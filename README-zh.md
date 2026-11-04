@@ -34,7 +34,7 @@ docker compose restart panda-force
 
 按终端显示的链接完成登录，然后刷新 PandaForce，即可开始会话。PandaForce 管理员与模型账号相互独立；模型服务的权限和费用遵循服务商规则。
 
-默认镜像为 **`hiforceai/panda-force:0.0.3`**。管理员、模型认证、附件及工作文件保存在 Docker 卷中，重启容器不会丢失。`docker compose down` 保留数据卷。默认端口仅本机可访问。
+默认镜像为 **`hiforceai/panda-force:0.0.4`**。管理员、模型认证、附件及工作文件保存在 Docker 卷中，重启容器不会丢失。`docker compose down` 保留数据卷。默认端口仅本机可访问。
 
 ## 宿主机已有 Codex？
 

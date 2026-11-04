@@ -22,7 +22,7 @@ In a source checkout, these files are under `panda-docs/static/downloads/kuberne
 
 ## Before deploying
 
-Use a Linux amd64 cluster, `kubectl`, and a working persistent-volume provisioner. The templates use the public `hiforceai/panda-force:0.0.3` image and a 10 GiB `ReadWriteOnce` PVC. If your cluster has no default StorageClass, add `storageClassName: YOUR_STORAGE_CLASS` under the PVC's `spec`. Confirm the class supports your node placement; a class using `WaitForFirstConsumer` can defer volume binding until scheduling.
+Use a Linux amd64 cluster, `kubectl`, and a working persistent-volume provisioner. The templates use the public `hiforceai/panda-force:0.0.4` image and a 10 GiB `ReadWriteOnce` PVC. If your cluster has no default StorageClass, add `storageClassName: YOUR_STORAGE_CLASS` under the PVC's `spec`. Confirm the class supports your node placement; a class using `WaitForFirstConsumer` can defer volume binding until scheduling.
 
 Both templates include a Namespace, PVC, Deployment and ClusterIP Service. They use one replica and `Recreate` updates for this single-instance application and its SQLite data. CPU/memory values are starting points; adjust them for your workload. Persistent-volume ownership must allow the configured Unix user to write; the example uses UID/GID 1000 and `fsGroup: 1000`. The init container creates only application directories on the PVC, and does not change node directories.
 

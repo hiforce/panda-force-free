@@ -42,13 +42,13 @@
     {
       "path": "README-zh.md",
       "bytes": 3571,
-      "sha256": "63b9a19ef88cde24f5bd5f3a40a9ba6cee1844dc6ca8b2854ab7fef3c82e6b3b",
+      "sha256": "be576d40719a73045711f78b6925fd815e31fbc136876f51185b14999970f320",
       "mode": "100644"
     },
     {
       "path": "README.md",
       "bytes": 3877,
-      "sha256": "764e3035ec7ce622abf8db395c4612723fac537dacaf5ab802ede74223c5bc8f",
+      "sha256": "e4abcccc9242604982410ccda6a48404c3c67f47907efe15228a008c05cc1651",
       "mode": "100644"
     },
     {
@@ -72,13 +72,13 @@
     {
       "path": "docker-compose.yml",
       "bytes": 1473,
-      "sha256": "b002de7ca2426457ba4b0d2d9a5edd2169b5c5ba314df8646403aaa6b3ed4cd9",
+      "sha256": "c16d4f829fff876fc14aa7dc27d02ba6b8de8b443deb5d96bdfe337129a15a43",
       "mode": "100644"
     },
     {
       "path": "package.json",
       "bytes": 5375,
-      "sha256": "bafce4d19f8b6bc5309b2d433684bea50d507a6bd9faf6edc92a5b5d90e85415",
+      "sha256": "62658a5e7ded97d975de8e007e76a253b7d1690d76b7a41d4594e56c440ebaa9",
       "mode": "100644"
     },
     {
@@ -108,13 +108,13 @@
     {
       "path": "panda-docs/docs/installation.md",
       "bytes": 8575,
-      "sha256": "c001842a4262e80e596b83c3ff579f70f0ace0eb6a0116c45d536be47dfc8579",
+      "sha256": "3c5454e547211a2df1bdfc258703ffc65544479a276f3a49cf7ef3d16ec3c30c",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/kubernetes.md",
       "bytes": 9272,
-      "sha256": "44c36830968e04b8f5db25ea0a0222caad75b356c9401558aa146e97cef79617",
+      "sha256": "5d936df042d448bd00dc9ba2e5a967cb251cfe6bffbee9425a5ea48d751303ce",
       "mode": "100644"
     },
     {
@@ -125,8 +125,8 @@
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 2129,
-      "sha256": "e84412b60651e7e99c8007faec61c884d6c5d993af475f2bd1c1451f3202059f",
+      "bytes": 2124,
+      "sha256": "df4e40100428538071058c76d222afb2d254016184bf8e0431620f9617917ace",
       "mode": "100644"
     },
     {
@@ -138,7 +138,7 @@
     {
       "path": "panda-docs/docs/storage.md",
       "bytes": 1565,
-      "sha256": "8405d44fe558121d3da512c7a5b53611154042cbfaaf61e6d12bf34114952332",
+      "sha256": "769387ed62f70f9371e15e47f123a325d32cb2949838a7ac45a50e83d8c4a642",
       "mode": "100644"
     },
     {
@@ -186,13 +186,13 @@
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-isolated.yaml",
       "bytes": 3601,
-      "sha256": "62238eea0e7f974e89853d2a5e56b8609217f1b6fd18a3c8f9dc62ada93e3d52",
+      "sha256": "115ba9b13ae7a63fb64992015f585750cc9fc9380888119b9fcbd9c17afe4753",
       "mode": "100644"
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-shared.yaml",
       "bytes": 4352,
-      "sha256": "51768350fff85f2f82b085e49d27db4fe133af328340345cd8049411dd077a9d",
+      "sha256": "5bab8257a5e583146110688237e692854f10485b5b2b29d5ba098e3e59cb6038",
       "mode": "100644"
     },
     {
@@ -300,13 +300,13 @@
     {
       "path": "release/community/README-zh.md",
       "bytes": 3571,
-      "sha256": "63b9a19ef88cde24f5bd5f3a40a9ba6cee1844dc6ca8b2854ab7fef3c82e6b3b",
+      "sha256": "be576d40719a73045711f78b6925fd815e31fbc136876f51185b14999970f320",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
       "bytes": 3877,
-      "sha256": "764e3035ec7ce622abf8db395c4612723fac537dacaf5ab802ede74223c5bc8f",
+      "sha256": "e4abcccc9242604982410ccda6a48404c3c67f47907efe15228a008c05cc1651",
       "mode": "100644"
     },
     {
@@ -324,7 +324,7 @@
     {
       "path": "release/community/docker-compose.yml",
       "bytes": 1473,
-      "sha256": "b002de7ca2426457ba4b0d2d9a5edd2169b5c5ba314df8646403aaa6b3ed4cd9",
+      "sha256": "c16d4f829fff876fc14aa7dc27d02ba6b8de8b443deb5d96bdfe337129a15a43",
       "mode": "100644"
     },
     {
@@ -1846,5 +1846,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "99907e8b75392c87e8052a9a5d99ab2525ddd6951b5ae5f8333651d8104e45fc"
+  "contentSha256": "3baf12c1dcae3dee5813243baa4c6efa79f959171e2a02597bc24595aafa4dc2"
 }
