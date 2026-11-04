@@ -42,6 +42,12 @@ PandaForce 仍然运行在容器里，也可以把任务交给机器上已有的
 
 K8s 部署可下载 [两种方式的 YAML 模板](./panda-docs/docs/kubernetes.md)，按指南填写自己的节点和目录配置。
 
+## 支持开发
+
+[![Buy me a coffee](./panda-docs/static/img/buy-me-a-coffee.svg)](https://buymeacoffee.com/hiforce)
+
+如果 PandaForce 对你有帮助，欢迎请 Rocky 喝杯咖啡。赞助完全自愿，不包含 SLA、优先支持或承诺的响应与修复期限。
+
 ## 许可证
 
 采用 [MIT 许可证](./LICENSE)，个人及商业使用、修改和 fork 均免费。尽力维护，不承诺 SLA、响应时间或修复期限。[第三方声明](./THIRD_PARTY_NOTICES.md)。

@@ -7,6 +7,6 @@ export default {
   themeConfig: {
     navbar: {title: 'PandaForce Help', logo: {alt: 'PandaForce', src: 'img/panda-mark.svg'}, items: [{type: 'localeDropdown', position: 'right'}]},
     colorMode: {defaultMode: 'light', respectPrefersColorScheme: true},
-    footer: {style: 'dark', copyright: 'PandaForce · Best-effort maintenance, no SLA.'},
+    footer: {style: 'dark', links: [{title: 'Support', items: [{label: '☕ Buy me a coffee', href: 'https://buymeacoffee.com/hiforce'}]}], copyright: 'PandaForce · Best-effort maintenance, no SLA.'},
   },
 };

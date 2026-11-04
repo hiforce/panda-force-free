@@ -31,6 +31,7 @@
   "panda-docs/src/css/custom.css",
   "panda-docs/static/downloads/kubernetes/panda-force-isolated.yaml",
   "panda-docs/static/downloads/kubernetes/panda-force-shared.yaml",
+  "panda-docs/static/img/buy-me-a-coffee.svg",
   "panda-docs/static/img/panda-force-workspace-en.png",
   "panda-docs/static/img/panda-mark.svg",
   "patches/urllib@2.44.1.patch",

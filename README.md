@@ -42,6 +42,12 @@ See the [installation guide](./panda-docs/docs/installation.md) for remote acces
 
 Download [Kubernetes deployment templates](./panda-docs/docs/kubernetes.md) for either arrangement.
 
+## Support
+
+[![Buy me a coffee](./panda-docs/static/img/buy-me-a-coffee.svg)](https://buymeacoffee.com/hiforce)
+
+If PandaForce helps you, consider supporting Rocky's work. Contributions are voluntary and do not include an SLA, priority support, or a guaranteed response or fix deadline.
+
 ## License
 
 [MIT](./LICENSE), free for personal and commercial use, modifications and forks. Maintenance is best effort, with no SLA or guaranteed response/fix deadline. [Third-party notices](./THIRD_PARTY_NOTICES.md).
