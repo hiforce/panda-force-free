@@ -1,0 +1,6 @@
+services:
+  panda-force:
+    image: panda-force:local
+    build:
+      context: .
+      dockerfile: Dockerfile

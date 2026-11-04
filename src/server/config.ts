@@ -1,3 +1,4 @@
+import packageInfo from "../../package.json";
 import { pandaEnvironment, existingApplicationPath } from "./environment.js";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -24,13 +25,14 @@ const configuredReviewRoot = env.PANDA_FORCE_REVIEW_ROOT || null;
 if (projectless && !configuredReviewRoot) {
   throw new Error("PANDA_FORCE_REVIEW_ROOT is required when PANDA_FORCE_PROJECTLESS=true");
 }
-const defaultCwd = resolve(env.PANDA_FORCE_CWD || (projectless ? homeDir : appRoot));
+const defaultCwd = resolve(env.PANDA_FORCE_CWD || env.PANDA_FORCE_DEFAULT_CWD || (projectless ? homeDir : appRoot));
 const browseRoots = defaultBrowseRoots(homeDir);
 const legacyAttachmentRoot = existingApplicationPath(resolve(codexHome, "panda-force-uploads"));
 const attachmentRoot = resolve(env.PANDA_FORCE_ATTACHMENT_ROOT || legacyAttachmentRoot);
 const stateRoot = resolve(env.PANDA_FORCE_HOME || join(homeDir, ".panda-force"));
 
 export const config = Object.freeze({
+  version: packageInfo.version,
   host,
   port: Number(env.PORT || 8899),
   localhostOnly: host === "127.0.0.1" || host === "::1" || host === "localhost",

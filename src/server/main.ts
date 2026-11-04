@@ -95,6 +95,10 @@ const passwordAuth = createPasswordAuth({ authState });
 // Keep the selected backend across reconnects; silently switching to another
 // writer after a daemon disconnect would break shared sessions.
 const appServerConnection = resolveAppServerConnection(process.env, homeDir);
+console.info(
+  "[PandaForce] Native engine connection",
+  JSON.stringify({ mode: appServerConnection.mode, cwd: defaultCwd }),
+);
 const projectVisibility = new ProjectVisibilityStore(config.projectVisibilityPath, homeDir);
 const projectCatalog = new ProjectCatalog(config.projectCatalogPath);
 const goalStore = new GoalStore({
@@ -130,7 +134,7 @@ const accountLoader = createAccountIdentityLoader(async (refresh) => {
 const codexBridge = createCodexBridge({
   connection: appServerConnection,
   defaultCwd,
-  clientInfo: { name: "panda-force", title: "PandaForce", version: "0.2.0" },
+  clientInfo: { name: "panda-force", title: "PandaForce", version: config.version },
   isShuttingDown: () => shuttingDown,
   onMessage: handleCodexMessage,
   onConnected: (info) => {
@@ -503,7 +507,7 @@ const dispatchApiRoute = createRouter([
       respondJson(res, 200, {
         ok: true,
         codex: codexBridge.connected,
-        version: "0.2.0",
+        version: config.version,
         appServerMode: appServerConnection.mode,
       }),
   },

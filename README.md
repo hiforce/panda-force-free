@@ -6,4 +6,4 @@ Help is being rebuilt as an independent static HTML site in [panda-docs](./panda
 
 This edition is free under the [MIT license](./LICENSE), including commercial use, modifications and forks. Maintenance is best effort with no SLA or guaranteed response/fix deadline. See [third-party notices](./THIRD_PARTY_NOTICES.md) for preserved attribution.
 
-No prebuilt public image has been released. Installation and release instructions belong in the HTML help, not this README. Repository changes are reviewed privately before public publication.
+Container release: [hiforceai/panda-force:0.0.1](https://hub.docker.com/r/hiforceai/panda-force/tags?name=0.0.1), Linux amd64. Installation, configuration and release instructions live in the HTML help.

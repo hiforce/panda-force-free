@@ -70,8 +70,9 @@ test("PandaForce and an SSH-style client share active input, events, and daemon 
     await new Promise<void>(resolve => probe.listen(0, "127.0.0.1", resolve));
     const port = (probe.address() as any).port;
     await new Promise<void>(resolve => probe.close(() => resolve()));
-    const env = { ...process.env, CODEX_HOME: home, PANDA_FORCE_APP_SERVER_MODE: "shared", PANDA_FORCE_APP_SERVER_SOCKET: socketPath,
-      HOST: "127.0.0.1", PORT: String(port), PANDA_FORCE_CWD: home, PANDA_FORCE_PROJECTLESS: "false", PANDA_FORCE_PASSWORD: "", PANDA_FORCE_ACCESS_TOKEN: "shared-test" };
+    const env = { ...process.env, CODEX_HOME: home, PANDA_FORCE_DEFAULT_APP_SERVER_MODE: "isolated", PANDA_FORCE_DEFAULT_CWD: "/image-workspace",
+      CODEX_WEBUI_APP_SERVER_MODE: "shared", CODEX_WEBUI_APP_SERVER_SOCKET: socketPath, PANDA_FORCE_HOME: join(home, "panda-state"),
+      HOST: "127.0.0.1", PORT: String(port), CODEX_WEBUI_CWD: home, PANDA_FORCE_PROJECTLESS: "false", PANDA_FORCE_PASSWORD: "", PANDA_FORCE_ACCESS_TOKEN: "shared-test" };
     const base = `http://127.0.0.1:${port}`;
     const headers = { authorization: `Bearer shared-test`, "content-type": "application/json" };
     const startPandaForce = async () => {

@@ -2,7 +2,7 @@
 title: Configure PandaForce
 ---
 
-PandaForce settings use the `PANDA_FORCE_` prefix. Legacy environment settings remain accepted for migration. The PandaForce setting wins when both names are supplied, including an explicitly empty value. All current examples use the PandaForce names. Native engine settings such as `CODEX_HOME` belong to that engine, not to PandaForce branding.
+PandaForce settings use the `PANDA_FORCE_` prefix. Legacy environment settings remain accepted for migration. The PandaForce setting wins when both names are supplied, including an explicitly empty value. Image fallback defaults are considered only after explicit new or legacy runtime settings, so an image default cannot hide a deployed setting. All current examples use the PandaForce names. Native engine settings such as `CODEX_HOME` belong to that engine, not to PandaForce branding.
 
 | Variable | Purpose |
 | --- | --- |

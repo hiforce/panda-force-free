@@ -6,4 +6,4 @@
 
 本版采用 [MIT 许可证](./LICENSE)，个人及商业使用、修改和 fork 均免费。尽力维护，不承诺 SLA、响应时间或修复期限。上游版权与第三方许可独立保留于 [声明](./THIRD_PARTY_NOTICES.md)。
 
-公共预构建镜像尚未发布。安装、使用和打包说明统一放在 HTML 帮助中。修改先在私有仓库审核，再公开发布。
+容器版本：[hiforceai/panda-force:0.0.1](https://hub.docker.com/r/hiforceai/panda-force/tags?name=0.0.1)，当前支持 Linux amd64。安装、使用和打包说明统一放在 HTML 帮助中。

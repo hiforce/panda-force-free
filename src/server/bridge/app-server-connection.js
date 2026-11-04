@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 
 export function resolveAppServerConnection(env, home) {
   env = pandaEnvironment(env);
-  const mode = env.PANDA_FORCE_APP_SERVER_MODE || "auto";
+  const mode = env.PANDA_FORCE_APP_SERVER_MODE || env.PANDA_FORCE_DEFAULT_APP_SERVER_MODE || "auto";
   if (!["auto", "shared", "isolated"].includes(mode)) {
     throw new Error("PANDA_FORCE_APP_SERVER_MODE must be auto, shared, or isolated");
   }
