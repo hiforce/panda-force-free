@@ -123,8 +123,7 @@ try {
   fixture.requestApproval({ ...approval, id: "modal-scoped-decision" });
   await page.locator("#pendingApprovalNotice").waitFor({state:"visible"});
   await page.locator("#pendingApprovalNotice").click();
-  await page.locator("#approvalInboxDialog .approval-menu-toggle").click();
-  const scoped = page.locator("#approvalInboxDialog .approval-menu.floating-menu .approval-scoped");
+  const scoped = page.locator("#approvalInboxDialog .approval-actions-main .approval-scoped");
   assert.equal(await scoped.evaluate(el => { const r=el.getBoundingClientRect(); return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el; }), true);
   await scoped.click();
   const scopedResponse=await waitFor(()=>fixture.calls().find(c=>c.type==="response"&&c.id==="modal-scoped-decision"));

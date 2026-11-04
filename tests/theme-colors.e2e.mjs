@@ -34,7 +34,6 @@ for(const scheme of ['light','dark']){
   });
   await page.click('#toggleSidePanel');
   await page.click('[data-side-panel-action="review"]');
-  await page.click('.approval-menu-toggle');
   await page.click('.activity-item');
   await page.hover('.activity-item');
   await page.hover('.approval-deny');
@@ -67,8 +66,8 @@ for(const scheme of ['light','dark']){
       approval:style('.approval-card'),
       approvalDenyHover:style('.approval-deny'),
       command:style('.approval-command code'),
-      approvalMenu:style('.approval-menu'),
-      approvalMenuItem:style('.approval-menu button'),
+      approvalActions:style('.approval-actions-main'),
+      approvalScoped:style('.approval-scoped'),
       reviewHead:style('.review-file-head'),
       reviewName:style('.review-file-name'),
       reviewChevron:style('.review-chevron svg'),
@@ -100,7 +99,7 @@ for(const scheme of ['light','dark']){
     activityHover:contrast(result.activityHover.color,result.activityHover.background),
     activityOutput:contrast(result.activityOutput.color,result.activityOutput.background),
     loadOlder:contrast(result.loadOlder.color,result.loadOlder.background),
-    menu:contrast(result.approvalMenuItem.color,result.approvalMenu.background),
+    approvalScoped:contrast(result.approvalScoped.color,result.approvalActions.background),
     approvalDenyHover:contrast(result.approvalDenyHover.color,result.approvalDenyHover.background),
     reviewHead:contrast(result.reviewHead.color,result.reviewHead.background),
     reviewName:contrast(result.reviewName.color,result.reviewHead.background),
@@ -111,7 +110,7 @@ for(const scheme of ['light','dark']){
     add:contrast(result.addLine.color,result.addLine.background),
     delete:contrast(result.deleteLine.color,result.deleteLine.background),
   };
-  result.menuCommandOverlap=overlap(result.approvalMenu.rect,result.command.rect);
+  result.actionCommandOverlap=overlap(result.approvalActions.rect,result.command.rect);
   results.push(result);
   await page.close();
 }
@@ -121,9 +120,9 @@ console.log(JSON.stringify(results,null,2));
 for(const result of results){
   if(result.errors.length)process.exit(1);
   for(const [name,value] of Object.entries(result.contrast))if(value<4.5){console.error(`${result.scheme} ${name} contrast ${value.toFixed(2)} < 4.5`);process.exit(1)}
-  if(result.menuCommandOverlap>0){console.error(`${result.scheme} approval menu overlaps command by ${result.menuCommandOverlap}px²`);process.exit(1)}
+  if(result.actionCommandOverlap>0){console.error(`${result.scheme} approval menu overlaps command by ${result.actionCommandOverlap}px²`);process.exit(1)}
   if(result.scheme==='light'&&luminance(result.composer.background)<.7){console.error('light composer still uses a dark fixed surface');process.exit(1)}
-  if(result.scheme==='light'&&luminance(result.approvalMenu.background)<.7){console.error('light approval menu still uses a dark fixed surface');process.exit(1)}
+  if(result.scheme==='light'&&luminance(result.approvalActions.background)<.7){console.error('light approval menu still uses a dark fixed surface');process.exit(1)}
   if(result.scheme==='dark'&&luminance(result.hunk.background)>.2){console.error('dark review hunk is not using the dark App surface');process.exit(1)}
   if(result.scheme==='light'&&luminance(result.hunk.background)<.7){console.error('light review hunk still uses a dark fixed surface');process.exit(1)}
 }

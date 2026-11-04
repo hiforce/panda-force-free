@@ -17,7 +17,6 @@ async function run(width,height,name){
  await page.waitForSelector('[data-codex-approval-surface]');
  await page.waitForSelector('.activity-command-icon svg');
  await page.waitForSelector('.review-file',{state:'attached'});
- await page.click('.approval-menu-toggle');
  await page.click('#toggleSidePanel');
  await page.click('[data-side-panel-action="review"]');
  await page.waitForFunction(()=>!document.querySelector('#reviewPanelContent').hidden);
@@ -29,8 +28,8 @@ async function run(width,height,name){
   const card=document.querySelector('[data-codex-approval-surface]');
   const activityIcon=document.querySelector('.activity-command-icon svg');
   const waiting=document.querySelector('.activity-summary-copy')?.textContent;
-  const menuVisible=!card.querySelector('.approval-menu')?.hidden;
-  return {card:rect('[data-codex-approval-surface]'),composer:rect('.composer'),buttons:[...card.querySelectorAll('button')].map(x=>x.textContent.trim()),commandLines:getComputedStyle(card.querySelector('.approval-command code')).webkitLineClamp,commandText:card.querySelector('.approval-command code')?.textContent,activityIcon:!!activityIcon,reviewFiles:document.querySelectorAll('.review-file').length,reviewAdds:document.querySelector('#reviewStats')?.textContent,waiting,menuVisible,reviewDrawer:!document.querySelector('#sidePanel').hidden,reviewWidth:rect('#sidePanel')?.width,reviewMode:document.querySelector('#changeList')?.dataset.mode,reviewWrap:document.querySelector('#changeList')?.classList.contains('wrap'),splitRows:document.querySelectorAll('.review-split-row').length,scrollWidth:document.documentElement.scrollWidth,innerWidth};
+  const scopedVisible=card.querySelector('.approval-scoped')?.getBoundingClientRect().width>0;
+  return {card:rect('[data-codex-approval-surface]'),composer:rect('.composer'),buttons:[...card.querySelectorAll('button')].map(x=>x.textContent.trim()),commandLines:getComputedStyle(card.querySelector('.approval-command code')).webkitLineClamp,commandText:card.querySelector('.approval-command code')?.textContent,activityIcon:!!activityIcon,reviewFiles:document.querySelectorAll('.review-file').length,reviewAdds:document.querySelector('#reviewStats')?.textContent,waiting,scopedVisible,reviewDrawer:!document.querySelector('#sidePanel').hidden,reviewWidth:rect('#sidePanel')?.width,reviewMode:document.querySelector('#changeList')?.dataset.mode,reviewWrap:document.querySelector('#changeList')?.classList.contains('wrap'),splitRows:document.querySelectorAll('.review-split-row').length,scrollWidth:document.documentElement.scrollWidth,innerWidth};
  });
  await page.screenshot({path:artifact(`${name}.png`),fullPage:false});
  console.log(name,JSON.stringify({...result,errors},null,2));

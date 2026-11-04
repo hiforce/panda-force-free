@@ -1529,8 +1529,8 @@
     },
     {
       "path": "tests/product-projects.e2e.mjs",
-      "bytes": 15544,
-      "sha256": "605dc751b4bf251418d6c962a0d60c0bef1a8a3c83dd4e5f2e7a56967c3e66ff",
+      "bytes": 15462,
+      "sha256": "4777bffe62ac881f441cc263fd40b17c04428301b3a7af87deed5241322c4fd3",
       "mode": "100644"
     },
     {
@@ -1757,8 +1757,8 @@
     },
     {
       "path": "tests/surfaces-browser.mjs",
-      "bytes": 4114,
-      "sha256": "996f3697dbe854eda5d4685942d93fd803403ffbab531ed9f2359711dfeab63b",
+      "bytes": 4100,
+      "sha256": "99be1468757054d9e4a965b35b442b85db1079b36e4b9c82777a6d07333f6e8f",
       "mode": "100644"
     },
     {
@@ -1775,8 +1775,8 @@
     },
     {
       "path": "tests/theme-colors.e2e.mjs",
-      "bytes": 9236,
-      "sha256": "12423c3e30b7287a28c6ed2b02bd5b93e094599b04857198fe590bcf5f67605f",
+      "bytes": 9218,
+      "sha256": "8d2745d2fe3ac28561c51b48c1157b5096ccd4424e6fec1729c37e17f2355737",
       "mode": "100644"
     },
     {
@@ -1846,5 +1846,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "b0beb13a16e07cbfdb81d4c87ee9c7ff1f18570e2abb438a267252ffcbf9768e"
+  "contentSha256": "b06bdc02b5fdb41632a6f22af6b793b38af83b30627ff2931cea923eb119a7ac"
 }
