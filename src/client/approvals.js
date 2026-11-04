@@ -191,7 +191,7 @@ export function createApprovals({
       card = document.createElement("section");
     card.className = "approval-card";
     card.dataset.codexApprovalSurface = "";
-    card.innerHTML = `<div class="approval-content"><div class="approval-identity">${approvalIcon(model.kind)}<span>${escapeHtml(t(model.identity))}</span></div><div class="approval-title">${escapeHtml(t(model.title))}</div>${model.subtitle ? `<div class="approval-subtitle">${escapeHtml(shortPath(model.subtitle))}</div>` : ""}${model.reason ? `<div class="approval-reason"><span>${escapeHtml(t("Reason"))}</span><p>${escapeHtml(model.reason)}</p></div>` : ""}</div><div class="approval-body">${approvalBody(model, p)}</div><form class="approval-actions">${model.leading ? `<button type="button" class="approval-leading">${escapeHtml(t(model.leading.label))}</button>` : ""}<div class="approval-actions-main"><button type="button" class="approval-deny">${escapeHtml(t(model.deny.label))}</button>${model.scoped ? `<div class="approval-split"><button type="submit" class="approval-primary">${escapeHtml(t(model.primary.label))}</button><button type="button" class="approval-menu-toggle" aria-label="${escapeHtml(t("Approval options"))}" aria-expanded="false">${codexIcon("chevronDown")}</button><div class="approval-menu" hidden><button type="button" class="approval-scoped">${escapeHtml(t(model.scoped.label))}</button></div></div>` : `<button type="submit" class="approval-primary">${escapeHtml(t(model.primary.label))}</button>`}</div></form>`;
+    card.innerHTML = `<div class="approval-content"><div class="approval-identity">${approvalIcon(model.kind)}<span>${escapeHtml(t(model.identity))}</span></div><div class="approval-title">${escapeHtml(t(model.title))}</div>${model.subtitle ? `<div class="approval-subtitle">${escapeHtml(shortPath(model.subtitle))}</div>` : ""}${model.reason ? `<div class="approval-reason"><span>${escapeHtml(t("Reason"))}</span><p>${escapeHtml(model.reason)}</p></div>` : ""}</div><div class="approval-body">${approvalBody(model, p)}</div><form class="approval-actions">${model.leading ? `<button type="button" class="approval-leading">${escapeHtml(t(model.leading.label))}</button>` : ""}<div class="approval-actions-main"><button type="submit" class="approval-primary">${escapeHtml(t(model.primary.label))}</button>${model.scoped ? `<button type="button" class="approval-scoped">${escapeHtml(t(model.scoped.label))}</button>` : ""}<button type="button" class="approval-deny danger">${escapeHtml(t(model.deny.label))}</button></div></form>`;
     if (container) {
       const session = document.createElement("p");
       session.className = "approval-session-context";
@@ -239,9 +239,6 @@ export function createApprovals({
     card
       .querySelector(".approval-review-link")
       ?.addEventListener("click", () => openReviewPanel(diffForTurn(p.turnId)));
-    const menuToggle = card.querySelector(".approval-menu-toggle"),
-      menu = card.querySelector(".approval-menu");
-    menuToggle?.addEventListener("click", () => approvalMenuController.toggle(menuToggle, menu));
     scrollBottom();
   }
 

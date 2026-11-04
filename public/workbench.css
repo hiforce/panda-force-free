@@ -1443,6 +1443,48 @@
   white-space: normal;
   height: auto;
 }
+.approval-card .approval-actions {
+  flex-direction: row;
+  align-items: stretch;
+}
+.approval-card .approval-actions-main {
+  display: grid;
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  width: min(100%, 480px);
+  margin-inline-start: auto;
+}
+.approval-card .approval-actions-main > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: auto;
+  padding: 8px 10px;
+  border-radius: 9px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: 1.4;
+}
+.approval-card .approval-actions .approval-deny.danger {
+  color: var(--app-danger);
+  border-color: color-mix(in srgb, var(--app-danger) 55%, var(--pf-line));
+  background: color-mix(in srgb, var(--app-danger) 10%, var(--pf-card));
+}
+.approval-card .approval-actions .approval-deny.danger:hover:not(:disabled) {
+  color: var(--app-danger);
+  background: color-mix(in srgb, var(--app-danger) 18%, var(--pf-card));
+}
+.approval-card .approval-actions-main > button:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 2px;
+}
+.approval-card .approval-deny.danger:focus-visible {
+  outline-color: var(--app-danger);
+}
 .approval-session-context {
   font-size: 12px;
   color: var(--pf-muted);

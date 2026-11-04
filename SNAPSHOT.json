@@ -125,8 +125,8 @@
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 2124,
-      "sha256": "df4e40100428538071058c76d222afb2d254016184bf8e0431620f9617917ace",
+      "bytes": 2382,
+      "sha256": "077771d72ad5f1f88f1f143ba9a893b0f74301c2f2a8e33818adbbc8e1f8be0b",
       "mode": "100644"
     },
     {
@@ -263,8 +263,8 @@
     },
     {
       "path": "public/workbench.css",
-      "bytes": 30610,
-      "sha256": "ee170477bb861d66c6a2664a89221a439f09c52f76bfead4573c0b2881a533b6",
+      "bytes": 31826,
+      "sha256": "62c1778ea72b50c17fb49caf43e34a7bf1dca6de7e1260c48ef7cb3609c08690",
       "mode": "100644"
     },
     {
@@ -401,8 +401,8 @@
     },
     {
       "path": "src/client/approvals.js",
-      "bytes": 12022,
-      "sha256": "d94013995a37862a3268d0f0d6c1226ec63c6d8d3e89122dce6344977a36d01e",
+      "bytes": 11486,
+      "sha256": "ccd669d9dffac54e16e8fa26bfda7c3789bc218f63ab02ae813f8e28253dc126",
       "mode": "100644"
     },
     {
@@ -1055,8 +1055,8 @@
     },
     {
       "path": "tests/approval-menu.e2e.mjs",
-      "bytes": 5294,
-      "sha256": "00bd61c37d582aa8e55c53fab43b5f1c7cbbf23746d94112bc9f2f0c474f9e1a",
+      "bytes": 5259,
+      "sha256": "219c678c94896e0587c0f0050281514965dcecc6320f38db599f48587d339483",
       "mode": "100644"
     },
     {
@@ -1846,5 +1846,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "3baf12c1dcae3dee5813243baa4c6efa79f959171e2a02597bc24595aafa4dc2"
+  "contentSha256": "706d43f1b81fdd9819772ebbe44c152728d76a0acf57c208ce69752130945396"
 }
