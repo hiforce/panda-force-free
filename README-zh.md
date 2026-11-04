@@ -2,6 +2,8 @@
 
 用自然语言开展工作的工作台。当前支持 Codex，其他 CLI 引擎尚未接入。
 
+基于 [lezi-fun](https://github.com/lezi-fun) 的 [Codex WebUI](https://github.com/lezi-fun/codex-webui) 开发，感谢上游作者及所有贡献者。
+
 - 用项目组织会话，上传文件与图片。
 - 处理审批、回答问题、查看任务进度。
 - 浏览工作目录文件，使用集成终端。
@@ -51,3 +53,9 @@ K8s 部署可下载 [两种方式的 YAML 模板](./panda-docs/docs/kubernetes.m
 ## 许可证
 
 采用 [MIT 许可证](./LICENSE)，个人及商业使用、修改和 fork 均免费。尽力维护，不承诺 SLA、响应时间或修复期限。[第三方声明](./THIRD_PARTY_NOTICES.md)。
+
+## 上游与致谢
+
+PandaForce Free 衍生自 MIT 许可的 [lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui)。感谢 lezi-fun 及上游贡献者提供的基础与开源贡献。
+
+原始版权声明与 MIT 许可保留在 [LICENSE](./LICENSE) 和 [LICENSES/upstream-MIT.txt](./LICENSES/upstream-MIT.txt) 中；其他组件的出处见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。PandaForce 独立开发维护，上游署名不代表上游对本项目背书。

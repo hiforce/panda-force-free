@@ -2,6 +2,8 @@
 
 A workspace for natural-language work, powered by Codex today, with other CLI engines planned.
 
+Built on [Codex WebUI](https://github.com/lezi-fun/codex-webui) by [lezi-fun](https://github.com/lezi-fun). Thank you to the upstream author and contributors.
+
 - Organize conversations into projects and attach files or images.
 - Review approvals, answer questions and follow task progress.
 - Browse workspace files and use the integrated terminal.
@@ -51,3 +53,9 @@ If PandaForce helps you, consider supporting Rocky's work. Contributions are vol
 ## License
 
 [MIT](./LICENSE), free for personal and commercial use, modifications and forks. Maintenance is best effort, with no SLA or guaranteed response/fix deadline. [Third-party notices](./THIRD_PARTY_NOTICES.md).
+
+## Acknowledgements
+
+PandaForce Free is derived from [lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui), originally released under the MIT license. We thank lezi-fun and all upstream contributors for the foundation their work provides.
+
+The original copyright notice and MIT license are preserved in [LICENSE](./LICENSE) and [LICENSES/upstream-MIT.txt](./LICENSES/upstream-MIT.txt). Additional component attribution is recorded in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md). PandaForce is developed independently; upstream attribution does not imply endorsement.

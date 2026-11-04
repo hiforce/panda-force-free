@@ -41,20 +41,20 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 2832,
-      "sha256": "705f9dd4cfc3fb9040d5ea1647b6bc40b6da9a81416dd520d9e92cd1abdfacea",
+      "bytes": 3473,
+      "sha256": "3e3b2bac83fe84f5eb284ccd6d31da838fc69c305d1e3fc4c4879d2c5865b7e1",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 3034,
-      "sha256": "df2c82509d454350340809f1880bcc6de3909522675ca3e2297cdf1619fd650d",
+      "bytes": 3779,
+      "sha256": "fe7d72631e3923daee62cf2102c44cbcd9e377c56e4cea988911e0d9da19416b",
       "mode": "100644"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
-      "bytes": 3921,
-      "sha256": "096fbadb4f7aa36ec9ccf154244ccbe0fd6567124a7718b5cac3c6e12c76ae56",
+      "bytes": 3938,
+      "sha256": "84d27a3c9180b71a32f259b7cf3d957837ab40d57e4828045a21238dbc2ddd53",
       "mode": "100644"
     },
     {
@@ -119,8 +119,8 @@
     },
     {
       "path": "panda-docs/docs/overview.md",
-      "bytes": 792,
-      "sha256": "c0af9499cc6e3842a618c4776046faa770da5e269a5fc8eef178f95385e899b9",
+      "bytes": 1108,
+      "sha256": "3a60949261a9b059e0de615d588b30b3d233739725c942d3cd65e7a5ad17d0ef",
       "mode": "100644"
     },
     {
@@ -293,20 +293,20 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 2832,
-      "sha256": "705f9dd4cfc3fb9040d5ea1647b6bc40b6da9a81416dd520d9e92cd1abdfacea",
+      "bytes": 3473,
+      "sha256": "3e3b2bac83fe84f5eb284ccd6d31da838fc69c305d1e3fc4c4879d2c5865b7e1",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 3034,
-      "sha256": "df2c82509d454350340809f1880bcc6de3909522675ca3e2297cdf1619fd650d",
+      "bytes": 3779,
+      "sha256": "fe7d72631e3923daee62cf2102c44cbcd9e377c56e4cea988911e0d9da19416b",
       "mode": "100644"
     },
     {
       "path": "release/community/THIRD_PARTY_NOTICES.md",
-      "bytes": 3921,
-      "sha256": "096fbadb4f7aa36ec9ccf154244ccbe0fd6567124a7718b5cac3c6e12c76ae56",
+      "bytes": 3938,
+      "sha256": "84d27a3c9180b71a32f259b7cf3d957837ab40d57e4828045a21238dbc2ddd53",
       "mode": "100644"
     },
     {
@@ -1816,5 +1816,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "d459680e2e1fe8dff7c892f5371dfd9781691254b4d42a35fe6ec79d7e0bdf0a"
+  "contentSha256": "8fe794fe1a8cf90f544862c0876a8ecd7f7787ba3e84f8e6e697c94aec3f794a"
 }
