@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test, spyOn } from 'bun:test';
 import { createIdaasAuth, readIdaasConfig } from '../src/server/auth/idaas.js';
 
 const env = {
@@ -8,7 +8,7 @@ const env = {
 };
 const services: ReturnType<typeof createIdaasAuth>[] = [];
 afterEach(() => { for (const service of services.splice(0)) service.close(); });
-function fixture() {
+function fixture({ tokenSeconds = 1800 } = {}) {
   let clock = 1_800_000_000_000;
   let active = true, unavailable = false, account = 'allowed@example.com', tenantId = 42;
   let introspectionOverride: any = null;
@@ -18,8 +18,8 @@ function fixture() {
     fetchImpl: async (url: any, init: any) => {
       const path = new URL(url).pathname; calls.push({ path, body: JSON.parse(init.body), headers: init.headers });
       if (unavailable) throw new Error('upstream failed with secret data');
-      if (path === '/oidc/token') return Response.json({ success: true, data: { access_token: 'test-access-token', id_token: 'test-id-token', refresh_token: 'unused', expires_in: 180 } });
-      if (path === '/oidc/token/introspection') return Response.json(introspectionOverride || { active, exp: Math.floor(clock / 1000) + 180 });
+      if (path === '/oidc/token') return Response.json({ success: true, data: { access_token: 'test-access-token', id_token: 'test-id-token', refresh_token: 'unused', expires_in: tokenSeconds } });
+      if (path === '/oidc/token/introspection') return Response.json(introspectionOverride || { active, exp: Math.floor(clock / 1000) + tokenSeconds });
       if (path === '/oidc/me') return Response.json({ success: true, data: { uuid: 'user-1', account, tenantId } });
       throw new Error('Unexpected endpoint');
     },
@@ -28,7 +28,7 @@ function fixture() {
   const req = (cookie = '', headers = {}, method = 'GET') => ({ headers: { host: 'codex.example.com', cookie, ...headers }, socket: { remoteAddress: '127.0.0.1' }, method });
   async function route(path: string, request = req()) {
     const result: any = { status: 0, headers: {}, body: '' };
-    const res = { writeHead(status: number, headers: any) { result.status = status; result.headers = headers; }, end(body = '') { result.body = body; } };
+    const res = { statusCode: 200, writeHead(status: number, headers: any) { this.statusCode = status; result.status = status; result.headers = headers; }, end(body = '') { result.body = body; } };
     result.handled = await auth.handle(request, res, new URL(path, env.PANDA_FORCE_PUBLIC_URL));
     return result;
   }
@@ -111,7 +111,7 @@ describe('IDAAS browser authentication', () => {
     expect(document.status).toBe(400);
     expect(document.body).toContain('<html lang="en">');
     expect(document.body).not.toContain('untrusted-message');
-    const { sessionCookie } = await f.login(); f.advance(30_001); f.fail();
+    const { sessionCookie } = await f.login(); f.advance(300_001); f.fail();
     const api = await f.route('/api/auth/status', f.req(sessionCookie, { accept: 'text/html' }));
     expect(api.status).toBe(503);
     expect(api.headers['content-type']).toBe('application/json; charset=utf-8');
@@ -157,7 +157,7 @@ describe('IDAAS browser authentication', () => {
     expect(new URL(anonymous.headers.location).pathname).toBe('/logout');
   });
   test('uses an opaque secure cookie, bounded expiry and excludes tokens from status', async () => {
-    const f = fixture(); const { response, sessionCookie } = await f.login();
+    const f = fixture({ tokenSeconds: 180 }); const { response, sessionCookie } = await f.login();
     expect(response.headers['set-cookie'][0]).toContain('HttpOnly; SameSite=Lax; Max-Age=180; Secure');
     expect(sessionCookie).not.toContain('test-access-token');
     const status = await f.route('/api/auth/status', f.req(sessionCookie));
@@ -174,22 +174,37 @@ describe('IDAAS browser authentication', () => {
     await Promise.all(Array.from({ length: 10 }, () => f.auth.authenticate(f.req(sessionCookie))));
     expect(f.calls.filter(c => c.path.includes('introspection')).length).toBe(1);
     f.advance(30_001);
+    await f.auth.authenticate(f.req(sessionCookie));
+    expect(f.calls.filter(c => c.path.includes('introspection')).length).toBe(1);
+    f.advance(270_000);
     await Promise.all(Array.from({ length: 10 }, () => f.auth.authenticate(f.req(sessionCookie))));
     expect(f.calls.filter(c => c.path.includes('introspection')).length).toBe(2);
-    f.advance(30_001); f.invalidate();
+    f.advance(300_001); f.invalidate();
     await expect(f.auth.authenticate(f.req(sessionCookie))).rejects.toHaveProperty('status', 401);
     await Bun.sleep(1); expect(closed).toBe(1);
   });
   test('fails closed on upstream outages without exposing details', async () => {
-    const f = fixture(); const { sessionCookie } = await f.login(); f.advance(30_001); f.fail();
-    const status = await f.route('/api/auth/status', f.req(sessionCookie));
-    expect(status.status).toBe(503); expect(status.body).not.toContain('secret data');
+    const f = fixture(); const { sessionCookie } = await f.login(); f.advance(300_001); f.fail();
+    const warnings = spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const status = await f.route('/api/auth/status', f.req(sessionCookie));
+      expect(status.status).toBe(503); expect(status.body).not.toContain('secret data');
+      const entries = warnings.mock.calls.map(([event, detail]) => ({event, detail: JSON.parse(detail)}));
+      expect(entries).toHaveLength(2);
+      expect(entries[0].event).toBe('[panda-force] auth/provider-request');
+      expect(entries[0].detail).toMatchObject({operation:'/oidc/token/introspection',outcome:'unavailable',httpStatus:null});
+      expect(entries[0].detail.durationMs).toBeGreaterThanOrEqual(0);
+      expect(entries[1].event).toBe('[panda-force] auth/status-request');
+      expect(entries[1].detail.httpStatus).toBe(503);
+      const logged = JSON.stringify(warnings.mock.calls);
+      for (const secret of ['test-access-token','test-only-secret','secret data','allowed@example.com']) expect(logged).not.toContain(secret);
+    } finally { warnings.mockRestore(); }
   });
   test('background verification suspends channels during an outage without deleting the login', async () => {
     const f = fixture(); const { sessionCookie } = await f.login();
     const session = await f.auth.authenticate(f.req(sessionCookie)); let closed = 0;
     f.auth.watch(session.id, () => { closed++; });
-    f.advance(30_001); f.fail();
+    f.advance(300_001); f.fail();
     for (let n = 0; n < 110 && !closed; n++) await Bun.sleep(50);
     expect(closed).toBe(1);
     expect((await f.route('/api/auth/status', f.req(sessionCookie))).status).toBe(503);
@@ -198,13 +213,13 @@ describe('IDAAS browser authentication', () => {
     expect(JSON.parse(recovered.body).authenticated).toBe(true);
     expect(recovered.headers['set-cookie']).toBeUndefined();
     // Recovery does not extend the original token/session deadline.
-    f.advance(150_001);
+    f.advance(1_500_001);
     expect(JSON.parse((await f.route('/api/auth/status', f.req(sessionCookie))).body).authenticated).toBe(false);
   }, 10000);
   test('ambiguous or malformed provider results do not masquerade as a user sign-out', async () => {
     for (const result of [{}, { success: false }, { active: true }, { active: 'false', exp: 1_900_000_000 }]) {
       const f = fixture(); const { sessionCookie } = await f.login();
-      f.advance(30_001); f.introspection(result);
+      f.advance(300_001); f.introspection(result);
       expect((await f.route('/api/auth/status', f.req(sessionCookie))).status).toBe(503);
       f.introspection(null);
       expect(JSON.parse((await f.route('/api/auth/status', f.req(sessionCookie))).body).authenticated).toBe(true);

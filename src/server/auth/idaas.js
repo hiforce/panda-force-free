@@ -7,7 +7,7 @@ import { safeAuthReturnPath } from "../../shared/auth-return-path.js";
 const SESSION_COOKIE = "panda_force_idaas_session";
 const STATE_COOKIE = "panda_force_idaas_state";
 const MAX_ITEMS = 2048;
-const CACHE_MS = 30_000;
+const CACHE_MS = 5 * 60_000;
 const STATE_MS = 300_000;
 const SESSION_MS = 7_200_000;
 const randomId = () => randomBytes(32).toString("base64url");
@@ -153,6 +153,9 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
     res.end();
   };
   async function upstream(path, body, token) {
+    const started = performance.now();
+    let httpStatus = null;
+    let outcome = "unavailable";
     try {
       const response = await fetchImpl(`${config.endpoint}${path}`, {
         method: "POST",
@@ -165,6 +168,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
         },
         body: JSON.stringify(body),
       });
+      httpStatus = response.status;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json"))
         throw new Error("Invalid response");
       const reader = response.body.getReader();
@@ -190,10 +194,15 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
           ? new AuthError(503, "IDAAS is unavailable; try again later")
           : new AuthError(401, "IDAAS rejected the credentials");
       if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("Invalid response");
+      outcome = "ok";
       return payload.data ?? payload;
     } catch (error) {
       if (error instanceof AuthError) throw error;
       throw new AuthError(503, "IDAAS is unavailable; try again later");
+    } finally {
+      const durationMs = Math.round(performance.now() - started);
+      if (durationMs >= 1000 || outcome !== "ok")
+        console.warn("[panda-force] auth/provider-request", JSON.stringify({ operation: path, durationMs, httpStatus, outcome }));
     }
   }
   async function validateToken(token) {
@@ -278,6 +287,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
       ].includes(url.pathname)
     )
       return false;
+    const started = performance.now();
     try {
       if (url.pathname === "/auth/relogin") {
         if (req.method !== "POST") throw new AuthError(405, "Method not allowed");
@@ -464,6 +474,10 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
         error: error instanceof AuthError ? error.message : "Authentication unavailable",
         loginUrl: "/auth/login",
       });
+    } finally {
+      const durationMs = Math.round(performance.now() - started);
+      if (url.pathname === "/api/auth/status" && (durationMs >= 1000 || res.statusCode >= 500))
+        console.warn("[panda-force] auth/status-request", JSON.stringify({ durationMs, httpStatus: res.statusCode }));
     }
     return true;
   }

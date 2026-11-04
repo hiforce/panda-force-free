@@ -90,8 +90,42 @@ try{
  page.on('framenavigated',trackNavigation);
  const verify=()=>page.evaluate(()=>globalThis.__pandaForceCheckAuth({force:true}));
  await verify();await verify();
- await page.route('**/api/auth/status',route=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"Authentication temporarily unavailable"}'}));
+ let transientChecks=0;
+ await page.route('**/api/auth/status',route=>++transientChecks===1
+  ?route.fulfill({status:503,contentType:'application/json',body:'{"error":"Authentication temporarily unavailable"}'})
+  :route.continue());
+ // A transient failure stays quiet and retries automatically before the normal poll.
+ const retryResponse=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/auth/status'&&response.status()===200,{timeout:5000});
+ await verify();assert.equal(await page.locator('#pandaSessionNotice').isVisible(),false);
+ await retryResponse;assert.equal(transientChecks,2);
+ await page.unroute('**/api/auth/status');await verify();
+ // Requests slightly slower than the previous ten-second limit can still succeed.
+ await page.route('**/api/auth/status',async route=>{
+  await Bun.sleep(11000);
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(status)});
+ });
+ assert.equal((await verify()).authenticated,true);
+ assert.equal(await page.locator('#pandaSessionNotice').isVisible(),false);
+ await page.unroute('**/api/auth/status');
+ // Recently verified pages do not create new checks on focus or reconnect.
+ let pausedChecks=0;
+ await page.route('**/api/auth/status',route=>{pausedChecks++;return route.continue()});
+ await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});
+ await verify();assert.equal(pausedChecks,0);
+ await page.evaluate(()=>{delete document.visibilityState;document.dispatchEvent(new Event('visibilitychange'));});
+ await Bun.sleep(50);assert.equal(pausedChecks,0);
+ await page.evaluate(()=>{Object.defineProperty(navigator,'onLine',{configurable:true,value:false});dispatchEvent(new Event('offline'));});
+ await verify();assert.equal(pausedChecks,0);
+ await page.evaluate(()=>{delete navigator.onLine;dispatchEvent(new Event('online'));});
+ await Bun.sleep(50);assert.equal(pausedChecks,0);
+ await page.unroute('**/api/auth/status');
+ // Repeated failures over time still surface an actionable notice.
+ await page.route('**/api/auth/status',route=>route.fulfill({status:503,contentType:'application/json',body:'{}'}));
+ await verify();
+ await page.evaluate(()=>{window.__authRealNow=Date.now;Date.now=()=>window.__authRealNow()+16000;});
+ await verify();assert.equal(await page.locator('#pandaSessionNotice').isVisible(),false);
  await verify();await page.locator('#pandaSessionNotice[data-status="unavailable"]').waitFor();
+ await page.evaluate(()=>{Date.now=window.__authRealNow;delete window.__authRealNow;});
  assert.equal(await page.locator('#prompt').inputValue(),draft);
  assert.equal(page.url(),base+returnPath);assert.equal(navigations.length,0);
  await page.unroute('**/api/auth/status');await verify();

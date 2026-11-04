@@ -56,35 +56,41 @@
   }
 }
 :root {
-  --pf-accent: #425ee8;
+  --pf-accent: #91a4ff;
+  --pf-primary: #425ee8;
   --pf-radius: 12px;
   --pf-gap: 24px;
-  --pf-card: #202734;
-  --pf-canvas: #161b24;
-  --pf-sidebar: #1c222d;
-  --pf-ink: #e7ecf5;
-  --pf-muted: #a7b2c5;
-  --pf-line: #343e50;
-  --pf-soft: #242e40;
+  --pf-card: #202020;
+  --pf-canvas: #181818;
+  --pf-sidebar: #202020;
+  --pf-ink: #f2f2f2;
+  --pf-muted: #b0b0b0;
+  --pf-line: #3b3b3b;
+  --pf-soft: #2c2c2c;
+  --pf-message-bg: #303030;
 }
 :root[data-theme="light"] {
+  --pf-accent: #425ee8;
   --pf-card: #fff;
-  --pf-canvas: #f7f8fa;
-  --pf-sidebar: #f1f3f6;
-  --pf-ink: #202632;
-  --pf-muted: #667287;
-  --pf-line: #e0e5ef;
-  --pf-soft: #edf0f8;
+  --pf-canvas: #fff;
+  --pf-sidebar: #f7f7f7;
+  --pf-ink: #1f1f1f;
+  --pf-muted: #666;
+  --pf-line: #e5e5e5;
+  --pf-soft: #f3f3f3;
+  --pf-message-bg: #ededed;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
+    --pf-accent: #425ee8;
     --pf-card: #fff;
-    --pf-canvas: #f7f8fa;
-    --pf-sidebar: #f1f3f6;
-    --pf-ink: #202632;
-    --pf-muted: #667287;
-    --pf-line: #e0e5ef;
-    --pf-soft: #edf0f8;
+    --pf-canvas: #fff;
+    --pf-sidebar: #f7f7f7;
+    --pf-ink: #1f1f1f;
+    --pf-muted: #666;
+    --pf-line: #e5e5e5;
+    --pf-soft: #f3f3f3;
+    --pf-message-bg: #ededed;
   }
 }
 :root {
@@ -101,6 +107,8 @@
   --app-input: var(--pf-card);
   --app-surface-raised: var(--pf-card);
   --app-surface-hover: var(--pf-soft);
+  --user-message-bg: var(--pf-message-bg);
+  --user-message-border: var(--pf-line);
   --bg: var(--pf-canvas);
   --sidebar: var(--pf-sidebar);
   --surface: var(--pf-card);
@@ -351,7 +359,7 @@
   border-radius: 14px;
 }
 .send-button {
-  background: var(--pf-accent);
+  background: var(--pf-primary);
   color: white;
   border-radius: 9px;
 }
@@ -382,7 +390,7 @@
   background: var(--pf-soft);
 }
 .wb-button.primary {
-  background: var(--pf-accent);
+  background: var(--pf-primary);
   border-color: var(--pf-accent);
   color: white;
 }
@@ -792,7 +800,7 @@
   --auth-soft: var(--pf-soft);
 }
 .password-login button[type="submit"] {
-  background: var(--pf-accent);
+  background: var(--pf-primary);
   color: white;
 }
 .password-login-card {

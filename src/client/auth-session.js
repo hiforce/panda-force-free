@@ -1,5 +1,9 @@
 import { sessionLoginUrl } from "../shared/auth-return-path.js";
 
+const CHECK_INTERVAL_MS = 5 * 60_000;
+const CHECK_TIMEOUT_MS = 20_000;
+const NOTICE_DELAY_MS = 15_000;
+
 export function installPandaForceSession(status, { translate: t = (message) => message, i18n } = {}) {
   const originalFetch = globalThis.fetch.bind(globalThis);
   let checking = null,
@@ -7,7 +11,32 @@ export function installPandaForceSession(status, { translate: t = (message) => m
     timer = null,
     notice = null,
     condition = "authenticated",
-    lastCheck = -Infinity;
+    lastCheck = -Infinity,
+    lastVerifiedAt = Date.now(),
+    failures = 0,
+    firstFailureAt = null,
+    controller = null,
+    suspended = false;
+
+  const paused = () => suspended || document.visibilityState === "hidden" || navigator.onLine === false;
+  const clearTimer = () => {
+    clearTimeout(timer);
+    timer = null;
+  };
+  const schedule = () => {
+    clearTimer();
+    if (paused() || navigating || condition === "expired") return;
+    const delay = failures
+      ? Math.min(2000 * 2 ** Math.min(failures - 1, 5), 60_000)
+      : Math.max(1000, CHECK_INTERVAL_MS - (Date.now() - lastVerifiedAt));
+    timer = setTimeout(() => void check({ force: true }), delay);
+  };
+  const pause = () => {
+    clearTimer();
+    controller?.abort("session-check-paused");
+    failures = 0;
+    firstFailureAt = null;
+  };
 
   function render() {
     if (condition === "authenticated") {
@@ -57,26 +86,42 @@ export function installPandaForceSession(status, { translate: t = (message) => m
   }
 
   function check({ force = false } = {}) {
-    if (navigating) return Promise.resolve();
+    if (navigating || paused()) return Promise.resolve();
     if (checking) return checking;
     if (!force && Date.now() - lastCheck < 5000) return Promise.resolve();
     lastCheck = Date.now();
+    clearTimer();
+    const requestController = new AbortController();
+    controller = requestController;
+    const timeout = setTimeout(() => requestController.abort("session-check-timeout"), CHECK_TIMEOUT_MS);
     checking = originalFetch("/api/auth/status", {
       cache: "no-store",
       redirect: "error",
-      signal: AbortSignal.timeout(10000),
+      signal: requestController.signal,
     })
       .then(async (response) => {
         if (!response.ok) throw new Error("Sign-in verification unavailable");
         const current = await response.json();
         if (current.authMode !== status.authMode || typeof current.authenticated !== "boolean")
           throw new Error("Invalid sign-in status");
+        failures = 0;
+        firstFailureAt = null;
+        lastVerifiedAt = Date.now();
         setCondition(current.authenticated ? "authenticated" : "expired");
         return current;
       })
-      .catch(() => setCondition("unavailable"))
+      .catch(() => {
+        if (paused() || requestController.signal.reason === "session-check-paused") return;
+        failures++;
+        firstFailureAt ??= Date.now();
+        // Only the notice is delayed; protected requests still require server authentication.
+        if (failures >= 3 && Date.now() - firstFailureAt >= NOTICE_DELAY_MS) setCondition("unavailable");
+      })
       .finally(() => {
+        clearTimeout(timeout);
+        controller = null;
         checking = null;
+        schedule();
       });
     return checking;
   }
@@ -87,27 +132,30 @@ export function installPandaForceSession(status, { translate: t = (message) => m
     if (response.status === 401) {
       const input = args[0];
       const url = new URL(response.url || input?.url || String(input), location.href);
-      if (url.origin === location.origin) void check();
+      if (url.origin === location.origin) void check({ force: true });
     }
     return response;
   };
-  const start = () => {
-    if (timer === null) timer = setInterval(() => void check({ force: true }), 30000);
+  const resume = () => {
+    schedule();
+    if (Date.now() - lastVerifiedAt >= 60_000) void check({ force: true });
   };
-  start();
+  schedule();
   addEventListener("pagehide", () => {
-    clearInterval(timer);
-    timer = null;
+    suspended = true;
+    pause();
   });
   addEventListener("pageshow", (event) => {
     if (event.persisted) {
-      start();
-      void check({ force: true });
+      suspended = false;
+      resume();
     }
   });
-  addEventListener("online", () => void check({ force: true }));
+  addEventListener("online", resume);
+  addEventListener("offline", pause);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") void check();
+    if (document.visibilityState === "visible") resume();
+    else pause();
   });
   i18n?.subscribe(render);
 

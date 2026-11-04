@@ -432,6 +432,11 @@ export function createWorkbench({
     scheduled = true;
     queueMicrotask(() => {
       scheduled = false;
+      // A slower cached/history read may recover after an earlier startup read was superseded.
+      if (unavailableId === state.active?.id && state.active?.turns?.length) {
+        unavailableId = "";
+        signature = "";
+      }
       if (state.active && ["workspace", "new"].includes(route.page)) threadOpened(state.active.id);
       loadRouteTask();
       const next = JSON.stringify([

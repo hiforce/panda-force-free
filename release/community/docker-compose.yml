@@ -1,6 +1,6 @@
 services:
   panda-force:
-    image: ${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.0.1}
+    image: ${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.0.2}
     restart: unless-stopped
     user: "${PUID:-1000}:${PGID:-1000}"
     command: ["bun", "run", "start"]
