@@ -41,20 +41,20 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 3473,
-      "sha256": "3e3b2bac83fe84f5eb284ccd6d31da838fc69c305d1e3fc4c4879d2c5865b7e1",
+      "bytes": 3571,
+      "sha256": "120444340452e00782acd3b300c8fb77fa1a523c570eca27859e8518b098d8fe",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 3779,
-      "sha256": "fe7d72631e3923daee62cf2102c44cbcd9e377c56e4cea988911e0d9da19416b",
+      "bytes": 3877,
+      "sha256": "852d358a5eb8e1b10d4f903f3450173572327a9201047bef0fb793603bf16788",
       "mode": "100644"
     },
     {
       "path": "THIRD_PARTY_NOTICES.md",
-      "bytes": 3938,
-      "sha256": "84d27a3c9180b71a32f259b7cf3d957837ab40d57e4828045a21238dbc2ddd53",
+      "bytes": 4031,
+      "sha256": "23d2a3ad0190911365fbcd1df9815bef82fcbe1a23cc13de980196fcb622958a",
       "mode": "100644"
     },
     {
@@ -202,6 +202,12 @@
       "mode": "100644"
     },
     {
+      "path": "panda-docs/static/img/panda-force-banner.jpg",
+      "bytes": 143748,
+      "sha256": "dc01ac0f40bf816073a6b51fc31e272f4846e43a89bf18930bb27c1edb763ff1",
+      "mode": "100644"
+    },
+    {
       "path": "panda-docs/static/img/panda-force-workspace-en.png",
       "bytes": 96347,
       "sha256": "7125b3342346974088ed6b97843f990a0d1e694b71fe6a7e9606290ccde9e82d",
@@ -293,20 +299,20 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 3473,
-      "sha256": "3e3b2bac83fe84f5eb284ccd6d31da838fc69c305d1e3fc4c4879d2c5865b7e1",
+      "bytes": 3571,
+      "sha256": "120444340452e00782acd3b300c8fb77fa1a523c570eca27859e8518b098d8fe",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 3779,
-      "sha256": "fe7d72631e3923daee62cf2102c44cbcd9e377c56e4cea988911e0d9da19416b",
+      "bytes": 3877,
+      "sha256": "852d358a5eb8e1b10d4f903f3450173572327a9201047bef0fb793603bf16788",
       "mode": "100644"
     },
     {
       "path": "release/community/THIRD_PARTY_NOTICES.md",
-      "bytes": 3938,
-      "sha256": "84d27a3c9180b71a32f259b7cf3d957837ab40d57e4828045a21238dbc2ddd53",
+      "bytes": 4031,
+      "sha256": "23d2a3ad0190911365fbcd1df9815bef82fcbe1a23cc13de980196fcb622958a",
       "mode": "100644"
     },
     {
@@ -323,8 +329,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 10616,
-      "sha256": "29e16d3956a391ea9182a5b78889130d73e58b3f085cb924728b35e8d3f8d2ce",
+      "bytes": 10666,
+      "sha256": "de868b283a60444aea24f3d2e38cade833d8437020556a0e0129bfbd4c04ce52",
       "mode": "100644"
     },
     {
@@ -1816,5 +1822,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "8fe794fe1a8cf90f544862c0876a8ecd7f7787ba3e84f8e6e697c94aec3f794a"
+  "contentSha256": "9371028a4108cc4afa49680a17d2f495fe72066e642b6b0dfb3722b3d15c2edc"
 }

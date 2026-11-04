@@ -34,6 +34,8 @@ License reference: [Lucide ISC license](https://github.com/lucide-icons/lucide/b
 
 ## PandaForce visuals and activity indicators
 
+The README banner uses PandaForce's own brand mark and newly generated promotional artwork.
+
 The current PandaForce mark is defined by the SVG geometry in `src/shared/brand.js`. `public/assets/panda-mark.svg` and `panda-icon.png` are generated from that geometry. Activity indicators use source-controlled SVG icons and CSS animations. The previously extracted Codex.app images and animation JSON files have been removed from the current source tree and are not included in the free snapshot.
 
 OpenAI, Codex, Anthropic and Claude names and marks belong to their respective owners. This project is independent of and is not endorsed by those companies.

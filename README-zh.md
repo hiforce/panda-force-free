@@ -1,4 +1,4 @@
-# PandaForce
+![PandaForce — A workspace for getting things done with AI.](./panda-docs/static/img/panda-force-banner.jpg)
 
 用自然语言开展工作的工作台。当前支持 Codex，其他 CLI 引擎尚未接入。
 
