@@ -45,6 +45,12 @@ try {
       await waitFor(()=>decisions.length);assert.deepEqual(decisions.pop().result,expected);
     };
     await request(501);await checkLayout();
+    const systemDanger=await card().locator('.approval-deny').evaluate(button=>getComputedStyle(button).color);
+    await page.evaluate(theme=>document.documentElement.dataset.theme=theme,mobile?'light':'dark');
+    await checkLayout();
+    assert.notEqual(await card().locator('.approval-deny').evaluate(button=>getComputedStyle(button).color),systemDanger);
+    await page.evaluate(()=>delete document.documentElement.dataset.theme);
+    await checkLayout();
     await decide('.approval-scoped',{decision:'acceptForSession'});
     await request(502,'similar');await checkLayout();
     await page.screenshot({path:artifact(mobile?'approval-actions-mobile.png':'approval-actions-desktop.png')});

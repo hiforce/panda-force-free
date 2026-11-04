@@ -263,8 +263,8 @@
     },
     {
       "path": "public/workbench.css",
-      "bytes": 31826,
-      "sha256": "62c1778ea72b50c17fb49caf43e34a7bf1dca6de7e1260c48ef7cb3609c08690",
+      "bytes": 31894,
+      "sha256": "f8a26fee0e666345f462512e822edeb7b1de2a524c58bff3be9968419a2ae6d0",
       "mode": "100644"
     },
     {
@@ -1055,8 +1055,8 @@
     },
     {
       "path": "tests/approval-menu.e2e.mjs",
-      "bytes": 5259,
-      "sha256": "219c678c94896e0587c0f0050281514965dcecc6320f38db599f48587d339483",
+      "bytes": 5720,
+      "sha256": "ba6a91744a76f461e3aebf4b1d8214fb6314abf9ac9e7e083933ba64cf3f6799",
       "mode": "100644"
     },
     {
@@ -1846,5 +1846,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "706d43f1b81fdd9819772ebbe44c152728d76a0acf57c208ce69752130945396"
+  "contentSha256": "b0beb13a16e07cbfdb81d4c87ee9c7ff1f18570e2abb438a267252ffcbf9768e"
 }

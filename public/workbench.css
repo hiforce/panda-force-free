@@ -68,6 +68,7 @@
   --pf-line: #3b3b3b;
   --pf-soft: #2c2c2c;
   --pf-message-bg: #303030;
+  --pf-danger: #d17770;
 }
 :root[data-theme="light"] {
   --pf-accent: #425ee8;
@@ -79,6 +80,7 @@
   --pf-line: #e5e5e5;
   --pf-soft: #f3f3f3;
   --pf-message-bg: #ededed;
+  --pf-danger: #a52f2a;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
@@ -91,6 +93,7 @@
     --pf-line: #e5e5e5;
     --pf-soft: #f3f3f3;
     --pf-message-bg: #ededed;
+    --pf-danger: #a52f2a;
   }
 }
 :root {
@@ -1470,20 +1473,20 @@
   line-height: 1.4;
 }
 .approval-card .approval-actions .approval-deny.danger {
-  color: var(--app-danger);
-  border-color: color-mix(in srgb, var(--app-danger) 55%, var(--pf-line));
-  background: color-mix(in srgb, var(--app-danger) 10%, var(--pf-card));
+  color: var(--pf-danger);
+  border-color: color-mix(in srgb, var(--pf-danger) 55%, var(--pf-line));
+  background: color-mix(in srgb, var(--pf-danger) 10%, var(--pf-card));
 }
 .approval-card .approval-actions .approval-deny.danger:hover:not(:disabled) {
-  color: var(--app-danger);
-  background: color-mix(in srgb, var(--app-danger) 18%, var(--pf-card));
+  color: var(--pf-danger);
+  background: color-mix(in srgb, var(--pf-danger) 18%, var(--pf-card));
 }
 .approval-card .approval-actions-main > button:focus-visible {
   outline: 2px solid var(--pf-accent);
   outline-offset: 2px;
 }
 .approval-card .approval-deny.danger:focus-visible {
-  outline-color: var(--app-danger);
+  outline-color: var(--pf-danger);
 }
 .approval-session-context {
   font-size: 12px;
