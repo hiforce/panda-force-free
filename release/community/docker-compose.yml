@@ -1,0 +1,33 @@
+services:
+  codex-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: codex-webui:local
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command: ["bun", "run", "start"]
+    ports:
+      - "${WEBUI_BIND_IP:-127.0.0.1}:${WEBUI_PORT:-8899}:8899"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8899"
+      HOME: /home/codex
+      CODEX_HOME: /home/codex/.codex
+      PANDA_FORCE_HOME: /var/lib/panda-force
+      SHELL: /bin/bash
+      CODEX_WEBUI_CWD: /home/codex/workspace
+      CODEX_WEBUI_REVIEW_ROOT: /home/codex/workspace
+      CODEX_WEBUI_APP_SERVER_MODE: isolated
+      CODEX_WEBUI_AUTH_MODE: password
+      CODEX_WEBUI_PASSWORD: "${CODEX_WEBUI_PASSWORD:-}"
+      TZ: "${TZ:-UTC}"
+      NODE_ENV: production
+    volumes:
+      - ${PANDA_FORCE_HOME_HOST:-panda-force-state}:/var/lib/panda-force
+      - ${CODEX_HOME_HOST:-codex-webui-state}:/home/codex/.codex
+      - ${CODEX_WORKSPACE_HOST:-codex-webui-workspace}:/home/codex/workspace
+volumes:
+  panda-force-state:
+  codex-webui-state:
+  codex-webui-workspace:

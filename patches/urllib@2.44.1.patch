@@ -1,0 +1,17 @@
+diff --git a/lib/detect_proxy_agent.js b/lib/detect_proxy_agent.js
+index e7240dee67182bbbdb5b872ba1651bb28d07f343..b5c3a0cc437a09fef37ae538618f03697c832121 100644
+--- a/lib/detect_proxy_agent.js
++++ b/lib/detect_proxy_agent.js
+@@ -20,8 +20,10 @@ function detectProxyAgent(uri, args) {
+   var proxyAgent = proxyAgents[proxy];
+   if (!proxyAgent) {
+     debug('create new proxy %s', proxy);
+-    // lazy require, only support node >= 4
+-    proxyAgent = proxyAgents[proxy] = new (require('proxy-agent'))(proxy);
++    // Use the public modern API; keep proxy choice local to this cached agent.
++    proxyAgent = proxyAgents[proxy] = new (require('proxy-agent').ProxyAgent)({
++      getProxyForUrl: function () { return proxy; }
++    });
+   }
+   debug('get proxy: %s', proxy);
+   return proxyAgent;

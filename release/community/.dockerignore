@@ -1,0 +1,37 @@
+.git
+.claude
+.codex
+.panda-force
+config/panda-force.json
+logs
+.env
+.env.*
+node_modules
+dist
+public/app.bundle.js
+public/app.bundle.js.map
+public/file-preview.bundle.js
+public/terminal-runtime.bundle.js
+.artifacts
+coverage
+playwright-report
+test-results
+auth.json
+codex-webui-auth.json
+*.log
+**/.DS_Store
+
+# Private PandaForce project catalog and SQLite journals
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Exclude private agent and credential directories at every depth.
+**/.codex
+**/.claude
+**/.agents
+**/.aws
+**/.ssh
+**/.cursor
+**/.gemini
+**/.opencode

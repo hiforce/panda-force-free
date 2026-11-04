@@ -1,80 +1,84 @@
 # PandaForce Free
 
-**A free, MIT-licensed snapshot of PandaForce with best-effort community maintenance and no SLA commitments. Free to use, modify, and fork, including commercially.**
+A free, MIT-licensed AI workspace with best-effort community maintenance and no SLA commitments. Free to use, modify, and fork, including commercially.
 
-[License](./LICENSE) · [Upstream project](https://github.com/lezi-fun/codex-webui)
+[简体中文](./README-zh.md) · [License](./LICENSE) · [Usage](./USAGE.md) · [Security](./SECURITY.md) · [Contributing](./CONTRIBUTING.md) · [Updates](./UPDATES.md)
 
-> **Repository status:** Initial setup. This repository currently contains the license and this README; the application source snapshot has not yet been published. There is no installable release or release tag yet. The maintenance policy below applies to the free snapshot when it is published.
+## Features
 
-## About
+- Native Codex conversations, streaming responses, tool activity and model controls.
+- Named projects with unique codes and optional descriptions, independently associated with native sessions and working folders.
+- Command/file approvals, global pending-request inbox, native question forms and change review.
+- Image/file attachments, including clipboard image uploads; local storage is the default and no cloud credentials are included.
+- Workspace file browsing, source previews and an integrated terminal.
+- Browser-based administrator setup, real preparation progress, mobile layouts, English/Simplified Chinese and light/dark themes.
 
-PandaForce is a browser-based AI workspace that brings projects, conversations, CLI sessions, approvals, and workspace tools together. Its current implementation connects to the Codex app-server. Claude CLI and other execution engines are not currently integrated.
+The current execution engine is Codex app-server. Claude and other CLI engines are not integrated. Native question forms support per-question single choice and permitted free text; multiple selections in one question are not implemented. Only public reasoning summaries supplied by the engine can be displayed.
 
-PandaForce Free is intended to preserve a fixed historical version of that workspace. It is a community snapshot with best-effort maintenance, without a guaranteed update schedule or SLA.
+## Quick start
 
-The planned snapshot is based on a codebase that includes:
+Requirements: Bun **1.4.2**, Node.js **22** (validated with 22.23.4), Git, and an installed Codex CLI. The application has been validated against Codex CLI **0.166.0**; newer protocol versions can change behavior. Windows has not been fully validated.
 
-- Projects with names, unique codes, and optional descriptions; native conversations can be associated with projects independently of working folders.
-- Shared Codex CLI sessions, streaming responses, model settings, and tool activity.
-- Command and file-change approvals, native question forms, and change review.
-- Image and file attachments, including clipboard image uploads.
-- Workspace file browsing, source previews, and a terminal.
-- First-run administrator setup, workspace preparation progress, and responsive layouts with English and Simplified Chinese support.
+```bash
+git clone https://github.com/hiforce/panda-force-free.git
+cd panda-force-free
+bun install --frozen-lockfile
+npm rebuild node-pty --build-from-source
+npm install -g @openai/codex@0.166.0
+codex
+bun run start
+```
 
-The exact snapshot commit, included features, verified dependencies, and installation instructions will be recorded with the source release. This list is not a claim that runnable application files are already present in this repository.
+Sign in to Codex when prompted, then open **http://127.0.0.1:8899**. A fresh PandaForce installation asks you to create an administrator. No preset password, cloud account, private registry or configuration file is required. This administrator is separate from your model-provider account.
 
-## Free to use, including commercially
+The terminal's native module needs Python 3, Make and a C++ compiler. On Debian/Ubuntu, install `python3 build-essential`; on macOS, install the Xcode Command Line Tools. Rebuild node-pty after changing Node versions. If Conda interferes, use `npm_config_python=/usr/bin/python3 npm rebuild node-pty --build-from-source`. Use Bun to install dependencies: the tracked urllib compatibility patch is applied by Bun, not by plain `npm install`.
 
-The applicable MIT license permits use, modification, distribution, and commercial use, subject to its conditions. Retain the required copyright and license notices when redistributing the software or substantial portions of it.
+To choose a working directory:
 
-For this free snapshot:
+```bash
+CODEX_WEBUI_CWD=/absolute/path/to/workspace bun run start
+```
 
-- There is no PandaForce usage fee or project-value threshold.
-- Commercial projects may use it without purchasing PandaForce support.
-- You may fork it, modify it, and maintain your own version under the applicable license terms.
-- Your own changes or continued maintenance of a fork do not create a PandaForce fee.
-- You do not need a paid license for another PandaForce edition merely to exercise this snapshot's MIT rights.
+Prefer absolute paths. Normal folder browsing is constrained to your home directory. All admitted users share the same workspace, terminal privileges and native model account; this is not a multi-tenant isolation boundary.
 
-Third-party components and assets retain their own applicable terms. MIT does not grant rights to third-party trademarks or materials outside its scope. Original upstream notices and the applicable third-party notices must accompany the published source snapshot.
+## Docker
 
-Free software does not mean free model access, API usage, cloud storage, hosting, or other third-party services. Those may require your own accounts and incur their own charges.
+The included Dockerfile uses public, digest-pinned Bun and Node images. Compose binds to localhost and uses persistent named volumes by default:
 
-## Maintenance policy
+```bash
+docker compose up --build -d
+docker compose logs codex-webui
+```
 
-**Maintenance is best effort, with no SLA, guaranteed response time, or fix deadline.**
+On first initialization through Docker, use the installation code printed in the logs if requested. To sign in to the container's model account:
 
-The maintainer may review issues, publish updates, or accept fixes as time and priorities allow. This is not a declaration that maintenance has stopped, and it is not a promise of ongoing or scheduled maintenance.
+```bash
+docker compose exec -it codex-webui codex
+```
 
-There is no commitment to provide:
+Keep the state volumes. `docker compose down` stops the service; adding `--volumes` deletes the named state volumes. The defaults run as UID/GID 1000. When mounting host directories, prepare ownership for that user before starting. Shared host-daemon mode additionally requires matching socket permissions, user identity and identical paths; the standalone example intentionally uses isolated mode.
 
-- New features or dependency updates.
-- Compatibility fixes for future CLI, model-provider, browser, or operating-system changes.
-- Security monitoring, vulnerability fixes, or backports.
-- Issue responses, personal troubleshooting, or resolution deadlines.
-- Deployment assistance, a service-level agreement, or continuing technical support.
+## Storage, configuration and logs
 
-Others are welcome to maintain their own forks in accordance with the applicable licenses. A separately maintained fork must not imply official maintenance or endorsement by the PandaForce maintainer.
+- Source installs use `$HOME/.panda-force` for application configuration, rolling logs and project metadata. Docker uses `/var/lib/panda-force`.
+- Model account state uses `$CODEX_HOME` or `$HOME/.codex`, independently of the PandaForce administrator.
+- Local attachments default to `$CODEX_HOME/codex-webui-uploads`; set `CODEX_WEBUI_ATTACHMENT_ROOT` to choose a private persistent directory. Up to 10 files per message and 25 MiB per file are supported.
+- Application logs go to both stdout/stderr and the logs directory; defaults retain at most 10 segments of 10 MiB each.
+- Project metadata lives in `data/projects.sqlite`. Back up via SQLite's online backup facility or stop the application and copy the entire data directory, including WAL/SHM files where present.
+- `.env.example` documents optional settings. Provider/API usage, hosting and storage costs remain yours.
 
-Review the code, dependencies, and operational risks before deploying a historical version, particularly on a public network. Do not assume a reported vulnerability will receive a response or a fix.
+CLI shared mode and optional IDAAS/OSS integrations are available in the source, but are not needed for local use. Supply your own credentials privately; no maintainer credentials or bucket configuration are distributed. Never expose the terminal/workspace to untrusted users. Put remote access behind HTTPS and authentication.
 
-Any separately commissioned engineering or support work requires its own agreement. It is a service purchase, not a fee for rights already granted by this snapshot's MIT license.
+## Maintenance and free use
 
-## Installation and releases
+Maintenance is best effort. The maintainer may review reports and publish updates, but promises no SLA, release schedule, response time, security backport or fix deadline. Paid personal work, customization and time-bound support require a separate agreement; they are not prerequisites for exercising this edition's MIT rights.
 
-Application source and installation instructions are not available in this repository yet. Please do not expect a working application from cloning it at this stage.
+This edition has no PandaForce project-value usage fee, including for commercial projects. You may modify it and maintain your own forks under the applicable licenses. Commercial policies of another edition do not withdraw rights already granted for this snapshot. Models, APIs and other providers can charge separately.
 
-The source release will identify the exact snapshot commit and tag, tested tool versions, setup instructions, operational boundaries, and third-party notices. No release date or ongoing release schedule is promised.
+## Provenance and third-party rights
 
-## Origin and acknowledgements
+PandaForce derives from [lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui). Thank you to lezi-fun and the upstream contributors. The original MIT copyright and permission notice are preserved. See [LICENSE](./LICENSE) and [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
-PandaForce derives from **[lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui)**, an MIT-licensed community project. Thank you to **lezi-fun and the upstream contributors** for the foundation.
+The exported tree contains source-controlled PandaForce visuals and Lucide icons; extracted proprietary desktop images/animation data are excluded. Installed dependencies retain their own licenses. PandaForce is independent of OpenAI and Anthropic and is not endorsed by either company.
 
-PandaForce development adds its own project/session model, installation and identity flows, workspace preparation, interface and protocol improvements, deployment integration, and refactoring. These additions do not erase the original authors' copyright or applicable licenses.
-
-The original upstream copyright and MIT license text will be retained with the application source snapshot. Acknowledgements and links do not replace required license notices.
-
-PandaForce is independent of OpenAI and Anthropic and is not an official product of either company. Product names and trademarks belong to their respective owners.
-
-## License
-
-See [LICENSE](./LICENSE) for the repository's current MIT license. The software is supplied without the warranties excluded by that license. Separately licensed third-party material remains subject to its own terms.
+`SNAPSHOT.json` inventories the published files and content hashes. It contains no private Git history. This repository has its own public update history. See [UPDATES.md](./UPDATES.md) for safe subsequent changes.

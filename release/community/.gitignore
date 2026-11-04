@@ -1,0 +1,52 @@
+# Dependencies and generated bundles
+node_modules/
+/dist/
+/public/app.bundle.js
+/public/app.bundle.js.map
+/public/file-preview.bundle.js
+/public/terminal-runtime.bundle.js
+/public/auth-bootstrap.js
+/public/i18n.js
+/public/codex-brand.js
+
+# Local environment configuration (keep shareable examples)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local Codex state and credentials
+.codex/
+.panda-force/
+/config/panda-force.json
+/logs/
+/auth.json
+/codex-webui-auth.json
+
+# Test output and logs
+/.artifacts/
+/coverage/
+/test-results/
+/playwright-report/
+*.log
+
+# Local tooling and operating system files
+.claude/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Private PandaForce project catalog and SQLite journals
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Agent metadata and private tooling never belong in a source release.
+.agents/
+.aws/
+.ssh/
+.cursor/
+.gemini/
+.opencode/
