@@ -1,0 +1,155 @@
+# PandaForce shared mode. Choose one template; do not apply both.
+# Public example only; no production configuration or credentials.
+# Set spec.storageClassName on the PVC if the cluster has no default StorageClass.
+# Replace every REPLACE_WITH value and the workspace path before applying.
+# Match runAsUser, runAsGroup and fsGroup to the host Codex account.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: panda-force
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: panda-force-state
+  namespace: panda-force
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: panda-force
+  namespace: panda-force
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: panda-force
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: panda-force
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+        kubernetes.io/hostname: REPLACE_WITH_NODE_NAME
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      terminationGracePeriodSeconds: 30
+      initContainers:
+      - name: prepare-state
+        image: hiforceai/panda-force:0.0.1
+        command:
+        - bun
+        - -e
+        - 'const {mkdir} = await import("node:fs/promises"); for (const name of ["model-state",
+          "workspace", "attachments"]) await mkdir("/var/lib/panda-force/" + name,
+          {recursive: true, mode: 0o700});'
+        volumeMounts:
+        - name: state
+          mountPath: /var/lib/panda-force
+      containers:
+      - name: panda-force
+        image: hiforceai/panda-force:0.0.1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8899
+        env:
+        - name: HOST
+          value: 0.0.0.0
+        - name: PORT
+          value: '8899'
+        - name: HOME
+          value: /srv/panda-force/workspace
+        - name: CODEX_HOME
+          value: /var/lib/panda-force/model-state
+        - name: PANDA_FORCE_HOME
+          value: /var/lib/panda-force
+        - name: PANDA_FORCE_CWD
+          value: /srv/panda-force/workspace
+        - name: PANDA_FORCE_REVIEW_ROOT
+          value: /srv/panda-force/workspace
+        - name: PANDA_FORCE_ATTACHMENT_ROOT
+          value: /srv/panda-force/workspace/.panda-force-attachments
+        - name: PANDA_FORCE_APP_SERVER_MODE
+          value: shared
+        - name: PANDA_FORCE_AUTH_MODE
+          value: password
+        - name: PANDA_FORCE_LOG_MAX_BYTES
+          value: '10485760'
+        - name: PANDA_FORCE_LOG_MAX_FILES
+          value: '10'
+        - name: PANDA_FORCE_APP_SERVER_SOCKET
+          value: /run/panda-force/codex-control/REPLACE_WITH_SOCKET_FILENAME
+        volumeMounts:
+        - name: state
+          mountPath: /var/lib/panda-force
+        - name: host-workspace
+          mountPath: /srv/panda-force/workspace
+        - name: host-control
+          mountPath: /run/panda-force/codex-control
+          readOnly: true
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: '2'
+            memory: 2Gi
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: http
+          periodSeconds: 5
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: state
+        persistentVolumeClaim:
+          claimName: panda-force-state
+      - name: host-workspace
+        hostPath:
+          path: /srv/panda-force/workspace
+          type: Directory
+      - name: host-control
+        hostPath:
+          path: /REPLACE_WITH_ACTUAL_SOCKET_DIRECTORY
+          type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: panda-force
+  namespace: panda-force
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: panda-force
+  ports:
+  - name: http
+    port: 8899
+    targetPort: http

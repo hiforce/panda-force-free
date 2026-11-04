@@ -8,6 +8,8 @@
 
 [English](./README.md) · [帮助文档](./panda-docs/docs/overview.md)
 
+![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en.png)
+
 ## 快速开始
 
 需要 Linux amd64、Docker Compose 和 Git。镜像已包含 Codex CLI，无需在宿主机安装 Codex，也无需挂载宿主机认证文件。默认由 PandaForce 在容器内启动自己的 Codex 服务（**isolated 模式**）。
@@ -37,6 +39,8 @@ docker compose restart panda-force
 PandaForce 仍然运行在容器里，也可以把任务交给机器上已有的 Codex 服务执行（**shared 模式**），复用该服务的登录状态。这时不会在容器内另起 Codex 服务，也不用在容器内重新登录。需要挂载服务 socket 与工作目录；仅挂载认证文件无法共享会话。具体操作见 [Linux 宿主机接入指南](./panda-docs/docs/installation.md#use-codex-already-installed-on-the-host)。
 
 远程访问和源码构建见 [安装指南](./panda-docs/docs/installation.md)，备份见 [存储指南](./panda-docs/docs/storage.md)。
+
+K8s 部署可下载 [两种方式的 YAML 模板](./panda-docs/docs/kubernetes.md)，按指南填写自己的节点和目录配置。
 
 ## 许可证
 

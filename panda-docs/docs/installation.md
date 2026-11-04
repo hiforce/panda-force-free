@@ -90,6 +90,8 @@ For remote browser access, use an SSH tunnel to the localhost port or a separate
 
 ## Connecting from Kubernetes
 
+See [Kubernetes deployment](./kubernetes.md) for downloadable YAML templates for both arrangements, configuration steps and storage requirements.
+
 A Kubernetes Pod cannot automatically see a node's files or Unix sockets. To connect to Codex on that node, its deployment must:
 
 - Run on the node where the existing Codex service runs, using a node selector or required node affinity.

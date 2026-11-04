@@ -41,14 +41,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 2310,
-      "sha256": "6c89861b7d0dc5cbde7771913fc4e8260adb80e3bc81a101c85fbc3bf4c63b82",
+      "bytes": 2560,
+      "sha256": "7f3a7e49a117d6826fca9ea2e748ea8f6dfcad2c2fa13b38f37a1d56d8d796d2",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 2530,
-      "sha256": "1ad70a72d0bef6361399339d373eaed342ac1587893e7a41d764bec71f055e44",
+      "bytes": 2746,
+      "sha256": "395ef11eec260abfea09b6c5edf20bb075d16c7f309512635c8774c55c07f705",
       "mode": "100644"
     },
     {
@@ -107,8 +107,14 @@
     },
     {
       "path": "panda-docs/docs/installation.md",
-      "bytes": 8426,
-      "sha256": "1d129108796ba99a3aa1505efd03a9032e6ec37008a1409ecc8c1548b32767da",
+      "bytes": 8573,
+      "sha256": "8cf51f80a5dfe1c344d211182cd9d53a13ef166ad71e1561c20829aa00e6052c",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/docs/kubernetes.md",
+      "bytes": 9272,
+      "sha256": "ab3228b35a0f52e80f5201ca6bab096879eeb09d5df7f8d0e7c7b200399783c4",
       "mode": "100644"
     },
     {
@@ -167,14 +173,32 @@
     },
     {
       "path": "panda-docs/sidebars.js",
-      "bytes": 322,
-      "sha256": "4960621b4cfef964ecb3864dd74ada50f6cd16ab3be14ce412e794261bdc6031",
+      "bytes": 336,
+      "sha256": "2944db0fa8784ab89c93939783ad570d73fa9fa9f892c8ef03e95f104af60cfb",
       "mode": "100644"
     },
     {
       "path": "panda-docs/src/css/custom.css",
       "bytes": 568,
       "sha256": "50b39bc4bff2ab82a5a9437014032248d4a1af45cc089594363dceee6db56f8c",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/downloads/kubernetes/panda-force-isolated.yaml",
+      "bytes": 3601,
+      "sha256": "afdefe597be79632be97400f97a3318b5199afcfface9d9ceca045ea7b23f4dd",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/downloads/kubernetes/panda-force-shared.yaml",
+      "bytes": 4352,
+      "sha256": "03577d30aaf2c1d2ce3a4ae2e8a5525e604e40b2f66f82b122ee01ce5e55e4f3",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/panda-force-workspace-en.png",
+      "bytes": 96347,
+      "sha256": "7125b3342346974088ed6b97843f990a0d1e694b71fe6a7e9606290ccde9e82d",
       "mode": "100644"
     },
     {
@@ -263,14 +287,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 2310,
-      "sha256": "6c89861b7d0dc5cbde7771913fc4e8260adb80e3bc81a101c85fbc3bf4c63b82",
+      "bytes": 2560,
+      "sha256": "7f3a7e49a117d6826fca9ea2e748ea8f6dfcad2c2fa13b38f37a1d56d8d796d2",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 2530,
-      "sha256": "1ad70a72d0bef6361399339d373eaed342ac1587893e7a41d764bec71f055e44",
+      "bytes": 2746,
+      "sha256": "395ef11eec260abfea09b6c5edf20bb075d16c7f309512635c8774c55c07f705",
       "mode": "100644"
     },
     {
@@ -293,8 +317,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 10340,
-      "sha256": "67e0c18c4f56a7ed9889c993f46ab066340cf161539d91a595a6d6540b4f7eaf",
+      "bytes": 10569,
+      "sha256": "6e357c4b8a4641d316734d5fc1b6caefbf2780885086f782c138f01a8df30bf1",
       "mode": "100644"
     },
     {
@@ -1786,5 +1810,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "6250191be03d15ba37d5b8890639aa2415fc2a2eff38dbc3fbf45d1be441a233"
+  "contentSha256": "044a9733be4b7b07bdd12fa4384dd2ecd03b13a4ae44da29543e625e5b4b8365"
 }

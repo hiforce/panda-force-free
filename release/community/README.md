@@ -8,6 +8,8 @@ A workspace for natural-language work, powered by Codex today, with other CLI en
 
 [简体中文](./README-zh.md) · [Help](./panda-docs/docs/overview.md)
 
+![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en.png)
+
 ## Quick start
 
 Requires Docker with Compose and Git on Linux amd64. The published image includes Codex CLI; no host Codex installation or host authentication files are required. By default, PandaForce starts its own Codex service inside the container (**isolated mode**).
@@ -37,6 +39,8 @@ The default image is **`hiforceai/panda-force:0.0.1`**. State, model credentials
 PandaForce can stay in its container and send tasks to Codex already running on your machine (**shared mode**), reusing that service's login. PandaForce does not start a separate Codex service in the container in this mode. Mount the service socket and workspace; mounting authentication files alone does not share sessions. Follow the [Linux host setup](./panda-docs/docs/installation.md#use-codex-already-installed-on-the-host).
 
 See the [installation guide](./panda-docs/docs/installation.md) for remote access and source builds, and [storage guide](./panda-docs/docs/storage.md) for backups.
+
+Download [Kubernetes deployment templates](./panda-docs/docs/kubernetes.md) for either arrangement.
 
 ## License
 
