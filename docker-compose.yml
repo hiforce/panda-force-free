@@ -26,8 +26,8 @@ services:
       - ${PANDA_FORCE_WORKSPACE_HOST:-${CODEX_WORKSPACE_HOST:-panda-force-workspace}}:/home/codex/workspace
 volumes:
   panda-force-state:
-    name: ${PANDA_FORCE_STATE_VOLUME_NAME:-}
+    name: ${PANDA_FORCE_STATE_VOLUME_NAME:-${COMPOSE_PROJECT_NAME:-panda-force}_panda-force-state}
   panda-force-model-state:
-    name: ${PANDA_FORCE_MODEL_VOLUME_NAME:-}
+    name: ${PANDA_FORCE_MODEL_VOLUME_NAME:-${COMPOSE_PROJECT_NAME:-panda-force}_panda-force-model-state}
   panda-force-workspace:
-    name: ${PANDA_FORCE_WORKSPACE_VOLUME_NAME:-}
+    name: ${PANDA_FORCE_WORKSPACE_VOLUME_NAME:-${COMPOSE_PROJECT_NAME:-panda-force}_panda-force-workspace}
