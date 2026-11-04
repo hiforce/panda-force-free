@@ -321,11 +321,10 @@ browserDispatch.after(({ method, params, result }) => {
   }
 });
 browserDispatch.after(({ method, params, result }) => threadHub.recordReviewDiffsFromRpc(method, params, result));
-// Resuming a multi-GB CLI thread also scans its journal. Its persisted
-// native item pages remain available for progress polling without a resume.
+// Metadata-only rejoin subscribes an already-loaded thread to live approvals,
+// including when its history is served through bounded native item pages.
 browserDispatch.after(async ({ method, result }) => {
-  if (["host/thread/history", "thread/read"].includes(method) && !result?.history?.nativePages)
-    await threadHub.subscribeSharedThread(result?.thread);
+  if (["host/thread/history", "thread/read"].includes(method)) await threadHub.subscribeSharedThread(result?.thread);
 });
 browserDispatch.after(({ method, params, result }) => {
   if (["host/thread/history", "thread/read"].includes(method)) goalStore.emit(result?.thread?.id || params.threadId);

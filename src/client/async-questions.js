@@ -46,6 +46,7 @@ export function readAsyncQuestions(item) {
 
 export function closeEarlierAsyncQuestions(root, t) {
   for (const card of root.querySelectorAll("[data-async-question-card]")) {
+    if (["submitting", "unconfirmed", "submitted"].includes(card.dataset.status)) continue;
     card.open = false;
     card.dataset.status = "earlier";
     card.querySelector("summary").textContent = t("Earlier question");
@@ -57,7 +58,7 @@ export function closeEarlierAsyncQuestions(root, t) {
   }
 }
 
-export function createAsyncQuestionCard(item, questions, { t, prepareAnswer }) {
+export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
   const details = document.createElement("details");
   details.dataset.asyncQuestionCard = "";
   details.dataset.itemId = String(item.id);
@@ -68,24 +69,37 @@ export function createAsyncQuestionCard(item, questions, { t, prepareAnswer }) {
   summary.textContent = t("Question for you");
   const hint = document.createElement("p");
   hint.className = "async-question-hint";
-  hint.textContent = t("Choose or write an answer, add it to your message, then send it in the conversation.");
+  hint.textContent = t("Choose or write your answers, then submit them directly to the conversation.");
   const form = createUserInputCard(
     { id: item.id, params: { questions } },
     {
       t,
-      submitLabel: "Add answer to message",
+      submitLabel: "Submit answer",
       headingLabel: "Choose an answer",
       respond: async (_id, result) => {
         const text = questions
           .map((question) => question.question + "\n" + result.answers[question.id].answers.join("\n"))
           .join("\n\n");
-        await prepareAnswer(text);
+        details.dataset.status = "submitting";
+        try {
+          const result = await sendAnswer(text);
+          if (result?.deliveryUncertain) details.dataset.status = "unconfirmed";
+        } catch (error) {
+          details.dataset.status = "open";
+          throw error;
+        }
       },
       onResolved: () => {
         details.open = false;
-        details.dataset.status = "prepared";
-        summary.textContent = t("Answer added to message");
-        hint.textContent = t("Send the message to deliver your answer.");
+        const uncertain = details.dataset.status === "unconfirmed";
+        details.dataset.status = uncertain ? "unconfirmed" : "submitted";
+        summary.textContent = t(uncertain ? "Delivery unconfirmed" : "Answer submitted");
+        hint.textContent = t(
+          uncertain
+            ? "Check the message delivery status before sending again."
+            : "Your answer has been sent to the conversation.",
+        );
+        form.querySelector("[type=submit]").hidden = true;
       },
       onError: () => {},
     },

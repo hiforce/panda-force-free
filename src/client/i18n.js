@@ -4,13 +4,21 @@ export const LOCALE_PREFERENCES = Object.freeze(["system", "zh-CN", "en"]);
 const ZH_CN = Object.create(null);
 
 Object.assign(ZH_CN, {
+  "Answer submitted": "回答已提交",
+  "Your answer has been sent to the conversation.": "回答已直接发送到对话。",
+  "Choose or write your answers, then submit them directly to the conversation.":
+    "选择或填写答案，点击提交即可直接发送到对话。",
+  "Check the message delivery status before sending again.": "请先检查消息发送状态，避免重复发送。",
+  "Conversation changed; reopen the question before submitting.": "会话已切换，请重新打开问题后提交。",
+  "A message is still being sent. Please wait and try again.": "消息正在发送，请稍后重试。",
   "Earlier question": "此前的提问",
   "Question for you": "需要你回答的问题",
   "Choose an answer": "选择或填写答案",
   "Add answer to message": "将回答加入消息",
   "Answer added to message": "回答已加入输入框",
   "Send the message to deliver your answer.": "发送消息后，回答才会提交。",
-  "Choose or write an answer, add it to your message, then send it in the conversation.": "选择或填写答案，加入输入框后发送，即可在对话中回答。",
+  "Choose or write an answer, add it to your message, then send it in the conversation.":
+    "选择或填写答案，加入输入框后发送，即可在对话中回答。",
   "You continued the conversation. This question is kept as history.": "你已继续对话，此提问仅作为历史记录保留。",
   "Answered {answered} of {total} questions": "已回答 {answered} / {total} 题",
   "Choose one option for this question.": "请选择一个选项。",

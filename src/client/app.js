@@ -2060,14 +2060,10 @@ function upsertItem(item, turnId, root = $("#conversation"), live = true) {
         if (group?.querySelector(".activity-item")) updateActivitySummary(group);
         else group?.remove();
       }
+      const questionThreadId = state.active?.id;
       el = createAsyncQuestionCard(item, questions, {
         t,
-        prepareAnswer: (answer) => {
-          const input = $("#prompt");
-          input.value = input.value.trim() ? input.value.trimEnd() + "\n\n" + answer : answer;
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-          input.focus();
-        },
+        sendAnswer: (answer) => submitPrompt({ preventDefault() {} }, { text: answer, threadId: questionThreadId }),
       });
       ensureTurnTimeline(turnId, root).querySelector(".turn-event-stream").append(el);
       state.items.set(item.id, el);
@@ -3776,20 +3772,25 @@ async function queuePrompt() {
     syncComposerSubmitState();
   }
 }
-async function submitPrompt(event) {
+async function submitPrompt(event, questionAnswer = null) {
   event.preventDefault();
   const submissionKey = pendingMessageOwner();
-  if (promptSubmissions.has(submissionKey)) return;
+  if (questionAnswer && (!questionAnswer.threadId || questionAnswer.threadId !== state.active?.id))
+    throw new Error(t("Conversation changed; reopen the question before submitting."));
+  if (promptSubmissions.has(submissionKey)) {
+    if (questionAnswer) throw new Error(t("A message is still being sent. Please wait and try again."));
+    return;
+  }
   closeComposerAutocomplete();
   closePermissionMenu();
   const input = $("#prompt"),
-    text = input.value.trim(),
-    attachments = [...state.composerAttachments],
+    text = questionAnswer ? questionAnswer.text.trim() : input.value.trim(),
+    attachments = questionAnswer ? [] : [...state.composerAttachments],
     content = buildComposerInput(text, attachments),
     hasContent = content.length > 0,
     turnId = activeTurnId();
   let thread = state.active;
-  const goalCommand = !attachments.length ? parseGoalCommand(text) : null;
+  const goalCommand = !questionAnswer && !attachments.length ? parseGoalCommand(text) : null;
   if (goalCommand) {
     try {
       await submitGoalCommand(thread, goalCommand);
@@ -3799,7 +3800,7 @@ async function submitPrompt(event) {
     }
     return;
   }
-  const nativeSlashCommand = !attachments.length ? parseNativeSlashCommand(text) : null;
+  const nativeSlashCommand = !questionAnswer && !attachments.length ? parseNativeSlashCommand(text) : null;
   if (nativeSlashCommand) {
     try {
       await submitNativeSlashCommand(thread, nativeSlashCommand);
@@ -3810,7 +3811,7 @@ async function submitPrompt(event) {
     }
     return;
   }
-  const localSlashCommand = !attachments.length ? parseLocalSlashCommand(text) : null;
+  const localSlashCommand = !questionAnswer && !attachments.length ? parseLocalSlashCommand(text) : null;
   if (localSlashCommand) {
     handleLocalSlashCommand(localSlashCommand);
     input.value = "";
@@ -3819,10 +3820,10 @@ async function submitPrompt(event) {
   }
   const generation = threadNavigationGeneration;
   const isCurrent = () => generation === threadNavigationGeneration && state.active?.id === thread?.id;
-  if ((!hasContent && !turnId) || !composerAttachmentsReady()) return;
+  if ((!hasContent && !turnId) || (!questionAnswer && !composerAttachmentsReady())) return;
   const submissionToken = Symbol();
   promptSubmissions.set(submissionKey, submissionToken);
-  const mentions = state.composerMentions,
+  const mentions = questionAnswer ? [] : state.composerMentions,
     model = state.selectedModel,
     productProjectId = state.newSessionProjectId,
     effort = $("#effortSelect").value;
@@ -3856,12 +3857,14 @@ async function submitPrompt(event) {
     pendingUserMessages.set(optimisticId, optimistic);
     upsertItem(optimistic, optimistic.turnId);
     composerHistory.record({ text, mentions, attachments });
-    input.value = "";
-    state.composerMentions = [];
-    state.composerAttachments = [];
-    renderComposerAttachments();
-    renderContextTray();
-    resizePrompt();
+    if (!questionAnswer) {
+      input.value = "";
+      state.composerMentions = [];
+      state.composerAttachments = [];
+      renderComposerAttachments();
+      renderContextTray();
+      resizePrompt();
+    }
     if (turnId) {
       let resumed = false;
       if (thread?.canAcceptDirectInput !== true) {
@@ -3916,10 +3919,10 @@ async function submitPrompt(event) {
       }
       sent = true;
       setPendingMessageDelivery(optimisticId, "sent");
-      clearComposerDraft(thread.id);
+      if (!questionAnswer) clearComposerDraft(thread.id);
       commitSessionModelSettings(thread.id);
       if (isCurrent()) scheduleActiveThreadSync(0);
-      return;
+      return { sent: true };
     }
     if (!thread) {
       const startingProjectless = state.projectless;
@@ -3962,13 +3965,14 @@ async function submitPrompt(event) {
     if (result?.turn?.id) optimistic.turnId = result.turn.id;
     sent = true;
     setPendingMessageDelivery(optimisticId, "sent");
-    clearComposerDraft(thread.id);
+    if (!questionAnswer) clearComposerDraft(thread.id);
     commitSessionModelSettings(thread.id);
+    return { sent: true };
   } catch (error) {
     // An echoed item is stronger evidence than a lost acknowledgement.
     if (optimisticId && !pendingUserMessages.has(optimisticId)) {
       sent = true;
-      return;
+      return { sent: true };
     }
     const uncertain =
       dispatchStarted &&
@@ -3979,7 +3983,7 @@ async function submitPrompt(event) {
     deliveryUncertain = uncertain;
     setPendingMessageDelivery(optimisticId, uncertain ? "unconfirmed" : "failed");
     if (isCurrent()) {
-      if (!uncertain && !input.value && !state.composerAttachments.length) {
+      if (!questionAnswer && !uncertain && !input.value && !state.composerAttachments.length) {
         input.value = text;
         state.composerMentions = mentions;
         state.composerAttachments = attachments;
@@ -3990,10 +3994,15 @@ async function submitPrompt(event) {
       if (!error?.silentTransportSwitch)
         addPersistentError(uncertain ? t("Delivery unconfirmed") : threadInputErrorMessage(error));
     }
+    if (questionAnswer) {
+      if (uncertain) return { deliveryUncertain: true };
+      throw error;
+    }
   } finally {
     releasePromptSubmission(submissionToken);
     if (optimisticId && !sent && !dispatchStarted) setPendingMessageDelivery(optimisticId, "failed");
     if (
+      !questionAnswer &&
       hasContent &&
       !sent &&
       !deliveryUncertain &&

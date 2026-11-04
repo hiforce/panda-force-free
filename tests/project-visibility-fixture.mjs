@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, renameSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync, renameSync, openSync, ftruncateSync, closeSync } from 'node:fs';
 import { join } from 'node:path';
 import { createServer } from 'node:net';
 
@@ -11,7 +11,7 @@ export async function waitFor(check) {
   throw new Error('Project visibility fixture timed out');
 }
 
-export async function createProjectVisibilityFixture({ freshAdministrator = false, historySessions = 0, questionnaireRollout = false } = {}) {
+export async function createProjectVisibilityFixture({ freshAdministrator = false, historySessions = 0, questionnaireRollout = false, sharedApprovals = false } = {}) {
   // Keep the project inside the application's existing folder-browsing boundary.
   const artifacts = new URL('../.artifacts/', import.meta.url).pathname;
   mkdirSync(artifacts, { recursive: true });
@@ -23,6 +23,13 @@ export async function createProjectVisibilityFixture({ freshAdministrator = fals
     { id: 'old-beta', name: 'Old beta session', cwd: beta, status: { type: 'idle' }, createdAt: 1, updatedAt: 2, turns: [], canAcceptDirectInput: true },
     { id: 'tasks', name: 'Task without a project', projectless: true, status: { type: 'idle' }, turns: [] },
   ];
+  if (sharedApprovals) {
+    const sessions = join(dir, 'sessions');mkdirSync(sessions);
+    const path = join(sessions, 'large-approval.jsonl');
+    const fd=openSync(path,'w');ftruncateSync(fd,9*1024*1024);closeSync(fd);
+    initial[0].path=path;
+    initial[0].turns=[{id:'shared-approval-turn',status:'inProgress',items:[{id:'approval-context',type:'agentMessage',text:'Waiting for command approval.'}]}];
+  }
   if (questionnaireRollout) {
     const sessions = join(dir, 'sessions');
     mkdirSync(sessions);
@@ -44,13 +51,16 @@ export async function createProjectVisibilityFixture({ freshAdministrator = fals
   const serverRequest = join(dir, 'server-request.json');
   writeFileSync(join(dir, 'codex'), `#!${process.execPath}
 import { createInterface } from 'node:readline';
+import { createServer } from 'node:http';
+import { WebSocketServer } from 'ws';
 import { appendFileSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 let count=0;
 const threads=${JSON.stringify(initial)};
 const queues=new Map();
-const send=value=>process.stdout.write(JSON.stringify(value)+'\\n');
+let sharedSocket;
+const send=value=>sharedSocket?sharedSocket.send(JSON.stringify(value)):process.stdout.write(JSON.stringify(value)+'\\n');
 setInterval(()=>{if(existsSync(${JSON.stringify(serverRequest)})){const request=JSON.parse(readFileSync(${JSON.stringify(serverRequest)},'utf8'));unlinkSync(${JSON.stringify(serverRequest)});send(request)}},50).unref();
-createInterface({input:process.stdin}).on('line',line=>{
+const handleLine=line=>{
   const m=JSON.parse(line),p=m.params||{};
   if(!m.method&&('result' in m||'error' in m)){appendFileSync(${JSON.stringify(trace)},JSON.stringify({type:'response',...m})+'\\n');return}
   if(!m.method||m.id===undefined)return;
@@ -67,7 +77,10 @@ createInterface({input:process.stdin}).on('line',line=>{
     threads.unshift(thread);send({method:'thread/started',params:{thread}});result={thread};
   }else if(m.method==='thread/read'||m.method==='thread/resume'){
     const thread=threads.find(t=>t.id===p.threadId);result={thread};
-    if(m.method==='thread/resume')send({method:'thread/started',params:{thread}});
+    if(m.method==='thread/resume'){
+      send({method:'thread/started',params:{thread}});
+      if(${sharedApprovals})send({id:'shared-approval',method:'item/commandExecution/requestApproval',params:{threadId:thread.id,turnId:'shared-approval-turn',itemId:'shared-command',command:'printf approval-check',cwd:${JSON.stringify(alpha)},availableDecisions:['accept','decline','acceptForSession']}});
+    }
   }else if(m.method==='turn/start'){
     result={turn:{id:'turn-'+(++count),status:'completed',items:[]}};
     send({method:'thread/status/changed',params:{threadId:p.threadId,status:{type:'idle'}}});
@@ -75,10 +88,14 @@ createInterface({input:process.stdin}).on('line',line=>{
     const queuedSubmission={id:'queue-'+(++count),clientUserMessageId:p.clientUserMessageId,input:p.input};
     queues.set(p.threadId,[queuedSubmission]);result={queuedSubmission};
   }else if(m.method==='thread/queue/list')result={data:queues.get(p.threadId)||[]};
-  else if(m.method==='thread/turns/list'||m.method==='permissionProfile/list')result={data:[]};
+  else if(m.method==='thread/turns/list')result={data:threads.find(thread=>thread.id===p.threadId)?.turns||[]};
+  else if(m.method==='thread/items/list'){const records=(threads.find(thread=>thread.id===p.threadId)?.turns||[]).flatMap(turn=>turn.items.map(item=>({turnId:turn.id,item}))).reverse();const cursor=Number(p.cursor)||0;result={data:records.slice(cursor,cursor+1),nextCursor:cursor+1<records.length?String(cursor+1):null}}
+  else if(m.method==='permissionProfile/list')result={data:[]};
   else if(m.method==='host/thread/live')result={active:false,turn:null};
   send({id:m.id,result});
-});
+};
+if(${sharedApprovals}){const server=createServer();const wss=new WebSocketServer({server});wss.on('connection',socket=>{sharedSocket=socket;socket.on('message',raw=>handleLine(String(raw)))});server.listen(${JSON.stringify(join(dir,'daemon.sock'))});}
+else createInterface({input:process.stdin}).on('line',handleLine);
 `, { mode: 0o700 });
   const port = await new Promise(resolve => {
     const probe = createServer();
@@ -86,7 +103,7 @@ createInterface({input:process.stdin}).on('line',line=>{
   });
   const base = `http://127.0.0.1:${port}`;
   const headers = { authorization: `Basic ${Buffer.from('codex:visibility-test').toString('base64')}` };
-  let proc;
+  let proc, daemon;
   let serverLogs = "";
   const fixture = {
     dir, alpha, beta, base, headers,
@@ -101,9 +118,10 @@ createInterface({input:process.stdin}).on('line',line=>{
       }
     },
     async start() {
+      if(sharedApprovals&&!daemon){daemon=Bun.spawn([join(dir,'codex')],{cwd:dir,stdout:'ignore',stderr:'pipe'});await waitFor(()=>existsSync(join(dir,'daemon.sock')));}
       proc = Bun.spawn(['bun', 'run', 'src/server/main.ts'], {
         cwd: new URL('..', import.meta.url).pathname,
-        env: { ...process.env, NODE_ENV: 'production', HOME: new URL('..', import.meta.url).pathname, PANDA_FORCE_HOME: join(dir, 'panda-state'), BUN_RUNTIME_TRANSPILER_CACHE_PATH: '0', PATH: `${dir}:${process.env.PATH}`, CODEX_HOME: dir, PANDA_FORCE_CWD: alpha, PANDA_FORCE_PROJECTLESS: 'false', HOST: '127.0.0.1', PORT: String(port), PANDA_FORCE_PASSWORD: '', PANDA_FORCE_ACCESS_TOKEN: freshAdministrator ? '' : 'visibility-test' },
+        env: { ...process.env, PANDA_FORCE_APP_SERVER_MODE: sharedApprovals?'shared':'isolated', ...(sharedApprovals?{PANDA_FORCE_APP_SERVER_SOCKET:join(dir,'daemon.sock')}:{}), NODE_ENV: 'production', HOME: new URL('..', import.meta.url).pathname, PANDA_FORCE_HOME: join(dir, 'panda-state'), BUN_RUNTIME_TRANSPILER_CACHE_PATH: '0', PATH: `${dir}:${process.env.PATH}`, CODEX_HOME: dir, PANDA_FORCE_CWD: alpha, PANDA_FORCE_PROJECTLESS: 'false', HOST: '127.0.0.1', PORT: String(port), PANDA_FORCE_PASSWORD: '', PANDA_FORCE_ACCESS_TOKEN: freshAdministrator ? '' : 'visibility-test' },
         stdout: 'ignore', stderr: 'pipe',
       });
       serverLogs = "";
@@ -115,7 +133,7 @@ createInterface({input:process.stdin}).on('line',line=>{
       } catch (error) { if (proc.exitCode !== null) throw error; return false; } }).catch(error => { throw new Error(`${error.message}\n${serverLogs}`); });
     },
     async stop() { if (proc) { proc.kill(); await proc.exited; proc = null; } },
-    async dispose() { await fixture.stop(); rmSync(dir, { recursive: true, force: true }); },
+    async dispose() { await fixture.stop(); if(daemon){daemon.kill();await daemon.exited;} rmSync(dir, { recursive: true, force: true }); },
     async visibility(body) {
       const response = await fetch(`${base}/api/projects/visibility`, body ? { method: 'POST', headers: { ...headers, 'content-type': 'application/json' }, body: JSON.stringify(body) } : { headers });
       if (!response.ok) throw new Error(await response.text());

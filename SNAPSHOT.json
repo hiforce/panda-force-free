@@ -77,8 +77,8 @@
     },
     {
       "path": "package.json",
-      "bytes": 5300,
-      "sha256": "dd81eaa98573c8764ef4785ac6245b103756becbf63cbf414cd01d11f1b19397",
+      "bytes": 5375,
+      "sha256": "bafce4d19f8b6bc5309b2d433684bea50d507a6bd9faf6edc92a5b5d90e85415",
       "mode": "100644"
     },
     {
@@ -125,8 +125,8 @@
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 1592,
-      "sha256": "f1ba0f2139c2cab3016967cbc5593f21617e26ab520ae60522c040c3a0d61e08",
+      "bytes": 2129,
+      "sha256": "e84412b60651e7e99c8007faec61c884d6c5d993af475f2bd1c1451f3202059f",
       "mode": "100644"
     },
     {
@@ -329,8 +329,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 10777,
-      "sha256": "98a6242e393a061117491e6620787fd026f27a88106dfd4c43089e5805ead941",
+      "bytes": 10813,
+      "sha256": "c6c65a2a80cbff0049c990f2bbb0c8483d4d24d1dc600bf53dfe22f43d304978",
       "mode": "100644"
     },
     {
@@ -395,8 +395,8 @@
     },
     {
       "path": "src/client/app.js",
-      "bytes": 210476,
-      "sha256": "a84b3363ee9ec244593ca6bec527af5e39861451dd2a0a5e98d4c4665285afa0",
+      "bytes": 211156,
+      "sha256": "5ef90291994fdd54ed7244a1269deb85bd97011bf09562905b88e4376c396131",
       "mode": "100644"
     },
     {
@@ -407,8 +407,8 @@
     },
     {
       "path": "src/client/async-questions.js",
-      "bytes": 3544,
-      "sha256": "8309c00364225eb2a153c71f08a0338eb19ae4b00172413f8e395b1bec2a853c",
+      "bytes": 4184,
+      "sha256": "9a5ec9cb484a43257e079922123be8b0c4d4f84b826696f92e9ecda24fb0cb55",
       "mode": "100644"
     },
     {
@@ -479,8 +479,8 @@
     },
     {
       "path": "src/client/i18n.js",
-      "bytes": 46214,
-      "sha256": "e512f446fada0deb5d65e1bf0e7ab098bfe8f7993a903a0205a19e64fa21618e",
+      "bytes": 46850,
+      "sha256": "f58ec6672b1d40659661ecd5ebdd4d2a5fd4ee882d1cfeb5a16dfbece382b4b5",
       "mode": "100644"
     },
     {
@@ -797,8 +797,8 @@
     },
     {
       "path": "src/server/main.ts",
-      "bytes": 42228,
-      "sha256": "d9bc498a56222faa448e06d8d2760268a00b41b3ef794e1a1c1bd1ae00b9a1e2",
+      "bytes": 42196,
+      "sha256": "128ae4246b38a66575db1289af0db3e20e0278b96bf32ac42050138e1ab866c7",
       "mode": "100644"
     },
     {
@@ -1061,14 +1061,14 @@
     },
     {
       "path": "tests/async-questions.e2e.mjs",
-      "bytes": 3646,
-      "sha256": "1689623733bd8e7e4027fb08daa71e8f9d96d28ae935f36b8014038e1a3cb6f5",
+      "bytes": 5956,
+      "sha256": "c86d77d250800ad3a98ac4098ba9dfd510e959a2b41379ea20b9324c52c71e5c",
       "mode": "100644"
     },
     {
       "path": "tests/async-questions.test.ts",
-      "bytes": 3359,
-      "sha256": "673623078b145ac7eebf97efcddd1f886f6ade4972f241108d46fdd584c4475e",
+      "bytes": 4257,
+      "sha256": "5e476c30f75b21fa93ba3c910598de5692c86bc808671f99ff90e9dbf2a4bf7c",
       "mode": "100644"
     },
     {
@@ -1559,8 +1559,8 @@
     },
     {
       "path": "tests/project-visibility-fixture.mjs",
-      "bytes": 9061,
-      "sha256": "edaf3fc5e7e87c74f6877ff2b8014e9edf3e3a4b56a140eccfccb7dc8472f812",
+      "bytes": 11080,
+      "sha256": "fc44823c49d1333d343ff99d3ef0c094355b767f7d8d1d27fad113a66cfe6124",
       "mode": "100644"
     },
     {
@@ -1702,6 +1702,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/shared-approvals.e2e.mjs",
+      "bytes": 2198,
+      "sha256": "3083f7e21bc243a29b55822dafb53befa986978e4fbab667e2df893eb36a63ba",
+      "mode": "100644"
+    },
+    {
       "path": "tests/shared-input-service.test.ts",
       "bytes": 2483,
       "sha256": "9bebad49d1192c08d52888c1b7d6e5775bb030d259243b92745e2c60d2e99ecf",
@@ -1840,5 +1846,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "bd01897c8e196351036a41c680f9c6c4330638bd4ef1d5079d5828c215fd4a52"
+  "contentSha256": "99907e8b75392c87e8052a9a5d99ab2525ddd6951b5ae5f8333651d8104e45fc"
 }
