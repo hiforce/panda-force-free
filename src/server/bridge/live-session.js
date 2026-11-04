@@ -207,6 +207,20 @@ export function applyRolloutEvent(state, event) {
     upsertItem(state, reasoning);
     return state;
   }
+  // Host rollouts use function calls for questionnaires, even when native thread reads omit them.
+  if (
+    payload.type === "function_call" &&
+    /(?:^|[./_])request_user_input(?:_async)?$/.test(payload.name || "")
+  ) {
+    upsertItem(state, {
+      id: payload.id || payload.call_id,
+      type: "dynamicToolCall",
+      tool: payload.name,
+      arguments: payload.arguments,
+      status: "completed",
+    });
+    return state;
+  }
   if (payload.type === "custom_tool_call") {
     const command = commandFromToolInput(payload.input);
     if (command) {

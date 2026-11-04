@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {createProjectVisibilityFixture} from './project-visibility-fixture.mjs';
+import {parseRollout} from '../src/server/bridge/live-session.js';
 const fixture=await createProjectVisibilityFixture();
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
@@ -10,7 +11,12 @@ try{
  await page.goto(fixture.base+'/task/old-alpha');
  await page.locator('#workspacePreparation').waitFor({state:'hidden'});
  await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.active?.id==='old-alpha');
- const item={id:'async-question-1',type:'dynamicToolCall',tool:'functions.request_user_input_async',status:'completed',arguments:{questions:[{title:'Which repository?',options:['Public free repository','Private source repository']},{title:'What should change?'}]}};
+ const rollout=[
+  {type:'event_msg',payload:{type:'task_started',turn_id:'questions'}},
+  {type:'response_item',payload:{id:'async-question-1',type:'function_call',name:'request_user_input_async',call_id:'question-call',arguments:JSON.stringify({questions:[{title:'Which repository?',options:['Public free repository','Private source repository']},{title:'What should change?'}]})}}
+ ].map(event=>JSON.stringify(event)).join('\n');
+ const item=parseRollout(rollout).turn.items[0];
+ assert.ok(item,'Host rollout must retain the questionnaire before the browser receives it');
  await page.evaluate(item=>globalThis.__pandaForceDebug.notify('item/completed',{threadId:'old-alpha',turnId:'questions',item}),item);
  const card=page.locator('[data-async-question-card]');await card.waitFor();
  assert.equal(await card.locator('fieldset').count(),2);
