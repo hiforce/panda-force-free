@@ -1,6 +1,6 @@
 # PandaForce Free
 
-**An unmaintained, MIT-licensed snapshot of PandaForce. Free to use, modify, and fork, including for commercial use.**
+**A free, MIT-licensed snapshot of PandaForce with best-effort community maintenance and no SLA commitments. Free to use, modify, and fork, including commercially.**
 
 [License](./LICENSE) · [Upstream project](https://github.com/lezi-fun/codex-webui)
 
@@ -10,7 +10,7 @@
 
 PandaForce is a browser-based AI workspace that brings projects, conversations, CLI sessions, approvals, and workspace tools together. Its current implementation connects to the Codex app-server. Claude CLI and other execution engines are not currently integrated.
 
-PandaForce Free is intended to preserve a fixed historical version of that workspace. It is a community snapshot rather than a continuously maintained product release.
+PandaForce Free is intended to preserve a fixed historical version of that workspace. It is a community snapshot with best-effort maintenance, without a guaranteed update schedule or SLA.
 
 The planned snapshot is based on a codebase that includes:
 
@@ -41,7 +41,9 @@ Free software does not mean free model access, API usage, cloud storage, hosting
 
 ## Maintenance policy
 
-**The original maintainer will not maintain this free edition.**
+**Maintenance is best effort, with no SLA, guaranteed response time, or fix deadline.**
+
+The maintainer may review issues, publish updates, or accept fixes as time and priorities allow. This is not a declaration that maintenance has stopped, and it is not a promise of ongoing or scheduled maintenance.
 
 There is no commitment to provide:
 
@@ -51,7 +53,7 @@ There is no commitment to provide:
 - Issue responses, personal troubleshooting, or resolution deadlines.
 - Deployment assistance, a service-level agreement, or continuing technical support.
 
-Others are welcome to maintain their own forks in accordance with the applicable licenses. A community-maintained fork must not imply that the original PandaForce maintainer maintains or endorses it.
+Others are welcome to maintain their own forks in accordance with the applicable licenses. A separately maintained fork must not imply official maintenance or endorsement by the PandaForce maintainer.
 
 Review the code, dependencies, and operational risks before deploying a historical version, particularly on a public network. Do not assume a reported vulnerability will receive a response or a fix.
 
