@@ -42,13 +42,13 @@
     {
       "path": "README-zh.md",
       "bytes": 3571,
-      "sha256": "be576d40719a73045711f78b6925fd815e31fbc136876f51185b14999970f320",
+      "sha256": "5f143364daa9b9adc64363d1315b32aec292157ce17d0890029341fcf8d146c5",
       "mode": "100644"
     },
     {
       "path": "README.md",
       "bytes": 3877,
-      "sha256": "e4abcccc9242604982410ccda6a48404c3c67f47907efe15228a008c05cc1651",
+      "sha256": "cff1d37835c43c60170b548963e3540e86c924483fc7a2502b10094654b74d50",
       "mode": "100644"
     },
     {
@@ -72,13 +72,13 @@
     {
       "path": "docker-compose.yml",
       "bytes": 1473,
-      "sha256": "c16d4f829fff876fc14aa7dc27d02ba6b8de8b443deb5d96bdfe337129a15a43",
+      "sha256": "fcf383c523d87728b817a389f582dc24262b3c1297dc80a34c785cf0f6a45f3d",
       "mode": "100644"
     },
     {
       "path": "package.json",
       "bytes": 5411,
-      "sha256": "ab7b8e13bd495c59cf584016c4b73944c2612c4f14f7cae47da934449393584f",
+      "sha256": "1b603dd88ddaa54aca37e9b9337f72988d0d32d0183a37b75135606826b0e394",
       "mode": "100644"
     },
     {
@@ -108,13 +108,13 @@
     {
       "path": "panda-docs/docs/installation.md",
       "bytes": 8575,
-      "sha256": "3c5454e547211a2df1bdfc258703ffc65544479a276f3a49cf7ef3d16ec3c30c",
+      "sha256": "4a2dc0cd7c932520db448d8db91d1a69ec78a96516654bc9b8924adc10216ae4",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/kubernetes.md",
       "bytes": 9272,
-      "sha256": "5d936df042d448bd00dc9ba2e5a967cb251cfe6bffbee9425a5ea48d751303ce",
+      "sha256": "e7e00d14363ee93de82e3239ff673e8b5ceada766b4b0508cdee6d059901315b",
       "mode": "100644"
     },
     {
@@ -125,8 +125,8 @@
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 2689,
-      "sha256": "1989aadd9d6ba76840ad7a4bd8fcd717215d15ba5cb456802c6bf04b11ccf54d",
+      "bytes": 2684,
+      "sha256": "7e9b971e552541b2a3dcb4fc207f2cc4e4c0ddd742ffd588e1a39e935f4e8914",
       "mode": "100644"
     },
     {
@@ -138,7 +138,7 @@
     {
       "path": "panda-docs/docs/storage.md",
       "bytes": 1565,
-      "sha256": "769387ed62f70f9371e15e47f123a325d32cb2949838a7ac45a50e83d8c4a642",
+      "sha256": "1da4a419ae52e27cad343d0d089c44a3a2d6273a2345015ac617da029e6e00b7",
       "mode": "100644"
     },
     {
@@ -186,13 +186,13 @@
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-isolated.yaml",
       "bytes": 3601,
-      "sha256": "115ba9b13ae7a63fb64992015f585750cc9fc9380888119b9fcbd9c17afe4753",
+      "sha256": "fdb4810f5eb8b9f0f74e67d256a349efbf8f0f7b8be4f70b72e50411b63da132",
       "mode": "100644"
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-shared.yaml",
       "bytes": 4352,
-      "sha256": "5bab8257a5e583146110688237e692854f10485b5b2b29d5ba098e3e59cb6038",
+      "sha256": "21f7284e345e5e9bf2827fad5a325436ab8194fbff3717ea4b464542af655d1c",
       "mode": "100644"
     },
     {
@@ -300,13 +300,13 @@
     {
       "path": "release/community/README-zh.md",
       "bytes": 3571,
-      "sha256": "be576d40719a73045711f78b6925fd815e31fbc136876f51185b14999970f320",
+      "sha256": "5f143364daa9b9adc64363d1315b32aec292157ce17d0890029341fcf8d146c5",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
       "bytes": 3877,
-      "sha256": "e4abcccc9242604982410ccda6a48404c3c67f47907efe15228a008c05cc1651",
+      "sha256": "cff1d37835c43c60170b548963e3540e86c924483fc7a2502b10094654b74d50",
       "mode": "100644"
     },
     {
@@ -324,7 +324,7 @@
     {
       "path": "release/community/docker-compose.yml",
       "bytes": 1473,
-      "sha256": "c16d4f829fff876fc14aa7dc27d02ba6b8de8b443deb5d96bdfe337129a15a43",
+      "sha256": "fcf383c523d87728b817a389f582dc24262b3c1297dc80a34c785cf0f6a45f3d",
       "mode": "100644"
     },
     {
@@ -1852,5 +1852,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "44f3d98c00a5d27a0dd9c0212f8635ea8f8a1fd73d377ceb3af8efed3460f66e"
+  "contentSha256": "46d02d8d45a4a354ed3ee1283e69b93a38f89e7ef0ed319ade310d3a8ad8e722"
 }
