@@ -6,10 +6,10 @@ const results=[];
 
 for(const width of [1101,1150,1190]){
   const page=await browser.newPage({viewport:{width,height:800},colorScheme:'dark'});
-  await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug);
+  await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug);
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     api.notify('turn/diff/updated',{turnId:'responsive-turn',threadId:'responsive-thread',diff:'diff --git a/src/a.ts b/src/a.ts\n--- a/src/a.ts\n+++ b/src/a.ts\n@@ -1 +1 @@\n-old();\n+next();\n'});
     document.querySelector('#reviewMode').click();
   });
@@ -23,7 +23,7 @@ for(const width of [1101,1150,1190]){
 
 {
   const page=await browser.newPage({viewport:{width:1190,height:800},colorScheme:'dark'});
-  await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+  await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
   await page.click('#toggleSidePanel');
   await page.waitForFunction(()=>document.querySelector('.conversation-shell').inert&&document.querySelector('#sidePanel').getAttribute('aria-modal')==='true');
   const overlay=await page.evaluate(()=>({conversationInert:document.querySelector('.conversation-shell').inert,modal:document.querySelector('#sidePanel').getAttribute('aria-modal')}));

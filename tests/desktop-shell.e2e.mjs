@@ -1,22 +1,22 @@
 import { chromium } from 'playwright';
 import { launchOptions } from './browser-runtime.mjs';
 
-const base=process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899';
+const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
 const browser=await chromium.launch(launchOptions());
 const context=await browser.newContext({viewport:{width:1120,height:760},colorScheme:'dark'});
-await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('codex-webui-locale','en')});
+await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
 const page=await context.newPage();
 page.setDefaultTimeout(7000);
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 await page.goto(base,{waitUntil:'networkidle'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.renderAccount);
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.account!==null);
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.connected);
-await page.evaluate(()=>globalThis.__codexWebuiDebug.loadInitial());
+await page.waitForFunction(()=>globalThis.__pandaForceDebug?.renderAccount);
+await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.account!==null);
+await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.connected);
+await page.evaluate(()=>globalThis.__pandaForceDebug.loadInitial());
 
 await page.evaluate(()=>{
-  const api=globalThis.__codexWebuiDebug;
+  const api=globalThis.__pandaForceDebug;
   api.renderAccount({type:'chatgpt',displayName:'Desktop User',avatarUrl:null,planType:'plus',initials:'DU'});
   api.setPermissionProfiles([
     {id:':read-only',description:null,allowed:true},
@@ -65,7 +65,7 @@ const settingsSearch=await page.evaluate(()=>({
   clearVisible:!document.querySelector('#clearSettingsSearch').hidden,
 }));
 await page.click('[data-settings-page="browser-use"]');
-await page.screenshot({path:'/tmp/codex-webui-settings-shell.png'});
+await page.screenshot({path:'/tmp/panda-force-settings-shell.png'});
 await page.click('#clearSettingsSearch');
 await page.click('[data-settings-page="general-settings"]');
 const settings=await page.evaluate(()=>({
@@ -86,21 +86,21 @@ const permissionMenu=await page.evaluate(()=>({
   options:[...document.querySelectorAll('[data-permission-mode] strong')].map(node=>node.textContent.trim()),
   blockedDisabled:document.querySelector('[data-permission-mode="profile:managed-blocked"]')?.disabled,
 }));
-await page.screenshot({path:'/tmp/codex-webui-permissions-menu.png'});
+await page.screenshot({path:'/tmp/panda-force-permissions-menu.png'});
 
 await page.click('[data-permission-mode="guardian-approvals"]');
 const guardian=await page.evaluate(()=>({
-  selected:globalThis.__codexWebuiDebug.selectedPermission(),
-  thread:globalThis.__codexWebuiDebug.permissionThreadPolicy(),
-  turn:globalThis.__codexWebuiDebug.permissionTurnPolicy('/tmp/project'),
+  selected:globalThis.__pandaForceDebug.selectedPermission(),
+  thread:globalThis.__pandaForceDebug.permissionThreadPolicy(),
+  turn:globalThis.__pandaForceDebug.permissionTurnPolicy('/tmp/project'),
 }));
 
 await page.click('#modeButton');
 await page.click('[data-permission-mode="profile:team-safe"]');
 const profile=await page.evaluate(()=>({
-  selected:globalThis.__codexWebuiDebug.selectedPermission(),
-  thread:globalThis.__codexWebuiDebug.permissionThreadPolicy(),
-  turn:globalThis.__codexWebuiDebug.permissionTurnPolicy('/tmp/project'),
+  selected:globalThis.__pandaForceDebug.selectedPermission(),
+  thread:globalThis.__pandaForceDebug.permissionThreadPolicy(),
+  turn:globalThis.__pandaForceDebug.permissionTurnPolicy('/tmp/project'),
 }));
 
 await page.click('#modeButton');
@@ -110,14 +110,14 @@ const fullAccessDialog=await page.evaluate(()=>{
   const dialog=document.querySelector('#fullAccessDialog'),rect=dialog.getBoundingClientRect();
   return {modal:dialog.matches(':modal'),centerX:rect.left+rect.width/2,centerY:rect.top+rect.height/2,viewportX:innerWidth/2,viewportY:innerHeight/2};
 });
-await page.screenshot({path:'/tmp/codex-webui-full-access-dialog.png'});
+await page.screenshot({path:'/tmp/panda-force-full-access-dialog.png'});
 await page.click('#confirmFullAccess');
 const fullAccess=await page.evaluate(()=>({
   label:document.querySelector('#modeButton .control-label').textContent.trim(),
-  mode:globalThis.__codexWebuiDebug.state.permissionMode,
-  selected:globalThis.__codexWebuiDebug.selectedPermission(),
-  thread:globalThis.__codexWebuiDebug.permissionThreadPolicy(),
-  turn:globalThis.__codexWebuiDebug.permissionTurnPolicy('/tmp/project'),
+  mode:globalThis.__pandaForceDebug.state.permissionMode,
+  selected:globalThis.__pandaForceDebug.selectedPermission(),
+  thread:globalThis.__pandaForceDebug.permissionThreadPolicy(),
+  turn:globalThis.__pandaForceDebug.permissionTurnPolicy('/tmp/project'),
 }));
 
 await page.click('#accountButton');
@@ -125,21 +125,21 @@ await page.click('#accountSettings');
 await page.click('#settingsFullAccessRow .settings-switch');
 const fullAccessSettingOff=await page.evaluate(()=>({
   checked:document.querySelector('#settingsFullAccessToggle').checked,
-  mode:globalThis.__codexWebuiDebug.state.permissionMode,
-  visible:globalThis.__codexWebuiDebug.state.permissionVisibility.fullAccess,
+  mode:globalThis.__pandaForceDebug.state.permissionMode,
+  visible:globalThis.__pandaForceDebug.state.permissionVisibility.fullAccess,
 }));
 await page.click('#settingsFullAccessRow .settings-switch');
 await page.waitForFunction(()=>document.querySelector('#fullAccessDialog').open);
 await page.click('#confirmFullAccess');
 const fullAccessSettingOn=await page.evaluate(()=>({
   checked:document.querySelector('#settingsFullAccessToggle').checked,
-  mode:globalThis.__codexWebuiDebug.state.permissionMode,
-  visible:globalThis.__codexWebuiDebug.state.permissionVisibility.fullAccess,
+  mode:globalThis.__pandaForceDebug.state.permissionMode,
+  visible:globalThis.__pandaForceDebug.state.permissionVisibility.fullAccess,
 }));
 await page.click('#closeSettingsNav');
 await page.waitForFunction(()=>!document.querySelector('#settingsDialog').open&&location.pathname==='/');
 
-await page.evaluate(()=>globalThis.__codexWebuiDebug.renderAccount({type:'apiKey',displayName:'API key',avatarUrl:null,planType:null,initials:'AP'}));
+await page.evaluate(()=>globalThis.__pandaForceDebug.renderAccount({type:'apiKey',displayName:'API key',avatarUrl:null,planType:null,initials:'AP'}));
 await page.click('#accountButton');
 await page.waitForFunction(()=>document.querySelector('#settingsDialog').open);
 const apiKey=await page.evaluate(()=>({
@@ -155,10 +155,10 @@ const apiKey=await page.evaluate(()=>({
 }));
 const apiSettings=await page.evaluate(()=>({
   autoReviewHidden:document.querySelector('#settingsAutoReviewRow')?.hidden,
-  selectedMode:globalThis.__codexWebuiDebug.state.permissionMode,
+  selectedMode:globalThis.__pandaForceDebug.state.permissionMode,
 }));
 await page.setViewportSize({width:390,height:844});
-await page.screenshot({path:'/tmp/codex-webui-settings-mobile.png'});
+await page.screenshot({path:'/tmp/panda-force-settings-mobile.png'});
 const mobileSettings=await page.evaluate(()=>({
   dialog:document.querySelector('#settingsDialog').getBoundingClientRect().toJSON(),
   viewport:{width:innerWidth,height:innerHeight},

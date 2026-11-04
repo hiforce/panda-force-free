@@ -10,7 +10,7 @@ const context=await browser.newContext({
   hasTouch:true,
 });
 const page=await context.newPage();
-await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
 const before=await page.evaluate(()=>({
   innerWidth,
   coarse:matchMedia('(pointer: coarse)').matches,

@@ -1,7 +1,7 @@
 import { chromium } from 'playwright';
 import { launchOptions } from './browser-runtime.mjs';
 
-const base=process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899';
+const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
 const browser=await chromium.launch(launchOptions());
 const results=[];
 
@@ -39,7 +39,7 @@ for(const viewport of [{width:1280,height:720},{width:360,height:700}]){
 
   const result=await page.evaluate(()=>{
     const panel=document.querySelector('#sidePanel').getBoundingClientRect();
-    const debug=globalThis.__codexWebuiDebug;
+    const debug=globalThis.__pandaForceDebug;
     return {
       width:innerWidth,
       scrollWidth:document.documentElement.scrollWidth,

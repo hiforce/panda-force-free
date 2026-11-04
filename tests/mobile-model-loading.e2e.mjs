@@ -13,7 +13,7 @@ try{
   const context=await browser.newContext({...devices['Pixel 7']});
   await context.addInitScript(()=>{
     if(window!==window.top)return;
-    localStorage.setItem('codex-webui-locale','en');
+    localStorage.setItem('panda-force-locale','en');
     delete window.Notification;
     window.__modelsViaWs=0;
     const NativeWebSocket=window.WebSocket;
@@ -29,15 +29,15 @@ try{
     return route.continue();
   });
   await page.goto(base,{waitUntil:'domcontentloaded'});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.modelLoadStatus==='ready');
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.modelLoadStatus==='ready');
   assert.equal(requests,2);
   assert.equal(await page.locator('#settingsTaskNotifyToggle').isEnabled(),false);
   assert.equal(await page.locator('#composerSteerHint').count(),0);
   assert.equal(await page.evaluate(()=>window.__modelsViaWs),0);
-  assert.ok(await page.evaluate(()=>globalThis.__codexWebuiDebug.state.models.length)>0);
+  assert.ok(await page.evaluate(()=>globalThis.__pandaForceDebug.state.models.length)>0);
   // A response that never arrives must time out and expose a usable retry action.
   const failure=await page.evaluate(async()=>{
-    const api=globalThis.__codexWebuiDebug,original=window.fetch;
+    const api=globalThis.__pandaForceDebug,original=window.fetch;
     window.__workingModelFetch=original;window.__modelAttempts=0;
     window.fetch=(resource,options={})=>{
       if(new URL(resource,location.href).pathname==='/api/rpc'&&JSON.parse(options.body).method==='model/list'){
@@ -53,7 +53,7 @@ try{
   assert.deepEqual(failure,{status:'error',label:'Model load failed · Retry',attempts:2,busy:'false'});
   await page.evaluate(()=>{window.fetch=window.__workingModelFetch});
   await page.locator('#modelButton').click();
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.modelLoadStatus==='ready');
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.modelLoadStatus==='ready');
   assert.equal(await page.locator('#modelButton').getAttribute('aria-busy'),'false');
   assert.equal(await page.evaluate(()=>window.__modelsViaWs),0);
   assert.deepEqual(errors,[]);

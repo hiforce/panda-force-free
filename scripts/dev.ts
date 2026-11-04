@@ -23,7 +23,7 @@ const commands = [
       "build",
       "src/client/auth-bootstrap.js",
       "src/client/i18n.js",
-      "src/client/codex-brand.js",
+      "src/client/panda-brand.js",
       "--target=browser",
       "--outdir=public",
       "--external=/app.bundle.js",
@@ -75,6 +75,6 @@ const exited = await Promise.race(
 );
 
 if (!stopping) {
-  console.error(`[codex-webui] ${exited.name} development process exited with code ${exited.code}`);
+  console.error(`[panda-force] ${exited.name} development process exited with code ${exited.code}`);
   await stop(exited.code || 1);
 }

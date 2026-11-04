@@ -12,11 +12,11 @@ test("local uploads use the configured persistent root and native input keeps th
   const fixture = await localAuthFixture();
   try {
     fixture.env.CODEX_HOME = legacyHome;
-    fixture.env.CODEX_WEBUI_ATTACHMENT_ROOT = uploads;
+    fixture.env.PANDA_FORCE_ATTACHMENT_ROOT = uploads;
     // Credentials alone must not enable OSS or cause any cloud request.
-    fixture.env.CODEX_WEBUI_OSS_BUCKET = "unused-bucket";
-    fixture.env.CODEX_WEBUI_OSS_ACCESS_KEY_ID = "unused-id";
-    fixture.env.CODEX_WEBUI_OSS_ACCESS_KEY_SECRET = "unused-secret";
+    fixture.env.PANDA_FORCE_OSS_BUCKET = "unused-bucket";
+    fixture.env.PANDA_FORCE_OSS_ACCESS_KEY_ID = "unused-id";
+    fixture.env.PANDA_FORCE_OSS_ACCESS_KEY_SECRET = "unused-secret";
     await fixture.restart();
     const setup = await fixture.post("/api/auth/setup", { username: "owner", password: "Abc123" });
     expect(setup.status).toBe(200);
@@ -24,7 +24,7 @@ test("local uploads use the configured persistent root and native input keeps th
     const config = await (await fetch(fixture.base + "/api/config", { headers: { cookie } })).json();
     expect(config).toMatchObject({ attachmentStorage: "local", attachmentUrlPrefix: null });
     const png = readFileSync(new URL("../public/assets/panda-icon.png", import.meta.url));
-    const oldRoot = join(legacyHome, "codex-webui-uploads");
+    const oldRoot = join(legacyHome, "panda-force-uploads");
     mkdirSync(oldRoot);
     const oldImage = join(oldRoot, "old-image.png");
     const oldFile = join(oldRoot, "old-notes.txt");
@@ -41,7 +41,7 @@ test("local uploads use the configured persistent root and native input keeps th
     expect(attachment.path).toBe(join(uploads, attachment.id, name));
     expect(statSync(attachment.path).mode & 0o777).toBe(0o600);
     expect(readFileSync(attachment.path)).toEqual(png);
-    expect(existsSync(join(fixture.dir, "codex-webui-uploads"))).toBe(false);
+    expect(existsSync(join(fixture.dir, "panda-force-uploads"))).toBe(false);
     expect(buildComposerInput("Read 01", [attachment])).toContainEqual({ type: "localImage", path: attachment.path });
     const preview = await fetch(fixture.base + "/api/images/local?path=" + encodeURIComponent(attachment.path), { headers: { cookie } });
     expect(preview.status).toBe(200);

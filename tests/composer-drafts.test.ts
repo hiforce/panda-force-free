@@ -5,7 +5,7 @@ test("legacy new-task draft migrates once and stays isolated between projects",(
  const dom=new JSDOM("",{url:"https://fixture.test"}),old=Object.getOwnPropertyDescriptor(globalThis,"localStorage");
  Object.defineProperty(globalThis,"localStorage",{configurable:true,value:dom.window.localStorage});
  try{
-  localStorage.setItem("codex-webui-composer-drafts",JSON.stringify({__new__:{text:"Unsent before upgrade",mentions:[],attachments:[{name:"01 产品图.png",status:"ready"}]}}));
+  localStorage.setItem("panda-force-composer-drafts",JSON.stringify({__new__:{text:"Unsent before upgrade",mentions:[],attachments:[{name:"01 产品图.png",status:"ready"}]}}));
   let project="alpha",text="";
   const drafts=createComposerDrafts({getActiveThreadId:()=>null,getNewDraftKey:()=>"__new__:"+project,getDraftSnapshot:()=>({text,mentions:[],attachments:[]})});
   expect(drafts.getComposerDraft()?.text).toBe("Unsent before upgrade");expect(drafts.getComposerDraft()?.attachments[0].name).toBe("01 产品图.png");

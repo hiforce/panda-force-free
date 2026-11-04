@@ -8,9 +8,9 @@ mkdirSync(resolve(root,'docs/assets'),{recursive:true});
 const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
 await page.goto('http://127.0.0.1:8899',{waitUntil:'networkidle'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state?.config?.defaultCwd);
+await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state?.config?.defaultCwd);
 await page.evaluate(async()=>{
- const api=globalThis.__codexWebuiDebug;
+ const api=globalThis.__pandaForceDebug;
  const demo=`${api.state.config.home}/projects/demo-app`;
  api.state.active={id:'readme-thread',name:'Build a responsive settings panel',cwd:demo,source:'local'};
  document.querySelector('#threadTitle').textContent='Build a responsive settings panel';

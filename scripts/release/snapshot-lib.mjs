@@ -11,8 +11,8 @@ export function assertReleasePath(path) {
   if (path.includes("\\") || path.split("/").some((p) => !p || p === "." || p === ".."))
     throw new Error("Unsafe release path: " + path);
   const parts = path.split("/");
-  if (/^release\/community\/(?:\.gitignore|\.dockerignore|\.env.example)$/.test(path)) return;
-  const permittedDot = parts[0] === ".github" || [".gitignore", ".dockerignore", ".env.example"].includes(path);
+  if (/^(?:release\/community|panda-docs)\/(?:\.gitignore|\.dockerignore|\.env.example)$/.test(path)) return;
+  const permittedDot = [".gitignore", ".dockerignore", ".env.example"].includes(path);
   if (parts.some((p) => p.startsWith(".")) && !permittedDot) throw new Error("Private metadata path: " + path);
   if (parts.slice(1).some((p) => p.startsWith("."))) throw new Error("Nested private metadata path: " + path);
   if (/(?:^|\/)(?:AGENTS|SKILL|MEMORY)\.md$/i.test(path) || /\.(?:sqlite(?:-wal|-shm)?|pem|key|log)$/i.test(path))

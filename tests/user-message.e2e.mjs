@@ -27,13 +27,13 @@ try{
   for(const scheme of ['light','dark'])for(const mobile of [false,true]){
     const locale=mobile?'zh-CN':'en';
     const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1280,height:800},colorScheme:scheme,hasTouch:mobile,permissions:['clipboard-read','clipboard-write']});
-    await context.addInitScript(locale=>{if(window===window.top)localStorage.setItem('codex-webui-locale',locale)},locale);
+    await context.addInitScript(locale=>{if(window===window.top)localStorage.setItem('panda-force-locale',locale)},locale);
     const page=await context.newPage(),errors=[];
     page.on('pageerror',error=>errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.port}`,{waitUntil:'networkidle'});
-    await page.waitForFunction(()=>globalThis.__codexWebuiDebug);
+    await page.waitForFunction(()=>globalThis.__pandaForceDebug);
     await page.evaluate(message=>{
-      const api=globalThis.__codexWebuiDebug;
+      const api=globalThis.__pandaForceDebug;
       api.state.active={id:'copy-thread',cwd:'/tmp',turns:[]};
       api.syncTurnSnapshot({id:'copy-turn',status:'completed',items:[{id:'copy-user',type:'userMessage',content:[{type:'text',text:message}]}]});
       window.__clipboard=navigator.clipboard;
@@ -56,7 +56,7 @@ try{
 
     // The same item can be updated without adding another copy button.
     await page.evaluate(message=>{
-      const api=globalThis.__codexWebuiDebug;
+      const api=globalThis.__pandaForceDebug;
       api.notify('item/completed',{threadId:'copy-thread',turnId:'copy-turn',item:{id:'copy-user',type:'userMessage',content:[{type:'text',text:message} ]}});
       Object.defineProperty(navigator,'clipboard',{configurable:true,value:undefined});
     },message);
@@ -79,7 +79,7 @@ try{
     assert.equal(await page.locator('body > textarea').count(),0);
 
     await page.evaluate(()=>{
-      const api=globalThis.__codexWebuiDebug;
+      const api=globalThis.__pandaForceDebug;
       api.notify('item/completed',{threadId:'copy-thread',turnId:'file-turn',item:{id:'file-user',type:'userMessage',content:[{type:'text',text:'Attached file: "report.txt"\n/tmp/report.txt'}]}});
       api.notify('item/completed',{threadId:'copy-thread',turnId:'long-turn',item:{id:'long-user',type:'userMessage',content:[{type:'text',text:'long'.repeat(150)}]}});
     });

@@ -6,5 +6,5 @@ export const PANDA_ICON_DATA_URL = `data:image/svg+xml,${encodeURIComponent(PAND
 export function pandaForceMark(className = "") {
   const classes = className.replace(/[^a-zA-Z0-9 _-]/g, "");
   // Retain the sizing class for existing themes and cached client entry points.
-  return `<span class="codex-interface-mark panda-force-mark ${classes}" data-panda-force-mark><svg viewBox="0 0 32 32" aria-hidden="true">${PANDA_SHAPES}</svg></span>`;
+  return `<span class="panda-interface-mark panda-force-mark ${classes}" data-panda-force-mark><svg viewBox="0 0 32 32" aria-hidden="true">${PANDA_SHAPES}</svg></span>`;
 }

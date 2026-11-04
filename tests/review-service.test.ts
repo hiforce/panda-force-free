@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { applyReviewPatch } from "../src/server/review/apply.js";
 
 const allowedRoot = tmpdir();
-const fixture = join(allowedRoot, `codex-webui-review-fixture-${process.pid}`);
+const fixture = join(allowedRoot, `panda-force-review-fixture-${process.pid}`);
 const file = join(fixture, "sample.txt");
 let diff = "";
 
@@ -19,8 +19,8 @@ beforeAll(() => {
   rmSync(fixture, { recursive: true, force: true });
   mkdirSync(fixture, { recursive: true });
   git("init", "-q");
-  git("config", "user.name", "Codex WebUI Test");
-  git("config", "user.email", "codex-webui@test.invalid");
+  git("config", "user.name", "Codex PandaForce Test");
+  git("config", "user.email", "panda-force@test.invalid");
   writeFileSync(file, "before\n");
   git("add", "sample.txt");
   git("commit", "-qm", "initial");

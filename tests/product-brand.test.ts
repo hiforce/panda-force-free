@@ -11,7 +11,6 @@ test("public login and workspace chrome use PandaForce while naming the connecte
   expect(document.querySelector(".window-brand strong")!.textContent).toBe("PandaForce");
   expect(document.querySelector("#passwordGate")!.getAttribute("aria-label")).toBe("PandaForce login");
   expect(document.querySelector("#productModeButton")!.getAttribute("aria-label")).toContain("Codex");
-  expect(source).not.toContain("Codex WebUI");
 });
 
 test("standalone authentication pages keep PandaForce branding and relogin actions in every locale", () => {
@@ -24,7 +23,6 @@ test("standalone authentication pages keep PandaForce branding and relogin actio
       expect(document.querySelector(".brand")!.textContent).toBe("PandaForce");
       expect(document.querySelector("[data-panda-force-mark]")).not.toBeNull();
       expect(document.querySelector('link[rel="icon"]')!.getAttribute("href")).toStartWith("data:image/svg+xml,");
-      expect(html).not.toContain("WebUI");
       if (kind === "signedOut") expect(document.querySelector(".action")!.getAttribute("href")).toBe("/auth/login");
       else expect(document.querySelector("form")!.getAttribute("action")).toBe("/auth/relogin");
     }

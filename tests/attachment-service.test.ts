@@ -10,7 +10,7 @@ const png=readFileSync(new URL('../public/assets/panda-icon.png',import.meta.url
 const request=(bytes,headers={})=>Object.assign((async function*(){yield bytes})(),{headers});
 
 test('uploads use isolated names and retain validated image bytes and private permissions', async () => {
-  const root=mkdtempSync(join(tmpdir(),'webui-upload-'));
+  const root=mkdtempSync(join(tmpdir(),'panda-upload-'));
   try {
     const first=await saveAttachment(request(png),root,'../../截图.png');
     const second=await saveAttachment(request(png),root,'截图.png');
@@ -24,7 +24,7 @@ test('uploads use isolated names and retain validated image bytes and private pe
 });
 
 test('empty, oversized, aborted and disguised image uploads do not leave files', async () => {
-  const root=mkdtempSync(join(tmpdir(),'webui-upload-reject-'));
+  const root=mkdtempSync(join(tmpdir(),'panda-upload-reject-'));
   try {
     await expect(saveAttachment(request(Buffer.alloc(0)),root,'empty.txt')).rejects.toThrow('empty');
     await expect(saveAttachment(request(Buffer.from('invalid')),root,'fake.png')).rejects.toThrow('file type');
@@ -69,7 +69,7 @@ test('clipboard files and items retain named files, avoid duplicates and name on
 });
 
 test('extensionless clipboard images enter visual input with the original filename', async () => {
-  const root = mkdtempSync(join(tmpdir(), 'webui-clipboard-upload-'));
+  const root = mkdtempSync(join(tmpdir(), 'panda-clipboard-upload-'));
   try {
     const attachment = await saveAttachment(request(png), root, '剪贴板截图');
     expect(attachment.name).toBe('剪贴板截图');

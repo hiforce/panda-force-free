@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 test("a slow HTTP client receives the complete large RPC response", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "webui-slow-response-"));
+  const dir = mkdtempSync(join(tmpdir(), "panda-slow-response-"));
   const token = "slow-response-test";
   const probe = createServer();
   await new Promise<void>(resolve => probe.listen(0, "127.0.0.1", resolve));
@@ -25,8 +25,8 @@ createInterface({ input: process.stdin }).on("line", line => {
   const server = Bun.spawn(["bun", "run", "src/server/main.ts"], {
     cwd: new URL("..", import.meta.url).pathname,
     env: { ...process.env, NODE_ENV: "production", PATH: `${dir}:${process.env.PATH}`,
-      CODEX_HOME: dir, CODEX_WEBUI_CWD: dir, CODEX_WEBUI_APP_SERVER_MODE: "isolated",
-      CODEX_WEBUI_AUTH_MODE: "password", CODEX_WEBUI_PASSWORD: "", CODEX_WEBUI_ACCESS_TOKEN: token,
+      CODEX_HOME: dir, PANDA_FORCE_CWD: dir, PANDA_FORCE_APP_SERVER_MODE: "isolated",
+      PANDA_FORCE_AUTH_MODE: "password", PANDA_FORCE_PASSWORD: "", PANDA_FORCE_ACCESS_TOKEN: token,
       HOST: "127.0.0.1", PORT: String(port) },
     stdout: "ignore", stderr: "ignore",
   });

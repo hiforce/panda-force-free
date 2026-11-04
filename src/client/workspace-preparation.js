@@ -211,6 +211,6 @@ export function createWorkspacePreparation({
 
 export function getWorkspacePreparation() {
   return (globalThis[GLOBAL_KEY] ||= createWorkspacePreparation({
-    translate: (message, values) => globalThis.__codexWebuiI18n?.t(message, values) ?? message,
+    translate: (message, values) => globalThis.__pandaForceI18n?.t(message, values) ?? message,
   }));
 }

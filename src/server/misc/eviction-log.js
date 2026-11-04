@@ -8,7 +8,7 @@ export function createEvictionLogger(label, every = 50) {
   return (detail) => {
     count += 1;
     if (count === 1 || count % every === 0) {
-      console.warn(`[codex-webui] ${label}: ${count} cache eviction(s) so far${detail ? ` (${detail})` : ""}`);
+      console.warn(`[panda-force] ${label}: ${count} cache eviction(s) so far${detail ? ` (${detail})` : ""}`);
     }
   };
 }

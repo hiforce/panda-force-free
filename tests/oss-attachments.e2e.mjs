@@ -1,4 +1,4 @@
-// Opt-in live OSS round trip: CODEX_WEBUI_OSS_TEST_CONFIG=/private/config.json bun tests/oss-attachments.e2e.mjs
+// Opt-in live OSS round trip: PANDA_FORCE_OSS_TEST_CONFIG=/private/config.json bun tests/oss-attachments.e2e.mjs
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -8,7 +8,7 @@ import OSS from "ali-oss";
 import { chromium } from "playwright";
 import { launchOptions } from "./browser-runtime.mjs";
 
-const config = JSON.parse(readFileSync(process.env.CODEX_WEBUI_OSS_TEST_CONFIG, "utf8"));
+const config = JSON.parse(readFileSync(process.env.PANDA_FORCE_OSS_TEST_CONFIG, "utf8"));
 const client = new OSS({ ...config, authorizationV4: true, secure: true, timeout: 15000 });
 const directory = mkdtempSync(join(tmpdir(), "oss-browser-"));
 const logPath = join(directory, "calls.json");
@@ -41,11 +41,11 @@ const base = `http://127.0.0.1:${port}`;
 const server = Bun.spawn(["bun", "run", "src/server/main.ts"], {
   cwd: new URL("..", import.meta.url).pathname,
   env: { ...process.env, PATH: `${directory}:${process.env.PATH}`, HOST: "127.0.0.1", PORT: String(port),
-    CODEX_HOME: directory, CODEX_WEBUI_AUTH_MODE: "none", CODEX_WEBUI_PASSWORD: "", CODEX_WEBUI_ACCESS_TOKEN: "",
-    CODEX_WEBUI_APP_SERVER_MODE: "isolated", CODEX_WEBUI_ATTACHMENT_STORAGE: "oss",
-    CODEX_WEBUI_OSS_BUCKET: config.bucket, CODEX_WEBUI_OSS_REGION: config.region, CODEX_WEBUI_OSS_ENDPOINT: config.endpoint,
-    CODEX_WEBUI_OSS_PREFIX: "codex-webui/attachments", CODEX_WEBUI_OSS_ACCESS_KEY_ID: config.accessKeyId,
-    CODEX_WEBUI_OSS_ACCESS_KEY_SECRET: config.accessKeySecret,
+    CODEX_HOME: directory, PANDA_FORCE_AUTH_MODE: "none", PANDA_FORCE_PASSWORD: "", PANDA_FORCE_ACCESS_TOKEN: "",
+    PANDA_FORCE_APP_SERVER_MODE: "isolated", PANDA_FORCE_ATTACHMENT_STORAGE: "oss",
+    PANDA_FORCE_OSS_BUCKET: config.bucket, PANDA_FORCE_OSS_REGION: config.region, PANDA_FORCE_OSS_ENDPOINT: config.endpoint,
+    PANDA_FORCE_OSS_PREFIX: "panda-force/attachments", PANDA_FORCE_OSS_ACCESS_KEY_ID: config.accessKeyId,
+    PANDA_FORCE_OSS_ACCESS_KEY_SECRET: config.accessKeySecret,
   }, stdout: "ignore", stderr: "ignore",
 });
 let browser;
@@ -59,9 +59,9 @@ try {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(base, { waitUntil: "networkidle" });
-  await page.waitForFunction(() => globalThis.__codexWebuiDebug?.state.config.attachmentUrlPrefix);
+  await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.config.attachmentUrlPrefix);
   await page.evaluate(() => {
-    const api = globalThis.__codexWebuiDebug;
+    const api = globalThis.__pandaForceDebug;
     api.startNewTask();
     api.state.active = { id: "oss-test-thread", cwd: api.state.config.defaultCwd, turns: [], canAcceptDirectInput: true };
   });
@@ -70,13 +70,13 @@ try {
     { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("OSS test notes") },
   ]);
   await page.waitForFunction(() => {
-    const a = globalThis.__codexWebuiDebug.state.composerAttachments;
+    const a = globalThis.__pandaForceDebug.state.composerAttachments;
     return a.length === 2 && a.every(value => value.status === "ready");
   });
-  const attachments = await page.evaluate(() => globalThis.__codexWebuiDebug.state.composerAttachments);
+  const attachments = await page.evaluate(() => globalThis.__pandaForceDebug.state.composerAttachments);
   for (const attachment of attachments) objects.add(attachment.objectKey);
   assert.ok(attachments.every(a => a.storage === "oss" && a.url.startsWith("https://") && !a.path));
-  assert.equal(existsSync(join(directory, "codex-webui-uploads")), false);
+  assert.equal(existsSync(join(directory, "panda-force-uploads")), false);
   await page.waitForFunction(() => document.querySelector(".composer-attachment-preview img")?.naturalWidth > 0);
   await page.click(".composer-attachment-preview");
   await page.waitForFunction(() => document.querySelector("#imageViewerImage")?.naturalWidth > 0);

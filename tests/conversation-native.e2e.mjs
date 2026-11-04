@@ -3,16 +3,16 @@ import { launchOptions } from './browser-runtime.mjs';
 
 const browser=await chromium.launch(launchOptions());
 const context=await browser.newContext({viewport:{width:1280,height:800}});
-await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('codex-webui-locale','en')});
+await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
 const page=await context.newPage();
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 page.on('console',message=>{if(message.type()==='error'&&!message.text().includes('404'))errors.push(message.text())});
 
-await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug);
+await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.waitForFunction(()=>globalThis.__pandaForceDebug);
 await page.evaluate(()=>{
-  const api=globalThis.__codexWebuiDebug;
+  const api=globalThis.__pandaForceDebug;
   api.state.active={id:'native-thread',cwd:api.state.config.defaultCwd,turns:[]};
   document.querySelector('#conversation').replaceChildren();
   api.notify('item/completed',{turnId:'optimistic-turn',item:{id:'local-native-user',type:'userMessage',content:[{type:'text',text:'Inspect the native conversation layout.'}]}});
@@ -103,7 +103,7 @@ const result=await page.evaluate(()=>{
   };
 });
 result.citationClick=await page.evaluate(()=>new Promise(resolve=>{
-  addEventListener('codex-webui:file-reference',event=>resolve({detail:event.detail,hash:location.hash}),{once:true});
+  addEventListener('panda-force:file-reference',event=>resolve({detail:event.detail,hash:location.hash}),{once:true});
   document.querySelector('.file-citation').click();
 }));
 result.citationCopy=await page.evaluate(()=>{
@@ -139,7 +139,7 @@ result.commandExpansion=await page.evaluate(()=>{
     outputMaxHeight:output&&getComputedStyle(output).maxHeight,
   };
 });
-await page.screenshot({path:'/tmp/codex-webui-conversation-native.png',fullPage:false});
+await page.screenshot({path:'/tmp/panda-force-conversation-native.png',fullPage:false});
 result.errors=errors;
 result.markdownTypography=markdownTypography;
 
@@ -188,11 +188,11 @@ await page.evaluate(()=>document.querySelector('#sidebar')?.classList.remove('mo
 await page.waitForTimeout(250);
 result.mobileCitation=await page.evaluate(()=>{const citation=document.querySelector('.file-citation')?.getBoundingClientRect(),timeline=document.querySelector('.native-turn-timeline')?.getBoundingClientRect();return{innerWidth,scrollWidth:document.documentElement.scrollWidth,citationRight:citation?.right||0,timelineLeft:timeline?.left||0,timelineRight:timeline?.right||0}});
 if(result.mobileCitation.scrollWidth>result.mobileCitation.innerWidth||result.mobileCitation.citationRight>result.mobileCitation.innerWidth+.5||result.mobileCitation.timelineLeft<0||result.mobileCitation.timelineRight>result.mobileCitation.innerWidth+.5)throw new Error(`Conversation overflows the mobile viewport: ${JSON.stringify(result.mobileCitation)}`);
-await page.screenshot({path:'/tmp/codex-webui-conversation-native-mobile.png',fullPage:false});
+await page.screenshot({path:'/tmp/panda-force-conversation-native-mobile.png',fullPage:false});
 if(result.errors.length)throw new Error(`Browser errors: ${result.errors.join('; ')}`);
 
 const optimisticFailure=await page.evaluate(async()=>{
-  const api=globalThis.__codexWebuiDebug;
+  const api=globalThis.__pandaForceDebug;
   api.state.active={id:'optimistic-failure-thread',cwd:'/tmp',source:'local'};
   api.state.ws={send(raw){const request=JSON.parse(raw);queueMicrotask(()=>{const pending=api.state.pending.get(request.id);api.state.pending.delete(request.id);pending?.reject(new Error('forced turn start failure'))})}};
   const input=document.querySelector('#prompt');

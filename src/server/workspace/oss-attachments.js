@@ -1,3 +1,4 @@
+import { pandaEnvironment } from "../environment.js";
 import OSS from "ali-oss";
 import { attachmentUrlName, canonicalAttachmentUrl } from "../../shared/attachment-urls.js";
 import { ATTACHMENT_MAX_BYTES, attachmentImageType } from "./attachments.js";
@@ -8,17 +9,18 @@ const MAX_INLINE_INPUT_BYTES = 60 * 1024 * 1024;
 const IMAGE_REFERENCE = /^Attached image: ("[^\n]*")\n(https:\/\/[^\n]+)$/gm;
 
 export function readOssAttachmentConfig(env = process.env) {
-  const mode = env.CODEX_WEBUI_ATTACHMENT_STORAGE || "local";
+  env = pandaEnvironment(env);
+  const mode = env.PANDA_FORCE_ATTACHMENT_STORAGE || "local";
   if (mode === "local") return null;
-  if (mode !== "oss") throw new Error("CODEX_WEBUI_ATTACHMENT_STORAGE must be local or oss");
-  const bucket = env.CODEX_WEBUI_OSS_BUCKET;
-  const region = env.CODEX_WEBUI_OSS_REGION || "oss-eu-central-1";
-  const accessKeyId = env.CODEX_WEBUI_OSS_ACCESS_KEY_ID;
-  const accessKeySecret = env.CODEX_WEBUI_OSS_ACCESS_KEY_SECRET;
+  if (mode !== "oss") throw new Error("PANDA_FORCE_ATTACHMENT_STORAGE must be local or oss");
+  const bucket = env.PANDA_FORCE_OSS_BUCKET;
+  const region = env.PANDA_FORCE_OSS_REGION || "oss-eu-central-1";
+  const accessKeyId = env.PANDA_FORCE_OSS_ACCESS_KEY_ID;
+  const accessKeySecret = env.PANDA_FORCE_OSS_ACCESS_KEY_SECRET;
   if (!bucket || !accessKeyId || !accessKeySecret) throw new Error("OSS bucket and access credentials are required");
   if (!/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket) || !/^oss-[a-z0-9-]+$/.test(region))
     throw new Error("Invalid OSS bucket or region");
-  const endpoint = env.CODEX_WEBUI_OSS_ENDPOINT || `https://${region}.aliyuncs.com`;
+  const endpoint = env.PANDA_FORCE_OSS_ENDPOINT || `https://${region}.aliyuncs.com`;
   const target = new URL(endpoint);
   if (
     target.protocol !== "https:" ||
@@ -31,7 +33,7 @@ export function readOssAttachmentConfig(env = process.env) {
     target.hostname !== `${region}.aliyuncs.com`
   )
     throw new Error("OSS endpoint must be the HTTPS public endpoint for its region");
-  const prefix = (env.CODEX_WEBUI_OSS_PREFIX || "codex-webui/attachments").replace(/^\/+|\/+$/g, "");
+  const prefix = (env.PANDA_FORCE_OSS_PREFIX || "panda-force/attachments").replace(/^\/+|\/+$/g, "");
   if (!prefix || prefix.split("/").some((part) => !/^[a-zA-Z0-9_-]+$/.test(part)))
     throw new Error("Invalid OSS attachment prefix");
   return {
@@ -41,7 +43,7 @@ export function readOssAttachmentConfig(env = process.env) {
     prefix,
     accessKeyId,
     accessKeySecret,
-    stsToken: env.CODEX_WEBUI_OSS_SECURITY_TOKEN || undefined,
+    stsToken: env.PANDA_FORCE_OSS_SECURITY_TOKEN || undefined,
   };
 }
 
@@ -155,7 +157,7 @@ export function createOssAttachmentStorage(config, { client, now = () => new Dat
           },
         });
       } catch (error) {
-        console.warn("[codex-webui] OSS attachment upload failed:", error.code || "network_error", error.status || "");
+        console.warn("[panda-force] OSS attachment upload failed:", error.code || "network_error", error.status || "");
         throw Object.assign(new Error("OSS upload failed; try again later"), {
           code: "oss_upload_failed",
           status: 502,

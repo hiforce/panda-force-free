@@ -6,7 +6,7 @@ import { resolveLocalFile } from "../src/server/workspace/files.js";
 
 describe("local agent file download boundary", () => {
   test("resolves absolute, relative, file URL and sandbox file references inside an allowed root", () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-webui-file-"));
+    const root = mkdtempSync(join(tmpdir(), "panda-force-file-"));
     const folder = join(root, "generated files");
     const file = join(folder, "report.txt");
     try {
@@ -23,8 +23,8 @@ describe("local agent file download boundary", () => {
   });
 
   test("rejects paths outside the boundary, directories, symbolic links, invalid paths and oversized files", () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-webui-file-root-"));
-    const outside = mkdtempSync(join(tmpdir(), "codex-webui-file-outside-"));
+    const root = mkdtempSync(join(tmpdir(), "panda-force-file-root-"));
+    const outside = mkdtempSync(join(tmpdir(), "panda-force-file-outside-"));
     try {
       const outsideFile = join(outside, "outside.txt");
       const localFile = join(root, "large.bin");

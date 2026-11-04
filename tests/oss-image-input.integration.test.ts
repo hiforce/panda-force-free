@@ -47,7 +47,7 @@ test("real app-server accepts inline OSS images and forwards original filenames 
     const png = readFileSync(new URL("../public/assets/panda-icon.png", import.meta.url));
     const large = Buffer.concat([png, Buffer.alloc(25 * 1024 * 1024 - png.length)]);
     const storage = createOssAttachmentStorage({ bucket: "native-test-bucket", region: "oss-eu-central-1",
-      endpoint: "https://oss-eu-central-1.aliyuncs.com", prefix: "codex-webui/attachments" }, { client: {
+      endpoint: "https://oss-eu-central-1.aliyuncs.com", prefix: "panda-force/attachments" }, { client: {
       async getStream(key) { const bytes = key.endsWith("大图原名.png") ? large : png; return { stream: Readable.from([bytes]), res: { headers: { "content-length": String(bytes.length) } } }; },
       async signatureUrlV4(_method, _seconds, _request, key) { return `https://native-test-bucket.oss-eu-central-1.aliyuncs.com/${key.split("/").map(encodeURIComponent).join("/")}?signature=test`; },
     } });

@@ -11,7 +11,7 @@ try {
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.goto(fixture.base+'/task/old-alpha');
  await page.locator('#workspacePreparation').waitFor({state:'hidden'});
- await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.active?.id==='old-alpha');
+ await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.active?.id==='old-alpha');
  const request={id:'questionnaire-roundtrip',method:'item/tool/requestUserInput',params:{threadId:'old-alpha',turnId:'question-turn',itemId:'question-item',isBlocking:true,questions:[
   {id:'strategy',header:'Strategy',question:'Which delivery approach should be used?',options:[{label:'Small iterations',description:'Review each completed iteration.'},{label:'All at once',description:'Review everything together.'}],isOther:true},
   {id:'notes',header:'Notes',question:'What should the acceptance review cover?'},
@@ -42,8 +42,8 @@ try {
   assert.ok((await inbox.locator('[type=submit]').boundingBox()).height>=44);
  }
  checks.push('Unsubmitted answers survive session navigation and appear in the global request inbox; 320/390 pixel touch layout');
- await page.evaluate(()=>globalThis.__codexWebuiDebug.state.ws?.close());
- await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.transport==='sse');
+ await page.evaluate(()=>globalThis.__pandaForceDebug.state.ws?.close());
+ await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.transport==='sse');
  await page.route('**/api/codex/respond',route=>route.fulfill({status:503,json:{error:'Synthetic response failure'}}));
  await inbox.locator('[type=submit]').click();
  await inbox.locator('.user-input-error').waitFor();

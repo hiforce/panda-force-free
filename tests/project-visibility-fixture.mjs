@@ -39,7 +39,7 @@ createInterface({input:process.stdin}).on('line',line=>{
   if(!m.method&&('result' in m||'error' in m)){appendFileSync(${JSON.stringify(trace)},JSON.stringify({type:'response',...m})+'\\n');return}
   if(!m.method||m.id===undefined)return;
   appendFileSync(${JSON.stringify(trace)},JSON.stringify({method:m.method,params:p})+'\\n');
-  if('webuiProjectless' in p)throw new Error('WebUI metadata leaked into native RPC');
+  if('pandaProjectless' in p)throw new Error('PandaForce metadata leaked into native RPC');
   let result={};
   if(m.method==='initialize')result={codexHome:${JSON.stringify(dir)}};
   else if(m.method==='model/list')result={data:[{id:'gpt-fixture',model:'gpt-fixture',displayName:'GPT Fixture',defaultReasoningEffort:'medium',supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]};
@@ -87,7 +87,7 @@ createInterface({input:process.stdin}).on('line',line=>{
     async start() {
       proc = Bun.spawn(['bun', 'run', 'src/server/main.ts'], {
         cwd: new URL('..', import.meta.url).pathname,
-        env: { ...process.env, NODE_ENV: 'production', HOME: new URL('..', import.meta.url).pathname, PANDA_FORCE_HOME: join(dir, 'panda-state'), BUN_RUNTIME_TRANSPILER_CACHE_PATH: '0', PATH: `${dir}:${process.env.PATH}`, CODEX_HOME: dir, CODEX_WEBUI_CWD: alpha, CODEX_WEBUI_PROJECTLESS: 'false', HOST: '127.0.0.1', PORT: String(port), CODEX_WEBUI_PASSWORD: '', CODEX_WEBUI_ACCESS_TOKEN: freshAdministrator ? '' : 'visibility-test' },
+        env: { ...process.env, NODE_ENV: 'production', HOME: new URL('..', import.meta.url).pathname, PANDA_FORCE_HOME: join(dir, 'panda-state'), BUN_RUNTIME_TRANSPILER_CACHE_PATH: '0', PATH: `${dir}:${process.env.PATH}`, CODEX_HOME: dir, PANDA_FORCE_CWD: alpha, PANDA_FORCE_PROJECTLESS: 'false', HOST: '127.0.0.1', PORT: String(port), PANDA_FORCE_PASSWORD: '', PANDA_FORCE_ACCESS_TOKEN: freshAdministrator ? '' : 'visibility-test' },
         stdout: 'ignore', stderr: 'pipe',
       });
       serverLogs = "";

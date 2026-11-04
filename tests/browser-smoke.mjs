@@ -3,7 +3,7 @@ import { artifact, launchOptions } from './browser-runtime.mjs';
 const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:720}});
 const errors=[];page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('404 (Not Found)'))errors.push(m.text())});page.on('pageerror',e=>errors.push(e.message));
-await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
 await page.waitForSelector('#newTask');
 await page.click('#newTask');
 const dialogAfterNewTask=await page.locator('#folderDialog').evaluate(e=>e.open);

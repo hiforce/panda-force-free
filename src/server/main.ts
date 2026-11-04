@@ -109,11 +109,11 @@ const sseClients = new Set<ServerResponse>();
 const terminalSessions = new Map<WebSocket, ReturnType<typeof createTerminalSession>>();
 const pendingCodexRequests = new Map<number | string, any>();
 const autoContinueRecovery = createAutoContinueRecovery(recoveryRequest, (error: Error) => {
-  console.error("[codex-webui] automatic continue failed:", error.message);
+  console.error("[panda-force] automatic continue failed:", error.message);
 });
 const reviewDiffs = new ReviewDiffStore();
 const recoverMessageQueue = createQueueRecovery(recoveryRequest, (error: Error) => {
-  console.error("[codex-webui] queue recovery:", error.message);
+  console.error("[panda-force] queue recovery:", error.message);
 });
 const threadHub = createThreadHub({
   request,
@@ -130,7 +130,7 @@ const accountLoader = createAccountIdentityLoader(async (refresh) => {
 const codexBridge = createCodexBridge({
   connection: appServerConnection,
   defaultCwd,
-  clientInfo: { name: "codex-webui", title: "PandaForce", version: "0.2.0" },
+  clientInfo: { name: "panda-force", title: "PandaForce", version: "0.2.0" },
   isShuttingDown: () => shuttingDown,
   onMessage: handleCodexMessage,
   onConnected: (info) => {
@@ -180,15 +180,15 @@ function scheduleGoalCommand(threadId: unknown, item: any) {
   const text = userMessageText(item).toLowerCase();
   if (text === "/goal resume") {
     void request("thread/goal/set", { threadId, status: "active", origin: "user" }).catch((error) =>
-      console.error("[codex-webui] goal resume sync failed:", error instanceof Error ? error.message : error),
+      console.error("[panda-force] goal resume sync failed:", error instanceof Error ? error.message : error),
     );
   } else if (text === "/goal pause") {
     void request("thread/goal/set", { threadId, status: "paused", origin: "user" }).catch((error) =>
-      console.error("[codex-webui] goal pause sync failed:", error instanceof Error ? error.message : error),
+      console.error("[panda-force] goal pause sync failed:", error instanceof Error ? error.message : error),
     );
   } else if (text === "/goal clear") {
     void request("thread/goal/clear", { threadId, origin: "user" }).catch((error) =>
-      console.error("[codex-webui] goal clear sync failed:", error instanceof Error ? error.message : error),
+      console.error("[panda-force] goal clear sync failed:", error instanceof Error ? error.message : error),
     );
   }
 }
@@ -235,7 +235,7 @@ function handleCodexMessage(message: any) {
     // Keep the server receive time explicit and timezone-safe for browser clients.
     // Native app-server timestamps are Unix seconds; this ISO value is only the
     // fallback for events that do not carry a lifecycle timestamp of their own.
-    const payload = { ...message, params: { ...(message.params || {}), webuiReceivedAt: new Date().toISOString() } };
+    const payload = { ...message, params: { ...(message.params || {}), pandaReceivedAt: new Date().toISOString() } };
     broadcast({ type: "codex/notification", payload });
   }
 }
@@ -290,7 +290,7 @@ browserDispatch.resolve("thread/turns/list", ({ params }) =>
 );
 browserDispatch.resolve("host/thread/live", ({ params }) => threadHub.readLiveThread(params.threadId));
 browserDispatch.resolve("thread/resume", ({ params, flags }) =>
-  flags.webuiPrepareInput === true && appServerConnection.mode === "shared"
+  flags.pandaPrepareInput === true && appServerConnection.mode === "shared"
     ? prepareSharedInput({ request, getThreadMetadata: threadHub.getThreadMetadata }, params)
     : undefined,
 );
@@ -331,20 +331,20 @@ browserDispatch.after(({ method, result }) => {
     appServerConnection.mode === "shared" &&
     ["thread/start", "thread/resume"].includes(method) &&
     result?.thread?.id &&
-    !result.webuiAlreadyLoaded
+    !result.pandaAlreadyLoaded
   )
     threadHub.markSubscribed(result.thread.id);
 });
 browserDispatch.after(({ method, params, flags, result, replyExtras }) => {
   if (method !== "thread/start") return;
-  if (result?.thread?.id && !flags.webuiProjectless) {
+  if (result?.thread?.id && !flags.pandaProjectless) {
     try {
       if (projectVisibility.setHidden(result.thread.cwd || params.cwd || defaultCwd, false)) {
         broadcast({ type: "projects/visibility", ...projectVisibility.snapshot() });
       }
     } catch (error) {
       // A completed creation must not look like a failed RPC and be retried.
-      console.error("[codex-webui] could not restore project visibility:", error);
+      console.error("[panda-force] could not restore project visibility:", error);
     }
   }
   replyExtras.projectVisibility = projectVisibility.snapshot();
@@ -696,7 +696,7 @@ const dispatchApiRoute = createRouter([
         });
         res.end(avatar.body);
       } catch (error) {
-        console.warn("[codex-webui] account request failed:", error instanceof Error ? error.message : String(error));
+        console.warn("[panda-force] account request failed:", error instanceof Error ? error.message : String(error));
         if (url.pathname === "/api/account/avatar") {
           respondJson(res, 502, { error: "Profile avatar unavailable" });
           return;
@@ -831,7 +831,7 @@ const server = createServer(async (req, res) => {
     "/favicon.svg",
     "/auth-bootstrap.js",
     "/i18n.js",
-    "/codex-brand.js",
+    "/panda-brand.js",
   ]);
   let idaasSession: { id: string; identity: any; expiresAt: number } | null = null;
   if (idaasAuth) {
@@ -979,7 +979,7 @@ terminalWss.on("connection", (client, req) => {
     });
     terminalSessions.set(client, terminal);
   } catch (error) {
-    console.error("[codex-webui] terminal failed", error);
+    console.error("[panda-force] terminal failed", error);
     client.close(1011, "Terminal unavailable");
     return;
   }
@@ -1023,9 +1023,9 @@ server.listen(port, host, () => {
   console.log(`PandaForce listening on http://${host}:${port}`);
   if (!idaasAuth && passwordAuth.passwordSetupRequired()) {
     console.warn(
-      `[codex-webui] Create your administrator account in the browser. No password startup options are required.`,
+      `[panda-force] Create your administrator account in the browser. No password startup options are required.`,
     );
-    console.warn(`[codex-webui] Remote installation code: ${passwordAuth.installationCode()}`);
+    console.warn(`[panda-force] Remote installation code: ${passwordAuth.installationCode()}`);
   }
   if (!localhostOnly) {
     const addresses = Object.values(networkInterfaces())

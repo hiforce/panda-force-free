@@ -3,7 +3,7 @@ import { launchOptions } from './browser-runtime.mjs';
 
 const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:800},colorScheme:'dark'});
-const baseUrl=process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899';
+const baseUrl=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
 const pageErrors=[];
 page.on('pageerror',error=>pageErrors.push(error.message));
 await page.goto(baseUrl,{waitUntil:'networkidle'});

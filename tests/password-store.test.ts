@@ -7,12 +7,12 @@ import { loadStoredPassword, passwordStorePath, saveStoredPassword } from "../sr
 
 describe("managed LAN password store", () => {
   test("resolves the configured location", () => {
-    expect(passwordStorePath({ CODEX_WEBUI_AUTH_STORE: "./custom-auth.json" })).toBe(join(process.cwd(), "custom-auth.json"));
-    expect(passwordStorePath({ CODEX_HOME: "/tmp/codex-home" })).toBe("/tmp/codex-home/codex-webui-auth.json");
+    expect(passwordStorePath({ PANDA_FORCE_AUTH_STORE: "./custom-auth.json" })).toBe(join(process.cwd(), "custom-auth.json"));
+    expect(passwordStorePath({ CODEX_HOME: "/tmp/codex-home" })).toBe("/tmp/codex-home/panda-force-auth.json");
   });
 
   test("writes only the credential hash with private permissions and never overwrites", () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-webui-password-store-"));
+    const root = mkdtempSync(join(tmpdir(), "panda-force-password-store-"));
     const path = join(root, "nested", "auth.json");
     const password = "correct horse battery staple";
     const credential = createStoredPassword(password, { salt: "0123456789abcdef" });
@@ -29,7 +29,7 @@ describe("managed LAN password store", () => {
   });
 
   test("rejects malformed credential files", () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-webui-password-store-invalid-"));
+    const root = mkdtempSync(join(tmpdir(), "panda-force-password-store-invalid-"));
     const path = join(root, "auth.json");
     try {
       writeFileSync(path, '{"version":1,"algorithm":"scrypt"}\n');

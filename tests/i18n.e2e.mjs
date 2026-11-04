@@ -1,35 +1,35 @@
 import { chromium } from 'playwright';
 import { artifact, launchOptions } from './browser-runtime.mjs';
 
-const base=process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899';
+const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
 const browser=await chromium.launch(launchOptions());
 const context=await browser.newContext({viewport:{width:1120,height:760},colorScheme:'dark'});
-await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('codex-webui-locale','zh-CN')});
+await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','zh-CN')});
 const page=await context.newPage();
 page.setDefaultTimeout(10_000);
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 
 await page.goto(base,{waitUntil:'domcontentloaded'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.openSettings);
+await page.waitForFunction(()=>globalThis.__pandaForceDebug?.openSettings);
 await page.waitForFunction(()=>document.documentElement.lang==='zh-CN');
 await page.evaluate(()=>{
-  globalThis.__codexWebuiDebug.startNewTask();
+  globalThis.__pandaForceDebug.startNewTask();
   const effort=document.querySelector('#effortSelect');
   effort.innerHTML='<option value="low" selected>low</option>';
-  globalThis.__codexWebuiI18n.setPreference('zh-CN');
+  globalThis.__pandaForceI18n.setPreference('zh-CN');
   const message=document.createElement('div');
   message.id='i18nContentProbe';
   message.className='message-text';
   message.textContent='Settings Running command';
   document.body.append(message);
-  globalThis.__codexWebuiDebug.openSettings('general-settings');
+  globalThis.__pandaForceDebug.openSettings('general-settings');
 });
 await page.waitForFunction(()=>document.querySelector('#settingsDialog')?.open&&document.querySelector('#settingsPageTitle')?.textContent==='通用');
 
 const chinese=await page.evaluate(()=>({
   lang:document.documentElement.lang,
-  preference:localStorage.getItem('codex-webui-locale'),
+  preference:localStorage.getItem('panda-force-locale'),
   newChat:document.querySelector('#newTask span:nth-child(2)')?.textContent.trim(),
   threadTitle:document.querySelector('#threadTitle')?.textContent.trim(),
   settings:document.querySelector('#settingsTitle')?.textContent.trim(),
@@ -45,7 +45,7 @@ await page.selectOption('#languageSelect','en');
 await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.querySelector('#settingsPageTitle')?.textContent==='General');
 const english=await page.evaluate(()=>({
   lang:document.documentElement.lang,
-  preference:localStorage.getItem('codex-webui-locale'),
+  preference:localStorage.getItem('panda-force-locale'),
   newChat:document.querySelector('#newTask span:nth-child(2)')?.textContent.trim(),
   threadTitle:document.querySelector('#threadTitle')?.textContent.trim(),
   page:document.querySelector('#settingsPageTitle')?.textContent.trim(),
@@ -56,10 +56,10 @@ const english=await page.evaluate(()=>({
 
 await page.selectOption('#languageSelect','zh-CN');
 await page.reload({waitUntil:'domcontentloaded'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug&&document.documentElement.lang==='zh-CN');
+await page.waitForFunction(()=>globalThis.__pandaForceDebug&&document.documentElement.lang==='zh-CN');
 const persisted=await page.evaluate(()=>({
   lang:document.documentElement.lang,
-  preference:localStorage.getItem('codex-webui-locale'),
+  preference:localStorage.getItem('panda-force-locale'),
   language:document.querySelector('#languageSelect')?.value,
   page:document.querySelector('#settingsPageTitle')?.textContent.trim(),
 }));

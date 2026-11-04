@@ -27,6 +27,7 @@ import { createComposerDrafts } from "./composer-drafts.js";
 import { createThreadSidebar } from "./threads-sidebar.js";
 import { createAccountView } from "./account-view.js";
 import { createSessionControls } from "./session-controls.js";
+import { readAsyncQuestions, createAsyncQuestionCard, closeEarlierAsyncQuestions } from "./async-questions.js";
 import { createApprovals } from "./approvals.js";
 import {
   DEFAULT_TURN_PAGE_SIZE,
@@ -44,7 +45,7 @@ import { agentMessageText, localImageUrl, renderAssistantMarkdown, renderItemIma
 import { createFilePreview } from "./lazy-file-preview.js";
 import { createFilesPanel } from "./files-panel.js";
 import { codexIcon, hydrateCodexIcons } from "./codex-icons.js";
-import { codexInterfaceMark } from "./codex-brand.js";
+import { pandaInterfaceMark } from "./panda-brand.js";
 import { createDomI18n, createI18n } from "./i18n.js";
 import {
   buildApprovalModel,
@@ -75,9 +76,9 @@ import { attachmentDisplayUrl, configureAttachmentUrls } from "../shared/attachm
 globalThis.__renderAssistantMarkdown = renderAssistantMarkdown;
 const $ = (s) => document.querySelector(s);
 const approvalMenuController = createAnchoredMenu();
-const i18n = globalThis.__codexWebuiI18n || createI18n();
-globalThis.__codexWebuiI18n = i18n;
-globalThis.__codexWebuiDomI18n = globalThis.__codexWebuiDomI18n || createDomI18n(i18n);
+const i18n = globalThis.__pandaForceI18n || createI18n();
+globalThis.__pandaForceI18n = i18n;
+globalThis.__pandaForceDomI18n = globalThis.__pandaForceDomI18n || createDomI18n(i18n);
 const t = (message, values) => i18n.t(message, values);
 const workspacePreparation = getWorkspacePreparation();
 let workbench;
@@ -88,7 +89,7 @@ const filePreview = createFilePreview({
   onBackToFiles: () => openFilesDialog(),
   getAttachmentUrlPrefix: () => state.config.attachmentUrlPrefix,
   onError: () => {
-    globalThis.__codexWebuiCheckAuth?.();
+    globalThis.__pandaForceCheckAuth?.();
     addPersistentError(t("Could not load file preview. Please retry."));
   },
 });
@@ -173,7 +174,7 @@ const { terminalStates, fitTerminal, initializeTerminal } = createTerminalPanel(
   $,
   t,
   getCwd: () => currentTerminalCwd(),
-  onAuthCheck: () => globalThis.__codexWebuiCheckAuth?.(),
+  onAuthCheck: () => globalThis.__pandaForceCheckAuth?.(),
 });
 const { browserState, navigateBrowser, moveBrowserHistory, updateBrowserControls } = createBrowserController({ $ });
 const threadNavigationGate = createLatestRequestGate();
@@ -338,15 +339,15 @@ const icons = {
   check: codexIcon("check"),
 };
 hydrateCodexIcons();
-$("#windowCodexMark").innerHTML = codexInterfaceMark("window-codex-mark");
-$("#emptyCodexMark").innerHTML = codexInterfaceMark("empty-codex-mark");
+$("#windowCodexMark").innerHTML = pandaInterfaceMark("window-panda-mark");
+$("#emptyCodexMark").innerHTML = pandaInterfaceMark("empty-panda-mark");
 
 const { connect, rpc, respondToCodex, postBridge, clearTransportReconnectTimer, resetReconnectBackoff } =
   createTransport({
     state,
     onMessage: (message) => handle(message),
     setStatus: (kind, text) => setStatus(kind, text),
-    onAuthCheck: () => globalThis.__codexWebuiCheckAuth?.(),
+    onAuthCheck: () => globalThis.__pandaForceCheckAuth?.(),
     onSseDisrupted: () => {
       workspacePreparation.start("connection");
       initialLoadGate.next();
@@ -1298,7 +1299,7 @@ async function resyncActiveConversation() {
     toast(t("Conversation resynchronized"));
     return true;
   } catch (error) {
-    console.warn("[codex-webui] conversation resync failed:", error);
+    console.warn("[panda-force] conversation resync failed:", error);
     addPersistentError(error?.message || t("Could not refresh conversation"));
     return false;
   } finally {
@@ -1379,7 +1380,7 @@ async function prefetchEarlierConversation(thread, navigationId) {
   } catch (error) {
     // Background history is an enhancement. The latest page is already usable;
     // leave the existing load-older control to retry the request on demand.
-    console.warn("[codex-webui] background conversation history failed:", error?.message || error);
+    console.warn("[panda-force] background conversation history failed:", error?.message || error);
   }
 }
 async function loadEarlierConversation(thread) {
@@ -1621,7 +1622,7 @@ function renderThread(thread, loadMore = 0) {
 function showEmpty() {
   renderMessageQueue();
   const root = $("#conversation");
-  root.innerHTML = `<div class="empty-state" id="emptyState">${codexInterfaceMark("empty-codex-mark")}<h1>${escapeHtml(t("What can I help?"))}</h1></div>`;
+  root.innerHTML = `<div class="empty-state" id="emptyState">${pandaInterfaceMark("empty-panda-mark")}<h1>${escapeHtml(t("What can I help?"))}</h1></div>`;
   renderPendingUserMessages();
   restorePendingApprovals();
 }
@@ -2041,9 +2042,37 @@ function upsertItem(item, turnId, root = $("#conversation"), live = true) {
     state.items.delete(item.id);
     el = null;
   }
+  if (!el && item.type === "userMessage") closeEarlierAsyncQuestions(root, t);
   if (!el && item.type === "userMessage")
     el = claimOptimisticUser(item, root, turnId) || claimEquivalentUserMessage(item, root, turnId);
   if (!el && item.type === "agentMessage") el = claimEquivalentAgentMessage(item, turnId);
+  const questions = readAsyncQuestions(item);
+  if (questions) {
+    if (!el) {
+      // Arguments can arrive after the generic tool row; replace that row once.
+      const oldRow = root.querySelector(`[data-item-id="${CSS.escape(activityItemId(item))}"].activity-item`);
+      if (oldRow) {
+        const group = oldRow.closest("[data-agent-activity-group]");
+        oldRow.nextElementSibling?.remove();
+        oldRow.remove();
+        state.activityItems.get(turnId)?.delete(activityItemId(item));
+        if (group?.querySelector(".activity-item")) updateActivitySummary(group);
+        else group?.remove();
+      }
+      el = createAsyncQuestionCard(item, questions, {
+        t,
+        prepareAnswer: (answer) => {
+          const input = $("#prompt");
+          input.value = input.value.trim() ? input.value.trimEnd() + "\n\n" + answer : answer;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.focus();
+        },
+      });
+      ensureTurnTimeline(turnId, root).querySelector(".turn-event-stream").append(el);
+      state.items.set(item.id, el);
+    }
+    return;
+  }
   if (!el) {
     if (item.type === "userMessage") {
       el = document.createElement("article");
@@ -2223,7 +2252,7 @@ function activityGroupExpansionKey(activity) {
   const threadId = state.active?.id,
     turnId = activity.closest("[data-turn-id]")?.dataset.turnId,
     anchor = activity.dataset.activityGroupAnchor;
-  return threadId && turnId && anchor ? `codex-webui-activity-group:${threadId}:${turnId}:${anchor}` : null;
+  return threadId && turnId && anchor ? `panda-force-activity-group:${threadId}:${turnId}:${anchor}` : null;
 }
 function savedActivityGroupExpansion(activity) {
   const key = activityGroupExpansionKey(activity),
@@ -2375,7 +2404,7 @@ function activityItemExpansionKey(row) {
   const threadId = state.active?.id,
     turnId = row.closest("[data-turn-id]")?.dataset.turnId,
     itemId = row.dataset.itemId;
-  return threadId && turnId && itemId ? `codex-webui-activity-item:${threadId}:${turnId}:${itemId}` : null;
+  return threadId && turnId && itemId ? `panda-force-activity-item:${threadId}:${turnId}:${itemId}` : null;
 }
 function savedActivityItemExpansion(row) {
   const key = activityItemExpansionKey(row),
@@ -2799,7 +2828,7 @@ function onNotification(method, p) {
   if (method === "turn/started") {
     recordTurnTiming(
       p.turn?.id,
-      p.turn ? { ...p.turn, startedAt: p.turn.startedAt ?? p.webuiReceivedAt } : { startedAt: p.webuiReceivedAt },
+      p.turn ? { ...p.turn, startedAt: p.turn.startedAt ?? p.pandaReceivedAt } : { startedAt: p.pandaReceivedAt },
     );
     clearThreadError(activityThreadId);
     updateThreadListActivity(activityThreadId, {
@@ -2888,13 +2917,13 @@ function onNotification(method, p) {
       ? p.item.status
       : "completed";
     upsertItem(
-      { ...p.item, status, ...(p.item?.type === "agentMessage" ? { receivedAt: p.webuiReceivedAt } : {}) },
+      { ...p.item, status, ...(p.item?.type === "agentMessage" ? { receivedAt: p.pandaReceivedAt } : {}) },
       p.turnId,
     );
   } else if (method === "item/agentMessage/delta") {
     let el = state.items.get(p.itemId);
     if (!el) {
-      upsertItem({ id: p.itemId, type: "agentMessage", text: "", receivedAt: p.webuiReceivedAt }, p.turnId);
+      upsertItem({ id: p.itemId, type: "agentMessage", text: "", receivedAt: p.pandaReceivedAt }, p.turnId);
       el = state.items.get(p.itemId);
     }
     const body = el.querySelector(".message-text");
@@ -2936,7 +2965,7 @@ function onNotification(method, p) {
     if (p.threadId && state.active?.id && p.threadId !== state.active.id) return;
     recordTurnReview(p.turnId, p.diff || "", "native");
   } else if (method === "turn/completed") {
-    const completedTurn = p.turn ? { ...p.turn, completedAt: p.turn.completedAt ?? p.webuiReceivedAt } : p.turn;
+    const completedTurn = p.turn ? { ...p.turn, completedAt: p.turn.completedAt ?? p.pandaReceivedAt } : p.turn;
     recordTurnTiming(p.turn?.id, completedTurn || {});
     if (!eventThreadId && (p.turn?.status === "failed" || p.turn?.error))
       addPersistentError(p.turn?.error || "Codex turn failed", { key: p.turn?.id ? `turn:${p.turn.id}` : undefined });
@@ -2944,7 +2973,7 @@ function onNotification(method, p) {
       setActiveTurnId("");
     if (p.turn?.items)
       for (const i of p.turn.items)
-        upsertItem(i.type === "agentMessage" ? { ...i, receivedAt: p.webuiReceivedAt } : i, p.turn.id);
+        upsertItem(i.type === "agentMessage" ? { ...i, receivedAt: p.pandaReceivedAt } : i, p.turn.id);
     if (p.turn?.id) syncWorkedForDivider(p.turn.id, turnDurationMs(p.turn));
     syncSessionStatusSurface();
     maybeNotifyTaskCompleted(p);
@@ -3493,7 +3522,7 @@ function handlePromptKeydown(event) {
 async function resumeActiveThread(thread = state.active) {
   if (!thread) return null;
   const generation = threadNavigationGeneration;
-  const resumed = await rpc("thread/resume", { threadId: thread.id, excludeTurns: true, webuiPrepareInput: true });
+  const resumed = await rpc("thread/resume", { threadId: thread.id, excludeTurns: true, pandaPrepareInput: true });
   if (generation === threadNavigationGeneration && state.active?.id === thread.id) {
     state.active = { ...state.active, ...resumed.thread };
     renderHeader();
@@ -3678,7 +3707,7 @@ async function queuePrompt() {
         model,
         ...policy,
         sessionStartSource: "startup",
-        webuiProjectless: projectless,
+        pandaProjectless: projectless,
       });
       thread = { ...result.thread, projectless };
       if (productProjectId) businessProjects.pendingAssignments.set(thread.id, productProjectId);
@@ -3899,7 +3928,7 @@ async function submitPrompt(event) {
         model,
         ...threadPolicy,
         sessionStartSource: "startup",
-        webuiProjectless: startingProjectless,
+        pandaProjectless: startingProjectless,
       });
       thread = { ...res.thread, projectless: startingProjectless };
       if (productProjectId) businessProjects.pendingAssignments.set(thread.id, productProjectId);
@@ -4952,14 +4981,14 @@ $("#accountLogout").onclick = async () => {
     addPersistentError(error.message);
   }
 };
-addEventListener("codex-webui:logged-out", () => {
+addEventListener("panda-force:logged-out", () => {
   initialLoadGate.next();
   sidebarCache.clear({ disableWrites: true });
   conversationCache.clear();
   persistedConversationVersions.clear();
   void persistentConversationCache.clear();
 });
-addEventListener("codex-webui:before-login", () => persistComposerDraft());
+addEventListener("panda-force:before-login", () => persistComposerDraft());
 $("#settingsDialog").addEventListener("cancel", (event) => {
   event.preventDefault();
   closeSettings();
@@ -5061,7 +5090,7 @@ document.addEventListener("click", (e) => {
     lineStart: Number(citation.dataset.fileLineStart) || null,
     lineEnd: Number(citation.dataset.fileLineEnd) || null,
   };
-  dispatchEvent(new CustomEvent("codex-webui:file-reference", { detail: reference }));
+  dispatchEvent(new CustomEvent("panda-force:file-reference", { detail: reference }));
   filePreview.open({ ...reference, cwd: citation.dataset.fileCwd || imageCwd() });
 });
 document.addEventListener("click", (e) => {
@@ -5189,7 +5218,7 @@ workspacePreparation.registerRetry("projects", () =>
 );
 workspacePreparation.registerRetry("models", () => loadModelsRaw());
 workspacePreparation.registerRetry("permissions", () => loadPermissionProfilesRaw());
-globalThis.__codexWebuiDebug = {
+globalThis.__pandaForceDebug = {
   workbench,
   persistentConversationCache,
   notify: onNotification,

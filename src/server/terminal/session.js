@@ -1,3 +1,4 @@
+import { pandaEnvironment } from "../environment.js";
 import { chmodSync, realpathSync, statSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -57,7 +58,7 @@ export function createTerminalSession({ cwd, cols = 100, rows = 24, onData, onEx
     onExit({ exitCode, signal, error });
   };
   try {
-    session = spawn(process.env.CODEX_WEBUI_NODE || "node", [worker, cwd, String(cols), String(rows)], {
+    session = spawn(pandaEnvironment().PANDA_FORCE_NODE || "node", [worker, cwd, String(cols), String(rows)], {
       cwd,
       env: process.env,
       stdio: ["pipe", "pipe", "pipe", "ipc"],

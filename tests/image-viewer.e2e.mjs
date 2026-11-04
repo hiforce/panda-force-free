@@ -6,19 +6,19 @@ import sharp from 'sharp';
 import { chromium } from 'playwright';
 import { launchOptions } from './browser-runtime.mjs';
 
-const directory=mkdtempSync(join(tmpdir(),'codex-webui-agent-images-'));
-const imageA=join(directory,'codex-webui-agent-image-a.png');
+const directory=mkdtempSync(join(tmpdir(),'panda-force-agent-images-'));
+const imageA=join(directory,'panda-force-agent-image-a.png');
 const imageB=join(directory,'原始身份照.png');
 const png=readFileSync(new URL('../public/assets/panda-icon.png',import.meta.url));
 const largePng=await sharp(png).resize(2400,1800,{fit:'fill'}).png().toBuffer();
 writeFileSync(imageA,largePng);
 writeFileSync(imageB,png);
-let base=process.env.CODEX_WEBUI_TEST_URL,server;
+let base=process.env.PANDA_FORCE_TEST_URL,server;
 if(!base){
   const port=await new Promise(resolve=>{const probe=createServer();probe.listen(0,'127.0.0.1',()=>{const {port}=probe.address();probe.close(()=>resolve(port))})});
   base=`http://127.0.0.1:${port}`;
   server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:new URL('..',import.meta.url).pathname,
-    env:{...process.env,HOME:directory,HOST:'127.0.0.1',PORT:String(port),CODEX_HOME:join(directory,'codex'),CODEX_WEBUI_CWD:directory,CODEX_WEBUI_AUTH_MODE:'none',CODEX_WEBUI_PASSWORD:'',CODEX_WEBUI_ACCESS_TOKEN:'',CODEX_WEBUI_APP_SERVER_MODE:'isolated',CODEX_WEBUI_ATTACHMENT_STORAGE:'local'},stdout:'ignore',stderr:'ignore'});
+    env:{...process.env,HOME:directory,HOST:'127.0.0.1',PORT:String(port),CODEX_HOME:join(directory,'codex'),PANDA_FORCE_CWD:directory,PANDA_FORCE_AUTH_MODE:'none',PANDA_FORCE_PASSWORD:'',PANDA_FORCE_ACCESS_TOKEN:'',PANDA_FORCE_APP_SERVER_MODE:'isolated',PANDA_FORCE_ATTACHMENT_STORAGE:'local'},stdout:'ignore',stderr:'ignore'});
 }
 
 let browser,page,stage='startup';
@@ -55,9 +55,9 @@ try{
   });
   await page.goto(base,{waitUntil:'networkidle'});
   stage='application startup';
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug);
   await page.evaluate(({imageA,imageB})=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     for(const animation of api.state.motion.values())animation?.destroy?.();
     for(const map of [api.state.items,api.state.turns,api.state.activities,api.state.activityItems,api.state.dividers,api.state.motion])map.clear();
     api.state.active={id:'image-thread',cwd:api.state.config.defaultCwd,source:'local'};
@@ -71,10 +71,10 @@ try{
   stage='activity original image';
   await page.waitForFunction(()=>document.querySelector('#imageViewerImage')?.naturalWidth===2400);
   const activityViewer=await page.evaluate(()=>({title:document.querySelector('#imageViewerTitle').textContent,source:document.querySelector('#imageViewerImage').getAttribute('src'),original:document.querySelector('#imageViewerOriginal').getAttribute('href')}));
-  if(activityViewer.title!=='codex-webui-agent-image-a.png'||activityViewer.source!==activityViewer.original||activityViewer.source.includes('thumbnail='))throw new Error(`Activity image lost its original: ${JSON.stringify(activityViewer)}`);
+  if(activityViewer.title!=='panda-force-agent-image-a.png'||activityViewer.source!==activityViewer.original||activityViewer.source.includes('thumbnail='))throw new Error(`Activity image lost its original: ${JSON.stringify(activityViewer)}`);
   await page.locator('#closeImageViewer').click();
   await page.evaluate(({imageA,imageB})=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     for(const animation of api.state.motion.values())animation?.destroy?.();
     for(const map of [api.state.items,api.state.turns,api.state.activities,api.state.activityItems,api.state.dividers,api.state.motion])map.clear();
     document.querySelector('#conversation').replaceChildren();
@@ -128,17 +128,17 @@ try{
     closeFocused:document.activeElement===document.querySelector('#closeImageViewer'),
   }));
   if(viewer.title!=='Agent screenshot'||viewer.path!==imageA||viewer.source!==viewer.original||!viewer.closeFocused)throw new Error(`Unexpected image viewer state: ${JSON.stringify(viewer)}`);
-  await page.screenshot({path:'/tmp/codex-webui-image-viewer.png',fullPage:false});
+  await page.screenshot({path:'/tmp/panda-force-image-viewer.png',fullPage:false});
   await page.locator('#closeImageViewer').click();
   if(!await page.locator('[data-local-conversation-commentary] .message-image-button').evaluate(node=>document.activeElement===node))throw new Error('Closing the viewer must restore focus to the image preview');
 
   const citationResult=await page.evaluate(()=>new Promise(resolve=>{
     let fileEvents=0;
-    addEventListener('codex-webui:file-reference',()=>fileEvents++);
+    addEventListener('panda-force:file-reference',()=>fileEvents++);
     document.querySelector('[data-local-conversation-commentary] .image-citation').click();
     requestAnimationFrame(()=>resolve({fileEvents,open:document.querySelector('#imageViewer').open,title:document.querySelector('#imageViewerTitle').textContent}));
   }));
-  if(citationResult.fileEvents!==0||!citationResult.open||citationResult.title!=='codex-webui-agent-image-a.png')throw new Error(`Image citations must open the viewer instead of the file bridge: ${JSON.stringify(citationResult)}`);
+  if(citationResult.fileEvents!==0||!citationResult.open||citationResult.title!=='panda-force-agent-image-a.png')throw new Error(`Image citations must open the viewer instead of the file bridge: ${JSON.stringify(citationResult)}`);
   await page.locator('#closeImageViewer').click();
 
   await page.setViewportSize({width:390,height:844});
@@ -149,11 +149,11 @@ try{
     return {innerWidth,scrollWidth:document.documentElement.scrollWidth,dialogLeft:dialog.left,dialogRight:dialog.right,imageLeft:image.left,imageRight:image.right};
   });
   if(mobile.scrollWidth>mobile.innerWidth||mobile.dialogLeft<-.5||mobile.dialogRight>mobile.innerWidth+.5||mobile.imageLeft<0||mobile.imageRight>mobile.innerWidth+.5)throw new Error(`Image viewer overflows the mobile viewport: ${JSON.stringify(mobile)}`);
-  await page.screenshot({path:'/tmp/codex-webui-image-viewer-mobile.png',fullPage:false});
+  await page.screenshot({path:'/tmp/panda-force-image-viewer-mobile.png',fullPage:false});
   if(errors.length)throw new Error(`Browser errors: ${errors.join('; ')}`);
   console.log(JSON.stringify({endpoint:'ok',compression:{originalBytes:largePng.length,displayBytes:compressed.length,width:metadata.width,height:metadata.height},activityViewer,result:{...result,markdownButton:!!result.markdownButton},viewer,citationResult,mobile,errors},null,2));
 }catch(error){
-  console.error(`Image viewer failure during ${stage}`,page&&await page.evaluate(()=>({url:location.href,images:[...document.querySelectorAll('.message-image')].map(image=>({src:image.getAttribute('src'),width:image.naturalWidth,complete:image.complete})),active:globalThis.__codexWebuiDebug?.state.active?.id,items:globalThis.__codexWebuiDebug?.state.items?.size})));
+  console.error(`Image viewer failure during ${stage}`,page&&await page.evaluate(()=>({url:location.href,images:[...document.querySelectorAll('.message-image')].map(image=>({src:image.getAttribute('src'),width:image.naturalWidth,complete:image.complete})),active:globalThis.__pandaForceDebug?.state.active?.id,items:globalThis.__pandaForceDebug?.state.items?.size})));
   throw error;
 }finally{
   await browser?.close();

@@ -1,9 +1,17 @@
-export const LOCALE_STORAGE_KEY = "codex-webui-locale";
+export const LOCALE_STORAGE_KEY = "panda-force-locale";
 export const LOCALE_PREFERENCES = Object.freeze(["system", "zh-CN", "en"]);
 
 const ZH_CN = Object.create(null);
 
 Object.assign(ZH_CN, {
+  "Earlier question": "此前的提问",
+  "Question for you": "需要你回答的问题",
+  "Choose an answer": "选择或填写答案",
+  "Add answer to message": "将回答加入消息",
+  "Answer added to message": "回答已加入输入框",
+  "Send the message to deliver your answer.": "发送消息后，回答才会提交。",
+  "Choose or write an answer, add it to your message, then send it in the conversation.": "选择或填写答案，加入输入框后发送，即可在对话中回答。",
+  "You continued the conversation. This question is kept as history.": "你已继续对话，此提问仅作为历史记录保留。",
   "Answered {answered} of {total} questions": "已回答 {answered} / {total} 题",
   "Choose one option for this question.": "请选择一个选项。",
   "Enter an answer for this question.": "请填写此题的答案。",

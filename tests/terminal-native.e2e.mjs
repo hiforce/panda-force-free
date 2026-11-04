@@ -12,9 +12,9 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, col
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 
-const terminalFixture = mkdtempSync(join(tmpdir(), 'codex-webui-terminal-'));
+const terminalFixture = mkdtempSync(join(tmpdir(), 'panda-force-terminal-'));
 const vimFile = join(terminalFixture, 'vim-test.txt');
-await page.goto(process.env.CODEX_WEBUI_TEST_URL || 'http://127.0.0.1:8899', { waitUntil: 'networkidle' });
+await page.goto(process.env.PANDA_FORCE_TEST_URL || 'http://127.0.0.1:8899', { waitUntil: 'networkidle' });
 await page.fill('#prompt', '检查输入框横线与终端键盘支持');
 
 const composer = await page.evaluate(() => ({

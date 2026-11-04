@@ -13,9 +13,9 @@ describe('terminal service', () => {
   });
 
   test('keeps terminal cwd inside the same allowed browse roots', () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), 'codex-webui-test-root-')));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'panda-force-test-root-')));
     const project = realpathSync(mkdtempSync(join(root, 'project-')));
-    const outside = realpathSync(mkdtempSync(join(tmpdir(), 'codex-webui-test-outside-')));
+    const outside = realpathSync(mkdtempSync(join(tmpdir(), 'panda-force-test-outside-')));
     const roots = [root];
     expect(resolveTerminalCwd(project, roots, root)).toBe(project);
     expect(resolveTerminalCwd(outside, roots, root)).toBe(root);
@@ -23,8 +23,8 @@ describe('terminal service', () => {
   });
 
   test('reports a missing PTY worker runtime without crashing the server', async () => {
-    const previous = process.env.CODEX_WEBUI_NODE;
-    process.env.CODEX_WEBUI_NODE = '/definitely/missing/codex-webui-node';
+    const previous = process.env.PANDA_FORCE_NODE;
+    process.env.PANDA_FORCE_NODE = '/definitely/missing/panda-force-node';
     try {
       const result = await new Promise(resolve => {
         const session = createTerminalSession({
@@ -35,8 +35,8 @@ describe('terminal service', () => {
       });
       expect(result.exitCode).toBe(1);
     } finally {
-      if (previous === undefined) delete process.env.CODEX_WEBUI_NODE;
-      else process.env.CODEX_WEBUI_NODE = previous;
+      if (previous === undefined) delete process.env.PANDA_FORCE_NODE;
+      else process.env.PANDA_FORCE_NODE = previous;
     }
   });
 });

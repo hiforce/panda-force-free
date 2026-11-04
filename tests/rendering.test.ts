@@ -69,11 +69,11 @@ describe("assistant Markdown and LaTeX rendering", () => {
   });
 
   test("renders file citations separately from external links", () => {
-    const html = renderAssistantMarkdown("Changed [app.js](/Users/home/Projects/codex-webui/public/app.js:186-199) and [docs](https://example.com/docs).");
-    expect(parseFileReference("/Users/home/Projects/codex-webui/public/app.js:186-199")).toEqual({ path: "/Users/home/Projects/codex-webui/public/app.js", lineStart: 186, lineEnd: 199 });
+    const html = renderAssistantMarkdown("Changed [app.js](/Users/home/Projects/panda-force/public/app.js:186-199) and [docs](https://example.com/docs).");
+    expect(parseFileReference("/Users/home/Projects/panda-force/public/app.js:186-199")).toEqual({ path: "/Users/home/Projects/panda-force/public/app.js", lineStart: 186, lineEnd: 199 });
     expect(parseFileReference("https://example.com/docs")).toBeNull();
     expect(html).toContain('class="file-citation"');
-    expect(html).toContain('data-file-reference="/Users/home/Projects/codex-webui/public/app.js"');
+    expect(html).toContain('data-file-reference="/Users/home/Projects/panda-force/public/app.js"');
     expect(html).toContain('data-file-line-start="186"');
     expect(html).toContain('data-file-line-end="199"');
     expect(html).toContain('href="https://example.com/docs" target="_blank" rel="noopener noreferrer"');

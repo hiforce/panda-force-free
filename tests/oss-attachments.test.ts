@@ -9,8 +9,8 @@ import { attachmentsFromInput, buildComposerInput, composerInputKey, composerTex
 import { attachmentDisplayUrl, configureAttachmentUrls } from "../src/shared/attachment-urls.js";
 
 const env = {
-  CODEX_WEBUI_ATTACHMENT_STORAGE: "oss", CODEX_WEBUI_OSS_BUCKET: "test-europe-bucket",
-  CODEX_WEBUI_OSS_ACCESS_KEY_ID: "test-id", CODEX_WEBUI_OSS_ACCESS_KEY_SECRET: "test-secret",
+  PANDA_FORCE_ATTACHMENT_STORAGE: "oss", PANDA_FORCE_OSS_BUCKET: "test-europe-bucket",
+  PANDA_FORCE_OSS_ACCESS_KEY_ID: "test-id", PANDA_FORCE_OSS_ACCESS_KEY_SECRET: "test-secret",
 };
 const config = readOssAttachmentConfig(env);
 const png = readFileSync(new URL("../public/assets/panda-icon.png", import.meta.url));
@@ -30,15 +30,15 @@ afterEach(() => { calls.length = 0; configureAttachmentUrls(); });
 
 test("OSS configuration requires credentials, HTTPS and a bounded object directory", () => {
   expect(readOssAttachmentConfig({})).toBeNull();
-  const { CODEX_WEBUI_ATTACHMENT_STORAGE, ...credentialsOnly } = env;
+  const { PANDA_FORCE_ATTACHMENT_STORAGE, ...credentialsOnly } = env;
   expect(readOssAttachmentConfig(credentialsOnly)).toBeNull();
-  expect(readOssAttachmentConfig({ ...env, CODEX_WEBUI_ATTACHMENT_STORAGE: "local" })).toBeNull();
+  expect(readOssAttachmentConfig({ ...env, PANDA_FORCE_ATTACHMENT_STORAGE: "local" })).toBeNull();
   expect(createOssAttachmentStorage(null)).toBeNull();
-  expect(config).toMatchObject({ region: "oss-eu-central-1", prefix: "codex-webui/attachments" });
-  expect(() => readOssAttachmentConfig({ ...env, CODEX_WEBUI_OSS_ACCESS_KEY_SECRET: "" })).toThrow("credentials");
-  expect(() => readOssAttachmentConfig({ ...env, CODEX_WEBUI_OSS_ENDPOINT: "http://oss-eu-central-1.aliyuncs.com" })).toThrow("HTTPS");
-  expect(() => readOssAttachmentConfig({ ...env, CODEX_WEBUI_OSS_PREFIX: "../other-app" })).toThrow("prefix");
-  expect(() => readOssAttachmentConfig({ ...env, CODEX_WEBUI_OSS_ENDPOINT: "https://unrelated.example.com" })).toThrow("endpoint");
+  expect(config).toMatchObject({ region: "oss-eu-central-1", prefix: "panda-force/attachments" });
+  expect(() => readOssAttachmentConfig({ ...env, PANDA_FORCE_OSS_ACCESS_KEY_SECRET: "" })).toThrow("credentials");
+  expect(() => readOssAttachmentConfig({ ...env, PANDA_FORCE_OSS_ENDPOINT: "http://oss-eu-central-1.aliyuncs.com" })).toThrow("HTTPS");
+  expect(() => readOssAttachmentConfig({ ...env, PANDA_FORCE_OSS_PREFIX: "../other-app" })).toThrow("prefix");
+  expect(() => readOssAttachmentConfig({ ...env, PANDA_FORCE_OSS_ENDPOINT: "https://unrelated.example.com" })).toThrow("endpoint");
 });
 
 test("validated uploads go to a dated private OSS object without leaving a local file", async () => {
@@ -49,7 +49,7 @@ test("validated uploads go to a dated private OSS object without leaving a local
     const attachment = await saveAttachment(request, directory, "../截图.png", storage);
     expect(attachment.storage).toBe("oss");
     expect(attachment.path).toBeUndefined();
-    expect(attachment.objectKey).toBe(`codex-webui/attachments/2026/11/03/${attachment.id}/截图.png`);
+    expect(attachment.objectKey).toBe(`panda-force/attachments/2026/11/03/${attachment.id}/截图.png`);
     expect(attachment.url).toStartWith(storage.urlPrefix);
     expect(calls[0].bytes).toEqual(png);
     expect(calls[0].options.headers["x-oss-object-acl"]).toBe("private");

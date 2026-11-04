@@ -3,22 +3,19 @@
   "version": "0.2.0",
   "private": true,
   "license": "MIT",
-  "repository": "github:hiforce/panda-force-free",
-  "bugs": "https://github.com/hiforce/panda-force-free/issues",
-  "homepage": "https://github.com/hiforce/panda-force-free#readme",
   "type": "module",
   "scripts": {
     "start": "bun run scripts/start.ts",
     "dev": "bun run scripts/dev.ts",
     "build": "bun run build:client && bun run build:server",
-    "check": "bun build src/server/main.ts --target=bun --outfile=/tmp/codex-webui-server-check.js && bun build scripts/dev.ts --target=bun --outfile=/tmp/codex-webui-dev-check.js && bun build src/client/app.js --target=browser --outfile=/tmp/codex-webui-app-check.js --external=/file-preview.bundle.js --external=/terminal-runtime.bundle.js && bun build scripts/start.ts --target=bun --outfile=/tmp/panda-force-start-check.js",
+    "check": "bun build src/server/main.ts --target=bun --outfile=/tmp/panda-force-server-check.js && bun build scripts/dev.ts --target=bun --outfile=/tmp/panda-force-dev-check.js && bun build src/client/app.js --target=browser --outfile=/tmp/panda-force-app-check.js --external=/file-preview.bundle.js --external=/terminal-runtime.bundle.js && bun build scripts/start.ts --target=bun --outfile=/tmp/panda-force-start-check.js",
     "test": "bun run test:unit",
     "test:unit": "bun test $(ls tests/*.test.ts | grep -v '.integration.')",
     "test:integration": "bun test tests/*.integration.test.ts",
     "test:browser": "bun tests/idaas-auth.e2e.mjs && bun tests/rendering-security.e2e.mjs && bun tests/account-usage.e2e.mjs && bun tests/browser-smoke.mjs && bun tests/browser-panel.e2e.mjs && bun tests/browser-site-compat.e2e.mjs && bun tests/ws-sse-fallback.e2e.mjs && bun tests/chrome-layout.e2e.mjs && bun tests/conversation-native.e2e.mjs && bun tests/activity-state.e2e.mjs && bun tests/runtime-activity.e2e.mjs && bun tests/composer-submit-state.e2e.mjs && bun tests/composer-history.e2e.mjs && bun tests/composer-attachments.e2e.mjs && bun tests/optimistic-send.e2e.mjs && bun tests/refactor-failure-paths.e2e.mjs && bun tests/message-queue.e2e.mjs && bun tests/multi-session.e2e.mjs && bun tests/session-list-activity.e2e.mjs && bun tests/project-visibility.e2e.mjs && bun tests/mobile-viewport.e2e.mjs && bun tests/approval-menu.e2e.mjs && bun tests/conversation-loading.e2e.mjs && bun tests/startup-loading.e2e.mjs && bun tests/sidebar-refresh.e2e.mjs && bun tests/workspace-preparation.e2e.mjs && bun tests/mobile-model-loading.e2e.mjs && bun tests/file-download.e2e.mjs && bun tests/image-viewer.e2e.mjs && bun tests/composer-native.e2e.mjs && bun tests/composer-autocomplete.e2e.mjs && bun tests/projectless-composer.e2e.mjs && bun tests/terminal-native.e2e.mjs && bun tests/side-utilities.e2e.mjs && bun tests/desktop-shell.e2e.mjs && bun tests/review-turn-selection.e2e.mjs && bun tests/theme-colors.e2e.mjs && bun tests/user-message.e2e.mjs && bun tests/responsive-panels.e2e.mjs && bun tests/summary-scroll.e2e.mjs && bun tests/mobile-layout.test.mjs && bun tests/mobile-device-mode.e2e.mjs && bun tests/surfaces-browser.mjs && bun tests/i18n.e2e.mjs && bun tests/password-login.e2e.mjs && bun tests/password-setup.e2e.mjs",
     "test:e2e": "bun tests/malformed-url.e2e.mjs && bun tests/account-api.e2e.mjs && bun tests/approval-e2e.mjs && bun tests/review-api-e2e.mjs && bun tests/dev-watch.e2e.mjs",
     "test:browser:failure-paths": "bun tests/refactor-failure-paths.e2e.mjs",
-    "build:client": "bun build src/client/app.js --target=browser --minify --outfile=public/app.bundle.js --external=/file-preview.bundle.js --external=/terminal-runtime.bundle.js && bun build src/client/auth-bootstrap.js src/client/i18n.js src/client/codex-brand.js --target=browser --minify --outdir=public --external=/app.bundle.js && bun build src/client/file-preview.js --target=browser --minify --outfile=public/file-preview.bundle.js && bun build src/client/terminal-runtime.js --target=browser --minify --outfile=public/terminal-runtime.bundle.js",
+    "build:client": "bun build src/client/app.js --target=browser --minify --outfile=public/app.bundle.js --external=/file-preview.bundle.js --external=/terminal-runtime.bundle.js && bun build src/client/auth-bootstrap.js src/client/i18n.js src/client/panda-brand.js --target=browser --minify --outdir=public --external=/app.bundle.js && bun build src/client/file-preview.js --target=browser --minify --outfile=public/file-preview.bundle.js && bun build src/client/terminal-runtime.js --target=browser --minify --outfile=public/terminal-runtime.bundle.js",
     "build:server": "bun build src/server/main.ts --target=bun --outfile=dist/server.js && bun -e \"await Bun.write('dist/worker.js', Bun.file('src/server/terminal/worker.js'))\" && bun build scripts/start.ts --target=bun --outfile=dist/start.js",
     "test:browser:i1": "bun tests/panda-workbench.e2e.mjs",
     "test:browser:projects": "bun tests/product-projects.e2e.mjs && bun tests/questionnaire.e2e.mjs",
@@ -60,5 +57,8 @@
   },
   "overrides": {
     "basic-ftp": "^6.2.5"
-  }
+  },
+  "repository": "github:hiforce/panda-force-free",
+  "bugs": "https://github.com/hiforce/panda-force-free/issues",
+  "homepage": "https://github.com/hiforce/panda-force-free#readme"
 }

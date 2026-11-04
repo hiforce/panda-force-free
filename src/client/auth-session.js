@@ -1,6 +1,6 @@
 import { sessionLoginUrl } from "../shared/auth-return-path.js";
 
-export function installWebuiSession(status, { translate: t = (message) => message, i18n } = {}) {
+export function installPandaForceSession(status, { translate: t = (message) => message, i18n } = {}) {
   const originalFetch = globalThis.fetch.bind(globalThis);
   let checking = null,
     navigating = false,
@@ -16,13 +16,13 @@ export function installWebuiSession(status, { translate: t = (message) => messag
     }
     if (!notice) {
       notice = document.createElement("aside");
-      notice.id = "webuiSessionNotice";
-      notice.className = "webui-session-notice";
+      notice.id = "pandaSessionNotice";
+      notice.className = "panda-session-notice";
       notice.setAttribute("role", "status");
       notice.setAttribute("aria-live", "polite");
       const message = document.createElement("span"),
         button = document.createElement("button");
-      message.className = "webui-session-message";
+      message.className = "panda-session-message";
       button.type = "button";
       button.onclick = () => {
         if (condition !== "expired") {
@@ -30,7 +30,7 @@ export function installWebuiSession(status, { translate: t = (message) => messag
           return;
         }
         if (navigating) return;
-        dispatchEvent(new Event("codex-webui:before-login"));
+        dispatchEvent(new Event("panda-force:before-login"));
         navigating = true;
         const current = location.pathname + location.search + location.hash;
         location.assign(status.authMode === "idaas" ? sessionLoginUrl(current) : current);
@@ -81,7 +81,7 @@ export function installWebuiSession(status, { translate: t = (message) => messag
     return checking;
   }
 
-  globalThis.__codexWebuiCheckAuth = check;
+  globalThis.__pandaForceCheckAuth = check;
   globalThis.fetch = async (...args) => {
     const response = await originalFetch(...args);
     if (response.status === 401) {
@@ -113,7 +113,7 @@ export function installWebuiSession(status, { translate: t = (message) => messag
 
   const button = document.createElement("button");
   button.type = "button";
-  button.id = "webuiLogout";
+  button.id = "pandaLogout";
   button.className = "account-menu-row";
   button.textContent = `${t("Log out")} (PandaForce · ${status.identity?.username || status.identity?.account || "PandaForce"})`;
   button.onclick = async () => {
@@ -121,7 +121,7 @@ export function installWebuiSession(status, { translate: t = (message) => messag
     try {
       const response = await originalFetch("/api/auth/logout", { method: "POST" });
       if (!response.ok) throw new Error("Unable to sign out");
-      dispatchEvent(new Event("codex-webui:logged-out"));
+      dispatchEvent(new Event("panda-force:logged-out"));
       navigating = true;
       location.assign(status.authMode === "idaas" ? "/auth/logged-out" : "/");
     } catch {

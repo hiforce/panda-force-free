@@ -35,7 +35,7 @@ function installFailingBridge(page, mode) {
 }
 
 const browser = await chromium.launch(launchOptions());
-const base = process.env.CODEX_WEBUI_TEST_URL || 'http://127.0.0.1:8899';
+const base = process.env.PANDA_FORCE_TEST_URL || 'http://127.0.0.1:8899';
 const results = [];
 try {
   for (const mode of ['error-close', 'first-event-timeout']) {
@@ -48,13 +48,13 @@ try {
     await installFailingBridge(page, mode);
     await page.goto(`${base}/?ws-failure=${mode}`, { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => {
-      const state = globalThis.__codexWebuiDebug?.state;
+      const state = globalThis.__pandaForceDebug?.state;
       return state?.transport === 'sse' && state.connected && state.models.length > 0;
     }, { timeout: 20_000 });
     const result = await page.evaluate(() => ({
-      transport: globalThis.__codexWebuiDebug.state.transport,
-      connected: globalThis.__codexWebuiDebug.state.connected,
-      models: globalThis.__codexWebuiDebug.state.models.length,
+      transport: globalThis.__pandaForceDebug.state.transport,
+      connected: globalThis.__pandaForceDebug.state.connected,
+      models: globalThis.__pandaForceDebug.state.models.length,
       status: document.querySelector('#statusText')?.textContent?.trim(),
     }));
     await page.screenshot({ path: artifact(`ws-sse-fallback-${mode}.png`) });

@@ -10,7 +10,7 @@ function run(cwd: string, args: string[]) {
   return String(result.stdout);
 }
 
-const root = mkdtempSync(join(tmpdir(), "codex-webui-git-"));
+const root = mkdtempSync(join(tmpdir(), "panda-force-git-"));
 const repo = join(root, "repo");
 mkdirSync(repo);
 run(repo, ["init", "--initial-branch=main"]);
@@ -21,7 +21,7 @@ run(repo, ["add", "tracked.txt"]);
 run(repo, ["commit", "-m", "initial commit"]);
 writeFileSync(join(repo, "tracked.txt"), "one\ntwo\n");
 writeFileSync(join(repo, "untracked.txt"), "new\n");
-const outside = mkdtempSync(join(tmpdir(), "codex-webui-git-outside-"));
+const outside = mkdtempSync(join(tmpdir(), "panda-force-git-outside-"));
 
 afterAll(() => {
   rmSync(root, { recursive: true, force: true });

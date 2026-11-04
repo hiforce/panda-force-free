@@ -17,7 +17,7 @@ coverage
 playwright-report
 test-results
 auth.json
-codex-webui-auth.json
+panda-force-auth.json
 *.log
 **/.DS_Store
 
@@ -35,3 +35,7 @@ codex-webui-auth.json
 **/.cursor
 **/.gemini
 **/.opencode
+
+panda-docs/node_modules
+panda-docs/build
+panda-docs/.docusaurus

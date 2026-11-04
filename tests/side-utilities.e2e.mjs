@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { launchOptions } from './browser-runtime.mjs';
 
-const base=process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899';
+const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
 const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:760},colorScheme:'dark'});
 const errors=[];
@@ -23,7 +23,7 @@ async function waitForTerminalOutput(kind,expected){
   }
 }
 await page.goto(base,{waitUntil:'networkidle'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.notify);
+await page.waitForFunction(()=>globalThis.__pandaForceDebug?.notify);
 await page.click('#toggleSidePanel');
 await page.click('[data-side-panel-action="terminal"]');
 await page.waitForFunction(()=>document.querySelector('#sideTerminalHost')?.dataset.connected==='true'&&document.querySelector('#sideTerminalHost .xterm'));
@@ -40,7 +40,7 @@ const terminal=await page.evaluate(()=>({
   hasOutputLine:[...Array(globalThis.__codexTerminals.side.term.buffer.active.length)].some((_,index)=>globalThis.__codexTerminals.side.term.buffer.active.getLine(index)?.translateToString(true).trim()==='SIDE_TERMINAL_OK'),
 }));
 
-await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('item/started',{turnId:'side-task-turn',item:{id:'spawn-side-task',type:'collabAgentToolCall',tool:'spawnAgent',status:'inProgress',senderThreadId:'parent-thread',receiverThreadIds:['child-thread'],prompt:'Inspect the browser compatibility issue.',model:'gpt-5.6-terra',reasoningEffort:'medium',agentsStates:{'child-thread':{status:'running',message:'Checking redirects'}}}}));
+await page.evaluate(()=>globalThis.__pandaForceDebug.notify('item/started',{turnId:'side-task-turn',item:{id:'spawn-side-task',type:'collabAgentToolCall',tool:'spawnAgent',status:'inProgress',senderThreadId:'parent-thread',receiverThreadIds:['child-thread'],prompt:'Inspect the browser compatibility issue.',model:'gpt-5.6-terra',reasoningEffort:'medium',agentsStates:{'child-thread':{status:'running',message:'Checking redirects'}}}}));
 await page.click('#openSidePanelTab');
 await page.click('[data-side-panel-action="side-task"]');
 await page.waitForFunction(()=>document.querySelector('#sideTaskList .side-task-card'));
@@ -53,7 +53,7 @@ const sideTask=await page.evaluate(()=>({
 }));
 
 await page.evaluate(()=>{
-  const {state}=globalThis.__codexWebuiDebug,cwd=state.active?.cwd||state.config.defaultCwd;
+  const {state}=globalThis.__pandaForceDebug,cwd=state.active?.cwd||state.config.defaultCwd;
   state.transport='ws';
   state.ws={readyState:WebSocket.OPEN,send(raw){
     const request=JSON.parse(raw);
@@ -67,23 +67,23 @@ await page.evaluate(()=>{
   }};
 });
 await page.click('.side-task-card');
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.active?.id==='child-thread'&&document.querySelector('.assistant-response .message-text')?.textContent.includes('Child task result'));
+await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.active?.id==='child-thread'&&document.querySelector('.assistant-response .message-text')?.textContent.includes('Child task result'));
 const sideTaskNavigation=await page.evaluate(()=>({
-  activeId:globalThis.__codexWebuiDebug.state.active?.id,
-  storedId:localStorage.getItem('codex-webui-active-thread'),
+  activeId:globalThis.__pandaForceDebug.state.active?.id,
+  storedId:localStorage.getItem('panda-force-active-thread'),
   heading:document.querySelector('#threadTitle')?.textContent.trim(),
   response:document.querySelector('.assistant-response .message-text')?.textContent.trim(),
 }));
-await page.screenshot({path:join(tmpdir(),'codex-webui-side-task-open.png'),fullPage:false});
+await page.screenshot({path:join(tmpdir(),'panda-force-side-task-open.png'),fullPage:false});
 
-await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('item/started',{turnId:'missing-side-task-turn',item:{id:'missing-side-task',type:'collabAgentToolCall',tool:'spawnAgent',status:'inProgress',receiverThreadIds:['missing-child-thread'],prompt:'Unavailable child task',model:'gpt-5.6-terra',agentsStates:{'missing-child-thread':{status:'running'}}}}));
+await page.evaluate(()=>globalThis.__pandaForceDebug.notify('item/started',{turnId:'missing-side-task-turn',item:{id:'missing-side-task',type:'collabAgentToolCall',tool:'spawnAgent',status:'inProgress',receiverThreadIds:['missing-child-thread'],prompt:'Unavailable child task',model:'gpt-5.6-terra',agentsStates:{'missing-child-thread':{status:'running'}}}}));
 await page.click('#openSidePanelTab');
 await page.click('[data-side-panel-action="side-task"]');
 await page.click('.side-task-card[data-thread-id="missing-child-thread"]');
 await page.waitForFunction(()=>document.querySelector('#toast')?.classList.contains('show'));
 const failedSideTaskNavigation=await page.evaluate(()=>({
-  activeId:globalThis.__codexWebuiDebug.state.active?.id,
-  storedId:localStorage.getItem('codex-webui-active-thread'),
+  activeId:globalThis.__pandaForceDebug.state.active?.id,
+  storedId:localStorage.getItem('panda-force-active-thread'),
   heading:document.querySelector('#threadTitle')?.textContent.trim(),
   toast:document.querySelector('#toast')?.textContent.trim(),
   disabled:document.querySelector('.side-task-card[data-thread-id="missing-child-thread"]')?.disabled,

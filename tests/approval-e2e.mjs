@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { artifact, launchOptions } from './browser-runtime.mjs';
 
 const config = await fetch('http://127.0.0.1:8899/api/config').then(response => response.json());
-const proof = join(dirname(config.defaultCwd), `.codex-webui-approval-e2e-${process.pid}.txt`);
+const proof = join(dirname(config.defaultCwd), `.panda-force-approval-e2e-${process.pid}.txt`);
 rmSync(proof, { force: true });
 const browser = await chromium.launch(launchOptions());
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });

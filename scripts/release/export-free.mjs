@@ -15,8 +15,8 @@ export function exportFree({ source = process.cwd(), ref = "HEAD", destination, 
     const [meta, path] = entry.split("\t");
     const [mode, type] = meta.split(" ");
     const selected =
-      /^(?:src|tests|patches|scripts|release\/community)\//.test(path) ||
-      /^(?:package\.json|bun\.lock|LICENSES\/upstream-codex-webui-MIT\.txt)$/.test(path) ||
+      /^(?:src|tests|patches|scripts|panda-docs|release\/community)\//.test(path) ||
+      /^(?:package\.json|bun\.lock|LICENSES\/upstream-MIT\.txt)$/.test(path) ||
       /^public\/(?:index\.html|style\.css|workbench\.css|file-preview\.css|favicon\.svg|assets\/panda-(?:mark\.svg|icon\.png))$/.test(
         path,
       );
@@ -29,19 +29,14 @@ export function exportFree({ source = process.cwd(), ref = "HEAD", destination, 
     "README.md",
     "README-zh.md",
     "LICENSE",
-    "SECURITY.md",
-    "CONTRIBUTING.md",
     "THIRD_PARTY_NOTICES.md",
     "Dockerfile",
     "docker-compose.yml",
     ".env.example",
     ".gitignore",
     ".dockerignore",
-    "UPDATES.md",
-    "USAGE.md",
   ])
     mapping.set(name, { source: "release/community/" + name, mode: "100644" });
-  mapping.set(".github/workflows/ci.yml", { source: "release/community/ci.yml", mode: "100644" });
   // New files require an explicit public-license review, even under source roots.
   const approved = JSON.parse(
     git(source, ["show", commit + ":release/community/public-files.json"], { encoding: "utf8" }),

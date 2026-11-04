@@ -1,8 +1,8 @@
 # Third-party notices
 
-## Upstream codex-webui
+## Upstream attribution
 
-PandaForce Free derives from [lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui). The original Copyright (c) 2026 lezi-fun and complete MIT grant are retained in [LICENSE](./LICENSE) and [LICENSES/upstream-codex-webui-MIT.txt](https://github.com/hiforce/panda-force-free/blob/main/LICENSES/upstream-codex-webui-MIT.txt). We thank the upstream contributors.
+PandaForce Free derives from [the lezi-fun upstream project](https://github.com/lezi-fun). The original Copyright (c) 2026 lezi-fun and complete MIT grant are retained in [LICENSE](./LICENSE) and [LICENSES/upstream-MIT.txt](https://github.com/hiforce/panda-force-free/blob/main/LICENSES/upstream-MIT.txt). We thank the upstream contributors.
 
 ## CodeMirror 6
 

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { JSDOM } from "jsdom";
 import { LOCALE_STORAGE_KEY, createDomI18n, createI18n, resolveLocale, translate, zhCNMessages } from "../src/client/i18n.js";
 
-describe("WebUI i18n", () => {
+describe("PandaForce i18n", () => {
   test("resolves an explicit language before the system language", () => {
     expect(resolveLocale("zh-CN", ["en-US"])).toBe("zh-CN");
     expect(resolveLocale("en", ["zh-CN"])).toBe("en");

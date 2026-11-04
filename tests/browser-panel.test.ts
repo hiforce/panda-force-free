@@ -22,7 +22,7 @@ describe("browser panel URLs", () => {
     expect(normalizeBrowserUrl(" ").error).toBe("Enter a URL");
   });
 
-  test("enables same-origin website behavior without exposing the WebUI origin", () => {
+  test("enables same-origin website behavior without exposing the PandaForce origin", () => {
     const app = "http://127.0.0.1:8899/";
     expect(browserSandboxFor("https://example.com/app", app)).toContain("allow-same-origin");
     expect(browserSandboxFor("http://127.0.0.1:8899/api/config", app)).not.toContain("allow-same-origin");

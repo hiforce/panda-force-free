@@ -13,7 +13,7 @@ test("an already loaded CLI thread accepts preparation without scanning its jour
   }, { threadId: "cli" });
   expect(calls.map(call => call.method)).toEqual(["thread/loaded/list", "thread/loaded/list"]);
   expect(result.thread.canAcceptDirectInput).toBe(true);
-  expect(result.webuiAlreadyLoaded).toBe(true);
+  expect(result.pandaAlreadyLoaded).toBe(true);
 });
 
 test("a stored unloaded thread is resumed with history excluded", async () => {

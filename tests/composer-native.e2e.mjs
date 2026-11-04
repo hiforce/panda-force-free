@@ -5,12 +5,12 @@ const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1018,height:980},colorScheme:'dark'});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
-await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state?.config?.defaultCwd);
+await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state?.config?.defaultCwd);
 await page.click('#newTask');
 await page.waitForFunction(()=>document.querySelector('#modelLabel')?.textContent?.trim()&&!/loading/i.test(document.querySelector('#modelLabel').textContent));
 const modelFilter=await page.evaluate(()=>{
-  const api=globalThis.__codexWebuiDebug;
+  const api=globalThis.__pandaForceDebug;
   const mixed=[...api.state.models,{model:'o3',displayName:'o3'}];
   api.state.models=api.filterAppModels(mixed);
   api.renderModels();
@@ -34,7 +34,7 @@ const home=await page.evaluate(()=>{
   };
 });
 const contextUsage=await page.evaluate(()=>{
-  const api=globalThis.__codexWebuiDebug,initiallyHidden=document.querySelector('#contextUsage').hidden;
+  const api=globalThis.__pandaForceDebug,initiallyHidden=document.querySelector('#contextUsage').hidden;
   api.state.active={id:'context-thread',cwd:api.state.config.defaultCwd};
   api.notify('thread/tokenUsage/updated',{threadId:'context-thread',tokenUsage:{modelContextWindow:200000,last:{totalTokens:80000}}});
   const indicator=document.querySelector('#contextUsage'),progress=indicator.querySelector('.context-usage-progress'),queue=document.querySelector('[data-composer-control="queue"]');

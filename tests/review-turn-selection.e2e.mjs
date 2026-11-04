@@ -5,10 +5,10 @@ const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:800}});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
-await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug);
+await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.waitForFunction(()=>globalThis.__pandaForceDebug);
 await page.evaluate(async()=>{
-  const api=globalThis.__codexWebuiDebug;
+  const api=globalThis.__pandaForceDebug;
   api.state.active={id:'thread-review-owner',cwd:api.state.config.defaultCwd||'.',source:'local'};
   api.notify('turn/diff/updated',{turnId:'turn-old',threadId:'thread-review-owner',diff:'diff --git a/src/old.ts b/src/old.ts\n--- a/src/old.ts\n+++ b/src/old.ts\n@@ -1 +1 @@\n-oldValue();\n+oldFixed();\n'});
   await api.request({id:'approval-old',method:'item/fileChange/requestApproval',params:{threadId:'thread-review-owner',turnId:'turn-old',itemId:'file-old',reason:'Review the older turn before applying it.'}});
@@ -18,18 +18,18 @@ await page.waitForSelector('.approval-review-link');
 await page.click('.approval-review-link');
 await page.waitForFunction(()=>!document.querySelector('#reviewPanelContent').hidden);
 const selected=await page.evaluate(()=>({
-  turnId:globalThis.__codexWebuiDebug.state.activeReview?.turnId,
+  turnId:globalThis.__pandaForceDebug.state.activeReview?.turnId,
   files:[...document.querySelectorAll('.review-file-name')].map(node=>node.textContent.trim()),
 }));
 await page.click('#reviewTab');
 const selectedAfterTabClick=await page.evaluate(()=>({
-  turnId:globalThis.__codexWebuiDebug.state.activeReview?.turnId,
+  turnId:globalThis.__pandaForceDebug.state.activeReview?.turnId,
   files:[...document.querySelectorAll('.review-file-name')].map(node=>node.textContent.trim()),
 }));
 await page.click('#newTask');
 const reset=await page.evaluate(()=>({
-  activeReview:globalThis.__codexWebuiDebug.state.activeReview,
-  turnDiffCount:globalThis.__codexWebuiDebug.state.turnDiffs.size,
+  activeReview:globalThis.__pandaForceDebug.state.activeReview,
+  turnDiffCount:globalThis.__pandaForceDebug.state.turnDiffs.size,
   reviewPatchDisabled:document.querySelector('#reviewPatch').disabled,
 }));
 console.log(JSON.stringify({selected,selectedAfterTabClick,reset,errors},null,2));

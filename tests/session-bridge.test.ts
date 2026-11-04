@@ -42,7 +42,7 @@ createInterface({input:process.stdin}).on('line',line=>{
 `,{mode:0o755});
     const port=await new Promise<number>(resolve=>{const probe=createServer();probe.listen(0,'127.0.0.1',()=>{const port=(probe.address() as any).port;probe.close(()=>resolve(port))})});
     const base=`http://127.0.0.1:${port}`;
-    proc=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:new URL('..',import.meta.url).pathname,env:{...process.env,CODEX_WEBUI_APP_SERVER_MODE:'isolated',PATH:`${dir}:${process.env.PATH}`,HOST:'127.0.0.1',PORT:String(port),CODEX_WEBUI_PASSWORD:'',CODEX_WEBUI_ACCESS_TOKEN:'bridge-test'},stdout:'ignore',stderr:'ignore'});
+    proc=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:new URL('..',import.meta.url).pathname,env:{...process.env,PANDA_FORCE_APP_SERVER_MODE:'isolated',PATH:`${dir}:${process.env.PATH}`,HOST:'127.0.0.1',PORT:String(port),PANDA_FORCE_PASSWORD:'',PANDA_FORCE_ACCESS_TOKEN:'bridge-test'},stdout:'ignore',stderr:'ignore'});
     const headers={authorization:`Basic ${Buffer.from('codex:bridge-test').toString('base64')}`};
     await waitFor(async()=>{try{return (await fetch(`${base}/api/health`,{headers})).ok}catch{return false}});
     async function connect(){

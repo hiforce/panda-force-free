@@ -30,8 +30,8 @@ RUN bun run build:client \
 ENV HOME=/home/codex \
     CODEX_HOME=/home/codex/.codex \
     PANDA_FORCE_HOME=/var/lib/panda-force \
-    CODEX_WEBUI_CWD=/home/codex/workspace \
-    CODEX_WEBUI_APP_SERVER_MODE=isolated \
+    PANDA_FORCE_CWD=/home/codex/workspace \
+    PANDA_FORCE_APP_SERVER_MODE=isolated \
     HOST=0.0.0.0 \
     PORT=8899
 USER 1000:1000

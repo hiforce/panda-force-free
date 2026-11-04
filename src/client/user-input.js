@@ -1,6 +1,17 @@
 export const USER_INPUT_METHODS = ["item/tool/requestUserInput", "tool/requestUserInput"];
 
-export function createUserInputCard(request, { t, respond, onResolved, onError, draft = {} }) {
+export function createUserInputCard(
+  request,
+  {
+    t,
+    respond,
+    onResolved,
+    onError,
+    draft = {},
+    submitLabel = "Submit answer",
+    headingLabel = "Waiting for your answer",
+  },
+) {
   const card = document.createElement("section");
   card.className = "user-input-card";
   card.dataset.requestId = String(request.id);
@@ -8,7 +19,7 @@ export function createUserInputCard(request, { t, respond, onResolved, onError, 
   const form = document.createElement("form");
   const heading = document.createElement("strong");
   heading.className = "user-input-title";
-  heading.textContent = t("Waiting for your answer");
+  heading.textContent = t(headingLabel);
   form.append(heading);
   const progress = document.createElement("p");
   progress.className = "user-input-progress";
@@ -113,7 +124,7 @@ export function createUserInputCard(request, { t, respond, onResolved, onError, 
   const submit = document.createElement("button");
   submit.type = "submit";
   submit.className = "user-input-submit";
-  submit.textContent = t("Submit answer");
+  submit.textContent = t(submitLabel);
   form.append(error, submit);
   card.append(form);
   form.onsubmit = async (event) => {
@@ -148,7 +159,7 @@ export function createUserInputCard(request, { t, respond, onResolved, onError, 
       error.hidden = false;
       onError(error.textContent);
       submit.disabled = false;
-      submit.textContent = t("Submit answer");
+      submit.textContent = t(submitLabel);
       for (const { fieldset } of fields) fieldset.disabled = false;
     }
   };

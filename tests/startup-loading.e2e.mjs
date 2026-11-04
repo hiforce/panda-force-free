@@ -25,15 +25,15 @@ try{
   let configuration;
   await page.route('**/api/config',route=>{configuration=route});
   await page.goto(base,{waitUntil:'domcontentloaded'});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.connected===true);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.connected===true);
   assert.ok(configuration,'Connection starts before config returns');
   await configuration.continue();
   await page.unroute('**/api/config');
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.config.defaultCwd);
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.modelLoadStatus==='ready');
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.config.defaultCwd);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.modelLoadStatus==='ready');
   // Permission profiles and models may be slow; the session list must render first.
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     if(api.state.ws)api.state.ws.onmessage=null;
     api.state.events?.close();api.state.transport='sse';
     const original=window.fetch;
@@ -55,7 +55,7 @@ try{
   await page.waitForFunction(()=>window.__startupPending.has('model/list')&&window.__startupPending.has('permissionProfile/list'));
   await page.evaluate(async()=>{for(const resolve of window.__startupPending.values())resolve();await window.__startupLoad});
   // A session-list failure must not prevent models or permissions loading.
-  await page.evaluate(()=>{window.__startupListFails=true;window.__startupPending.clear();globalThis.__codexWebuiDebug.state.threads=[];window.__startupLoad=globalThis.__codexWebuiDebug.loadInitial()});
+  await page.evaluate(()=>{window.__startupListFails=true;window.__startupPending.clear();globalThis.__pandaForceDebug.state.threads=[];window.__startupLoad=globalThis.__pandaForceDebug.loadInitial()});
   await page.waitForFunction(()=>window.__startupPending.has('model/list')&&window.__startupPending.has('permissionProfile/list'));
   await page.evaluate(async()=>{for(const resolve of window.__startupPending.values())resolve();await window.__startupLoad});
   await page.waitForSelector('.thread-item[data-id="fast-session"]');

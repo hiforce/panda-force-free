@@ -11,16 +11,16 @@ try {
     const context = await browser.newContext({ ...(mobile ? devices['iPhone 13'] : {}), viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 800 } });
     context.setDefaultTimeout(10_000);
     await fixture.signIn(context);
-    await context.addInitScript(() => { if (window === window.top) localStorage.setItem('codex-webui-locale', 'en'); });
+    await context.addInitScript(() => { if (window === window.top) localStorage.setItem('panda-force-locale', 'en'); });
     const page = await context.newPage(), decisions = [], errors = [];
     page.on('pageerror', error => errors.push(error.message));
     page.on("response", async response => { if(response.url().endsWith("/api/codex/respond") && response.ok()) decisions.push(response.request().postDataJSON()); });
     await page.goto(fixture.base, { waitUntil: 'networkidle' });
-    await page.waitForFunction(() => globalThis.__codexWebuiDebug?.state.modelLoadStatus === 'ready');
-    await page.evaluate(() => globalThis.__codexWebuiDebug.openThread('old-alpha'));
+    await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === 'ready');
+    await page.evaluate(() => globalThis.__pandaForceDebug.openThread('old-alpha'));
     // Use the real approval renderer while recording decisions instead of running a command.
-    await page.evaluate(() => { const api = globalThis.__codexWebuiDebug; api.state.ws?.close(); });
-    await page.waitForFunction(() => globalThis.__codexWebuiDebug.state.transport === 'sse');
+    await page.evaluate(() => { const api = globalThis.__pandaForceDebug; api.state.ws?.close(); });
+    await page.waitForFunction(() => globalThis.__pandaForceDebug.state.transport === 'sse');
     const prefix = mobile ? "mobile-" : "desktop-";
     const request = async (id, scoped = 'session') => {
       fixture.requestApproval({ id: prefix+id, method: 'item/commandExecution/requestApproval', params: { threadId: 'old-alpha', turnId: `approval-${prefix+id}`, itemId: `command-${prefix+id}`, command: 'echo test', cwd: fixture.alpha, availableDecisions: ['accept', 'decline', 'acceptForSession'], ...(scoped === 'similar' ? { proposedExecpolicyAmendment: ['echo'] } : {}) } });
@@ -66,7 +66,7 @@ try {
     assert.equal(await menu().count(), 0);
     assert.equal(await page.locator('.approval-card').count(), 0);
     await request(504); await toggle().click();
-    await page.evaluate(() => globalThis.__codexWebuiDebug.startNewTask());
+    await page.evaluate(() => globalThis.__pandaForceDebug.startNewTask());
     assert.equal(await menu().count(), 0);
     assert.equal(decisions.length, 0);
     assert.deepEqual(errors, []);

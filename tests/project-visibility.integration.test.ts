@@ -30,10 +30,10 @@ test('visibility persists across restart, synchronizes WS/SSE, and restores only
     expect(await fixture.visibility()).toEqual(hidden);
     expect((await fixture.rpc('thread/start', { cwd: fixture.alpha, model: 'fail' })).type).toBe('rpc/error');
     expect(await fixture.visibility()).toEqual(hidden);
-    await fixture.rpc('thread/start', { cwd: fixture.alpha, webuiProjectless: true });
+    await fixture.rpc('thread/start', { cwd: fixture.alpha, pandaProjectless: true });
     expect(await fixture.visibility()).toEqual(hidden);
     // Metadata must be stripped before forwarding to the native app-server.
-    const started = await fixture.rpc('thread/start', { cwd: fixture.alpha, webuiProjectless: false });
+    const started = await fixture.rpc('thread/start', { cwd: fixture.alpha, pandaProjectless: false });
     expect(started.type).toBe('rpc/result');
     expect(started.projectVisibility.hiddenProjects).toEqual({});
     await waitFor(() => messages.find(m => m.type === 'projects/visibility' && m.revision === started.projectVisibility.revision));

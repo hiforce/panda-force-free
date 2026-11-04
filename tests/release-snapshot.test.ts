@@ -5,19 +5,19 @@ import {join} from 'node:path';
 import {exportFree} from '../scripts/release/export-free.mjs';
 import {prepareUpdate} from '../scripts/release/prepare-update.mjs';
 import {git,assertReleasePath,inspectText,verifySnapshot} from '../scripts/release/snapshot-lib.mjs';
-const templates=['README.md','README-zh.md','LICENSE','SECURITY.md','CONTRIBUTING.md','THIRD_PARTY_NOTICES.md','Dockerfile','docker-compose.yml','.env.example','.gitignore','.dockerignore','UPDATES.md','USAGE.md','ci.yml'];
+const templates=['README.md','README-zh.md','LICENSE','THIRD_PARTY_NOTICES.md','Dockerfile','docker-compose.yml','.env.example','.gitignore','.dockerignore'];
 function commit(root:string){git(root,['add','.']);git(root,['commit','-qm','Synthetic fixture']);}
 function repository(root:string){mkdirSync(root,{recursive:true});git(root,['init','-q']);git(root,['config','user.name','Fixture']);git(root,['config','user.email','fixture@example.invalid']);}
 test('filtered exports exclude private state and internal history; three-way updates preserve public edits',()=>{
  const root=mkdtempSync(join(tmpdir(),'panda-snapshot-')),source=join(root,'source'),publicRepo=join(root,'public');
  try{
   repository(source);mkdirSync(join(source,'src'),{recursive:true});mkdirSync(join(source,'release/community'),{recursive:true});
-  writeFileSync(join(source,'package.json'),'{"name":"codex-webui"}');writeFileSync(join(source,'bun.lock'),'{"name":"codex-webui"}');
+  writeFileSync(join(source,'package.json'),'{"name":"panda-force"}');writeFileSync(join(source,'bun.lock'),'{"name":"panda-force"}');
   for(const name of templates)writeFileSync(join(source,'release/community',name),'Fixture document\n');
   writeFileSync(join(source,'src/example.js'),'export const a = 1;\n\n\n\nexport const b = 1;\n');
   for(const path of ['.codex/state.json','.claude/config.json','docs/design/internal.txt']){mkdirSync(join(source,path,'..'),{recursive:true});writeFileSync(join(source,path),'Private fixture');}
   const approved=['package.json','bun.lock','src/example.js','release/community/public-files.json',
-   ...templates.map(name=>'release/community/'+name),...templates.filter(name=>name!=='ci.yml'),'.github/workflows/ci.yml'];
+   ...templates.map(name=>'release/community/'+name),...templates];
   writeFileSync(join(source,'release/community/public-files.json'),JSON.stringify(approved));
   writeFileSync(join(source,'src/proprietary.js'),'Private future feature');
   commit(source);const before=join(root,'before');exportFree({source,destination:before});

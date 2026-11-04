@@ -18,7 +18,7 @@ const freePort = () => new Promise((resolvePort, reject) => {
 });
 const port = await freePort();
 const base = `http://127.0.0.1:${port}`;
-const fixtureRoot = mkdtempSync(join(tmpdir(), 'codex-webui-preview-'));
+const fixtureRoot = mkdtempSync(join(tmpdir(), 'panda-force-preview-'));
 mkdirSync(join(fixtureRoot, 'codex-home'));
 writeFileSync(join(fixtureRoot, 'codex'), `#!${process.execPath}
 import { createInterface } from 'node:readline';
@@ -53,7 +53,7 @@ const xref = Buffer.byteLength(pdf);
 pdf += `xref\n0 5\n0000000000 65535 f \n${offsets.slice(1).map(offset => `${String(offset).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
 writeFileSync(join(fixtureRoot, 'report.pdf'), pdf);
 const server = Bun.spawn(['bun', 'run', 'src/server/main.ts'], {
-  cwd: root, env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), CODEX_HOME: join(fixtureRoot, 'codex-home'), CODEX_WEBUI_APP_SERVER_MODE: 'isolated', PATH: `${fixtureRoot}:${process.env.PATH}`, CODEX_WEBUI_AUTH_STORE: join(fixtureRoot, 'auth.json'), CODEX_WEBUI_PASSWORD: '', CODEX_WEBUI_ACCESS_TOKEN: '' },
+  cwd: root, env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), CODEX_HOME: join(fixtureRoot, 'codex-home'), PANDA_FORCE_APP_SERVER_MODE: 'isolated', PATH: `${fixtureRoot}:${process.env.PATH}`, PANDA_FORCE_AUTH_STORE: join(fixtureRoot, 'auth.json'), PANDA_FORCE_PASSWORD: '', PANDA_FORCE_ACCESS_TOKEN: '' },
   stdout: 'ignore', stderr: 'pipe',
 });
 let browser;
@@ -74,14 +74,14 @@ try {
 
   browser = await chromium.launch({ ...launchOptions(), channel: 'chromium' });
   const page = await browser.newPage({ acceptDownloads: true, viewport: { width: 1000, height: 720 } });
-  await page.addInitScript(() => { if (window === window.top) localStorage.setItem('codex-webui-locale', 'en'); });
+  await page.addInitScript(() => { if (window === window.top) localStorage.setItem('panda-force-locale', 'en'); });
   const errors = [], downloads = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('download', download => downloads.push(download));
   await page.goto(base, { waitUntil: 'networkidle' });
-  await page.waitForFunction(() => globalThis.__codexWebuiDebug);
+  await page.waitForFunction(() => globalThis.__pandaForceDebug);
   await page.evaluate(({ fixture, fixtureRoot }) => {
-    const api = globalThis.__codexWebuiDebug;
+    const api = globalThis.__pandaForceDebug;
     api.state.active = { id: 'preview-thread', cwd: fixtureRoot, source: 'local' };
     document.querySelector('#conversation').replaceChildren();
     api.notify('item/completed', { turnId: 'preview-turn', item: {
@@ -108,7 +108,7 @@ try {
   assert.equal(await page.locator('.cm-content').getAttribute('aria-readonly'), 'true');
   await page.click('#closeFilePreview');
   await page.click('#closeFilesDialog');
-  await page.evaluate(() => { globalThis.__codexWebuiDebug.state.active.cwd = '/'; });
+  await page.evaluate(() => { globalThis.__pandaForceDebug.state.active.cwd = '/'; });
   const close = () => page.click('#closeFilePreview');
   await links.first().click();
   await ready();
@@ -192,7 +192,7 @@ try {
     return { left: bounds.left, right: bounds.right, width: innerWidth, scrollWidth: document.documentElement.scrollWidth };
   });
   assert.ok(mobile.left >= 0 && mobile.right <= mobile.width && mobile.scrollWidth <= mobile.width);
-  await page.screenshot({ path: '/tmp/codex-webui-file-preview-mobile.png' });
+  await page.screenshot({ path: '/tmp/panda-force-file-preview-mobile.png' });
   await close();
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ preview: 'ok', lineSelection: 'ok', markdown: 'ok', pdf: 'ok', errorsAndLimits: 'ok', staleRequests: 'ok', explicitDownload: 'ok', mobile }, null, 2));

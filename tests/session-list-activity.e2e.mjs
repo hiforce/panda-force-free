@@ -11,13 +11,13 @@ try{
   for(let i=0;i<400;i++){try{if((await fetch(`${base}/api/health`)).ok)break}catch{}await Bun.sleep(50)}
   browser=await chromium.launch(launchOptions());
   const context=await browser.newContext({viewport:{width:1018,height:760}});
-  await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('codex-webui-locale','en')});
+  await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.goto(base,{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.applyThreadSummaries);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug?.applyThreadSummaries);
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     if(api.state.ws)api.state.ws.onmessage=null;
     api.state.events?.close();
     api.state.transport='sse';
@@ -56,10 +56,10 @@ try{
   assert.equal(await row('idle').locator('time').textContent(),'2 hr. ago');
   assert.equal(await row('unknown').locator('time').textContent(),'—');
   assert.equal(await row('unknown').locator('time').getAttribute('datetime'),null);
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.state.active=globalThis.__codexWebuiDebug.state.threads.find(thread=>thread.id==='idle'));
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.renderHeader?.());
+  await page.evaluate(()=>globalThis.__pandaForceDebug.state.active=globalThis.__pandaForceDebug.state.threads.find(thread=>thread.id==='idle'));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.renderHeader?.());
   assert.equal(await page.locator('#sessionStatus').getAttribute('data-state'),'idle');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('goal/status/changed',{threadId:'idle',goalId:'goal-1',status:'active',objective:'Complete the validation',updatedAt:100}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('goal/status/changed',{threadId:'idle',goalId:'goal-1',status:'active',objective:'Complete the validation',updatedAt:100}));
   assert.equal(await page.locator('#goalStatus').getAttribute('data-state'),'active');
   assert.equal(await page.locator('#goalDialog').isVisible().catch(()=>false),false);
   await page.locator('#goalStatus .goal-status-toggle').click();
@@ -81,52 +81,52 @@ try{
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#goalDialog').isVisible(),false);
   // Subsequent protocol fixtures have independent timestamps.
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.state.goals.get('idle').updatedAt=100000);
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('goal/progress',{threadId:'idle',goalId:'goal-1',message:'P2 in progress',progress:{completed:2,total:4},updatedAt:101}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.state.goals.get('idle').updatedAt=100000);
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('goal/progress',{threadId:'idle',goalId:'goal-1',message:'P2 in progress',progress:{completed:2,total:4},updatedAt:101}));
   assert.equal((await page.locator('#goalStatus').textContent()).includes('P2 in progress'),false);
   assert.equal((await page.locator('#goalStatus').textContent()).includes('2/4'),true);
   await page.locator('#goalStatus .goal-status-toggle').click();
   assert.equal((await page.locator('#goalDialogDetail').textContent()).includes('P2 in progress'),true);
   await page.locator('#cancelGoalDialog').click();
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('goal/status/changed',{threadId:'idle',goalId:'goal-1',status:'blocked',detail:'old event',updatedAt:99}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('goal/status/changed',{threadId:'idle',goalId:'goal-1',status:'blocked',detail:'old event',updatedAt:99}));
   assert.equal(await page.locator('#goalStatus').getAttribute('data-state'),'active');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('goal/status/changed',{threadId:'idle',goalId:'goal-1',status:'completed',detail:'All checks passed',updatedAt:102}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('goal/status/changed',{threadId:'idle',goalId:'goal-1',status:'completed',detail:'All checks passed',updatedAt:102}));
   assert.equal(await page.locator('#goalStatus').getAttribute('data-state'),'completed');
   await page.locator('#goalStatus .goal-status-toggle').click();
   assert.equal((await page.locator('#goalDialogDetail').textContent()).includes('All checks passed'),true);
   await page.locator('#cancelGoalDialog').click();
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('goal/status/changed',{threadId:'running',goalId:'goal-2',status:'active',objective:'Background goal',updatedAt:103}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('goal/status/changed',{threadId:'running',goalId:'goal-2',status:'active',objective:'Background goal',updatedAt:103}));
   assert.equal(await page.locator('#goalStatus').getAttribute('data-state'),'completed');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-turn'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-turn'}}));
   assert.equal(await page.locator('#sessionStatus').getAttribute('data-state'),'running');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-turn',status:'completed'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-turn',status:'completed'}}));
   assert.equal(await page.locator('#sessionStatus').getAttribute('data-state'),'completed');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-error'}}));
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('error',{threadId:'idle',turnId:'status-error',error:{message:'Selected model is at capacity'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-error'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('error',{threadId:'idle',turnId:'status-error',error:{message:'Selected model is at capacity'}}));
   assert.equal(await page.locator('#sessionStatus').getAttribute('data-state'),'running');
   assert.equal(await page.locator('#persistentErrors [data-error-id]').count(),0);
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-error',status:'failed',error:{message:'Selected model is at capacity'}}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-error',status:'failed',error:{message:'Selected model is at capacity'}}}));
   assert.equal(await page.locator('#sessionStatus').getAttribute('data-state'),'error');
   assert.equal((await page.locator('[data-thread-error]').textContent()).includes('Selected model is at capacity'),true);
   assert.equal(await page.locator('#persistentErrors [data-error-id]').count(),0);
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-recovery'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-recovery'}}));
   assert.equal(await page.locator('#sessionStatus').getAttribute('data-state'),'running');
   assert.equal(await page.locator('[data-thread-error]').count(),0);
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug,stale={...api.state.threads.find(thread=>thread.id==='idle'),status:{type:'active'},lastError:{message:'Selected model is at capacity'}};
+    const api=globalThis.__pandaForceDebug,stale={...api.state.threads.find(thread=>thread.id==='idle'),status:{type:'active'},lastError:{message:'Selected model is at capacity'}};
     api.applyThreadSummaries(api.state.threads.map(thread=>thread.id==='idle'?stale:thread));
   });
   assert.equal(await page.locator('#sessionStatus').getAttribute('data-state'),'running');
   assert.equal(await row('idle').getAttribute('data-error'),'false');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-recovery',status:'completed'}}));
-  await page.evaluate(()=>{const api=globalThis.__codexWebuiDebug,thread=api.state.active;thread.lastError={message:'Selected model is at capacity'};thread.error=thread.lastError;api.renderHeader()});
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-recovery',status:'completed'}}));
+  await page.evaluate(()=>{const api=globalThis.__pandaForceDebug,thread=api.state.active;thread.lastError={message:'Selected model is at capacity'};thread.error=thread.lastError;api.renderHeader()});
   assert.equal(await page.locator('#sessionStatus').getAttribute('data-state'),'completed');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.applyThreadSummaries(window.__activityThreads));
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-generic-failure'}}));
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-generic-failure',status:'failed'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.applyThreadSummaries(window.__activityThreads));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-generic-failure'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-generic-failure',status:'failed'}}));
   assert.equal(await page.locator('#sessionStatus').textContent(),'Task failed');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-generic-recovery'}}));
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-generic-recovery',status:'completed'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/started',{threadId:'idle',turn:{id:'status-generic-recovery'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('turn/completed',{threadId:'idle',turn:{id:'status-generic-recovery',status:'completed'}}));
   const fits=await row('running').evaluate(node=>{
     const spinner=node.querySelector('.thread-running').getBoundingClientRect(),name=node.querySelector('.thread-name').getBoundingClientRect(),meta=node.querySelector('.thread-meta').getBoundingClientRect(),options=node.querySelector('.thread-options').getBoundingClientRect();
     return node.firstElementChild.classList.contains('thread-running')&&spinner.left>=node.getBoundingClientRect().left&&spinner.right<name.left&&name.width>0&&name.right<=meta.left&&meta.right<=options.left&&options.right<=node.getBoundingClientRect().right;
@@ -134,11 +134,11 @@ try{
   assert.equal(fits,true);
   await page.screenshot({path:artifact('session-list-activity.png')});
   // Unchanged server summaries must still advance time without replacing rows.
-  await page.evaluate(()=>{window.__originalActivityRow=document.querySelector('.thread-item[data-id="running"]');window.__activityNow+=120_000;globalThis.__codexWebuiDebug.applyThreadSummaries(window.__activityThreads)});
+  await page.evaluate(()=>{window.__originalActivityRow=document.querySelector('.thread-item[data-id="running"]');window.__activityNow+=120_000;globalThis.__pandaForceDebug.applyThreadSummaries(window.__activityThreads)});
   assert.equal(await row('running').locator('time').textContent(),'7 min. ago');
   assert.equal(await page.evaluate(()=>window.__originalActivityRow===document.querySelector('.thread-item[data-id="running"]')),true);
   const unchanged=await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug,before=document.querySelector('#conversation').innerHTML;
+    const api=globalThis.__pandaForceDebug,before=document.querySelector('#conversation').innerHTML;
     api.notify('turn/started',{threadId:'running',turn:{id:'new-running-turn'}});
     api.notify('turn/completed',{threadId:'running',turn:{id:'old-running-turn'}});
     return before===document.querySelector('#conversation').innerHTML;
@@ -146,14 +146,14 @@ try{
   assert.equal(unchanged,true);
   assert.equal(await row('running').getAttribute('data-running'),'true');
   assert.equal(await row('running').locator('time').textContent(),'now');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('thread/status/changed',{threadId:'running',status:{type:'idle'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('thread/status/changed',{threadId:'running',status:{type:'idle'}}));
   assert.equal(await row('running').locator('.thread-running').isVisible(),false);
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('thread/status/changed',{threadId:'unknown',status:{type:'active'}}));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.notify('thread/status/changed',{threadId:'unknown',status:{type:'active'}}));
   assert.equal(await row('unknown').locator('.thread-running').isVisible(),true);
 
   // A successful turn must clear a previous turn-level error on the same session.
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     const thread={id:'recovered',name:'Recovered session',cwd:api.state.config.defaultCwd,status:{type:'idle'},updatedAt:Date.now()/1000};
     api.state.threads.push(thread);api.renderThreads();
     api.notify('error',{threadId:'recovered',error:{message:'Selected model is at capacity'}});
@@ -162,17 +162,17 @@ try{
   assert.equal(await row('recovered').getAttribute('data-error'),'false');
   assert.equal(await row('recovered').getAttribute('class'),'thread-item');
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;api.state.active=api.state.threads.find(thread=>thread.id==='running');
+    const api=globalThis.__pandaForceDebug;api.state.active=api.state.threads.find(thread=>thread.id==='running');
     api.notify('turn/started',{threadId:'running',turn:{id:'auto-turn'}});
     api.notify('error',{threadId:'running',turnId:'auto-turn',error:{message:'Selected model is at capacity'}});
     api.notify('error',{threadId:'running',turnId:'auto-turn',error:{message:'Selected model is at capacity'}});
   });
   await page.waitForTimeout(800);
-  // Automatic Continue is owned by the WebUI service now; the browser only
+  // Automatic Continue is owned by the PandaForce service now; the browser only
   // renders the failure and must not create a duplicate turn.
   assert.equal(await page.evaluate(()=>window.__activityCalls.filter(call=>call.method==='turn/steer').length),0);
   assert.equal(await page.evaluate(()=>window.__activityCalls.filter(call=>call.method==='thread/queue/add').length),0);
-  await page.evaluate(()=>{globalThis.__codexWebuiDebug.state.active=globalThis.__codexWebuiDebug.state.threads.find(thread=>thread.id==='idle')});
+  await page.evaluate(()=>{globalThis.__pandaForceDebug.state.active=globalThis.__pandaForceDebug.state.threads.find(thread=>thread.id==='idle')});
   await page.locator('#toggleSummaryPanel').click();
   assert.equal(await page.locator('#summarySessionMarker').textContent(),'idle…');
   assert.equal(await page.locator('#summarySessionMarker').getAttribute('title'),'idle');
@@ -181,18 +181,18 @@ try{
   assert.equal(await page.locator('#copySummarySessionMarker').isDisabled(),false);
   await page.locator('#summarySessionName').fill('Renamed idle session');
   await page.locator('#saveSummarySessionName').click();
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.active?.name==='Renamed idle session');
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.active?.name==='Renamed idle session');
   assert.equal(await row('idle').locator('.thread-name').textContent(),'Renamed idle session');
   await page.locator('#closeSummaryPanel').click();
-  await page.evaluate(()=>{const api=globalThis.__codexWebuiDebug,thread=api.state.threads.find(item=>item.id==='idle');thread.lastActivityAt=Date.now()/1000-7200;api.state.active.lastActivityAt=thread.lastActivityAt;api.refreshThreadRowMetadata()});
-  await page.evaluate(()=>{globalThis.__codexWebuiI18n.setPreference('zh-CN');globalThis.__codexWebuiDebug.refreshThreadRowMetadata()});
+  await page.evaluate(()=>{const api=globalThis.__pandaForceDebug,thread=api.state.threads.find(item=>item.id==='idle');thread.lastActivityAt=Date.now()/1000-7200;api.state.active.lastActivityAt=thread.lastActivityAt;api.refreshThreadRowMetadata()});
+  await page.evaluate(()=>{globalThis.__pandaForceI18n.setPreference('zh-CN');globalThis.__pandaForceDebug.refreshThreadRowMetadata()});
   assert.equal(await row('idle').locator('time').textContent(),'2小时前');
   assert.equal(await row('unknown').locator('.thread-running').getAttribute('aria-label'),'进行中');
   assert.match(await row('idle').locator('time').getAttribute('title'),/上次活动：2小时前/);
   // Session navigation must not promote its project; each project expands in batches of five.
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;
-    globalThis.__codexWebuiI18n.setPreference('en');
+    const api=globalThis.__pandaForceDebug;
+    globalThis.__pandaForceI18n.setPreference('en');
     window.__activityThreads=Array.from({length:12},(_,index)=>({id:`page-${index}`,name:`Paged session ${index}`,cwd:'/projects/recent',updatedAt:1000-index,recencyAt:1000-index,turns:[]}));
     window.__activityThreads.push({id:'other-project',name:'Other project',cwd:'/projects/older',updatedAt:100,recencyAt:99999,turns:[]});
     api.state.active=window.__activityThreads[0];api.applyThreadSummaries(window.__activityThreads);
@@ -205,14 +205,14 @@ try{
   assert.equal(await page.locator('.sidebar-project-group[data-project="__pinned__"]').count(),1);
   assert.equal(await page.locator('.sidebar-project-group[data-project="__pinned__"] .sidebar-pinned-empty').textContent(),'No pinned sessions');
   assert.deepEqual(await recent.locator('.thread-item').evaluateAll(nodes=>nodes.map(node=>node.dataset.id)),['page-0','page-1','page-2','page-3','page-4']);
-  await page.evaluate(()=>{window.__activityThreads[0].updatedAt=9999999999;globalThis.__codexWebuiDebug.applyThreadSummaries(window.__activityThreads)});
+  await page.evaluate(()=>{window.__activityThreads[0].updatedAt=9999999999;globalThis.__pandaForceDebug.applyThreadSummaries(window.__activityThreads)});
   assert.deepEqual(await projectOrder(),['/projects/older','/projects/recent']);
   const expandedBeforePin=await recent.locator('.sidebar-project-row').getAttribute('aria-expanded');
   await togglePin(recent);
   assert.equal(await recent.getAttribute('data-pinned'),'true');
   assert.equal(await recent.locator('.sidebar-project-row').getAttribute('aria-expanded'),expandedBeforePin);
   assert.deepEqual(await projectOrder(),['/projects/recent','/projects/older']);
-  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('codex-webui-sidebar-pinned-projects'))),['/projects/recent']);
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('panda-force-sidebar-pinned-projects'))),['/projects/recent']);
   await togglePin(recent);
   assert.deepEqual(await projectOrder(),['/projects/older','/projects/recent']);
 
@@ -224,7 +224,7 @@ try{
   assert.equal(await recent.locator('.thread-item').count(),10);
   // Expanded count survives both navigation and summary refreshes.
   await row('page-8').click();
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.applyThreadSummaries(window.__activityThreads));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.applyThreadSummaries(window.__activityThreads));
   assert.equal(await recent.locator('.thread-item').count(),10);
   await recent.locator('.sidebar-sessions-more').click();
   assert.equal(await recent.locator('.thread-item').count(),12);
@@ -239,9 +239,9 @@ try{
   // Pin preferences survive a full page reload and sort multiple pinned projects alphabetically.
   await togglePin(recent);
   await page.reload({waitUntil:'networkidle'});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.renderThreads);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug?.renderThreads);
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     if(api.state.ws)api.state.ws.onmessage=null;
     api.state.events?.close();api.state.transport='sse';
     const original=window.fetch;
@@ -263,7 +263,7 @@ try{
   const pinnedGroup=page.locator('.sidebar-project-group[data-project="__pinned__"]');
   assert.equal(await pinnedGroup.count(),1);
   assert.deepEqual(await pinnedGroup.locator('.thread-item').evaluateAll(nodes=>nodes.map(node=>node.dataset.id)),['alpha']);
-  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('codex-webui-sidebar-pinned-threads'))),['alpha']);
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('panda-force-sidebar-pinned-threads'))),['alpha']);
   assert.equal(await page.locator('.sidebar-project-group[data-project="/z/Alpha"] .thread-item[data-id="alpha"]').count(),1);
   await pinnedGroup.locator('.thread-item[data-id="alpha"] .thread-options').click();
   await page.getByRole('menuitem',{name:'Unpin session',exact:true}).click({force:true});
@@ -271,7 +271,7 @@ try{
   assert.equal(await page.locator('.sidebar-project-group[data-project="__pinned__"] .sidebar-pinned-empty').textContent(),'No pinned sessions');
   await togglePin(page.locator('[data-project="/z/Alpha"]'));
   assert.deepEqual(await projectOrder(),['/z/Alpha','/projects/recent','/a/alpha','/projects/older']);
-  await page.evaluate(()=>globalThis.__codexWebuiI18n.setPreference('zh-CN'));
+  await page.evaluate(()=>globalThis.__pandaForceI18n.setPreference('zh-CN'));
   await page.locator('[data-project="/z/Alpha"] .sidebar-project-options').click();
   assert.equal(await page.getByRole('menuitem',{name:'取消置顶',exact:true}).textContent(),'取消置顶');
   await page.getByRole('menuitem',{name:'取消置顶',exact:true}).click();

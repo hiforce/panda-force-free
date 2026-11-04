@@ -5,13 +5,13 @@ import { join, resolve } from "node:path";
 import { afterAll } from "bun:test";
 import { defaultBrowseRoots, isDirectory, listFolders, resolveBrowsePath } from "../src/server/workspace/folders.js";
 
-const root = mkdtempSync(join(tmpdir(), "codex-webui-folders-"));
+const root = mkdtempSync(join(tmpdir(), "panda-force-folders-"));
 mkdirSync(join(root, "alpha"));
 mkdirSync(join(root, "Beta"));
 mkdirSync(join(root, ".hidden"));
 mkdirSync(join(root, "alpha", "nested"));
 writeFileSync(join(root, "file.txt"), "not a directory");
-const outside = mkdtempSync(join(tmpdir(), "codex-webui-outside-"));
+const outside = mkdtempSync(join(tmpdir(), "panda-force-outside-"));
 
 afterAll(() => {
   rmSync(root, { recursive: true, force: true });

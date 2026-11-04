@@ -15,7 +15,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1120, height: 760 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.addInitScript(() => { if (window === window.top) localStorage.setItem('codex-webui-locale', 'zh-CN'); });
+  await page.addInitScript(() => { if (window === window.top) localStorage.setItem('panda-force-locale', 'zh-CN'); });
   await page.clock.install();
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname;
@@ -69,7 +69,7 @@ try {
   await page.waitForTimeout(100);
   assert.match(await page.locator('#usageWindows').textContent(), /55% 已用/);
   defer = false;
-  await page.evaluate(() => globalThis.__codexWebuiI18n.setPreference('en'));
+  await page.evaluate(() => globalThis.__pandaForceI18n.setPreference('en'));
   await page.waitForFunction(() => document.querySelector('#usageWindows').textContent.includes('5-hour limit'));
   const beforePoll = usageReads;
   await page.clock.runFor(60001);
@@ -89,7 +89,7 @@ try {
   const beforeHidden = usageReads;
   await page.clock.runFor(60001);
   assert.equal(usageReads, beforeHidden);
-  await page.evaluate(() => globalThis.__codexWebuiDebug.openSettings('usage'));
+  await page.evaluate(() => globalThis.__pandaForceDebug.openSettings('usage'));
   socket.send(JSON.stringify({ type: 'bridge/status', status: 'disconnected' }));
   await page.waitForFunction(() => document.querySelector('#usageStatus').textContent.includes('Connect to Codex'));
   assert.equal(await page.locator('#usageWindows progress').count(), 0);

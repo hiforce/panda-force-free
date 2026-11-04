@@ -23,7 +23,7 @@ test('legacy migration preserves the existing credential and corrupt admin files
  }finally{rmSync(dir,{recursive:true,force:true})}
 });
 test('administrator paths keep custom and test state isolated',()=>{
- expect(administratorStorePath({CODEX_HOME:'/tmp/isolated'})).toBe('/tmp/isolated/codex-webui-admin.json');
- expect(administratorStorePath({CODEX_WEBUI_AUTH_STORE:'/tmp/legacy.json'})).toBe('/tmp/legacy.json.administrator.json');
- expect(administratorStorePath({CODEX_WEBUI_ADMIN_STORE:'/tmp/administrator.json'})).toBe('/tmp/administrator.json');
+ expect(administratorStorePath({CODEX_HOME:'/tmp/isolated'})).toBe('/tmp/isolated/panda-force-admin.json');
+ expect(administratorStorePath({PANDA_FORCE_AUTH_STORE:'/tmp/legacy.json'})).toBe('/tmp/legacy.json.administrator.json');
+ expect(administratorStorePath({PANDA_FORCE_ADMIN_STORE:'/tmp/administrator.json'})).toBe('/tmp/administrator.json');
 });

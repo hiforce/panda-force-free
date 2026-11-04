@@ -39,7 +39,7 @@ const PUBLIC_ASSETS = new Set([
   "/favicon.svg",
   "/auth-bootstrap.js",
   "/i18n.js",
-  "/codex-brand.js",
+  "/panda-brand.js",
   "/app.bundle.js",
   "/file-preview.bundle.js",
   "/terminal-runtime.bundle.js",
@@ -53,7 +53,7 @@ function safeEqual(left, right) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-const PASSWORD_SESSION_COOKIE = "codex_webui_session";
+const PASSWORD_SESSION_COOKIE = "panda_force_session";
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const STORED_PASSWORD_VERSION = 1;
 
@@ -129,7 +129,7 @@ export function verifyStoredPassword(password, credential) {
 
 export function storedPasswordSessionSecret(credential) {
   if (!isStoredPassword(credential)) return null;
-  return createHash("sha256").update(`codex-webui-session:${credential.salt}:${credential.hash}`).digest("base64url");
+  return createHash("sha256").update(`panda-force-session:${credential.salt}:${credential.hash}`).digest("base64url");
 }
 
 function hostnameOf(hostHeader) {

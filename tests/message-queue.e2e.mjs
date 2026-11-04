@@ -8,7 +8,7 @@ const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...proc
 let browser;
 async function fixture(page,entries=[]){
   await page.evaluate(async entries=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     if(api.state.ws)api.state.ws.onmessage=null;api.state.events?.close();api.state.transport='sse';
     window.__queueCalls=[];window.__queueEntries=entries;window.__queueHold=false;window.__queueReject=false;window.__queueLost=false;window.__createHold=false;
     const original=window.fetch;
@@ -39,9 +39,9 @@ async function fixture(page,entries=[]){
 try{
   for(let i=0;i<400;i++){try{if((await fetch(`${base}/api/health`)).ok)break}catch{}await Bun.sleep(50)}
   browser=await chromium.launch(launchOptions());const context=await browser.newContext();
-  await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('codex-webui-locale','en')});
+  await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto(base,{waitUntil:'networkidle'});await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.modelLoadStatus==='ready');await fixture(page);
+  await page.goto(base,{waitUntil:'networkidle'});await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.modelLoadStatus==='ready');await fixture(page);
   assert.equal(await page.locator('[data-composer-control=dictation]').count(),0);
   await page.evaluate(()=>window.__queueHold=true);await page.locator('#prompt').fill('Same text');await page.locator('#queueButton').click();
   await page.waitForFunction(()=>Boolean(window.__queueRelease));
@@ -50,16 +50,16 @@ try{
   await page.locator('#prompt').press('Tab');assert.equal(await page.evaluate(()=>window.__queueCalls.filter(call=>call.method==='thread/queue/add').length),1);
   await page.locator('#prompt').fill('');await page.evaluate(()=>{window.__queueHold=false;window.__queueRelease()});
   await page.waitForFunction(()=>document.querySelector('.message-queue-row')?.dataset.status==='queued');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('B'));assert.equal(await page.locator('#messageQueue').isVisible(),false);
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('A'));await page.waitForFunction(()=>document.querySelector('.message-queue-row[data-status=queued]'));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('B'));assert.equal(await page.locator('#messageQueue').isVisible(),false);
+  await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('A'));await page.waitForFunction(()=>document.querySelector('.message-queue-row[data-status=queued]'));
   // A new browser reads the native queue, rather than relying on the first page's memory.
-  const saved=await page.evaluate(()=>window.__queueEntries);const second=await context.newPage();await second.goto(base,{waitUntil:'networkidle'});await second.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.modelLoadStatus==='ready');await fixture(second,saved);
+  const saved=await page.evaluate(()=>window.__queueEntries);const second=await context.newPage();await second.goto(base,{waitUntil:'networkidle'});await second.waitForFunction(()=>globalThis.__pandaForceDebug?.state.modelLoadStatus==='ready');await fixture(second,saved);
   await second.waitForFunction(()=>document.querySelector('.message-queue-row[data-status=queued]'));assert.equal(await second.locator('.message-queue-text').textContent(),'Same text');await second.close();
   // The queue disappears from the server before the echo; retain the text until it arrives.
   const clientId=saved[0].clientUserMessageId;
-  await page.evaluate(()=>{window.__queueEntries=[];globalThis.__codexWebuiDebug.notify('thread/queue/changed',{threadId:'A'})});
+  await page.evaluate(()=>{window.__queueEntries=[];globalThis.__pandaForceDebug.notify('thread/queue/changed',{threadId:'A'})});
   await page.waitForFunction(()=>document.querySelector('.message-queue-row')?.dataset.status==='starting');
-  await page.evaluate(clientId=>{const api=globalThis.__codexWebuiDebug;api.notify('turn/started',{threadId:'A',turn:{id:'next-turn'}});api.notify('item/started',{threadId:'A',turnId:'next-turn',item:{id:'queue-echo',clientId,type:'userMessage',content:[{type:'text',text:'Same text'}]}})},clientId);
+  await page.evaluate(clientId=>{const api=globalThis.__pandaForceDebug;api.notify('turn/started',{threadId:'A',turn:{id:'next-turn'}});api.notify('item/started',{threadId:'A',turnId:'next-turn',item:{id:'queue-echo',clientId,type:'userMessage',content:[{type:'text',text:'Same text'}]}})},clientId);
   assert.equal(await page.locator('#messageQueue').isVisible(),false);assert.equal(await page.locator('.user-message').count(),2);
   // Tab queues, but composition confirmation and Shift+Tab do not.
   await page.locator('#prompt').fill('Tab message');
@@ -73,11 +73,11 @@ try{
   await page.evaluate(()=>{window.__queueReject=false;window.__queueLost=true});await page.locator('#prompt').fill('Lost ack');await page.locator('#queueButton').click();await page.waitForFunction(()=>document.querySelector('.message-queue-row[data-status=queued]'));
   assert.equal(await page.evaluate(()=>window.__queueCalls.filter(call=>call.method==='thread/queue/add'&&call.params.input[0].text==='Lost ack').length),1);
   await page.locator('.message-queue-cancel').click();await page.waitForFunction(()=>document.querySelector('#messageQueue').hidden);
-  await page.evaluate(()=>{window.__queueLost=false;window.__createHold=true;globalThis.__codexWebuiDebug.startNewTask()});await page.locator('#prompt').fill('New session queue');await page.locator('#queueButton').click();await page.waitForFunction(()=>Boolean(window.__createRelease));
+  await page.evaluate(()=>{window.__queueLost=false;window.__createHold=true;globalThis.__pandaForceDebug.startNewTask()});await page.locator('#prompt').fill('New session queue');await page.locator('#queueButton').click();await page.waitForFunction(()=>Boolean(window.__createRelease));
   assert.equal(await page.locator('.message-queue-text').textContent(),'New session queue');await page.evaluate(()=>window.__createRelease());await page.waitForFunction(()=>document.querySelector('.message-queue-row[data-status=queued]'));
   assert.equal(await page.evaluate(()=>window.__queueCalls.some(call=>call.method==='turn/steer'||call.method==='turn/start')),false);
   await page.setViewportSize({width:390,height:844});assert.equal(await page.locator('#queueButton').isVisible(),true);assert.ok(await page.locator('#queueButton').evaluate(node=>node.getBoundingClientRect().right<=innerWidth));
-  await page.evaluate(()=>globalThis.__codexWebuiI18n.setPreference('zh-CN'));await page.locator('#prompt').fill('Queue');await page.locator('#queueButton').click();await page.waitForFunction(()=>document.querySelectorAll('.message-queue-row[data-status=queued]').length===2);
+  await page.evaluate(()=>globalThis.__pandaForceI18n.setPreference('zh-CN'));await page.locator('#prompt').fill('Queue');await page.locator('#queueButton').click();await page.waitForFunction(()=>document.querySelectorAll('.message-queue-row[data-status=queued]').length===2);
   assert.equal(await page.locator('.message-queue-text').last().textContent(),'Queue');assert.equal(await page.locator('.message-queue-status').last().textContent(),'已排队');assert.ok((await page.locator('#queueButton').textContent()).includes('排队'));
   assert.deepEqual(errors,[]);console.log('message queue e2e passed');
 }finally{await browser?.close();server.kill();await server.exited}

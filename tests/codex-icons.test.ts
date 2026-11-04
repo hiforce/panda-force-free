@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { codexInterfaceMark } from "../src/client/codex-brand.js";
+import { pandaInterfaceMark } from "../src/client/panda-brand.js";
 import { codexIcon, codexIconNodes, hydrateCodexIcons } from "../src/client/codex-icons.js";
 
 describe("Codex icon assets", () => {
@@ -12,11 +12,11 @@ describe("Codex icon assets", () => {
   });
 
   test("the compatible brand entry point renders the PandaForce mark", () => {
-    const html = codexInterfaceMark("assistant-mark");
+    const html = pandaInterfaceMark("assistant-mark");
     expect(html).toContain('data-panda-force-mark');
     expect(html).toContain('viewBox="0 0 32 32"');
     expect(html).toContain('assistant-mark');
-    expect(html).not.toContain('data-codex-interface-mark');
+    expect(html).not.toContain('data-panda-interface-mark');
     expect(html).not.toContain("img");
   });
 

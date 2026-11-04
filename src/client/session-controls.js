@@ -554,7 +554,7 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
   function setPermissionVisibility(kind, enabled) {
     state.permissionVisibility[kind] = Boolean(enabled);
     storage.set(
-      kind === "autoReview" ? "codex-webui-permission-auto-review" : STORAGE_KEYS.permissionFullAccess,
+      kind === "autoReview" ? "panda-force-permission-auto-review" : STORAGE_KEYS.permissionFullAccess,
       String(Boolean(enabled)),
     );
     normalizePermissionMode();

@@ -7,7 +7,7 @@ node_modules/
 /public/terminal-runtime.bundle.js
 /public/auth-bootstrap.js
 /public/i18n.js
-/public/codex-brand.js
+/public/panda-brand.js
 
 # Local environment configuration (keep shareable examples)
 .env
@@ -21,7 +21,7 @@ node_modules/
 /config/panda-force.json
 /logs/
 /auth.json
-/codex-webui-auth.json
+/panda-force-auth.json
 
 # Test output and logs
 /.artifacts/
@@ -50,3 +50,7 @@ Thumbs.db
 .cursor/
 .gemini/
 .opencode/
+
+# Generated help site
+/panda-docs/build/
+/panda-docs/.docusaurus/

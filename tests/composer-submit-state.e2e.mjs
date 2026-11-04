@@ -14,13 +14,13 @@ try{
   await waitFor(async()=>(await fetch(`${base}/api/health`)).ok);
   browser=await chromium.launch(launchOptions());
   const context=await browser.newContext({viewport:{width:1018,height:760},colorScheme:'dark'});
-  await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('codex-webui-locale','en')});
+  await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.goto(base,{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.syncTurnSnapshot);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug?.syncTurnSnapshot);
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     api.state.active={id:'composer-thread',name:'Composer thread',cwd:api.state.config.defaultCwd,turns:[]};
     api.syncTurnSnapshot({id:'composer-turn',status:'inProgress',itemsView:'full',items:[]});
     api.notify('turn/started',{threadId:'other-thread',turn:{id:'other-turn'}});
@@ -35,7 +35,7 @@ try{
         window.__composerRpcCalls.push(payload);
         if(payload.method==='turn/steer'&&window.__noActiveSteer)return Response.json({type:'rpc/error',id:payload.id,error:'no active turn to steer'});
         if(payload.method==='turn/start'&&window.__noActiveSteer){
-          const api=globalThis.__codexWebuiDebug;
+          const api=globalThis.__pandaForceDebug;
           api.notify('turn/started',{threadId:payload.params.threadId,turn:{id:'fallback-turn'}});
           api.notify('item/started',{threadId:payload.params.threadId,turnId:'fallback-turn',item:{id:'fallback-user',type:'userMessage',content:payload.params.input}});
           return Response.json({type:'rpc/result',id:payload.id,result:{turn:{id:'fallback-turn'}}});
@@ -49,7 +49,7 @@ try{
     };
   });
   const ime=await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug,prompt=document.querySelector('#prompt'),form=document.querySelector('#composer');
+    const api=globalThis.__pandaForceDebug,prompt=document.querySelector('#prompt'),form=document.querySelector('#composer');
     let submissions=0;
     const intercept=event=>{event.preventDefault();event.stopImmediatePropagation();submissions++};
     form.addEventListener('submit',intercept,true);
@@ -90,7 +90,7 @@ try{
   await page.locator('#prompt').fill('Change direction while this task is running.');
   const steer=await page.evaluate(()=>({mode:document.querySelector('#sendButton')?.dataset.submitMode,title:document.querySelector('#sendButton')?.title,label:document.querySelector('#sendButton')?.textContent,stopped:document.querySelector('#sendButton')?.classList.contains('stop'),arrow:Boolean(document.querySelector('#sendButton path[d="M12 19V5"]'))}));
   await page.setViewportSize({width:390,height:844});
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.setSidebarOpen(false));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.setSidebarOpen(false));
   const mobile=await page.evaluate(()=>{const button=document.querySelector('#sendButton').getBoundingClientRect();return{right:button.right,left:button.left,overflow:document.documentElement.scrollWidth>innerWidth}});
   await page.screenshot({path:artifact('composer-submit-steer-mobile.png'),fullPage:false});
   await page.setViewportSize({width:1018,height:760});
@@ -103,7 +103,7 @@ try{
   await page.waitForFunction(()=>document.querySelector('.user-turn[data-steer=true]')?.dataset.delivery==='sent');
   const afterSteer=await page.evaluate(()=>({input:document.querySelector('#prompt')?.value,mode:document.querySelector('#sendButton')?.dataset.submitMode,call:window.__composerRpcCalls.find(call=>call.method==='turn/steer')}));
   const echoed=await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug,item={id:'server-steer',type:'userMessage',content:[{type:'text',text:'Change direction while this task is running.'}]};
+    const api=globalThis.__pandaForceDebug,item={id:'server-steer',type:'userMessage',content:[{type:'text',text:'Change direction while this task is running.'}]};
     api.notify('item/started',{threadId:'composer-thread',turnId:'composer-turn',item});
     api.notify('item/completed',{threadId:'composer-thread',turnId:'composer-turn',item});
     api.syncTurnSnapshot({id:'composer-turn',status:'inProgress',itemsView:'full',items:[{...item,id:'host-user-composer-turn-2',steer:true}]});
@@ -120,15 +120,15 @@ try{
   await page.click('#sendButton');
   await page.waitForTimeout(100);
   const interrupt=await page.evaluate(()=>({mode:document.querySelector('#sendButton')?.dataset.submitMode,call:window.__composerRpcCalls.find(call=>call.method==='turn/interrupt')}));
-  const send=await page.evaluate(()=>{const api=globalThis.__codexWebuiDebug;api.syncTurnSnapshot({id:'composer-turn',status:'completed',itemsView:'full',items:[]});const button=document.querySelector('#sendButton');return{mode:button?.dataset.submitMode,title:button?.title,stopped:button?.classList.contains('stop'),arrow:Boolean(button?.querySelector('path[d="M12 19V5"]'))}});
+  const send=await page.evaluate(()=>{const api=globalThis.__pandaForceDebug;api.syncTurnSnapshot({id:'composer-turn',status:'completed',itemsView:'full',items:[]});const button=document.querySelector('#sendButton');return{mode:button?.dataset.submitMode,title:button?.title,stopped:button?.classList.contains('stop'),arrow:Boolean(button?.querySelector('path[d="M12 19V5"]'))}});
   const repeated=await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug,text='Change direction while this task is running.';
+    const api=globalThis.__pandaForceDebug,text='Change direction while this task is running.';
     api.syncTurnSnapshot({id:'composer-turn',status:'completed',itemsView:'full',items:[{id:'server-steer-2',type:'userMessage',steer:true,content:[{type:'text',text}]}]});
     api.syncTurnSnapshot({id:'composer-turn',status:'completed',itemsView:'full',items:[{id:'host-user-composer-turn-3',type:'userMessage',steer:true,content:[{type:'text',text}]}]});
     return [...document.querySelectorAll('.user-turn[data-steer=true]')].filter(node=>node.querySelector('.user-message')?.textContent===text).length;
   });
   // The server completed the turn before the client received its notification.
-  await page.evaluate(()=>{const api=globalThis.__codexWebuiDebug;api.state.active.canAcceptDirectInput=true;api.syncTurnSnapshot({id:'stale-turn',status:'inProgress',items:[]});window.__noActiveSteer=true;window.__fallbackCallStart=window.__composerRpcCalls.length});
+  await page.evaluate(()=>{const api=globalThis.__pandaForceDebug;api.state.active.canAcceptDirectInput=true;api.syncTurnSnapshot({id:'stale-turn',status:'inProgress',items:[]});window.__noActiveSteer=true;window.__fallbackCallStart=window.__composerRpcCalls.length});
   await page.locator('#prompt').fill('Send after the task ended.');await page.click('#sendButton');
   await page.waitForFunction(()=>document.querySelector('[data-item-id="fallback-user"]')||[...document.querySelectorAll('.user-message')].some(node=>node.textContent==='Send after the task ended.'&&node.parentElement.dataset.optimisticUser===undefined));
   const fallback=await page.evaluate(()=>({calls:window.__composerRpcCalls.slice(window.__fallbackCallStart).filter(call=>['turn/steer','turn/start'].includes(call.method)),messages:[...document.querySelectorAll('.user-message')].filter(node=>node.textContent==='Send after the task ended.').map(node=>({turn:node.parentElement.dataset.userTurnId,steer:node.parentElement.dataset.steer,inTimeline:Boolean(node.closest('.turn-event-stream'))})),draft:document.querySelector('#prompt').value}));
@@ -136,11 +136,11 @@ try{
   assert.equal(fallback.calls[1].params.input[0].text,'Send after the task ended.');
   assert.deepEqual(fallback.messages,[{turn:'fallback-turn',steer:undefined,inTimeline:false}]);assert.equal(fallback.draft,'');
   await page.evaluate(()=>window.__noActiveSteer=false);
-  await page.evaluate(()=>{const api=globalThis.__codexWebuiDebug;api.state.active={id:'external-thread',name:'External thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:null};api.syncTurnSnapshot({id:'external-turn',status:'inProgress',itemsView:'full',items:[]});window.__composerConflictMode=true;window.__composerConflictCallStart=window.__composerRpcCalls.length});
+  await page.evaluate(()=>{const api=globalThis.__pandaForceDebug;api.state.active={id:'external-thread',name:'External thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:null};api.syncTurnSnapshot({id:'external-turn',status:'inProgress',itemsView:'full',items:[]});window.__composerConflictMode=true;window.__composerConflictCallStart=window.__composerRpcCalls.length});
   await page.locator('#prompt').fill('Keep this message when the CLI owns the task.');
   await page.click('#sendButton');
   await page.waitForFunction(()=>document.querySelector('#prompt')?.value==='Keep this message when the CLI owns the task.'&&[...document.querySelectorAll('.persistent-error-body p')].some(node=>node.textContent.includes('another Codex app or CLI')));
-  const conflict=await page.evaluate(()=>({input:document.querySelector('#prompt')?.value,persistentError:[...document.querySelectorAll('.persistent-error-body p')].find(node=>node.textContent.includes('another Codex app or CLI'))?.textContent?.trim(),activeId:globalThis.__codexWebuiDebug.state.active?.id,calls:window.__composerRpcCalls.slice(window.__composerConflictCallStart).map(call=>call.method),mode:document.querySelector('#sendButton')?.dataset.submitMode}));
+  const conflict=await page.evaluate(()=>({input:document.querySelector('#prompt')?.value,persistentError:[...document.querySelectorAll('.persistent-error-body p')].find(node=>node.textContent.includes('another Codex app or CLI'))?.textContent?.trim(),activeId:globalThis.__pandaForceDebug.state.active?.id,calls:window.__composerRpcCalls.slice(window.__composerConflictCallStart).map(call=>call.method),mode:document.querySelector('#sendButton')?.dataset.submitMode}));
   const result={ime,stop,steer,mobile,repeated,pending,afterSteer,echoed,rejected,interrupt,send,conflict,errors};
   console.log(JSON.stringify(result,null,2));
   if(!ime.autocompleteUnchanged||!ime.autocompleteWorks||ime.scenarios.some(test=>test.composingPrevented||test.legacyPrevented||test.nativePrevented||test.keptText!=='拼音输入'||test.imeSubmissions||test.shiftSubmissions||!test.enterPrevented||test.enterSubmissions!==1)||mobile.overflow||mobile.left<0||mobile.right>390||repeated!==2||pending.text!=='Change direction while this task is running.'||pending.delivery!=='sending'||pending.status!=='Steer · Sending…'||echoed.count!==1||echoed.status!=='Steer · Sent'||echoed.optimistic||rejected.count!==2||!rejected.texts.includes('Rejected steering message.')||errors.length||stop.mode!=='stop'||stop.title!=='Stop'||stop.turnId!=='composer-turn'||!stop.stopped||!stop.square||steer.mode!=='steer'||steer.title!=='Steer'||steer.label!==''||steer.stopped||!steer.arrow||afterSteer.input!==''||afterSteer.mode!=='stop'||afterSteer.call?.params?.threadId!=='composer-thread'||afterSteer.call?.params?.expectedTurnId!=='composer-turn'||afterSteer.call?.params?.input?.[0]?.text!=='Change direction while this task is running.'||interrupt.mode!=='stop'||interrupt.call?.params?.threadId!=='composer-thread'||interrupt.call?.params?.turnId!=='composer-turn'||send.mode!=='send'||send.title!=='Send message'||send.stopped||!send.arrow||conflict.input!=='Keep this message when the CLI owns the task.'||conflict.persistentError!=='This task is currently running in another Codex app or CLI. Close it there, then try again.'||conflict.activeId!=='external-thread'||JSON.stringify(conflict.calls)!==JSON.stringify(['thread/resume'])||conflict.mode!=='steer')process.exitCode=1;

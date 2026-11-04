@@ -7,7 +7,7 @@ export async function prepareSharedInput({ request, getThreadMetadata }, params)
     const page = await request("thread/loaded/list", { limit: 100, ...(cursor ? { cursor } : {}) });
     if (page.data?.includes(params.threadId)) {
       const thread = await getThreadMetadata(params.threadId);
-      return { thread: { ...thread, canAcceptDirectInput: true }, webuiAlreadyLoaded: true };
+      return { thread: { ...thread, canAcceptDirectInput: true }, pandaAlreadyLoaded: true };
     }
     cursor = page.nextCursor;
   } while (cursor);

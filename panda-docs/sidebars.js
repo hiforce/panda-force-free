@@ -1,0 +1,1 @@
+export default {guides: ['overview', {type: 'category', label: 'Getting started', items: ['installation', 'workspace']}, {type: 'category', label: 'Administration', items: ['configuration', 'storage', 'security', 'troubleshooting']}, {type: 'category', label: 'Development', items: ['building', 'releases', 'updates']}]};

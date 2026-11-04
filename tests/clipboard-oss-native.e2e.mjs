@@ -1,4 +1,4 @@
-// Opt-in: CODEX_WEBUI_OSS_TEST_CONFIG=/private/config.json bun tests/clipboard-oss-native.e2e.mjs
+// Opt-in: PANDA_FORCE_OSS_TEST_CONFIG=/private/config.json bun tests/clipboard-oss-native.e2e.mjs
 // Real browser clipboard, European OSS and native app-server; a local provider
 // captures the model input without sending a request to an external model.
 import assert from "node:assert/strict";
@@ -10,7 +10,7 @@ import OSS from "ali-oss";
 import { chromium } from "playwright";
 import { launchOptions } from "./browser-runtime.mjs";
 
-const config = JSON.parse(readFileSync(process.env.CODEX_WEBUI_OSS_TEST_CONFIG, "utf8"));
+const config = JSON.parse(readFileSync(process.env.PANDA_FORCE_OSS_TEST_CONFIG, "utf8"));
 const client = new OSS({ ...config, authorizationV4: true, secure: true, timeout: 15000 });
 const home = mkdtempSync(join(tmpdir(), "clipboard-oss-native-"));
 const socket = join(home, "daemon.sock");
@@ -43,12 +43,12 @@ try {
   const base = `http://127.0.0.1:${port}`;
   server = Bun.spawn(["bun", "run", "src/server/main.ts"], {
     cwd: new URL("..", import.meta.url).pathname,
-    env: { ...env, HOST: "127.0.0.1", PORT: String(port), HOME: home, CODEX_HOME: home, CODEX_WEBUI_CWD: home,
-      CODEX_WEBUI_AUTH_MODE: "none", CODEX_WEBUI_PASSWORD: "", CODEX_WEBUI_ACCESS_TOKEN: "",
-      CODEX_WEBUI_APP_SERVER_MODE: "shared", CODEX_WEBUI_APP_SERVER_SOCKET: socket,
-      CODEX_WEBUI_ATTACHMENT_STORAGE: "oss", CODEX_WEBUI_OSS_BUCKET: config.bucket, CODEX_WEBUI_OSS_REGION: config.region,
-      CODEX_WEBUI_OSS_ENDPOINT: config.endpoint, CODEX_WEBUI_OSS_PREFIX: config.prefix || "codex-webui/attachments",
-      CODEX_WEBUI_OSS_ACCESS_KEY_ID: config.accessKeyId, CODEX_WEBUI_OSS_ACCESS_KEY_SECRET: config.accessKeySecret,
+    env: { ...env, HOST: "127.0.0.1", PORT: String(port), HOME: home, CODEX_HOME: home, PANDA_FORCE_CWD: home,
+      PANDA_FORCE_AUTH_MODE: "none", PANDA_FORCE_PASSWORD: "", PANDA_FORCE_ACCESS_TOKEN: "",
+      PANDA_FORCE_APP_SERVER_MODE: "shared", PANDA_FORCE_APP_SERVER_SOCKET: socket,
+      PANDA_FORCE_ATTACHMENT_STORAGE: "oss", PANDA_FORCE_OSS_BUCKET: config.bucket, PANDA_FORCE_OSS_REGION: config.region,
+      PANDA_FORCE_OSS_ENDPOINT: config.endpoint, PANDA_FORCE_OSS_PREFIX: config.prefix || "panda-force/attachments",
+      PANDA_FORCE_OSS_ACCESS_KEY_ID: config.accessKeyId, PANDA_FORCE_OSS_ACCESS_KEY_SECRET: config.accessKeySecret,
     }, stdout: "ignore", stderr: "ignore",
   });
   await waitFor(async () => (await fetch(`${base}/health/readiness`)).ok, "app-server connection");
@@ -58,15 +58,15 @@ try {
   };
   browser = await chromium.launch(launchOptions());
   const context = await browser.newContext({ permissions: ["clipboard-read", "clipboard-write"] });
-  await context.addInitScript(() => { if (window === window.top) { localStorage.clear(); localStorage.setItem("codex-webui-locale", "en"); } });
+  await context.addInitScript(() => { if (window === window.top) { localStorage.clear(); localStorage.setItem("panda-force-locale", "en"); } });
   const page = await context.newPage(), errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(base, { waitUntil: "networkidle" });
-  await page.waitForFunction(() => globalThis.__codexWebuiDebug?.state.config.attachmentUrlPrefix);
+  await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.config.attachmentUrlPrefix);
   for (const source of ["system-clipboard", "items-only-no-extension", "nameless-image", "transcoded-original-name"]) {
     const { thread } = await rpc("thread/start", { cwd: home, model: "mock" });
     await page.evaluate(thread => {
-      const api = globalThis.__codexWebuiDebug; api.startNewTask();
+      const api = globalThis.__pandaForceDebug; api.startNewTask();
       api.state.active = { ...thread, turns: [], canAcceptDirectInput: true }; api.state.selectedModel = "mock";
     }, thread);
     await page.locator("#prompt").focus();
@@ -87,10 +87,10 @@ try {
       }, { base64: png.toString("base64"), source });
     }
     await page.waitForFunction(() => {
-      const a = globalThis.__codexWebuiDebug.state.composerAttachments;
+      const a = globalThis.__pandaForceDebug.state.composerAttachments;
       return a.length === 1 && a[0].status === "ready";
     });
-    const attachment = await page.evaluate(() => globalThis.__codexWebuiDebug.state.composerAttachments[0]);
+    const attachment = await page.evaluate(() => globalThis.__pandaForceDebug.state.composerAttachments[0]);
     objects.add(attachment.objectKey);
     assert.equal(attachment.kind, "image"); assert.equal(attachment.storage, "oss"); assert.equal(attachment.path, undefined);
     if (source === "items-only-no-extension") assert.equal(attachment.name, "粘贴的截图");

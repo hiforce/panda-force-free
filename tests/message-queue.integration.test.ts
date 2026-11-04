@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { createQueueRecovery } from '../src/server/bridge/message-queue.js';
 
 for (const interrupted of [false, true]) test(`queue advances without a browser after ${interrupted ? 'interruption' : 'completion'}`, async()=>{
-  const home=mkdtempSync(join(tmpdir(),'codex-webui-queue-test-'));
+  const home=mkdtempSync(join(tmpdir(),'panda-force-queue-test-'));
   const responses:any[]=[],events:any[]=[],pending=new Map<number,any>();let seq=0,child:any;
   // Hold inference locally so the test does not contact a model provider.
   const provider=createServer((req,res)=>{

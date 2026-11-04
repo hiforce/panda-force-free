@@ -3,8 +3,8 @@ import { rpcErrorPayload } from "../../shared/bridge-errors.js";
 export type DispatchContext = {
   method: string;
   params: any;
-  /** WebUI-only hints stripped from the native RPC params. */
-  flags: { webuiProjectless?: unknown; webuiPrepareInput?: unknown };
+  /** PandaForce-only hints stripped from the native RPC params. */
+  flags: { pandaProjectless?: unknown; pandaPrepareInput?: unknown };
   result?: any;
   /** Extra top-level fields merged into the rpc/result reply. */
   replyExtras: Record<string, any>;
@@ -47,12 +47,12 @@ export function createBrowserDispatch({
     if (message?.type === "rpc") {
       try {
         if (!isAllowedMethod(message.method)) throw new Error("RPC method is not available to browser clients");
-        // The webui* hints are not part of the native Codex RPC schema.
-        const { webuiProjectless, webuiPrepareInput, ...params } = message.params || {};
+        // The panda* hints are not part of the native Codex RPC schema.
+        const { pandaProjectless, pandaPrepareInput, ...params } = message.params || {};
         const ctx: DispatchContext = {
           method: message.method,
           params,
-          flags: { webuiProjectless, webuiPrepareInput },
+          flags: { pandaProjectless, pandaPrepareInput },
           replyExtras: {},
         };
         for (const hook of beforeHooks) hook(ctx);

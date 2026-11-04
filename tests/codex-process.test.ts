@@ -7,7 +7,7 @@ import { WebSocketServer } from "ws";
 import { createCodexBridge } from "../src/server/bridge/codex-process.ts";
 
 async function fixture(reply: (message: any, socket: any) => void, initializeDelay = 0) {
-  const directory = mkdtempSync(join(tmpdir(), "webui-bridge-"));
+  const directory = mkdtempSync(join(tmpdir(), "panda-bridge-"));
   const socketPath = join(directory, "daemon.sock");
   const server = createServer();
   const sockets = new WebSocketServer({ server });

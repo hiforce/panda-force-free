@@ -15,7 +15,7 @@ class AdministratorResetTest(unittest.TestCase):
     def fixture(self, base):
         root = base / "state"
         root.mkdir(mode=0o700)
-        auth = root / ".webui"
+        auth = root / ".panda"
         auth.mkdir(mode=0o700)
         record = auth / "administrator.json"
         record.write_text(json.dumps({"version": 1, "role": "admin", "username": "owner", "password": {"algorithm": "scrypt", "hash": "test"}}))

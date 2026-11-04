@@ -8,7 +8,7 @@ const roots: string[] = [];
 afterEach(async () => { while (roots.length) await rm(roots.pop()!, { recursive: true, force: true }); });
 
 async function fixture() {
-  const root = await mkdtemp(join(tmpdir(), "codex-webui-files-"));
+  const root = await mkdtemp(join(tmpdir(), "panda-force-files-"));
   roots.push(root);
   await mkdir(join(root, "src"), { recursive: true });
   await mkdir(join(root, "node_modules", "hidden"), { recursive: true });
@@ -36,7 +36,7 @@ describe("workspace file mention search", () => {
 
   test("does not follow symlinks outside the workspace", async () => {
     const root = await fixture();
-    const outside = await mkdtemp(join(tmpdir(), "codex-webui-outside-"));
+    const outside = await mkdtemp(join(tmpdir(), "panda-force-outside-"));
     roots.push(outside);
     await writeFile(join(outside, "package-secret.txt"), "secret");
     await symlink(outside, join(root, "external"));

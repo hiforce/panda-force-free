@@ -23,7 +23,7 @@ let output='';
 let browser;
 const dev=spawn('bun',['run','dev'],{
   cwd:root,
-  env:{...process.env,HOST:'127.0.0.1',PORT:String(port),CODEX_WEBUI_PASSWORD:'',CODEX_WEBUI_ACCESS_TOKEN:''},
+  env:{...process.env,HOST:'127.0.0.1',PORT:String(port),PANDA_FORCE_PASSWORD:'',PANDA_FORCE_ACCESS_TOKEN:''},
   stdio:['ignore','pipe','pipe'],
 });
 for(const stream of [dev.stdout,dev.stderr])stream.on('data',chunk=>{output=(output+chunk).slice(-20_000)});
@@ -46,17 +46,17 @@ try{
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error'&&!message.text().includes('404'))errors.push(message.text())});
   await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>Boolean(globalThis.__codexWebuiDebug));
+  await page.waitForFunction(()=>Boolean(globalThis.__pandaForceDebug));
   await new Promise(resolveWait=>setTimeout(resolveWait,500));
   const before=statSync(bundlePath).mtimeMs;
-  writeFileSync(sourcePath,`${sourceContent}\n/* codex-webui dev watch test */\n`);
+  writeFileSync(sourcePath,`${sourceContent}\n/* panda-force dev watch test */\n`);
   await waitFor(()=>statSync(bundlePath).mtimeMs>before,'frontend bundle rebuild',15_000);
   await page.reload({waitUntil:'networkidle'});
-  await page.waitForFunction(()=>Boolean(globalThis.__codexWebuiDebug));
+  await page.waitForFunction(()=>Boolean(globalThis.__pandaForceDebug));
   const health=await fetch(`http://127.0.0.1:${port}/api/health`).then(response=>response.json());
   const bundle=await fetch(`http://127.0.0.1:${port}/app.bundle.js`);
-  const rendered=await page.evaluate(()=>({title:document.title,newTask:document.querySelector('#newTask')?.textContent?.trim(),appLoaded:Boolean(globalThis.__codexWebuiDebug),overlay:Boolean(document.querySelector('[data-nextjs-dialog-overlay],vite-error-overlay,webpack-dev-server-client-overlay'))}));
-  await page.screenshot({path:'/tmp/codex-webui-dev-watch.png',fullPage:false});
+  const rendered=await page.evaluate(()=>({title:document.title,newTask:document.querySelector('#newTask')?.textContent?.trim(),appLoaded:Boolean(globalThis.__pandaForceDebug),overlay:Boolean(document.querySelector('[data-nextjs-dialog-overlay],vite-error-overlay,webpack-dev-server-client-overlay'))}));
+  await page.screenshot({path:'/tmp/panda-force-dev-watch.png',fullPage:false});
   const result={bundleRebuilt:statSync(bundlePath).mtimeMs>before,health,bundleStatus:bundle.status,bundleBytes:Number(bundle.headers.get('content-length')||0),rendered,errors};
   console.log(JSON.stringify(result,null,2));
   if(!result.bundleRebuilt||health.ok!==true||bundle.status!==200||result.bundleBytes<100_000||rendered.title!=='PandaForce'||!rendered.newTask?.includes('New task')||!rendered.appLoaded||rendered.overlay||errors.length)process.exitCode=1;

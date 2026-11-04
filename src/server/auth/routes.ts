@@ -188,7 +188,7 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
           refresh();
           sendAuthError(res, 409, "Administrator setup is no longer available");
         } else {
-          console.error("[codex-webui] administrator setup failed", error);
+          console.error("[panda-force] administrator setup failed", error);
           sendAuthError(res, 500, "Unable to save the administrator account");
         }
       } finally {

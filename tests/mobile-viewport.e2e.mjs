@@ -14,7 +14,7 @@ try {
     await context.request.post(`${fixture.base}/api/auth/login`, { data: { password: 'visibility-test' } });
     await context.addInitScript(() => {
       if (window !== window.top) return;
-      localStorage.setItem('codex-webui-locale', 'en');
+      localStorage.setItem('panda-force-locale', 'en');
       const native = window.visualViewport, viewport = new EventTarget();
       for (const name of ['width', 'height', 'scale', 'offsetTop', 'offsetLeft']) Object.defineProperty(viewport, name, { get: () => viewport[`_${name}`] ?? native[name] });
       Object.defineProperty(window, 'visualViewport', { value: viewport });
@@ -23,7 +23,7 @@ try {
     const page = await context.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(fixture.base, { waitUntil: 'networkidle' });
-    await page.waitForFunction(() => globalThis.__codexWebuiDebug?.state.modelLoadStatus === 'ready');
+    await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === 'ready');
     await page.evaluate(() => {
       document.querySelector('#threadTitle').textContent = '这是很长的项目会话标题，用于检查手机屏幕上的顶部布局';
       document.querySelector('#threadPath').textContent = '/home/coding/projects/a-very-long-project-folder';

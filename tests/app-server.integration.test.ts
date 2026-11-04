@@ -72,7 +72,7 @@ beforeAll(async () => {
   proc = spawn({
     cmd: ["bun", "run", "src/server/main.ts"],
     cwd: ROOT,
-    env: { ...process.env, PORT: String(port), HOST: "127.0.0.1", CODEX_WEBUI_PASSWORD: "", CODEX_WEBUI_ACCESS_TOKEN: "integration-access-token" },
+    env: { ...process.env, PORT: String(port), HOST: "127.0.0.1", PANDA_FORCE_PASSWORD: "", PANDA_FORCE_ACCESS_TOKEN: "integration-access-token" },
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -110,7 +110,7 @@ afterAll(async () => {
   }
 });
 
-describe("Codex WebUI app-server bridge", () => {
+describe("Codex PandaForce app-server bridge", () => {
   test("requires authentication when a reverse proxy supplies a non-localhost host", async () => {
     const denied = await fetch(`http://127.0.0.1:${port}/api/health`, { headers: { host: "codex.example.com" } });
     expect(denied.status).toBe(401);
@@ -185,7 +185,7 @@ describe("Codex WebUI app-server bridge", () => {
 
   test("streams a harmless real turn to completion", async () => {
     const models = await rpc("model/list", { limit: 30 });
-    const model = process.env.CODEX_WEBUI_TEST_MODEL || models.data.find((item: any) => item.isDefault)?.model || models.data[0]?.model;
+    const model = process.env.PANDA_FORCE_TEST_MODEL || models.data.find((item: any) => item.isDefault)?.model || models.data[0]?.model;
     if (!model) throw new Error("No model is available for the real-turn integration test");
     const started = await rpc("thread/start", {
       cwd: ROOT,

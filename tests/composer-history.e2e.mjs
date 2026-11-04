@@ -19,12 +19,12 @@ try{
   assert.equal((await fetch(`${base}/api/composer/history`,{method:'POST'})).status,405);
   browser=await chromium.launch(launchOptions());
   const context=await browser.newContext({viewport:{width:1018,height:760},colorScheme:'dark'});
-  await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('codex-webui-locale','en')});
+  await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/api/composer/history',route=>route.fulfill({json:{entries:[{text:'older CLI message'},{text:'first line\nsecond line'}]}}));
   await page.goto(base,{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.syncTurnSnapshot);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug?.syncTurnSnapshot);
   const prompt=page.locator('#prompt');
   await prompt.focus();
   await page.keyboard.press('ArrowUp');
@@ -60,7 +60,7 @@ try{
   assert.equal(await page.locator('#composerAutocomplete [aria-selected="true"]').getAttribute('data-autocomplete-id'),'plan');
   await page.keyboard.press('Escape');
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     api.state.active={id:'history-thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:true};
     api.state.composerMentions=[{id:'file:package.json',title:'package.json',path:'package.json',source:'file'}];
     api.state.transport='sse';
@@ -70,7 +70,7 @@ try{
       if(url.pathname==='/api/rpc'){
         const payload=JSON.parse(options.body||'{}');
         if(payload.method==='host/thread/history')return Response.json({type:'rpc/error',id:payload.id,error:'Unsupported method'});
-        if(payload.method==='thread/read')return Response.json({type:'rpc/result',id:payload.id,result:{thread:{id:payload.params.threadId,name:'Resumed',cwd:globalThis.__codexWebuiDebug.state.config.defaultCwd,turns:[{id:'resumed-turn',status:'completed',items:[{id:'resumed-user',type:'userMessage',content:[{type:'text',text:'resumed prompt'}]}]}],canAcceptDirectInput:true}}});
+        if(payload.method==='thread/read')return Response.json({type:'rpc/result',id:payload.id,result:{thread:{id:payload.params.threadId,name:'Resumed',cwd:globalThis.__pandaForceDebug.state.config.defaultCwd,turns:[{id:'resumed-turn',status:'completed',items:[{id:'resumed-user',type:'userMessage',content:[{type:'text',text:'resumed prompt'}]}]}],canAcceptDirectInput:true}}});
         if(payload.method==='turn/start')return Response.json({type:'rpc/result',id:payload.id,result:{turn:{id:'history-turn'}}});
         if(payload.method==='thread/queue/add')return Response.json({type:'rpc/result',id:payload.id,result:{queuedSubmission:{id:'history-queue'}}});
         if(payload.method==='thread/queue/list')return Response.json({type:'rpc/result',id:payload.id,result:{data:[]}});
@@ -89,7 +89,7 @@ try{
   await page.keyboard.press('ArrowUp');assert.equal(await prompt.inputValue(),'queued message');
   await page.click('#newTask');await page.keyboard.press('ArrowUp');
   assert.equal(await prompt.inputValue(),'queued message');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('resumed-thread'));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('resumed-thread'));
   await prompt.focus();await page.keyboard.press('ArrowUp');
   assert.equal(await prompt.inputValue(),'queued message');
   await page.keyboard.press('ArrowUp');assert.equal(await prompt.inputValue(),'use selected file');
@@ -97,7 +97,7 @@ try{
   await prompt.fill('resumed draft');
   await page.click('#newTask');await page.keyboard.press('ArrowDown');
   assert.equal(await prompt.inputValue(),'');
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('resumed-thread'));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('resumed-thread'));
   await prompt.focus();await page.keyboard.press('ArrowUp');
   assert.equal(await prompt.inputValue(),'resumed draft');
   assert.deepEqual(errors,[]);

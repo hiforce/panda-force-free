@@ -34,7 +34,7 @@ try {
   await page.waitForURL("**/task/old-alpha");
   await page.locator("#conversation").waitFor({ state: "visible" });
   await page.reload();
-  await page.waitForFunction(() => globalThis.__codexWebuiDebug?.state.active?.id === "old-alpha");
+  await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.active?.id === "old-alpha");
   await page.locator(".workbench-navigation [data-route=workspace]").click();
   assert.equal(await page.locator("#workbenchComposerSlot #composer").isVisible(), true);
   await page.keyboard.press("Control+Shift+k");
@@ -62,7 +62,7 @@ try {
   result.checks.push("Explicit product project context and isolated drafts between projects in the same working folder");
   await page.locator(".workbench-navigation [data-route=projects]").click();
   await page.locator(`[data-wb=pin][data-project-id="${betaProject.id}"]`).click();
-  await page.waitForFunction(id => JSON.parse(localStorage.getItem("codex-webui-sidebar-pinned-projects") || "[]").includes("project:" + id), betaProject.id);
+  await page.waitForFunction(id => JSON.parse(localStorage.getItem("panda-force-sidebar-pinned-projects") || "[]").includes("project:" + id), betaProject.id);
   await page.locator('[data-wb="create-project"]').first().click();
   await page.locator("#projectNameInput").fill("A manually created project");
   await page.locator("#projectCodeInput").fill("manual-project");
@@ -114,7 +114,7 @@ try {
   await page.locator(".wb-hero h1").waitFor();
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
   await page.screenshot({ path: join(artifacts, "workspace-zh-light.png") });
-  await page.evaluate(() => globalThis.__codexWebuiI18n.setPreference("en"));
+  await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("en"));
   await page.screenshot({ path: join(artifacts, "workspace-en-light.png") });
   await page.locator(".workbench-top-tools [data-wb=theme]").click();
   await page.screenshot({ path: join(artifacts, "workspace-en-dark.png") });
@@ -122,7 +122,7 @@ try {
     await page.setViewportSize({ width, height: 900 });
     for (const route of ["workspace", "tasks", "projects", "connections", "settings/appearance"]) {
       await page.goto(fixture.base + "/" + route);
-      await page.waitForFunction(() => Boolean(globalThis.__codexWebuiDebug?.workbench));
+      await page.waitForFunction(() => Boolean(globalThis.__pandaForceDebug?.workbench));
       await page.waitForTimeout(70);
       const rect = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth }));
       if (rect.scroll > rect.width) result.overflows.push({ route, ...rect });

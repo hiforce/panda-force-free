@@ -1,3 +1,4 @@
+import { pandaEnvironment, existingApplicationPath } from "../environment.js";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
@@ -11,9 +12,10 @@ export type StoredPassword = {
 };
 
 export function passwordStorePath(env: NodeJS.ProcessEnv = process.env) {
-  if (env.CODEX_WEBUI_AUTH_STORE) return resolve(env.CODEX_WEBUI_AUTH_STORE);
+  env = pandaEnvironment(env);
+  if (env.PANDA_FORCE_AUTH_STORE) return resolve(env.PANDA_FORCE_AUTH_STORE);
   const codexHome = env.CODEX_HOME || join(homedir(), ".codex");
-  return join(codexHome, "codex-webui-auth.json");
+  return existingApplicationPath(join(codexHome, "panda-force-auth.json"));
 }
 
 export function loadStoredPassword(path: string): StoredPassword | null {

@@ -9,7 +9,7 @@ import { createConversationHistory } from '../src/server/conversation/history.js
 
 const port=await new Promise(resolve=>{const probe=createServer();probe.listen(0,'127.0.0.1',()=>{const port=probe.address().port;probe.close(()=>resolve(port))})});
 const testDirectory=await mkdtemp(join(tmpdir(),'conversation-cache-'));
-const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...process.env,HOST:'127.0.0.1',PORT:String(port),CODEX_HOME:testDirectory,CODEX_WEBUI_APP_SERVER_MODE:'isolated',CODEX_WEBUI_AUTH_STORE:join(testDirectory,'auth.json'),CODEX_WEBUI_PASSWORD:'',CODEX_WEBUI_ACCESS_TOKEN:''},stdout:'ignore',stderr:'ignore'});
+const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...process.env,HOST:'127.0.0.1',PORT:String(port),CODEX_HOME:testDirectory,PANDA_FORCE_APP_SERVER_MODE:'isolated',PANDA_FORCE_AUTH_STORE:join(testDirectory,'auth.json'),PANDA_FORCE_PASSWORD:'',PANDA_FORCE_ACCESS_TOKEN:''},stdout:'ignore',stderr:'ignore'});
 let browser;
 try{
  const base=`http://127.0.0.1:${port}`;
@@ -20,9 +20,9 @@ try{
  const first=await history.read({threadId:'paged'}),second=await history.read({threadId:'paged',cursor:first.history.nextCursor}),third=await history.read({threadId:'paged',cursor:second.history.nextCursor});
  const unchanged=await history.read({threadId:'paged',revision:first.history.revision,oldestItemId:third.history.oldestItemId});
  browser=await chromium.launch(launchOptions());const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(base,{waitUntil:'networkidle'});await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.connected);
+ await page.goto(base,{waitUntil:'networkidle'});await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.connected);
  await page.evaluate(({first,second,third,unchanged})=>{
-  const api=globalThis.__codexWebuiDebug;api.state.ws.onmessage=null;api.state.events?.close();api.state.transport='sse';api.startNewTask();
+  const api=globalThis.__pandaForceDebug;api.state.ws.onmessage=null;api.state.events?.close();api.state.transport='sse';api.startNewTask();
   api.applyThreadSummaries([{id:'paged',name:'Paged history',cwd:api.state.config.home},{id:'other',name:'Other',cwd:api.state.config.home}]);
   window.__historyCalls=[];window.__holdHistory=false;const original=window.fetch;
   window.fetch=async(resource,options={})=>{
@@ -42,17 +42,17 @@ try{
    return Response.json({type:'rpc/result',id:call.id,result});
   };
  },{first,second,third,unchanged});
- await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('paged'));
+ await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('paged'));
  assert.equal(await page.locator('.activity-item').count(),99);assert.equal((await page.locator('[data-local-conversation-final-assistant]').textContent()).trim(),'Latest answer');
  await page.locator('.load-older').click();await page.waitForFunction(()=>document.querySelectorAll('.activity-item').length===199);assert.equal(await page.locator('.activity-item').count(),199);
  await page.locator('.load-older').click();await page.waitForFunction(()=>document.querySelectorAll('.activity-item').length===248);assert.equal(await page.locator('.activity-item').count(),248);assert.equal(await page.locator('.user-message').textContent(),'Original prompt');assert.equal(await page.locator('.load-older').count(),0);
- await page.evaluate(async()=>{await globalThis.__codexWebuiDebug.openThread('other');window.__holdHistory=true;window.__cachedOpen=globalThis.__codexWebuiDebug.openThread('paged')});
+ await page.evaluate(async()=>{await globalThis.__pandaForceDebug.openThread('other');window.__holdHistory=true;window.__cachedOpen=globalThis.__pandaForceDebug.openThread('paged')});
  assert.equal((await page.locator('[data-local-conversation-final-assistant]').textContent()).trim(),'Latest answer');assert.equal(await page.locator('.conversation-loading').count(),0);
  await page.waitForFunction(()=>window.__resolveHistory);await page.evaluate(async()=>{window.__resolveHistory();await window.__cachedOpen;window.__holdHistory=false});
  assert.equal(await page.locator('.activity-item').count(),248);
  const calls=await page.evaluate(()=>window.__historyCalls);assert.equal(calls.some(call=>call.method==='thread/read'),false);assert.ok(calls.some(call=>call.params?.revision&&call.params?.oldestItemId));assert.deepEqual(errors,[]);
  // A real page reload must show persisted content before either network history or the list returns.
- const saved=await page.evaluate(()=>globalThis.__codexWebuiDebug.persistentConversationCache.get('paged'));
+ const saved=await page.evaluate(()=>globalThis.__pandaForceDebug.persistentConversationCache.get('paged'));
  assert.equal(saved.history.revision,first.history.revision);assert.equal(saved.turns[0].items.length,100);
  const reloadStarted=performance.now();
  await page.addInitScript(()=>{const Native=window.WebSocket;window.WebSocket=class extends Native{constructor(url,...args){if(String(url).endsWith('/ws'))throw new Error('Use SSE for reload test');super(url,...args)}}});
@@ -73,17 +73,17 @@ try{
  assert.equal(await page.locator('.conversation-loading').count(),0);
  assert.equal(await page.locator('.activity-item').count(),99);
  assert.equal(await page.locator('.load-older').count(),1);
- assert.equal(await page.evaluate(()=>globalThis.__codexWebuiDebug.state.connected),false);
+ assert.equal(await page.evaluate(()=>globalThis.__pandaForceDebug.state.connected),false);
  assert.ok(connection);await connection.continue();await page.unroute('**/api/events');
  const revalidation=(await syncRequest).postDataJSON();assert.equal(revalidation.params.revision,first.history.revision);assert.equal(revalidation.params.oldestItemId,'turn:tool-150');
  for(let attempt=0;attempt<100&&!held.some(value=>value.call);attempt++)await Bun.sleep(10);
  assert.equal(held.find(value=>value.call)?.result.history.mode,'delta');
  assert.equal(held.find(value=>value.call)?.result.history.turns.length,0);
  for(const {route,result} of held)await route.fulfill({json:{type:'rpc/result',id:route.request().postDataJSON().id,result}});
- await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.active?.history?.unchanged===true);
+ await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.active?.history?.unchanged===true);
  assert.deepEqual(errors,[]);
  const eviction=await page.evaluate(async()=>{
-  const cache=globalThis.__codexWebuiDebug.persistentConversationCache,now=Date.now(),hour=60*60*1000;
+  const cache=globalThis.__pandaForceDebug.persistentConversationCache,now=Date.now(),hour=60*60*1000;
   const old={id:'expired',updatedAt:(now-49*hour)/1000,turns:[]};
   await cache.put(old);const expiredWrite=await cache.get(old.id)===null;
   const recent={id:'recent',updatedAt:(now-47*hour)/1000,turns:[]};
@@ -91,7 +91,7 @@ try{
   const originalNow=Date.now;let expiredAfterRefresh;
   try{Date.now=()=>now+2*hour;await cache.put(recent);expiredAfterRefresh=await cache.get(recent.id)===null}finally{Date.now=originalNow}
   // Seed an entry written by the previous cache version to verify physical cleanup.
-  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('codex-webui-conversations-v1',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
+  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('panda-force-conversations-v1',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
   const access=(mode,action)=>new Promise((resolve,reject)=>{const tx=db.transaction('entries',mode);action(tx.objectStore('entries'));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
   await access('readwrite',store=>store.put({id:'legacy',updatedAt:now,thread:{...old,id:'legacy'}}));
   await cache.prune();let legacy;
@@ -113,8 +113,8 @@ try{
  assert.equal((await page.locator('[data-local-conversation-final-assistant]').textContent()).trim(),'Latest answer');assert.deepEqual(errors,[]);
  page.on('dialog',dialog=>dialog.accept());await page.locator('.thread-item[data-id="paged"] .thread-options').click();
  await page.getByRole('menuitem',{name:'Delete thread',exact:true}).click();
- await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.active===null);
- assert.equal(deletedByUI,true);await page.waitForFunction(()=>!globalThis.__codexWebuiDebug.state.threads.some(thread=>thread.id==='paged'));
+ await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.active===null);
+ assert.equal(deletedByUI,true);await page.waitForFunction(()=>!globalThis.__pandaForceDebug.state.threads.some(thread=>thread.id==='paged'));
  assert.deepEqual(errors,[]);
  console.log(JSON.stringify({boundedHistory:true,olderPages:true,persistentReloadBeforeNetwork:true,cachedReloadMs,revisionRevalidation:true,storageUnavailableFallback:true,inactive48HourEviction:true,deletionEviction:true}));
 }finally{await browser?.close();server.kill();await server.exited;await rm(testDirectory,{recursive:true,force:true})}

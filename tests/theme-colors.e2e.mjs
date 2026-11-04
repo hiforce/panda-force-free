@@ -18,10 +18,10 @@ for(const scheme of ['light','dark']){
   const page=await browser.newPage({viewport:{width:1440,height:900},colorScheme:scheme});
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
-  await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug);
+  await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug);
   await page.evaluate(async()=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     api.state.active={id:'theme-thread',cwd:'/tmp/theme-demo',source:'local'};
     document.querySelector('#conversation').innerHTML='<article class="turn user-turn"><div class="user-message">Review the complete command before approval.</div></article>';
     api.notify('item/completed',{turnId:'theme-turn',item:{id:'theme-agent',type:'agentMessage',text:'Use `bun test` and read the [verification guide](https://example.com).\n\n```ts\nconst theme = "system";\n```\n\n| Surface | State |\n| --- | --- |\n| Panel | Ready |'}});

@@ -13,7 +13,7 @@ async function openPage() {
   });
   assert.equal(login.ok(), true);
   await context.addInitScript(() => {
-    if (window === window.top) localStorage.setItem("codex-webui-locale", "en");
+    if (window === window.top) localStorage.setItem("panda-force-locale", "en");
   });
   const page = await context.newPage();
   const errors = [];
@@ -25,10 +25,10 @@ async function checkBackgroundFailure(method) {
   const { context, page, errors } = await openPage();
   try {
     await page.goto(fixture.base, { waitUntil: "networkidle" });
-    await page.waitForFunction(() => globalThis.__codexWebuiDebug?.state.modelLoadStatus === "ready");
-    await page.evaluate(() => globalThis.__codexWebuiDebug.openThread("old-alpha"));
+    await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === "ready");
+    await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-alpha"));
     await page.evaluate((heldMethod) => {
-      const api = globalThis.__codexWebuiDebug;
+      const api = globalThis.__pandaForceDebug;
       api.state.ws.onmessage = null;
       api.state.events?.close();
       api.state.transport = "sse";
@@ -56,15 +56,15 @@ async function checkBackgroundFailure(method) {
     if (method === "thread/queue/add") await page.locator("#queueButton").click();
     else await page.locator("#composer").evaluate((form) => form.requestSubmit());
     await page.waitForFunction(() => window.rejectPendingSend);
-    await page.evaluate(() => globalThis.__codexWebuiDebug.openThread("old-beta"));
+    await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-beta"));
     await page.locator("#prompt").fill("Keep the other session's draft");
     await page.evaluate(() => window.rejectPendingSend());
     await page.waitForFunction((expected) => {
-      const drafts = JSON.parse(localStorage.getItem("codex-webui-composer-drafts") || "{}");
+      const drafts = JSON.parse(localStorage.getItem("panda-force-composer-drafts") || "{}");
       return drafts["old-alpha"]?.text === expected;
     }, text);
     assert.equal(await page.locator("#prompt").inputValue(), "Keep the other session's draft");
-    await page.evaluate(() => globalThis.__codexWebuiDebug.openThread("old-alpha"));
+    await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-alpha"));
     assert.equal(await page.locator("#prompt").inputValue(), text);
     // Retrying must reach the bridge: a lock stranded in finally would suppress it.
     if (method === "thread/queue/add") {
@@ -86,7 +86,7 @@ async function checkVisibilityFailure() {
   const { context, page, errors } = await openPage();
   try {
     await context.addInitScript(() => {
-      if (window === window.top) localStorage.setItem("codex-webui-active-thread", "old-alpha");
+      if (window === window.top) localStorage.setItem("panda-force-active-thread", "old-alpha");
     });
     await page.route("**/api/projects/visibility", (route) =>
       route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"Simulated outage"}' }),
@@ -94,15 +94,15 @@ async function checkVisibilityFailure() {
     await page.goto(fixture.base, { waitUntil: "networkidle" });
     await page.waitForFunction(
       (cwd) =>
-        globalThis.__codexWebuiDebug?.state.workspaceContext?.cwd === cwd &&
-        globalThis.__codexWebuiDebug.state.active?.id === "old-alpha",
+        globalThis.__pandaForceDebug?.state.workspaceContext?.cwd === cwd &&
+        globalThis.__pandaForceDebug.state.active?.id === "old-alpha",
       fixture.alpha,
     );
     assert.deepEqual(errors, []);
     // A temporary project-list failure must also allow the rest of startup to run.
-    assert.equal(await page.evaluate(() => globalThis.__codexWebuiDebug.state.modelLoadStatus), "ready");
+    assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.modelLoadStatus), "ready");
     await page.unroute("**/api/projects/visibility");
-    await page.evaluate(() => globalThis.__codexWebuiDebug.loadInitial());
+    await page.evaluate(() => globalThis.__pandaForceDebug.loadInitial());
     await page.locator('.thread-item[data-id="old-alpha"]').waitFor();
     assert.deepEqual(errors, []);
   } finally {
@@ -114,11 +114,11 @@ async function checkRequestTimeout(method) {
   const { context, page, errors } = await openPage();
   try {
     await page.goto(fixture.base, { waitUntil: "networkidle" });
-    await page.waitForFunction(() => globalThis.__codexWebuiDebug?.state.modelLoadStatus === "ready");
-    await page.evaluate(() => globalThis.__codexWebuiDebug.openThread("old-alpha"));
+    await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === "ready");
+    await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-alpha"));
     await page.clock.install();
     await page.evaluate((heldMethod) => {
-      const api = globalThis.__codexWebuiDebug;
+      const api = globalThis.__pandaForceDebug;
       api.state.ws.onmessage = null;
       api.state.events?.close();
       api.state.transport = "sse";
@@ -149,7 +149,7 @@ async function checkRequestTimeout(method) {
     const preparation = method === "thread/resume";
     await page.locator(`.user-turn[data-delivery="${preparation ? "failed" : "unconfirmed"}"]`).waitFor();
     assert.equal(await page.locator("#prompt").inputValue(), preparation ? text : "");
-    assert.equal(await page.evaluate(() => globalThis.__codexWebuiDebug.state.composerAttachments.length), preparation ? 6 : 0);
+    assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.composerAttachments.length), preparation ? 6 : 0);
     assert.equal(await page.evaluate(() => window.timeoutCalls), 1);
     if (preparation) {
       // The recovered draft and six attachments can be submitted with a fresh click.

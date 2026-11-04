@@ -2,9 +2,9 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { createIdaasAuth, readIdaasConfig } from '../src/server/auth/idaas.js';
 
 const env = {
-  CODEX_WEBUI_AUTH_MODE: 'idaas', IDAAS_AUTH_ENDPOINT: 'http://127.0.0.1:8087',
-  IDAAS_BROWSER_ENDPOINT: 'https://idaas.example.com', IDAAS_CLIENT_ID: 'webui', IDAAS_CLIENT_SECRET: 'test-only-secret',
-  CODEX_WEBUI_PUBLIC_URL: 'https://codex.example.com/', IDAAS_ALLOWED_TENANT_IDS: '42', IDAAS_ALLOWED_ACCOUNTS: 'allowed@example.com',
+  PANDA_FORCE_AUTH_MODE: 'idaas', IDAAS_AUTH_ENDPOINT: 'http://127.0.0.1:8087',
+  IDAAS_BROWSER_ENDPOINT: 'https://idaas.example.com', IDAAS_CLIENT_ID: 'panda', IDAAS_CLIENT_SECRET: 'test-only-secret',
+  PANDA_FORCE_PUBLIC_URL: 'https://codex.example.com/', IDAAS_ALLOWED_TENANT_IDS: '42', IDAAS_ALLOWED_ACCOUNTS: 'allowed@example.com',
 };
 const services: ReturnType<typeof createIdaasAuth>[] = [];
 afterEach(() => { for (const service of services.splice(0)) service.close(); });
@@ -29,7 +29,7 @@ function fixture() {
   async function route(path: string, request = req()) {
     const result: any = { status: 0, headers: {}, body: '' };
     const res = { writeHead(status: number, headers: any) { result.status = status; result.headers = headers; }, end(body = '') { result.body = body; } };
-    result.handled = await auth.handle(request, res, new URL(path, env.CODEX_WEBUI_PUBLIC_URL));
+    result.handled = await auth.handle(request, res, new URL(path, env.PANDA_FORCE_PUBLIC_URL));
     return result;
   }
   async function begin() {
@@ -54,8 +54,8 @@ describe('IDAAS browser authentication', () => {
     expect(readIdaasConfig({})).toBe(null);
     expect(() => readIdaasConfig({ IDAAS_CLIENT_ID: 'partial' })).toThrow();
     expect(() => readIdaasConfig({ ...env, IDAAS_CLIENT_SECRET: '' })).toThrow();
-    expect(() => readIdaasConfig({ ...env, CODEX_WEBUI_PUBLIC_URL: 'http://codex.example.com' })).toThrow();
-    expect(() => readIdaasConfig({ ...env, CODEX_WEBUI_PUBLIC_URL: 'https://codex.example.com/subpath/' })).toThrow();
+    expect(() => readIdaasConfig({ ...env, PANDA_FORCE_PUBLIC_URL: 'http://codex.example.com' })).toThrow();
+    expect(() => readIdaasConfig({ ...env, PANDA_FORCE_PUBLIC_URL: 'https://codex.example.com/subpath/' })).toThrow();
   });
   test('binds state to a browser and accepts the exact cross-site callback once', async () => {
     const f = fixture(); const start = await f.begin();
@@ -130,8 +130,8 @@ describe('IDAAS browser authentication', () => {
     expect(logout.pathname).toBe('/logout');
     expect([...logout.searchParams.entries()]).toEqual([['redirectUri', 'https://codex.example.com/auth/login']]);
     expect(response.headers['set-cookie']).toEqual([
-      'codex_webui_idaas_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure',
-      'codex_webui_idaas_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure',
+      'panda_force_idaas_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure',
+      'panda_force_idaas_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure',
     ]);
     expect(closed).toBe(true);
     expect(JSON.parse((await f.route('/api/auth/status', f.req(sessionCookie))).body).authenticated).toBe(false);
@@ -141,13 +141,13 @@ describe('IDAAS browser authentication', () => {
     expect(authorize.pathname).toBe('/oidc/auth');
     expect(authorize.searchParams.get('state')).not.toBe(stale.state);
     expect(authorize.searchParams.get('nonce')).not.toBe(new URL(stale.response.headers.location).searchParams.get('nonce'));
-    expect(authorize.searchParams.get('client_id')).toBe('webui');
+    expect(authorize.searchParams.get('client_id')).toBe('panda');
     expect(authorize.searchParams.get('redirect_uri')).toBe('https://codex.example.com/auth/callback');
     expect(authorize.searchParams.get('protocol')).toBe('oidc');
     expect(authorize.searchParams.get('response_type')).toBe('code');
     expect(authorize.searchParams.get('response_mode')).toBe('query');
   });
-  test('relogin works without a granted WebUI session and rejects cross-site or GET logout attempts', async () => {
+  test('relogin works without a granted PandaForce session and rejects cross-site or GET logout attempts', async () => {
     const f = fixture(); const { sessionCookie } = await f.login();
     expect((await f.route('/auth/relogin', f.req(sessionCookie))).status).toBe(405);
     expect((await f.route('/auth/relogin', f.req(sessionCookie, { origin: 'https://evil.example' }, 'POST'))).status).toBe(403);

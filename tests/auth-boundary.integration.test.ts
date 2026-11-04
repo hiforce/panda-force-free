@@ -29,11 +29,11 @@ async function rejectedUpgrade(url: string) {
 
 describe('authentication deployment boundary', () => {
   test('keeps the legacy setup-password flag restricted to localhost', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'webui-startup-auth-'));
+    const temp = mkdtempSync(join(tmpdir(), 'panda-startup-auth-'));
     try {
       for (const args of [['--setup-password']]) {
         const child = Bun.spawn(['bun', 'run', 'src/server/main.ts', ...args], {
-          cwd: root, env: { ...process.env, HOST: '0.0.0.0', CODEX_WEBUI_PASSWORD: '', CODEX_WEBUI_ACCESS_TOKEN: '', CODEX_WEBUI_AUTH_STORE: join(temp, 'auth.json') },
+          cwd: root, env: { ...process.env, HOST: '0.0.0.0', PANDA_FORCE_PASSWORD: '', PANDA_FORCE_ACCESS_TOKEN: '', PANDA_FORCE_AUTH_STORE: join(temp, 'auth.json') },
           stdout: 'pipe', stderr: 'pipe',
         });
         const error = await new Response(child.stderr).text();
@@ -44,7 +44,7 @@ describe('authentication deployment boundary', () => {
   });
 
   test('requires localhost HTTP, SSE and both WebSocket bridges to authenticate in every credential mode', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'webui-auth-boundary-'));
+    const temp = mkdtempSync(join(tmpdir(), 'panda-auth-boundary-'));
     try {
       const bin = join(temp, 'bin'); mkdirSync(bin);
       // Never start the developer’s real Codex process or use their account in this test.
@@ -55,7 +55,7 @@ describe('authentication deployment boundary', () => {
       for (const mode of ['password', 'token', 'managed']) {
         const port = await freePort();
         const child = Bun.spawn(['bun', 'run', 'src/server/main.ts'], {
-          cwd: root, env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, HOME: temp, CODEX_HOME: temp, HOST: '127.0.0.1', PORT: String(port), CODEX_WEBUI_PROJECTLESS: 'false', CODEX_WEBUI_CWD: root, CODEX_WEBUI_AUTH_STORE: store, CODEX_WEBUI_PASSWORD: mode === 'password' ? password : '', CODEX_WEBUI_ACCESS_TOKEN: mode === 'token' ? password : '' },
+          cwd: root, env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, HOME: temp, CODEX_HOME: temp, HOST: '127.0.0.1', PORT: String(port), PANDA_FORCE_PROJECTLESS: 'false', PANDA_FORCE_CWD: root, PANDA_FORCE_AUTH_STORE: store, PANDA_FORCE_PASSWORD: mode === 'password' ? password : '', PANDA_FORCE_ACCESS_TOKEN: mode === 'token' ? password : '' },
           stdout: 'ignore', stderr: 'ignore',
         });
         const base = `http://127.0.0.1:${port}`;

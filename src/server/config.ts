@@ -1,3 +1,4 @@
+import { pandaEnvironment, existingApplicationPath } from "./environment.js";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
@@ -13,43 +14,44 @@ function findProjectRoot(start: string) {
   throw new Error("Could not locate the project root containing public/");
 }
 
-const host = process.env.HOST || "127.0.0.1";
-const homeDir = process.env.HOME || process.cwd();
-const codexHome = process.env.CODEX_HOME || join(homeDir, ".codex");
+const env = pandaEnvironment();
+const host = env.HOST || "127.0.0.1";
+const homeDir = env.HOME || process.cwd();
+const codexHome = env.CODEX_HOME || join(homeDir, ".codex");
 const appRoot = findProjectRoot(import.meta.dir);
-const projectless = process.env.CODEX_WEBUI_PROJECTLESS === "true";
-const configuredReviewRoot = process.env.CODEX_WEBUI_REVIEW_ROOT || null;
+const projectless = env.PANDA_FORCE_PROJECTLESS === "true";
+const configuredReviewRoot = env.PANDA_FORCE_REVIEW_ROOT || null;
 if (projectless && !configuredReviewRoot) {
-  throw new Error("CODEX_WEBUI_REVIEW_ROOT is required when CODEX_WEBUI_PROJECTLESS=true");
+  throw new Error("PANDA_FORCE_REVIEW_ROOT is required when PANDA_FORCE_PROJECTLESS=true");
 }
-const defaultCwd = resolve(process.env.CODEX_WEBUI_CWD || (projectless ? homeDir : appRoot));
+const defaultCwd = resolve(env.PANDA_FORCE_CWD || (projectless ? homeDir : appRoot));
 const browseRoots = defaultBrowseRoots(homeDir);
-const legacyAttachmentRoot = resolve(codexHome, "codex-webui-uploads");
-const attachmentRoot = resolve(process.env.CODEX_WEBUI_ATTACHMENT_ROOT || legacyAttachmentRoot);
-const stateRoot = resolve(process.env.PANDA_FORCE_HOME || join(homeDir, ".panda-force"));
+const legacyAttachmentRoot = existingApplicationPath(resolve(codexHome, "panda-force-uploads"));
+const attachmentRoot = resolve(env.PANDA_FORCE_ATTACHMENT_ROOT || legacyAttachmentRoot);
+const stateRoot = resolve(env.PANDA_FORCE_HOME || join(homeDir, ".panda-force"));
 
 export const config = Object.freeze({
   host,
-  port: Number(process.env.PORT || 8899),
+  port: Number(env.PORT || 8899),
   localhostOnly: host === "127.0.0.1" || host === "::1" || host === "localhost",
   passwordInitialization: process.argv.includes("--setup-password"),
-  accessToken: process.env.CODEX_WEBUI_ACCESS_TOKEN || null,
-  environmentPassword: process.env.CODEX_WEBUI_PASSWORD || null,
-  authMode: process.env.CODEX_WEBUI_AUTH_MODE || null,
+  accessToken: env.PANDA_FORCE_ACCESS_TOKEN || null,
+  environmentPassword: env.PANDA_FORCE_PASSWORD || null,
+  authMode: env.PANDA_FORCE_AUTH_MODE || null,
   appRoot,
   publicDir: resolve(appRoot, "public"),
   homeDir,
   codexHome,
   projectless,
   configuredReviewRoot,
-  ntfyTopic: process.env.CODEX_WEBUI_NTFY_TOPIC || null,
-  ntfyUrl: (process.env.CODEX_WEBUI_NTFY_URL || "https://ntfy.sh").replace(/\/+$/, ""),
+  ntfyTopic: env.PANDA_FORCE_NTFY_TOPIC || null,
+  ntfyUrl: (env.PANDA_FORCE_NTFY_URL || "https://ntfy.sh").replace(/\/+$/, ""),
   defaultCwd,
   browseRoots,
   attachmentRoot,
   stateRoot,
   projectCatalogPath: resolve(stateRoot, "data", "projects.sqlite"),
-  projectVisibilityPath: resolve(codexHome, "codex-webui-project-visibility.json"),
+  projectVisibilityPath: existingApplicationPath(resolve(codexHome, "panda-force-project-visibility.json")),
   defaultCodexSessionsRoot: resolve(codexHome, "sessions"),
   imageRoots: [
     ...new Set([

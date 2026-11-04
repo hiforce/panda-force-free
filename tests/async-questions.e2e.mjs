@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {createProjectVisibilityFixture} from './project-visibility-fixture.mjs';
+const fixture=await createProjectVisibilityFixture();
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+try{
+ const context=await browser.newContext({viewport:{width:390,height:844},locale:'en'});
+ await fixture.signIn(context);const page=await context.newPage();const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(fixture.base+'/task/old-alpha');
+ await page.locator('#workspacePreparation').waitFor({state:'hidden'});
+ await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.active?.id==='old-alpha');
+ const item={id:'async-question-1',type:'dynamicToolCall',tool:'functions.request_user_input_async',status:'completed',arguments:{questions:[{title:'Which repository?',options:['Public free repository','Private source repository']},{title:'What should change?'}]}};
+ await page.evaluate(item=>globalThis.__pandaForceDebug.notify('item/completed',{threadId:'old-alpha',turnId:'questions',item}),item);
+ const card=page.locator('[data-async-question-card]');await card.waitFor();
+ assert.equal(await card.locator('fieldset').count(),2);
+ await page.locator('#prompt').fill('Keep my existing draft.');
+ await card.locator('[type=radio][value="0"]').check();
+ await card.locator('textarea:visible').fill('Rename all product variables.');
+ const before=fixture.calls().filter(c=>c.method==='turn/start'||c.method==='turn/steer').length;
+ await card.locator('[type=submit]').click();
+ await page.waitForFunction(()=>document.querySelector('[data-async-question-card]').dataset.status==='prepared');
+ const draft=await page.locator('#prompt').inputValue();
+ assert.ok(draft.startsWith('Keep my existing draft.'));assert.ok(draft.includes('Public free repository'));assert.ok(draft.includes('Rename all product variables.'));
+ assert.equal(await page.locator('#prompt').evaluate(el=>el===document.activeElement),true);
+ assert.equal(await card.getAttribute('open'),null);
+ assert.equal(fixture.calls().filter(c=>c.method==='turn/start'||c.method==='turn/steer').length,before);
+ await page.evaluate(()=>globalThis.__pandaForceDebug.notify('item/completed',{threadId:'old-alpha',turnId:'reply',item:{id:'reply-1',type:'userMessage',content:[{type:'inputText',text:'Public free repository'}]}}));
+ assert.equal(await card.getAttribute('data-status'),'earlier');assert.equal(await card.getAttribute('open'),null);
+ await card.locator('summary').click();assert.equal(await card.locator('[type=submit]').isVisible(),false);
+ assert.equal(await card.locator('[type=radio]').first().isDisabled(),true);
+ await page.evaluate(item=>globalThis.__pandaForceDebug.notify('item/completed',{threadId:'old-alpha',turnId:'questions',item}),item);
+ assert.equal(await page.locator('[data-async-question-card]').count(),1);
+ assert.equal(await card.getAttribute('data-status'),'earlier');
+ assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({interactiveOptionsAndText:true,draftPreserved:true,explicitSendRequired:true,replyCollapsesHistory:true,noReplayReopening:true,mobile:true,errors}));
+}finally{await browser.close();await fixture.dispose();}

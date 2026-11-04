@@ -8,7 +8,7 @@ import sharp from "sharp";
 
 describe("local agent image boundary", () => {
   test("resolves absolute, relative and file URL image references inside an allowed root", () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-webui-image-"));
+    const root = mkdtempSync(join(tmpdir(), "panda-force-image-"));
     const image = join(root, "preview.png");
     try {
       writeFileSync(image, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
@@ -27,8 +27,8 @@ describe("local agent image boundary", () => {
   });
 
   test("rejects paths outside the boundary, symbolic links, non-images and oversized files", () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-webui-image-root-"));
-    const outside = mkdtempSync(join(tmpdir(), "codex-webui-image-outside-"));
+    const root = mkdtempSync(join(tmpdir(), "panda-force-image-root-"));
+    const outside = mkdtempSync(join(tmpdir(), "panda-force-image-outside-"));
     try {
       const outsideImage = join(outside, "outside.png");
       writeFileSync(outsideImage, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
@@ -49,7 +49,7 @@ describe("local agent image boundary", () => {
 
 describe("local image activity thumbnails", () => {
   test("compresses large images without changing the original and refreshes replaced files", async () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-webui-thumbnail-"));
+    const root = mkdtempSync(join(tmpdir(), "panda-force-thumbnail-"));
     const path = join(root, "原始身份照.png");
     const thumbnail = createImageThumbnailCache();
     const resolveImage = () => resolveLocalImage(path, { home: root, allowedRoots: [root] });
@@ -75,7 +75,7 @@ describe("local image activity thumbnails", () => {
   });
 
   test("does not retain decode failures after an image is repaired", async () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-webui-thumbnail-invalid-"));
+    const root = mkdtempSync(join(tmpdir(), "panda-force-thumbnail-invalid-"));
     const path = join(root, "damaged.png");
     const thumbnail = createImageThumbnailCache();
     const resolveImage = () => resolveLocalImage(path, { home: root, allowedRoots: [root] });

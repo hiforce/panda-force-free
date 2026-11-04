@@ -7,7 +7,7 @@ import { readWorkspaceContext } from '../src/server/workspace/context.js';
 
 describe('workspace composer context', () => {
   test('reports the selected folder, local environment, and current git branch', () => {
-    const root=mkdtempSync(join(tmpdir(),'codex-webui-context-'));
+    const root=mkdtempSync(join(tmpdir(),'panda-force-context-'));
     try {
       const repo=join(root,'sample-project');mkdirSync(repo);
       execFileSync('git',['init','-b','feature/composer'],{cwd:repo,stdio:'ignore'});
@@ -16,7 +16,7 @@ describe('workspace composer context', () => {
   });
 
   test('falls back cleanly outside a git repository and rejects escaped paths', () => {
-    const root=mkdtempSync(join(tmpdir(),'codex-webui-context-'));
+    const root=mkdtempSync(join(tmpdir(),'panda-force-context-'));
     try {
       expect(readWorkspaceContext(root,[root])).toEqual({cwd:root,project:root.split('/').at(-1),environment:'Local',branch:'No branch'});
       expect(()=>readWorkspaceContext('/private/tmp',[root])).toThrow('outside allowed roots');

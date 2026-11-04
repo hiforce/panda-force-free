@@ -13,7 +13,7 @@ const site=createServer((req,res)=>{
 await new Promise(resolve=>site.listen(0,'127.0.0.1',resolve));
 const address=site.address();
 const target=`http://127.0.0.1:${address.port}/start`;
-const base=process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899';
+const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
 const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:760},colorScheme:'dark'});
 const errors=[];

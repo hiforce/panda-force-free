@@ -14,7 +14,7 @@ describe("Codex approval surfaces", () => {
       method: "item/commandExecution/requestApproval",
       params: {
         command: "bun test tests/ui.test.ts",
-        cwd: "/home/test-user/projects/codex-webui",
+        cwd: "/home/test-user/projects/panda-force",
         reason: "Run the focused test suite",
         proposedExecpolicyAmendment: ["bun", "test"],
         availableDecisions: ["accept", "acceptForSession", "decline", "cancel"],
@@ -35,7 +35,7 @@ describe("Codex approval surfaces", () => {
   test("models file approval with conversation scope", () => {
     const model = buildApprovalModel({
       method: "item/fileChange/requestApproval",
-      params: { reason: "Write the generated files", grantRoot: "/home/test-user/projects/codex-webui" },
+      params: { reason: "Write the generated files", grantRoot: "/home/test-user/projects/panda-force" },
     });
     expect(model.kind).toBe("patch");
     expect(model.identity).toBe("Edit files");

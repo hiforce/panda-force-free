@@ -7,13 +7,13 @@ import {saveStoredPassword} from '../src/server/auth/password-store.ts';
 let built=false;
 export async function localAuthFixture(options={}){
  if(!built){const build=Bun.spawnSync(['bun','run','build:client'],{cwd:new URL('..',import.meta.url).pathname,stdout:'ignore',stderr:'pipe'});if(build.exitCode)throw new Error(Buffer.from(build.stderr).toString());built=true}
- const dir=mkdtempSync(join(tmpdir(),'webui-administrator-')),bin=join(dir,'bin');mkdirSync(bin);
+ const dir=mkdtempSync(join(tmpdir(),'panda-administrator-')),bin=join(dir,'bin');mkdirSync(bin);
  const legacyPath=join(dir,'legacy.json'),adminPath=join(dir,'administrator.json');
  if(options.legacyPassword)saveStoredPassword(legacyPath,createStoredPassword(options.legacyPassword));
  writeFileSync(join(bin,'codex'),`#!${process.execPath}\nimport {createInterface} from 'node:readline';createInterface({input:process.stdin}).on('line',line=>{const m=JSON.parse(line);if(m.id===undefined)return;let result={};if(m.method==='initialize')result={codexHome:process.env.CODEX_HOME};if(['model/list','permissionProfile/list','thread/list','thread/loaded/list','thread/queue/list'].includes(m.method))result={data:[]};if(m.method==='account/read')result={account:null};process.stdout.write(JSON.stringify({id:m.id,result})+'\\n')});\n`,{mode:0o700});
  const port=await new Promise(resolve=>{const server=createServer();server.listen(0,'127.0.0.1',()=>{const port=server.address().port;server.close(()=>resolve(port))})});
  const env=Object.fromEntries(Object.entries(process.env).filter(([name])=>!name.startsWith('IDAAS_')));
- Object.assign(env,{PATH:bin+':'+env.PATH,HOME:dir,CODEX_HOME:dir,HOST:options.host||'127.0.0.1',PORT:String(port),NODE_ENV:'production',CODEX_WEBUI_PROJECTLESS:'false',CODEX_WEBUI_CWD:dir,CODEX_WEBUI_REVIEW_ROOT:dir,CODEX_WEBUI_APP_SERVER_MODE:'isolated',CODEX_WEBUI_ATTACHMENT_STORAGE:'local',CODEX_WEBUI_AUTH_MODE:options.authMode||'',CODEX_WEBUI_PASSWORD:options.environmentPassword||'',CODEX_WEBUI_ACCESS_TOKEN:options.accessToken||'',CODEX_WEBUI_AUTH_STORE:legacyPath,CODEX_WEBUI_ADMIN_STORE:adminPath});
+ Object.assign(env,{PATH:bin+':'+env.PATH,HOME:dir,CODEX_HOME:dir,HOST:options.host||'127.0.0.1',PORT:String(port),NODE_ENV:'production',PANDA_FORCE_PROJECTLESS:'false',PANDA_FORCE_CWD:dir,PANDA_FORCE_REVIEW_ROOT:dir,PANDA_FORCE_APP_SERVER_MODE:'isolated',PANDA_FORCE_ATTACHMENT_STORAGE:'local',PANDA_FORCE_AUTH_MODE:options.authMode||'',PANDA_FORCE_PASSWORD:options.environmentPassword||'',PANDA_FORCE_ACCESS_TOKEN:options.accessToken||'',PANDA_FORCE_AUTH_STORE:legacyPath,PANDA_FORCE_ADMIN_STORE:adminPath});
  let child,logs='',pumps=[];
  const fixture={dir,env,legacyPath,adminPath,base:`http://127.0.0.1:${port}`,
   get installationCode(){return logs.match(/Remote installation code: ([A-Za-z0-9_-]+)/)?.[1]},

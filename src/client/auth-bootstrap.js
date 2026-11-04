@@ -1,7 +1,7 @@
 import { applyThemePreference } from "./theme.js";
-import { installWebuiSession } from "./auth-session.js";
+import { installPandaForceSession } from "./auth-session.js";
 import { sessionLoginUrl } from "../shared/auth-return-path.js";
-import { codexInterfaceMark } from "./codex-brand.js";
+import { pandaInterfaceMark } from "./panda-brand.js";
 import { createDomI18n, createI18n } from "./i18n.js";
 import { startStartupReads } from "./startup-reads.js";
 import { getWorkspacePreparation } from "./workspace-preparation.js";
@@ -15,9 +15,9 @@ applyThemePreference();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applyThemePreference());
 
 const $ = (selector) => document.querySelector(selector);
-const i18n = globalThis.__codexWebuiI18n || createI18n();
-globalThis.__codexWebuiI18n = i18n;
-globalThis.__codexWebuiDomI18n = globalThis.__codexWebuiDomI18n || createDomI18n(i18n);
+const i18n = globalThis.__pandaForceI18n || createI18n();
+globalThis.__pandaForceI18n = i18n;
+globalThis.__pandaForceDomI18n = globalThis.__pandaForceDomI18n || createDomI18n(i18n);
 const t = (message) => i18n.t(message);
 
 function showAuthFailure(message) {
@@ -80,14 +80,14 @@ async function start() {
       const previous = localStorage.getItem("panda-force-browser-identity");
       if ((previous && previous !== identity) || (!previous && status.authMode === "idaas")) {
         for (const key of Object.keys(localStorage))
-          if (key.startsWith("codex-webui-") && key !== "codex-webui-locale") localStorage.removeItem(key);
+          if (key.startsWith("panda-force-") && key !== "panda-force-locale") localStorage.removeItem(key);
       }
       localStorage.setItem("panda-force-browser-identity", identity);
     } catch {}
 
     $("#passwordGate").hidden = true;
     if (!(await loadApp())) return;
-    if (status.authMode === "idaas" || status.passwordRequired) installWebuiSession(status, { translate: t, i18n });
+    if (status.authMode === "idaas" || status.passwordRequired) installPandaForceSession(status, { translate: t, i18n });
   };
   if (status.authMode === "idaas") {
     if (!status.authenticated) {
@@ -111,7 +111,7 @@ async function start() {
     error = $("#passwordError"),
     visibility = $("#passwordVisibility");
   let mode;
-  $("#passwordCodexMark").innerHTML = codexInterfaceMark("password-codex-mark");
+  $("#passwordCodexMark").innerHTML = pandaInterfaceMark("password-panda-mark");
   const action = () =>
     mode === "setup" ? "Create administrator" : mode === "migrate" ? "Save and continue" : "Log in";
   const field = (id, element, visible) => {
@@ -225,6 +225,6 @@ async function start() {
 }
 
 start().catch((error) => {
-  console.error("[codex-webui] authentication bootstrap failed", error);
+  console.error("[panda-force] authentication bootstrap failed", error);
   showAuthFailure(t("Could not open the workspace. Please reload."));
 });

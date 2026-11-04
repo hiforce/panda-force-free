@@ -1,6 +1,6 @@
 import { threadLastActivityAt } from "./ui-core.js";
 
-const DATABASE = "codex-webui-conversations-v1",
+const DATABASE = "panda-force-conversations-v1",
   STORE = "entries",
   SIDEBAR = "__sidebar__";
 export const CONVERSATION_CACHE_TTL_MS = 48 * 60 * 60 * 1000;

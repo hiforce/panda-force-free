@@ -1,23 +1,26 @@
+import { migrateBrowserState } from "./legacy-browser-state.js";
+migrateBrowserState();
+
 /**
  * Single access layer for persisted browser state (audit §3.1/§3.7).
  * All localStorage reads and writes go through here so quota or privacy-mode
  * failures degrade gracefully and every key is declared in one place.
  */
 export const STORAGE_KEYS = {
-  composerDrafts: "codex-webui-composer-drafts",
-  activeThread: "codex-webui-active-thread",
-  sidebarProjectExpansion: "codex-webui-sidebar-project-expansion",
-  sidebarPinnedProjects: "codex-webui-sidebar-pinned-projects",
-  sidebarPinnedThreads: "codex-webui-sidebar-pinned-threads",
-  sidebarSnapshot: "codex-webui-sidebar-snapshot-v1",
-  sessionModelCache: "codex-webui-session-model-cache",
-  taskNotify: "codex-webui-task-notify",
-  model: "codex-webui-model",
-  project: "codex-webui-project",
-  permissionMode: "codex-webui-permission-mode",
-  permissionFullAccess: "codex-webui-permission-full-access",
-  reviewPreferences: "codex-webui-review-preferences",
-  effortFor: (model) => `codex-webui-effort:${model}`,
+  composerDrafts: "panda-force-composer-drafts",
+  activeThread: "panda-force-active-thread",
+  sidebarProjectExpansion: "panda-force-sidebar-project-expansion",
+  sidebarPinnedProjects: "panda-force-sidebar-pinned-projects",
+  sidebarPinnedThreads: "panda-force-sidebar-pinned-threads",
+  sidebarSnapshot: "panda-force-sidebar-snapshot-v1",
+  sessionModelCache: "panda-force-session-model-cache",
+  taskNotify: "panda-force-task-notify",
+  model: "panda-force-model",
+  project: "panda-force-project",
+  permissionMode: "panda-force-permission-mode",
+  permissionFullAccess: "panda-force-permission-full-access",
+  reviewPreferences: "panda-force-review-preferences",
+  effortFor: (model) => `panda-force-effort:${model}`,
 };
 
 export const storage = {

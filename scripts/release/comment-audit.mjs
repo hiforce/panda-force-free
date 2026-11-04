@@ -46,7 +46,7 @@ if (import.meta.main) {
     .split("\0")
     .filter(
       (file) =>
-        /^(src|public|scripts|deploy|tests)\//.test(file) &&
+        /^(src|public|scripts|deploy|tests|panda-docs)\//.test(file) &&
         /\.(?:js|ts|mjs|cjs|css|html|svg|py|sh|yaml|yml)$/.test(file),
     );
   const result = auditComments([...new Set(files)]);

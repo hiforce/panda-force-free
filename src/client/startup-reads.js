@@ -1,4 +1,4 @@
-const GLOBAL_KEY = "__codexWebuiStartupReads";
+const GLOBAL_KEY = "__pandaForceStartupReads";
 
 export function startStartupReads({ fetchImpl = globalThis.fetch, timeoutMs = 8000 } = {}) {
   if (globalThis[GLOBAL_KEY]) return;

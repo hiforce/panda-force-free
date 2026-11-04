@@ -222,7 +222,7 @@ export async function resolveAccountIdentity(accountResponse: AccountResponse | 
     try {
       profile = await fetchCodexProfile();
     } catch (error) {
-      console.warn("[codex-webui] profile request failed:", error instanceof Error ? error.message : String(error));
+      console.warn("[panda-force] profile request failed:", error instanceof Error ? error.message : String(error));
     }
   }
   return buildAccountIdentity(accountResponse, profile);

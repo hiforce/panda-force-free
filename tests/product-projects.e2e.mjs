@@ -16,7 +16,7 @@ try {
   const catalog = async () => (await context.request.get(fixture.base + "/api/projects")).json();
   const go = async (path) => {
     await page.goto(fixture.base + path);
-    await page.waitForFunction(() => Boolean(globalThis.__codexWebuiDebug?.workbench));
+    await page.waitForFunction(() => Boolean(globalThis.__pandaForceDebug?.workbench));
     await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
   };
   const create = async (name, code, description = "") => {
@@ -89,8 +89,8 @@ try {
   assert.equal(await page.locator("#sessionProjectSelect").inputValue(), a.id);
   assert.equal(await page.locator(".working-folder-label").innerText(), "Working folder");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
-  await page.waitForFunction(() => globalThis.__codexWebuiDebug.state.active?.id?.startsWith("new-"));
-  const created = await page.evaluate(() => globalThis.__codexWebuiDebug.state.active.id);
+  await page.waitForFunction(() => globalThis.__pandaForceDebug.state.active?.id?.startsWith("new-"));
+  const created = await page.evaluate(() => globalThis.__pandaForceDebug.state.active.id);
   await waitFor(async () => (await catalog()).assignments.find((s) => s.id === created));
   assert.equal((await catalog()).assignments.find((s) => s.id === created).projectId, a.id);
   assert.equal(fixture.calls().find((c) => c.method === "thread/start").params.cwd, fixture.alpha);
@@ -102,7 +102,7 @@ try {
   await page.route("**/api/projects/assign", (route) => route.fulfill({ status: 503, json: { error: "Project information is temporarily unavailable. Please retry." } }));
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await page.waitForFunction(() => document.querySelector("#prompt")?.value === "Retry association without duplicate session");
-  const failedThread = await page.evaluate(() => globalThis.__codexWebuiDebug.state.active.id), starts = fixture.calls().filter((c) => c.method === "thread/start").length;
+  const failedThread = await page.evaluate(() => globalThis.__pandaForceDebug.state.active.id), starts = fixture.calls().filter((c) => c.method === "thread/start").length;
   await page.unroute("**/api/projects/assign");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await waitFor(async () => (await catalog()).assignments.find((s) => s.id === failedThread));
@@ -141,10 +141,10 @@ try {
   fixture.requestApproval({ ...approval, id: "restore-and-retry", params: { ...approval.params, turnId: "restore-approval" } });
   await page.locator(".approval-card").waitFor();
   await page.locator(".approval-card").evaluate((card) => card.remove());
-  await page.evaluate(() => globalThis.__codexWebuiDebug.openThread("old-alpha"));
+  await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-alpha"));
   await page.locator(".approval-card").waitFor();
-  await page.evaluate(() => globalThis.__codexWebuiDebug.state.ws?.close());
-  await page.waitForFunction(() => globalThis.__codexWebuiDebug.state.transport === "sse");
+  await page.evaluate(() => globalThis.__pandaForceDebug.state.ws?.close());
+  await page.waitForFunction(() => globalThis.__pandaForceDebug.state.transport === "sse");
   await page.route("**/api/codex/respond", (route) => route.fulfill({ status: 503, json: { error: "Temporary transport failure" } }));
   await page.locator(".approval-primary").click();
   await page.locator(".approval-submit-error").waitFor();
@@ -155,7 +155,7 @@ try {
   await waitFor(() => fixture.calls().find((c) => c.type === "response" && c.id === "restore-and-retry"));
   checks.push("Detached approval cards restore after history refresh; failed decisions keep their actions for explicit retry");
   const reasoning = await page.evaluate(() => {
-    const api = globalThis.__codexWebuiDebug;
+    const api = globalThis.__pandaForceDebug;
     api.notify("item/started", { threadId: "old-alpha", turnId: "summary-turn", item: { id: "public-summary", type: "reasoning", summary: [{ type: "summary_text", text: "Visible native summary" }] } });
     api.notify("item/completed", { threadId: "old-alpha", turnId: "summary-turn", item: { id: "public-summary", type: "reasoning", summary: [] } });
     for (const id of ["empty-one", "empty-two"]) api.notify("item/completed", { threadId: "old-alpha", turnId: "summary-turn", item: { id, type: "reasoning", summary: [], encrypted_content: "not-public" } });
@@ -172,7 +172,7 @@ try {
   }
   await page.screenshot({ path: artifacts + "/projects-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.evaluate(() => globalThis.__codexWebuiI18n.setPreference("zh-CN"));
+  await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("zh-CN"));
   await page.locator('[data-wb="create-project"]').first().click();
   await page.getByRole("heading", { name: "创建项目", exact: true }).waitFor();
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);

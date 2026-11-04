@@ -9,7 +9,7 @@ try{
   const f=await localAuthFixture(options);
   try{
    const context=await browser.newContext({viewport:{width:1280,height:900},locale:'en'});
-   await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('codex-webui-locale','en')});
+   await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
    const page=await context.newPage();await page.goto(f.base);
    await page.getByRole('heading',{name:'Welcome back',exact:true}).waitFor();assert.equal(await page.locator('#usernameField').isVisible(),false);
    await page.locator('#passwordInput').fill('wrong password');await page.locator('#passwordLoginButton').click();
@@ -19,7 +19,7 @@ try{
    assert.equal(await page.locator('#passwordField').isVisible(),false);assert.equal(await page.locator('#app').isVisible(),false);
    await page.screenshot({path:artifact(`administrator-migration-${kind}.png`)});
    await page.locator('#usernameInput').fill('existing-owner');await page.locator('#passwordLoginButton').click();
-   await page.locator('#webuiLogout').waitFor({state:'attached'});
+   await page.locator('#pandaLogout').waitFor({state:'attached'});
    assert.equal((await (await context.request.get(f.base+'/api/auth/status')).json()).identity.username,'existing-owner');
    await context.close();
   }finally{await f.dispose()}
@@ -46,7 +46,7 @@ try{
   await page.locator('#passwordInput').fill(password);await page.locator('#passwordConfirmInput').fill(password);await page.locator('#passwordLoginButton').click();
   await page.getByRole('alert').filter({hasText:'安装码不正确'}).waitFor();
   await page.locator('#installationCodeInput').fill(f.installationCode);await page.locator('#passwordLoginButton').click();
-  await page.locator('#webuiLogout').waitFor({state:'attached'});
+  await page.locator('#pandaLogout').waitFor({state:'attached'});
   assert.equal((await context.request.get(f.base+'/api/config')).status(),200);
   await context.close();
  }finally{await f.dispose()}

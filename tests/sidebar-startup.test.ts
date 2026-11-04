@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { createSidebarCache } from "../src/client/sidebar-cache.js";
 import { startStartupReads, takeStartupRead } from "../src/client/startup-reads.js";
 
-afterEach(() => { delete globalThis.__codexWebuiStartupReads; });
+afterEach(() => { delete globalThis.__pandaForceStartupReads; });
 const key = "sidebar";
 function fixture() {
   const data = new Map();

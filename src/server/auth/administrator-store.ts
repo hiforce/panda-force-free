@@ -1,3 +1,4 @@
+import { pandaEnvironment, existingApplicationPath } from "../environment.js";
 import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
@@ -22,9 +23,10 @@ export function validAdministratorUsername(value: unknown): value is string {
 }
 
 export function administratorStorePath(env: NodeJS.ProcessEnv = process.env) {
-  if (env.CODEX_WEBUI_ADMIN_STORE) return resolve(env.CODEX_WEBUI_ADMIN_STORE);
-  if (env.CODEX_WEBUI_AUTH_STORE) return `${resolve(env.CODEX_WEBUI_AUTH_STORE)}.administrator.json`;
-  return join(env.CODEX_HOME || join(homedir(), ".codex"), "codex-webui-admin.json");
+  env = pandaEnvironment(env);
+  if (env.PANDA_FORCE_ADMIN_STORE) return resolve(env.PANDA_FORCE_ADMIN_STORE);
+  if (env.PANDA_FORCE_AUTH_STORE) return `${resolve(env.PANDA_FORCE_AUTH_STORE)}.administrator.json`;
+  return existingApplicationPath(join(env.CODEX_HOME || join(homedir(), ".codex"), "panda-force-admin.json"));
 }
 
 function validRecord(value: any): value is StoredAdministrator {

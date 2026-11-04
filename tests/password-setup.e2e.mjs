@@ -7,7 +7,7 @@ const password='Abc123',f=await localAuthFixture();let browser;
 try{
  browser=await chromium.launch(launchOptions());
  const context=await browser.newContext({viewport:{width:1280,height:900},colorScheme:'light',locale:'en'});
- await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('codex-webui-locale','en')});
+ await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  let setupRequests=0;page.on('request',request=>{if(request.method()==='POST'&&request.url().endsWith('/api/auth/setup'))setupRequests++});
  await page.goto(f.base);await page.getByRole('heading',{name:'Create your administrator',exact:true}).waitFor();
@@ -18,7 +18,7 @@ try{
  assert.equal(await page.locator('#usernameInput').inputValue(),'admin');
  assert.equal(await page.locator('#installationCodeField').isVisible(),false);
  assert.equal(await page.locator('#app').isVisible(),false);
- assert.equal(await page.evaluate(()=>Boolean(globalThis.__codexWebuiDebug)),false);
+ assert.equal(await page.evaluate(()=>Boolean(globalThis.__pandaForceDebug)),false);
  assert.equal((await context.request.get(f.base+'/app.bundle.js')).status(),401);
  await page.screenshot({path:artifact('administrator-setup-desktop.png')});
  await page.emulateMedia({colorScheme:'dark'});await page.screenshot({path:artifact('administrator-setup-dark.png')});
@@ -39,14 +39,14 @@ try{
  await page.locator('#passwordConfirmInput').fill('incorrect confirmation');await page.locator('#passwordLoginButton').click();
  await page.getByRole('alert').filter({hasText:'Passwords do not match'}).waitFor();
  await page.locator('#passwordConfirmInput').fill(password);await page.locator('#passwordLoginButton').click();
- await page.locator('#webuiLogout').waitFor({state:'attached'});
- assert.ok((await page.locator('#webuiLogout').textContent()).includes('PandaForce'));
+ await page.locator('#pandaLogout').waitFor({state:'attached'});
+ assert.ok((await page.locator('#pandaLogout').textContent()).includes('PandaForce'));
  assert.equal(await page.locator('.window-brand strong').textContent(),'PandaForce');
  assert.equal(await page.locator('#windowCodexMark [data-panda-force-mark]').count(),1);
  assert.equal(setupRequests,1);
  assert.deepEqual((await (await context.request.get(f.base+'/api/auth/status')).json()).identity,{username:'owner',role:'admin'});
  assert.equal(readFileSync(f.adminPath,'utf8').includes(password),false);
- await page.setViewportSize({width:1280,height:900});if(await page.locator('#workspacePreparation').isVisible())await page.locator('#workspacePreparationContinue').click();await page.locator('#accountButton').click();await page.locator('#webuiLogout').click();
+ await page.setViewportSize({width:1280,height:900});if(await page.locator('#workspacePreparation').isVisible())await page.locator('#workspacePreparationContinue').click();await page.locator('#accountButton').click();await page.locator('#pandaLogout').click();
  await page.getByRole('heading',{name:'Welcome back',exact:true}).waitFor();
  assert.equal(await page.locator('#passwordGate').getAttribute('aria-label'),'PandaForce login');
  assert.equal((await context.request.get(f.base+'/api/config')).status(),401);
@@ -56,7 +56,7 @@ try{
  await page.getByRole('alert').filter({hasText:'Incorrect username or password'}).waitFor();
  await f.restart();await page.reload();await page.getByRole('heading',{name:'Welcome back',exact:true}).waitFor();
  await page.locator('#usernameInput').fill('OWNER');await page.locator('#passwordInput').fill(password);await page.locator('#passwordLoginButton').click();
- await page.locator('#webuiLogout').waitFor({state:'attached'});
+ await page.locator('#pandaLogout').waitFor({state:'attached'});
  assert.equal((await context.request.get(f.base+'/api/config')).status(),200);
  assert.deepEqual(errors,[]);
  console.log(JSON.stringify({zeroOptionSetup:true,preSetupAccessBlocked:true,desktopAndMobile:true,darkMode:true,passwordVisibility:true,mismatchValidation:true,administratorLogin:true,logout:true,restartPersistence:true,errors}));

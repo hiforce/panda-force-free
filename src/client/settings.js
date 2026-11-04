@@ -120,7 +120,7 @@ export function createSettingsPanel({
     if ($("#settingsDialog").open && matchMedia("(max-width:480px)").matches)
       $("#settingsDialog").dataset.mobilePage = "true";
     if (updateRoute && settingsRoutePage())
-      history.replaceState({ ...history.state, codexWebuiSettings: true }, "", `/settings/${selected}`);
+      history.replaceState({ ...history.state, pandaForceSettings: true }, "", `/settings/${selected}`);
   }
   function filterSettingsNavigation(query = "") {
     const normalized = query.trim().toLocaleLowerCase(),
@@ -251,12 +251,12 @@ export function createSettingsPanel({
       current = settingsRoutePage();
     if (!current) {
       history.pushState(
-        { codexWebuiSettings: true, codexSettingsReturnPath: location.pathname + location.search + location.hash },
+        { pandaForceSettings: true, codexSettingsReturnPath: location.pathname + location.search + location.hash },
         "",
         `/settings/${selected}`,
       );
     } else if (current !== selected) {
-      history.replaceState({ ...history.state, codexWebuiSettings: true }, "", `/settings/${selected}`);
+      history.replaceState({ ...history.state, pandaForceSettings: true }, "", `/settings/${selected}`);
     }
     showSettings(selected, { updateRoute: false });
   }

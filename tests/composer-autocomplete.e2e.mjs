@@ -5,8 +5,8 @@ const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1018,height:980},colorScheme:'dark'});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
-await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state?.config?.defaultCwd);
+await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state?.config?.defaultCwd);
 await page.click('#newTask');
 
 await page.locator('#prompt').fill('/');
@@ -24,7 +24,7 @@ await page.locator('#prompt').fill('/pla');
 const filtered=await page.locator('#composerAutocomplete [data-autocomplete-id]').allTextContents();
 await page.keyboard.press('Enter');
 const plan=await page.evaluate(()=>({
-  active:globalThis.__codexWebuiDebug.state.planMode,
+  active:globalThis.__pandaForceDebug.state.planMode,
   placeholder:document.querySelector('#prompt').placeholder,
   value:document.querySelector('#prompt').value,
   menuHidden:document.querySelector('#composerAutocomplete').hidden,
@@ -47,7 +47,7 @@ const mentionSelected=await page.evaluate(()=>({value:document.querySelector('#p
 await page.click('#newTask');
 const reset=await page.evaluate(()=>({value:document.querySelector('#prompt').value,trayHidden:document.querySelector('#composerContextTray').hidden,chips:document.querySelectorAll('#composerContextTray .composer-context-chip').length}));
 const mobile=await browser.newPage({viewport:{width:360,height:780},colorScheme:'dark'});
-await mobile.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await mobile.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
 await mobile.locator('#prompt').fill('/');
 await mobile.waitForSelector('#composerAutocomplete:not([hidden])');
 const mobileLayout=await mobile.evaluate(()=>{const menu=document.querySelector('#composerAutocomplete').getBoundingClientRect(),composer=document.querySelector('.composer').getBoundingClientRect();return{left:menu.left,right:menu.right,top:menu.top,bottom:menu.bottom,composerTop:composer.top,scrollWidth:document.documentElement.scrollWidth,innerWidth}});

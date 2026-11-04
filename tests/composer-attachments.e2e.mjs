@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 import { artifact, launchOptions } from './browser-runtime.mjs';
 
 const root=new URL('..',import.meta.url).pathname;
-const uploadsHome=mkdtempSync(join(tmpdir(),'webui-attachment-browser-'));
+const uploadsHome=mkdtempSync(join(tmpdir(),'panda-attachment-browser-'));
 const png=readFileSync(new URL('../public/assets/panda-icon.png',import.meta.url));
 const image={name:'截图.png',mimeType:'image/png',buffer:png};
 const notes={name:'notes.txt',mimeType:'text/plain',buffer:Buffer.from('Attachment notes')};
@@ -23,13 +23,13 @@ try{
   assert.equal((await fetch(`${base}/api/attachments?name=cross-site.txt`,{method:'POST',headers:{'sec-fetch-site':'cross-site'},body:'denied'})).status,401);
   browser=await chromium.launch(launchOptions());
   const context=await browser.newContext({viewport:{width:1018,height:760}});
-  await context.addInitScript(()=>{if(window===window.top){localStorage.clear();localStorage.setItem('codex-webui-locale','en')}});
+  await context.addInitScript(()=>{if(window===window.top){localStorage.clear();localStorage.setItem('panda-force-locale','en')}});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   await page.goto(base,{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.config.defaultCwd);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.config.defaultCwd);
   await page.evaluate(()=>{
-    const api=globalThis.__codexWebuiDebug;
+    const api=globalThis.__pandaForceDebug;
     api.state.ws.onmessage=null;api.state.events?.close();api.state.transport='sse';
     api.startNewTask();
     api.state.active={id:'attachment-thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:true};
@@ -53,8 +53,8 @@ try{
   const chooserPromise=page.waitForEvent('filechooser');
   await page.click('[data-composer-control="add"]');
   await (await chooserPromise).setFiles([image,notes]);
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.composerAttachments.length===2&&globalThis.__codexWebuiDebug.state.composerAttachments.every(file=>file.status==='ready'));
-  const attachments=await page.evaluate(()=>globalThis.__codexWebuiDebug.state.composerAttachments);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.composerAttachments.length===2&&globalThis.__pandaForceDebug.state.composerAttachments.every(file=>file.status==='ready'));
+  const attachments=await page.evaluate(()=>globalThis.__pandaForceDebug.state.composerAttachments);
   assert.equal(attachments[0].kind,'image');assert.equal(attachments[1].kind,'file');
   assert.ok(attachments.every(file=>file.path.startsWith(uploadsHome)));
   assert.deepEqual(readFileSync(attachments[0].path),png);
@@ -73,8 +73,8 @@ try{
   await page.waitForFunction(()=>document.querySelector('.user-message-images img')?.naturalWidth>0);
   assert.equal(await page.locator('#composerAttachments').isHidden(),true);
   // An echoed image message replaces its optimistic row.
-  await page.evaluate(call=>globalThis.__codexWebuiDebug.notify('item/completed',{threadId:'attachment-thread',turnId:'attachment-turn-1',item:{id:'echo-image',clientId:call.params.clientUserMessageId,type:'userMessage',content:call.params.input}}),call);
-  await page.evaluate(call=>globalThis.__codexWebuiDebug.syncTurnSnapshot({id:'attachment-turn-1',status:'completed',items:[{id:'host-user-attachment-turn-1-1',clientId:call.params.clientUserMessageId,type:'userMessage',content:call.params.input}]}),call);
+  await page.evaluate(call=>globalThis.__pandaForceDebug.notify('item/completed',{threadId:'attachment-thread',turnId:'attachment-turn-1',item:{id:'echo-image',clientId:call.params.clientUserMessageId,type:'userMessage',content:call.params.input}}),call);
+  await page.evaluate(call=>globalThis.__pandaForceDebug.syncTurnSnapshot({id:'attachment-turn-1',status:'completed',items:[{id:'host-user-attachment-turn-1-1',clientId:call.params.clientUserMessageId,type:'userMessage',content:call.params.input}]}),call);
   assert.equal(await page.locator('.user-turn').count(),1);
   assert.equal(await page.locator('.user-message').textContent(),'Review these attachments');
   assert.equal(await page.locator('.user-message-files a').textContent(),'notes.txt');
@@ -84,12 +84,12 @@ try{
   await page.keyboard.press('ArrowDown');assert.equal(await page.locator('#composerAttachments').isHidden(),true);
   // Image-only submissions must send rather than stop or do nothing.
   await page.locator('#attachmentInput').setInputFiles(image);
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.composerAttachments[0]?.status==='ready');
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.composerAttachments[0]?.status==='ready');
   await page.click('#sendButton');
   await page.waitForFunction(()=>window.__attachmentCalls.filter(call=>call.method==='turn/start').length===2);
   const imageOnly=await page.evaluate(()=>window.__attachmentCalls.filter(call=>call.method==='turn/start').at(-1));
   assert.equal(imageOnly.params.input.length,1);assert.equal(imageOnly.params.input[0].type,'localImage');
-  await page.evaluate(call=>globalThis.__codexWebuiDebug.notify('item/completed',{threadId:'attachment-thread',turnId:'attachment-turn-2',item:{id:'echo-image-only',clientId:call.params.clientUserMessageId,type:'userMessage',content:call.params.input}}),imageOnly);
+  await page.evaluate(call=>globalThis.__pandaForceDebug.notify('item/completed',{threadId:'attachment-thread',turnId:'attachment-turn-2',item:{id:'echo-image-only',clientId:call.params.clientUserMessageId,type:'userMessage',content:call.params.input}}),imageOnly);
   assert.equal(await page.locator('.user-turn').count(),2);
   await prompt.focus();await page.keyboard.press('ArrowUp');
   assert.equal(await prompt.inputValue(),'');assert.equal(await page.locator('.composer-attachment').count(),1);
@@ -97,12 +97,12 @@ try{
   await page.waitForFunction(()=>window.__attachmentCalls.some(call=>call.method==='thread/queue/add'));
   const queue=await page.evaluate(()=>window.__attachmentCalls.find(call=>call.method==='thread/queue/add'));
   assert.deepEqual(queue.params.input,imageOnly.params.input);
-  await page.waitForFunction(()=>document.querySelector('#prompt').value===''&&globalThis.__codexWebuiDebug.state.composerAttachments.length===0);
+  await page.waitForFunction(()=>document.querySelector('#prompt').value===''&&globalThis.__pandaForceDebug.state.composerAttachments.length===0);
   await page.keyboard.press('ArrowUp');
-  await page.evaluate(()=>{const api=globalThis.__codexWebuiDebug;api.syncTurnSnapshot({id:'running-attachment-turn',status:'inProgress',items:[]});window.__attachmentFail=true});
+  await page.evaluate(()=>{const api=globalThis.__pandaForceDebug;api.syncTurnSnapshot({id:'running-attachment-turn',status:'inProgress',items:[]});window.__attachmentFail=true});
   assert.equal(await page.locator('#sendButton').getAttribute('data-submit-mode'),'steer');
   await page.click('#sendButton');
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.composerAttachments.length===1);
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.composerAttachments.length===1);
   assert.equal(await prompt.inputValue(),'');
   assert.equal(await page.locator('.composer-attachment').count(),1);
   await page.evaluate(()=>{window.__attachmentFail=false;window.__attachmentNoActive=true});
@@ -118,37 +118,37 @@ try{
     const dataTransfer=new DataTransfer();dataTransfer.items.add(new File(['Dropped notes'],'drop.txt',{type:'text/plain'}));
     document.querySelector('#composer').dispatchEvent(new DragEvent('drop',{dataTransfer,bubbles:true,cancelable:true}));
   });
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.composerAttachments.length===2&&globalThis.__codexWebuiDebug.state.composerAttachments.every(file=>file.status==='ready'));
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.composerAttachments.length===2&&globalThis.__pandaForceDebug.state.composerAttachments.every(file=>file.status==='ready'));
   await page.setViewportSize({width:390,height:844});
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.setSidebarOpen(false));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.setSidebarOpen(false));
   await page.screenshot({path:artifact('composer-attachments-mobile.png'),animations:'disabled'});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await page.locator('.composer-attachment-remove').first().click();assert.equal(await page.locator('.composer-attachment').count(),1);
   // Saved drafts retain attachments; new tasks start empty.
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('another-attachment-thread'));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('another-attachment-thread'));
   assert.equal(await page.locator('.composer-attachment').count(),0);
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('attachment-thread'));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('attachment-thread'));
   assert.equal(await page.locator('.composer-attachment').count(),1);
   await page.keyboard.press('Control+k');assert.equal(await page.locator('.composer-attachment').count(),0);
   // Upload failures are visible and must not be silently dropped on submit.
   await page.locator('#attachmentInput').setInputFiles({name:'invalid.png',mimeType:'image/png',buffer:Buffer.from('invalid')});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.composerAttachments[0]?.status==='failed');
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.composerAttachments[0]?.status==='failed');
   assert.equal(await page.locator('#sendButton').isDisabled(),true);
   await page.locator('.composer-attachment-remove').click();assert.equal(await page.locator('#sendButton').isDisabled(),false);
   // A delayed upload belongs to the original saved draft, never the newly opened task.
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('upload-owner'));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('upload-owner'));
   let releaseUpload;
   await page.route('**/api/attachments?name=slow.txt',async route=>{await new Promise(resolve=>releaseUpload=resolve);await route.continue()});
   await page.locator('#attachmentInput').setInputFiles({name:'slow.txt',mimeType:'text/plain',buffer:Buffer.from('slow upload')});
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.composerAttachments[0]?.status==='uploading');
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.composerAttachments[0]?.status==='uploading');
   assert.equal(await page.locator('#sendButton').isDisabled(),true);
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('upload-other'));
+  await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('upload-other'));
   while(!releaseUpload)await Bun.sleep(10);
   releaseUpload();
   await page.waitForResponse(response=>response.url().includes('name=slow.txt'));
   assert.equal(await page.locator('.composer-attachment').count(),0);
-  await page.evaluate(()=>globalThis.__codexWebuiDebug.openThread('upload-owner'));
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug.state.composerAttachments[0]?.status==='ready');
+  await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('upload-owner'));
+  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.composerAttachments[0]?.status==='ready');
   assert.equal(await page.locator('.composer-attachment-name').textContent(),'slow.txt');
   assert.deepEqual(errors,[]);
   console.log('Attachment upload, image/file send, queue, steer, recovery, clipboard/drop and draft checks passed.');

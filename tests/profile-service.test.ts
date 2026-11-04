@@ -11,7 +11,7 @@ afterEach(() => {
 
 describe("Codex account profile", () => {
   test("uses the same authenticated profile endpoint as Codex Desktop without exposing tokens", async () => {
-    const directory = mkdtempSync(join(tmpdir(), "codex-webui-profile-"));
+    const directory = mkdtempSync(join(tmpdir(), "panda-force-profile-"));
     temporaryDirectories.push(directory);
     const authPath = join(directory, "auth.json");
     writeFileSync(authPath, JSON.stringify({

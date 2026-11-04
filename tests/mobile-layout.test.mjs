@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { artifact, launchOptions } from './browser-runtime.mjs';
 const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:591,height:1100},deviceScaleFactor:1,isMobile:true,hasTouch:true});
-await page.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
 const box=async s=>page.locator(s).evaluate(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,display:getComputedStyle(e).display,transform:getComputedStyle(e).transform}});
 const closedSidebar=await box('.sidebar');
 await page.click('#toggleSidebar');
@@ -32,7 +32,7 @@ console.log(JSON.stringify(result,null,2));
 await page.screenshot({path:artifact('mobile-layout.png'),fullPage:false});
 
 const narrow=await browser.newPage({viewport:{width:320,height:800},deviceScaleFactor:1,isMobile:true,hasTouch:true});
-await narrow.goto(process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await narrow.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
 const narrowChrome=await narrow.evaluate(()=>({hasBottomPanelButton:Boolean(document.querySelector('#toggleBottomPanel')),hasBottomPanel:Boolean(document.querySelector('#bottomPanel')),scrollWidth:document.documentElement.scrollWidth,innerWidth}));
 await narrow.click('#toggleSummaryPanel');
 await narrow.waitForFunction(()=>document.activeElement?.id==='closeSummaryPanel');

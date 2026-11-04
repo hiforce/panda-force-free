@@ -34,7 +34,7 @@ function fixture(transport = "ws") {
 describe("bridge request delivery deadlines", () => {
   test("a lost preparation reply times out and switches transport without submitting input", async () => {
     const f = fixture();
-    const result = f.api.rpc("thread/resume", { threadId: "cli", webuiPrepareInput: true }).catch(error => error);
+    const result = f.api.rpc("thread/resume", { threadId: "cli", pandaPrepareInput: true }).catch(error => error);
     jest.advanceTimersByTime(45_000);
     expect(f.state.pending.size).toBe(0);
     expect((await result).message).toContain("timed out");

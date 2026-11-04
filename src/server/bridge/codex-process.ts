@@ -33,7 +33,7 @@ export type CodexConnection = { mode: "shared"; socketPath: string } | { mode: s
  * Owns the Codex app-server transport: the spawned stdio child (isolated
  * mode) or the shared unix-socket WebSocket, JSON-RPC request/response
  * pairing with timeouts, the initialize handshake, and reconnect-on-exit.
- * Everything WebUI-specific happens in the injected callbacks.
+ * Everything PandaForce-specific happens in the injected callbacks.
  */
 export function createCodexBridge({
   connection,
@@ -81,13 +81,13 @@ export function createCodexBridge({
         heartbeat = setInterval(() => {
           if (socket !== codexSocket || socket.readyState !== WebSocket.OPEN) return;
           if (Date.now() - lastResponse > HEARTBEAT_INTERVAL_MS * 3) {
-            console.warn("[codex-webui] shared app-server heartbeat timed out; reconnecting");
+            console.warn("[panda-force] shared app-server heartbeat timed out; reconnecting");
             socket.terminate();
           } else socket.ping();
         }, HEARTBEAT_INTERVAL_MS);
         heartbeat.unref();
         initialize().catch((error) => {
-          console.error("[codex-webui] shared app-server initialize failed:", error.message);
+          console.error("[panda-force] shared app-server initialize failed:", error.message);
           socket.terminate();
         });
       });
@@ -96,13 +96,13 @@ export function createCodexBridge({
         try {
           handleMessage(JSON.parse(String(raw)));
         } catch (error) {
-          console.error("[codex-webui] invalid shared app-server message:", error);
+          console.error("[panda-force] invalid shared app-server message:", error);
         }
       });
       socket.on("pong", () => {
         lastResponse = Date.now();
       });
-      socket.on("error", (error) => console.error("[codex-webui] shared app-server:", error.message));
+      socket.on("error", (error) => console.error("[panda-force] shared app-server:", error.message));
       socket.on("close", (code, reason) => {
         if (codexSocket !== socket) return;
         codexSocket = null;
@@ -110,7 +110,7 @@ export function createCodexBridge({
         heartbeat = null;
         if (!isShuttingDown())
           console.warn(
-            `[codex-webui] shared app-server disconnected: code=${code}, reason=${String(reason).slice(0, 160) || "none"}, pending=${pending.size}`,
+            `[panda-force] shared app-server disconnected: code=${code}, reason=${String(reason).slice(0, 160) || "none"}, pending=${pending.size}`,
           );
         handleDisconnect(code, null);
       });
@@ -137,7 +137,7 @@ export function createCodexBridge({
         try {
           handleMessage(JSON.parse(line));
         } catch (error) {
-          console.error("[codex-webui] invalid app-server JSON:", line, error);
+          console.error("[panda-force] invalid app-server JSON:", line, error);
         }
       }
     });
@@ -148,7 +148,7 @@ export function createCodexBridge({
       handleDisconnect(code, signal);
     });
     initialize().catch((error) => {
-      console.error("[codex-webui] initialize failed", error);
+      console.error("[panda-force] initialize failed", error);
       terminate();
     });
   }
@@ -165,7 +165,7 @@ export function createCodexBridge({
   }
 
   function terminate(signal: NodeJS.Signals = "SIGTERM") {
-    // A shared daemon belongs to all clients, including SSH. Only detach WebUI.
+    // A shared daemon belongs to all clients, including SSH. Only detach PandaForce.
     if (codexSocket) {
       codexSocket.terminate();
       return;

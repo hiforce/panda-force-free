@@ -27,9 +27,9 @@ try{
  assert.equal(await page.locator('.auth-account-note').textContent(),'Your PandaForce account is separate from your Codex account.');
  await page.locator('#usernameInput').fill('owner');await page.locator('#passwordInput').fill('Abc123');await page.locator('#passwordConfirmInput').fill('Abc123');await page.locator('#passwordLoginButton').click();
  await page.locator('#workspacePreparation').waitFor({state:'visible'});await waitFor(()=>bundle);
- assert.equal(await page.evaluate(()=>Boolean(globalThis.__codexWebuiDebug)),false);
+ assert.equal(await page.evaluate(()=>Boolean(globalThis.__pandaForceDebug)),false);
  await bundle.continue();await page.unroute('**/app.bundle.js');
- await page.waitForFunction(()=>globalThis.__codexWebuiDebug);
+ await page.waitForFunction(()=>globalThis.__pandaForceDebug);
  await waitFor(()=>held.has('configuration')&&held.has('projects')&&held.has('models')&&events);
  await page.waitForFunction(()=>document.querySelector('#workspacePreparationProgress').value===1);
  await page.waitForTimeout(250);assert.equal(await page.locator('#workspacePreparationProgress').evaluate(p=>p.value),1);
@@ -37,12 +37,12 @@ try{
  assert.equal(await page.locator('#app').evaluate(el=>el.inert),true);
  const bounds=await page.locator('#workspacePreparation').boundingBox();assert.equal(bounds.x,0);assert.equal(bounds.width,1280);
  await page.screenshot({path:artifact('workspace-preparation-desktop.png')});
- await page.setViewportSize({width:390,height:844});await page.evaluate(()=>globalThis.__codexWebuiI18n.setPreference('zh-CN'));
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>globalThis.__pandaForceI18n.setPreference('zh-CN'));
  await page.getByRole('heading',{name:'正在准备工作台',exact:true}).waitFor();
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  await page.screenshot({path:artifact('workspace-preparation-mobile.png')});
  await page.emulateMedia({colorScheme:'dark'});await page.screenshot({path:artifact('workspace-preparation-mobile-dark.png')});await page.emulateMedia({colorScheme:'light'});
- await page.evaluate(()=>globalThis.__codexWebuiI18n.setPreference('en'));
+ await page.evaluate(()=>globalThis.__pandaForceI18n.setPreference('en'));
  await page.setViewportSize({width:1280,height:900});
  for(const key of ['configuration','projects','models'])await held.get(key)();
  await page.waitForFunction(()=>document.querySelector('#workspacePreparationProgress').value===4);

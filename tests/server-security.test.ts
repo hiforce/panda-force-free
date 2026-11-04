@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createPasswordSession, createStoredPassword, isAllowedBrowserRpcMethod, isRequestAuthorized, parseCookieHeader, resolvePublicAsset, storedPasswordSessionSecret, verifyPasswordSession, verifyStoredPassword } from "../src/server/auth/security.js";
 
-describe("WebUI server security boundary", () => {
+describe("PandaForce server security boundary", () => {
   test("allows only the RPC methods used by the browser client", () => {
     for (const method of ["model/list", "permissionProfile/list", "account/logout", "account/rateLimits/read", "thread/list", "thread/read", "thread/delete", "thread/name/set", "thread/resume", "thread/turns/list", "host/thread/live", "thread/start", "thread/queue/add", "thread/queue/list", "thread/queue/delete", "turn/start", "turn/steer", "turn/interrupt"]) {
       expect(isAllowedBrowserRpcMethod(method)).toBe(true);
@@ -16,7 +16,7 @@ describe("WebUI server security boundary", () => {
   });
 
   test("serves only declared public assets and never follows symbolic links", () => {
-    const root = mkdtempSync(join(tmpdir(), "codex-webui-public-"));
+    const root = mkdtempSync(join(tmpdir(), "panda-force-public-"));
     try {
       writeFileSync(join(root, "style.css"), "body{}\n");
       writeFileSync(join(root, "favicon.svg"), "<svg/>\n");
@@ -53,7 +53,7 @@ describe("WebUI server security boundary", () => {
 
   test("never bypasses configured authentication based on proxy headers or loopback hosts", () => {
     const secret = "correct horse";
-    const cookie = `codex_webui_session=${createPasswordSession(secret).token}`;
+    const cookie = `panda_force_session=${createPasswordSession(secret).token}`;
     for (const remoteAddress of ["127.0.0.1", "::1", "::ffff:127.0.0.1"]) {
       for (const hostHeader of ["localhost:8899", "127.0.0.1:8899", "[::1]:8899"]) {
         for (const headers of [{}, { forwardedFor: "198.51.100.20" }, { forwarded: "for=198.51.100.20" }, { realIp: "198.51.100.20" }]) {
@@ -91,8 +91,8 @@ describe("WebUI server security boundary", () => {
 
   test("accepts the signed session cookie for same-origin LAN HTTP and WebSocket requests", () => {
     const session = createPasswordSession("correct horse", { now: 1_700_000_000_000, ttlMs: 60_000 });
-    const cookie = `other=1; codex_webui_session=${encodeURIComponent(session.token)}; theme=dark`;
-    expect(parseCookieHeader(cookie).codex_webui_session).toBe(session.token);
+    const cookie = `other=1; panda_force_session=${encodeURIComponent(session.token)}; theme=dark`;
+    expect(parseCookieHeader(cookie).panda_force_session).toBe(session.token);
     expect(isRequestAuthorized({ remoteAddress: "192.168.2.40", hostHeader: "192.168.2.10:8899", authorization: null, accessToken: "correct horse", cookie, now: 1_700_000_030_000 })).toBe(true);
     expect(isRequestAuthorized({ remoteAddress: "192.168.2.40", hostHeader: "192.168.2.10:8899", authorization: null, accessToken: "correct horse", cookie, now: 1_700_000_060_001 })).toBe(false);
     expect(isRequestAuthorized({ remoteAddress: "192.168.2.40", hostHeader: "192.168.2.10:8899", authorization: null, accessToken: "correct horse", cookie, origin: "https://evil.example", now: 1_700_000_030_000 })).toBe(false);

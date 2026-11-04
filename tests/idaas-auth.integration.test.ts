@@ -18,7 +18,7 @@ function openSocket(url: string, cookie = '') {
 }
 
 test('IDAAS gates HTTP, both WS bridges and SSE, preserves probes and closes sessions on logout', async () => {
-  const temp = mkdtempSync(join(tmpdir(), 'webui-idaas-')); const bin = join(temp, 'bin'); mkdirSync(bin);
+  const temp = mkdtempSync(join(tmpdir(), 'panda-idaas-')); const bin = join(temp, 'bin'); mkdirSync(bin);
   writeFileSync(join(bin, 'codex'), '#!/usr/bin/env node\nprocess.stdin.resume();\n', { mode: 0o700 });
   const upstream = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(req) {
     const path = new URL(req.url).pathname;
@@ -31,10 +31,10 @@ test('IDAAS gates HTTP, both WS bridges and SSE, preserves probes and closes ses
   const child = Bun.spawn(['bun', 'run', 'src/server/main.ts'], {
     cwd: new URL('..', import.meta.url).pathname,
     env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, HOME: temp, CODEX_HOME: temp, HOST: '127.0.0.1', PORT: String(port),
-      CODEX_WEBUI_CWD: temp, CODEX_WEBUI_PROJECTLESS: 'false', CODEX_WEBUI_AUTH_MODE: 'idaas',
-      CODEX_WEBUI_PASSWORD: 'must-not-be-a-backdoor', CODEX_WEBUI_ACCESS_TOKEN: 'must-not-be-a-backdoor',
+      PANDA_FORCE_CWD: temp, PANDA_FORCE_PROJECTLESS: 'false', PANDA_FORCE_AUTH_MODE: 'idaas',
+      PANDA_FORCE_PASSWORD: 'must-not-be-a-backdoor', PANDA_FORCE_ACCESS_TOKEN: 'must-not-be-a-backdoor',
       IDAAS_AUTH_ENDPOINT: upstream.url.origin, IDAAS_BROWSER_ENDPOINT: upstream.url.origin, IDAAS_CLIENT_ID: 'test', IDAAS_CLIENT_SECRET: 'test-only',
-      CODEX_WEBUI_PUBLIC_URL: base, IDAAS_ALLOWED_TENANT_IDS: '42', IDAAS_ALLOWED_ACCOUNTS: 'owner' }, stdout: 'ignore', stderr: 'pipe',
+      PANDA_FORCE_PUBLIC_URL: base, IDAAS_ALLOWED_TENANT_IDS: '42', IDAAS_ALLOWED_ACCOUNTS: 'owner' }, stdout: 'ignore', stderr: 'pipe',
   });
   let ws: WebSocket | null = null, terminal: WebSocket | null = null;
   try {

@@ -16,8 +16,8 @@ async function waitFor(check: () => any) {
   throw new Error("Shared session check timed out");
 }
 
-test("WebUI and an SSH-style client share active input, events, and daemon lifetime", async () => {
-  const home = mkdtempSync(join(tmpdir(), "webui-shared-"));
+test("PandaForce and an SSH-style client share active input, events, and daemon lifetime", async () => {
+  const home = mkdtempSync(join(tmpdir(), "panda-shared-"));
   const socketPath = join(home, "daemon.sock");
   const responses: any[] = [], events: any[] = [];
   const provider = createServer((req, res) => {
@@ -27,7 +27,7 @@ test("WebUI and an SSH-style client share active input, events, and daemon lifet
       res.flushHeaders(); responses.push(res);
     });
   });
-  let daemon: any, webui: any, native: WebSocket | undefined, browser: WebSocket | undefined;
+  let daemon: any, panda: any, native: WebSocket | undefined, browser: WebSocket | undefined;
   const pending = new Map();
   let seq = 0;
   const nativeRpc = (method: string, params: any) => new Promise<any>((resolve, reject) => {
@@ -70,18 +70,18 @@ test("WebUI and an SSH-style client share active input, events, and daemon lifet
     await new Promise<void>(resolve => probe.listen(0, "127.0.0.1", resolve));
     const port = (probe.address() as any).port;
     await new Promise<void>(resolve => probe.close(() => resolve()));
-    const env = { ...process.env, CODEX_HOME: home, CODEX_WEBUI_APP_SERVER_MODE: "shared", CODEX_WEBUI_APP_SERVER_SOCKET: socketPath,
-      HOST: "127.0.0.1", PORT: String(port), CODEX_WEBUI_CWD: home, CODEX_WEBUI_PROJECTLESS: "false", CODEX_WEBUI_PASSWORD: "", CODEX_WEBUI_ACCESS_TOKEN: "shared-test" };
+    const env = { ...process.env, CODEX_HOME: home, PANDA_FORCE_APP_SERVER_MODE: "shared", PANDA_FORCE_APP_SERVER_SOCKET: socketPath,
+      HOST: "127.0.0.1", PORT: String(port), PANDA_FORCE_CWD: home, PANDA_FORCE_PROJECTLESS: "false", PANDA_FORCE_PASSWORD: "", PANDA_FORCE_ACCESS_TOKEN: "shared-test" };
     const base = `http://127.0.0.1:${port}`;
     const headers = { authorization: `Bearer shared-test`, "content-type": "application/json" };
-    const startWebui = async () => {
-      webui = Bun.spawn(["bun", "run", "src/server/main.ts"], { cwd: root, env, stdout: "ignore", stderr: "ignore" });
+    const startPandaForce = async () => {
+      panda = Bun.spawn(["bun", "run", "src/server/main.ts"], { cwd: root, env, stdout: "ignore", stderr: "ignore" });
       return waitFor(async () => {
         try { const health = await fetch(`${base}/api/health`, { headers }).then(r => r.json()); return health.codex && health; }
         catch { return false; }
       });
     };
-    const health = await startWebui();
+    const health = await startPandaForce();
     expect(health.appServerMode).toBe("shared");
     expect((await fetch(`${base}/api/rpc`, { method: "POST", body: "{}" })).status).toBe(401);
     const browserEvents: any[] = [];
@@ -98,28 +98,28 @@ test("WebUI and an SSH-style client share active input, events, and daemon lifet
     const opened = await rpc("host/thread/history", { threadId: thread.id });
     expect(opened.thread.id).toBe(thread.id);
     expect(opened.thread.canAcceptDirectInput).toBe(true);
-    const steer = await rpc("turn/steer", { threadId: thread.id, expectedTurnId: turn.id, input: [{ type: "text", text: "WebUI adds guidance" }] });
+    const steer = await rpc("turn/steer", { threadId: thread.id, expectedTurnId: turn.id, input: [{ type: "text", text: "PandaForce adds guidance" }] });
     expect(steer.turnId).toBe(turn.id);
-    await waitFor(() => events.some(e => e.method === "item/started" && e.params?.item?.content?.some((c: any) => c.text === "WebUI adds guidance")));
+    await waitFor(() => events.some(e => e.method === "item/started" && e.params?.item?.content?.some((c: any) => c.text === "PandaForce adds guidance")));
     await nativeRpc("turn/steer", { threadId: thread.id, expectedTurnId: turn.id, input: [{ type: "text", text: "SSH adds guidance too" }] });
     await waitFor(() => browserEvents.some(e => e.payload?.method === "item/started" && e.payload.params?.item?.content?.some((c: any) => c.text === "SSH adds guidance too")));
     browser.close(); browser = undefined;
-    webui.kill("SIGTERM"); await webui.exited; webui = null;
+    panda.kill("SIGTERM"); await panda.exited; panda = null;
     expect(daemon.exitCode).toBeNull();
-    // Detaching/restarting the WebUI keeps SSH's active turn alive.
-    await nativeRpc("turn/steer", { threadId: thread.id, expectedTurnId: turn.id, input: [{ type: "text", text: "SSH continues after WebUI closes" }] });
-    await startWebui();
-    // A fresh WebUI connection can send to SSH's loaded thread without a resume
+    // Detaching/restarting the PandaForce keeps SSH's active turn alive.
+    await nativeRpc("turn/steer", { threadId: thread.id, expectedTurnId: turn.id, input: [{ type: "text", text: "SSH continues after PandaForce closes" }] });
+    await startPandaForce();
+    // A fresh PandaForce connection can send to SSH's loaded thread without a resume
     // or event subscription. Large journals must use this same fast path.
-    const prepared = await rpc("thread/resume", { threadId: thread.id, excludeTurns: true, webuiPrepareInput: true });
+    const prepared = await rpc("thread/resume", { threadId: thread.id, excludeTurns: true, pandaPrepareInput: true });
     expect(prepared.thread.id).toBe(thread.id);
-    expect(prepared.webuiAlreadyLoaded).toBe(true);
+    expect(prepared.pandaAlreadyLoaded).toBe(true);
     const fastSteer = await rpc("turn/steer", { threadId: thread.id, expectedTurnId: turn.id, input: [{ type: "text", text: "Prepared input reaches SSH" }] });
     expect(fastSteer.turnId).toBe(turn.id);
     await waitFor(() => events.some(e => e.method === "item/started" && e.params?.item?.content?.some((c: any) => c.text === "Prepared input reaches SSH")));
     await rpc("turn/interrupt", { threadId: thread.id, turnId: turn.id });
     await waitFor(() => events.some(e => e.method === "turn/completed" && e.params.turn.id === turn.id));
-    const next = await rpc("turn/start", { threadId: thread.id, input: [{ type: "text", text: "WebUI starts the next task" }] });
+    const next = await rpc("turn/start", { threadId: thread.id, input: [{ type: "text", text: "PandaForce starts the next task" }] });
     await waitFor(() => events.some(e => e.method === "turn/started" && e.params.turn.id === next.turn.id));
     const queued = await rpc("thread/queue/add", { threadId: thread.id, clientUserMessageId: "shared-queue", input: [{ type: "text", text: "Shared queued message" }] });
     const queue = await nativeRpc("thread/queue/list", { threadId: thread.id });
@@ -130,7 +130,7 @@ test("WebUI and an SSH-style client share active input, events, and daemon lifet
     browser?.terminate(); native?.terminate();
     for (const request of pending.values()) request.reject(new Error("Test finished"));
     pending.clear();
-    for (const child of [webui, daemon]) if (child) { child.kill("SIGTERM"); await child.exited; }
+    for (const child of [panda, daemon]) if (child) { child.kill("SIGTERM"); await child.exited; }
     provider.closeAllConnections(); await new Promise<void>(resolve => provider.close(() => resolve()));
     rmSync(home, { recursive: true, force: true });
   }

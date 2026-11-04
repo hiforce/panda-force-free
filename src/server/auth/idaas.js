@@ -1,10 +1,11 @@
+import { pandaEnvironment } from "../environment.js";
 import { randomBytes, createHash } from "node:crypto";
 import { parseCookieHeader } from "./security.js";
 import { authPageLanguage, sendAuthPage } from "./pages.js";
 import { safeAuthReturnPath } from "../../shared/auth-return-path.js";
 
-const SESSION_COOKIE = "codex_webui_idaas_session";
-const STATE_COOKIE = "codex_webui_idaas_state";
+const SESSION_COOKIE = "panda_force_idaas_session";
+const STATE_COOKIE = "panda_force_idaas_state";
 const MAX_ITEMS = 2048;
 const CACHE_MS = 30_000;
 const STATE_MS = 300_000;
@@ -25,11 +26,12 @@ export class AuthError extends Error {
 }
 
 export function readIdaasConfig(env = process.env) {
-  const mode = env.CODEX_WEBUI_AUTH_MODE;
-  if (mode && !["idaas", "password", "none"].includes(mode)) throw new Error("Invalid CODEX_WEBUI_AUTH_MODE");
+  env = pandaEnvironment(env);
+  const mode = env.PANDA_FORCE_AUTH_MODE;
+  if (mode && !["idaas", "password", "none"].includes(mode)) throw new Error("Invalid PANDA_FORCE_AUTH_MODE");
   if (mode !== "idaas") {
     if (Object.keys(env).some((key) => key.startsWith("IDAAS_") && env[key])) {
-      throw new Error("Set CODEX_WEBUI_AUTH_MODE=idaas when configuring IDAAS");
+      throw new Error("Set PANDA_FORCE_AUTH_MODE=idaas when configuring IDAAS");
     }
     return null;
   }
@@ -38,7 +40,7 @@ export function readIdaasConfig(env = process.env) {
     "IDAAS_BROWSER_ENDPOINT",
     "IDAAS_CLIENT_ID",
     "IDAAS_CLIENT_SECRET",
-    "CODEX_WEBUI_PUBLIC_URL",
+    "PANDA_FORCE_PUBLIC_URL",
     "IDAAS_ALLOWED_TENANT_IDS",
     "IDAAS_ALLOWED_ACCOUNTS",
   ]) {
@@ -58,8 +60,8 @@ export function readIdaasConfig(env = process.env) {
       throw new Error("Invalid IDAAS endpoint");
     return url.href.replace(/\/$/, "");
   };
-  const publicUrl = new URL(endpoint(env.CODEX_WEBUI_PUBLIC_URL, true));
-  if (publicUrl.pathname !== "/") throw new Error("CODEX_WEBUI_PUBLIC_URL must use the domain root");
+  const publicUrl = new URL(endpoint(env.PANDA_FORCE_PUBLIC_URL, true));
+  if (publicUrl.pathname !== "/") throw new Error("PANDA_FORCE_PUBLIC_URL must use the domain root");
   return {
     endpoint: endpoint(env.IDAAS_AUTH_ENDPOINT),
     browserEndpoint: endpoint(env.IDAAS_BROWSER_ENDPOINT, true),
@@ -97,7 +99,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
     const session = sessions.get(id);
     sessions.delete(id);
     if (session) {
-      console.info("[codex-webui] auth/session-closed", JSON.stringify(session.identity));
+      console.info("[panda-force] auth/session-closed", JSON.stringify(session.identity));
       closeConnections(session);
     }
   };
@@ -255,7 +257,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
           // Fail closed for live channels while retaining the bounded session:
           // an IDAAS outage is not evidence that the user signed out.
           closeConnections(session);
-          console.warn("[codex-webui] auth/verification-unavailable");
+          console.warn("[panda-force] auth/verification-unavailable");
         }
       });
     }
@@ -289,7 +291,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
           for (const [state, transaction] of transactions) if (transaction.binding === hash) transactions.delete(state);
         }
         // IDAAS /logout clears its browser SSO cookies even when the denied
-        // identity never received a WebUI session or a locally stored id_token.
+        // identity never received a PandaForce session or a locally stored id_token.
         // Its redirectUri parameter is camelCase; /oidc/auth uses redirect_uri.
         const target = new URL(`${config.browserEndpoint}/logout`);
         target.searchParams.set("redirectUri", `${config.publicUrl}/auth/login`);
@@ -390,7 +392,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
           expiresAt,
           connections: new Set(),
         });
-        console.info("[codex-webui] auth/login", JSON.stringify(sessions.get(id).identity));
+        console.info("[panda-force] auth/login", JSON.stringify(sessions.get(id).identity));
         redirect(res, transaction.returnTo, [
           cookie(SESSION_COOKIE, id, Math.max(1, Math.floor((expiresAt - now()) / 1000))),
           cookie(STATE_COOKIE, "", 0),

@@ -1,16 +1,16 @@
 import { chromium } from 'playwright';
 import { launchOptions } from './browser-runtime.mjs';
 
-const base=process.env.CODEX_WEBUI_TEST_URL||'http://127.0.0.1:8899';
+const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
 const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1180,height:820},colorScheme:'dark'});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 await page.goto(base,{waitUntil:'networkidle'});
-await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.notify);
+await page.waitForFunction(()=>globalThis.__pandaForceDebug?.notify);
 
 await page.evaluate(()=>{
-  const api=globalThis.__codexWebuiDebug;
+  const api=globalThis.__pandaForceDebug;
   api.state.active={id:'runtime-thread',name:'Runtime thread',cwd:api.state.config.defaultCwd,turns:[]};
   api.notify('item/started',{turnId:'runtime-turn',item:{id:'runtime-command',type:'commandExecution',command:'bun test'}});
   api.notify('item/commandExecution/outputDelta',{turnId:'runtime-turn',itemId:'runtime-command',delta:'starting tests\n'});
@@ -33,12 +33,12 @@ const running=await page.evaluate(()=>({
   fileExpanded:document.querySelector('[data-item-id="runtime-file"]')?.getAttribute('aria-expanded'),
 }));
 
-await page.evaluate(()=>globalThis.__codexWebuiDebug.notify('item/completed',{turnId:'runtime-turn',item:{id:'runtime-file',type:'fileChange',status:'completed',changes:[{path:'/tmp/runtime.ts',kind:'update',diff:'@@ -1 +1 @@\n-old\n+new'}]}}));
+await page.evaluate(()=>globalThis.__pandaForceDebug.notify('item/completed',{turnId:'runtime-turn',item:{id:'runtime-file',type:'fileChange',status:'completed',changes:[{path:'/tmp/runtime.ts',kind:'update',diff:'@@ -1 +1 @@\n-old\n+new'}]}}));
 await page.waitForFunction(()=>document.querySelector('[data-item-id="runtime-file"] .activity-label')?.textContent.includes('Edited'));
 const completedLabel=await page.locator('[data-item-id="runtime-file"] .activity-label').textContent();
 
 await page.evaluate(()=>{
-  const api=globalThis.__codexWebuiDebug;
+  const api=globalThis.__pandaForceDebug;
   api.syncTurnSnapshot({id:'synced-turn',status:'inProgress',itemsView:'full',items:[
     {id:'synced-command',type:'commandExecution',status:'inProgress',command:'bun run build',aggregatedOutput:'building\n'},
     {id:'synced-user',type:'userMessage',content:[{type:'text',text:'Steer this task from the CLI.'}]},
@@ -47,7 +47,7 @@ await page.evaluate(()=>{
 });
 await page.click('[data-item-id="synced-command"]');
 await page.evaluate(()=>{
-  const api=globalThis.__codexWebuiDebug;
+  const api=globalThis.__pandaForceDebug;
   api.syncTurnSnapshot({id:'synced-turn',status:'inProgress',itemsView:'full',items:[
     {id:'synced-command',type:'commandExecution',status:'inProgress',command:'bun run build',aggregatedOutput:'building\nbundled\n'},
     {id:'synced-user',type:'userMessage',content:[{type:'text',text:'Steer this task from the CLI.'}]},
@@ -68,7 +68,7 @@ const syncing=await page.evaluate(()=>({
   deletedBackground:getComputedStyle(document.querySelector('[data-item-id="synced-file"] + .activity-output .review-line.delete')).backgroundColor,
 }));
 await page.evaluate(()=>{
-  const api=globalThis.__codexWebuiDebug;
+  const api=globalThis.__pandaForceDebug;
   api.syncTurnSnapshot({id:'synced-turn',status:'completed',itemsView:'full',items:[{id:'synced-command',type:'commandExecution',status:'completed',command:'bun run build',aggregatedOutput:'building\nbundled\n',exitCode:0}]});
 });
 await page.click('#toggleSidePanel');
@@ -77,7 +77,7 @@ const recovered=await page.evaluate(()=>({
   stopped:!document.querySelector('#sendButton')?.classList.contains('stop'),
   reviewPath:document.querySelector('.review-file-name')?.textContent,
   reviewText:document.querySelector('#changeList')?.textContent,
-  reviewSource:globalThis.__codexWebuiDebug.state.activeReview?.source,
+  reviewSource:globalThis.__pandaForceDebug.state.activeReview?.source,
 }));
 await page.evaluate(()=>{
   const root=document.querySelector('#conversation'),filler=document.createElement('div');
@@ -85,7 +85,7 @@ await page.evaluate(()=>{
   filler.dataset.openThreadScrollFixture='';
   root.append(filler);
   root.scrollTop=0;
-  globalThis.__codexWebuiDebug.scrollOpenedThreadToBottom();
+  globalThis.__pandaForceDebug.scrollOpenedThreadToBottom();
 });
 await page.waitForFunction(()=>{const root=document.querySelector('#conversation');return root.scrollHeight-root.scrollTop-root.clientHeight<2});
 const openedThreadScrollGap=await page.evaluate(()=>{const root=document.querySelector('#conversation');return root.scrollHeight-root.scrollTop-root.clientHeight});

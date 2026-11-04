@@ -55,7 +55,7 @@ test('existing managed passwords, environment passwords and API tokens can migra
    if(options.legacyPassword)expect(JSON.parse(readFileSync(f.adminPath,'utf8')).password).toEqual(JSON.parse(readFileSync(f.legacyPath,'utf8')));
    if(options.accessToken)expect((await fetch(f.base+'/api/config',{headers:{authorization:`Bearer ${password}`}})).status).toBe(200);
    expect((await f.post('/api/auth/login',{password})).status).toBe(401);
-   f.env.CODEX_WEBUI_PASSWORD='';f.env.CODEX_WEBUI_ACCESS_TOKEN='';await f.restart();
+   f.env.PANDA_FORCE_PASSWORD='';f.env.PANDA_FORCE_ACCESS_TOKEN='';await f.restart();
    expect((await f.post('/api/auth/login',{username:'owner',password})).status).toBe(200);
   }finally{await f.dispose()}
  }
