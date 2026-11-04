@@ -290,7 +290,7 @@ browserDispatch.resolve("thread/turns/list", ({ params }) =>
 );
 browserDispatch.resolve("host/thread/live", ({ params }) => threadHub.readLiveThread(params.threadId));
 browserDispatch.resolve("thread/resume", ({ params, flags }) =>
-  flags.pandaPrepareInput === true && appServerConnection.mode === "shared"
+  appServerConnection.mode === "shared" && (flags.pandaPrepareInput === true || params.excludeTurns === true)
     ? prepareSharedInput({ request, getThreadMetadata: threadHub.getThreadMetadata }, params)
     : undefined,
 );

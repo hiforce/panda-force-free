@@ -281,8 +281,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 10149,
-      "sha256": "ae6f4d935f06b32fde4e966880ab25c9fd6cdf4b807d92c3d027a79481d74eb1",
+      "bytes": 10225,
+      "sha256": "67dcd2c2cd0d41e9e54e30fb513c37db171f5e10e3a101904c105f516bed89e9",
       "mode": "100644"
     },
     {
@@ -623,8 +623,8 @@
     },
     {
       "path": "src/server/bridge/browser-dispatch.ts",
-      "bytes": 4594,
-      "sha256": "6d6eca05e8bc7d4095de8a21d9672c0a0f10ba2acf0360e5e0b181081095945b",
+      "bytes": 4613,
+      "sha256": "9157401719d92e928cb1a011591b0dd6ff6034e067bbda10c5a6a310e06b5f4d",
       "mode": "100644"
     },
     {
@@ -749,8 +749,8 @@
     },
     {
       "path": "src/server/main.ts",
-      "bytes": 42049,
-      "sha256": "9e444d25bf57a386f97d3caaf29d9766f670db3e928f2649546d824c5dad0362",
+      "bytes": 42083,
+      "sha256": "d0a84a28bafd55ca9e12f8a221ff10af144ca82d6253e41b273d2cb5e58a7339",
       "mode": "100644"
     },
     {
@@ -916,6 +916,12 @@
       "mode": "100644"
     },
     {
+      "path": "src/shared/browser-rpc-compat.js",
+      "bytes": 485,
+      "sha256": "7a9844ad848995900c73674a7c08a9c59f2fd8d3a70523e1def7c434dc2e2dd4",
+      "mode": "100644"
+    },
+    {
       "path": "src/shared/codex-surfaces.js",
       "bytes": 17117,
       "sha256": "ddf3d708e86facd9efe5b2409ade47828ef5383c6f8aaccac246600fadfe1a27",
@@ -1057,6 +1063,12 @@
       "path": "tests/browser-panel.test.ts",
       "bytes": 1269,
       "sha256": "1a8300de661d4e4e38d13cd6cef8533cc9ae167c2852ca67269af42e18ad8be2",
+      "mode": "100644"
+    },
+    {
+      "path": "tests/browser-rpc-compat.test.ts",
+      "bytes": 1467,
+      "sha256": "6943f7e32460055431ebe4a939755a5392f540aaa8b63c39c119c25a1e4d9af4",
       "mode": "100644"
     },
     {
@@ -1631,8 +1643,8 @@
     },
     {
       "path": "tests/shared-session.integration.test.ts",
-      "bytes": 8786,
-      "sha256": "5f50db6ce0e7c88ac2dacd9b18603ae5efea584093fa9573ddb78e0017995715",
+      "bytes": 9196,
+      "sha256": "2ab0d8f733e30528b870491c82780be37ee95f1ed343ea6cdc6ef6b9a24ce3c1",
       "mode": "100644"
     },
     {
@@ -1756,5 +1768,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "54b4d0c7a55ee5464b9e98deea0b2458f14dcb471bf42228c17c97e9c2d1b27e"
+  "contentSha256": "1222b29117930963d99bb9c7decd4b28febe3c81129d9b7a8995365de7643199"
 }

@@ -114,6 +114,11 @@ test("PandaForce and an SSH-style client share active input, events, and daemon 
     const prepared = await rpc("thread/resume", { threadId: thread.id, excludeTurns: true, pandaPrepareInput: true });
     expect(prepared.thread.id).toBe(thread.id);
     expect(prepared.pandaAlreadyLoaded).toBe(true);
+    const legacyPrepared = await rpc("thread/resume", {threadId: thread.id, excludeTurns: true, webuiPrepareInput: true});
+    expect(legacyPrepared.thread.canAcceptDirectInput).toBe(true);
+    expect(legacyPrepared.pandaAlreadyLoaded).toBe(true);
+    const unflaggedPrepared = await rpc("thread/resume", {threadId: thread.id, excludeTurns: true});
+    expect(unflaggedPrepared.pandaAlreadyLoaded).toBe(true);
     const fastSteer = await rpc("turn/steer", { threadId: thread.id, expectedTurnId: turn.id, input: [{ type: "text", text: "Prepared input reaches SSH" }] });
     expect(fastSteer.turnId).toBe(turn.id);
     await waitFor(() => events.some(e => e.method === "item/started" && e.params?.item?.content?.some((c: any) => c.text === "Prepared input reaches SSH")));

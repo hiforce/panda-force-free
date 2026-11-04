@@ -1,3 +1,4 @@
+import { splitBrowserRpcParams } from "../../shared/browser-rpc-compat.js";
 import { rpcErrorPayload } from "../../shared/bridge-errors.js";
 
 export type DispatchContext = {
@@ -48,11 +49,11 @@ export function createBrowserDispatch({
       try {
         if (!isAllowedMethod(message.method)) throw new Error("RPC method is not available to browser clients");
         // The panda* hints are not part of the native Codex RPC schema.
-        const { pandaProjectless, pandaPrepareInput, ...params } = message.params || {};
+        const { params, flags } = splitBrowserRpcParams(message.params);
         const ctx: DispatchContext = {
           method: message.method,
           params,
-          flags: { pandaProjectless, pandaPrepareInput },
+          flags,
           replyExtras: {},
         };
         for (const hook of beforeHooks) hook(ctx);
