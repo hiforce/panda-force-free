@@ -77,8 +77,8 @@
     },
     {
       "path": "package.json",
-      "bytes": 5375,
-      "sha256": "62658a5e7ded97d975de8e007e76a253b7d1690d76b7a41d4594e56c440ebaa9",
+      "bytes": 5411,
+      "sha256": "ab7b8e13bd495c59cf584016c4b73944c2612c4f14f7cae47da934449393584f",
       "mode": "100644"
     },
     {
@@ -125,8 +125,8 @@
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 2382,
-      "sha256": "077771d72ad5f1f88f1f143ba9a893b0f74301c2f2a8e33818adbbc8e1f8be0b",
+      "bytes": 2689,
+      "sha256": "1989aadd9d6ba76840ad7a4bd8fcd717215d15ba5cb456802c6bf04b11ccf54d",
       "mode": "100644"
     },
     {
@@ -329,8 +329,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 10813,
-      "sha256": "c6c65a2a80cbff0049c990f2bbb0c8483d4d24d1dc600bf53dfe22f43d304978",
+      "bytes": 10847,
+      "sha256": "2cb8bb69bf1ab6ca9ca93bfc24ddbd350b04c18feca70d159df0556d3c6e5477",
       "mode": "100644"
     },
     {
@@ -395,8 +395,8 @@
     },
     {
       "path": "src/client/app.js",
-      "bytes": 211156,
-      "sha256": "5ef90291994fdd54ed7244a1269deb85bd97011bf09562905b88e4376c396131",
+      "bytes": 211168,
+      "sha256": "da46d23c391d54aae63fc51ee1885c0046f30821150f9e76f5a0caae2d446e29",
       "mode": "100644"
     },
     {
@@ -587,8 +587,8 @@
     },
     {
       "path": "src/client/ui-core.js",
-      "bytes": 9850,
-      "sha256": "270f43985c2506764d1fe92aa5f7e88d68c29fe72249ea2a691038a7bb4e9b60",
+      "bytes": 9898,
+      "sha256": "9c9809b1fee37ff4b25931410fdda1880865ab16f502145205cd7446a68d666e",
       "mode": "100644"
     },
     {
@@ -731,20 +731,20 @@
     },
     {
       "path": "src/server/conversation/history.js",
-      "bytes": 6194,
-      "sha256": "1108f6538beb49a39af0660dee8aa7408378c39f3cded629686e606c6e29bd75",
+      "bytes": 6542,
+      "sha256": "b7666e7f970cdd07aeb84bed38880eccba4e10a90c062490577e8604fec715cd",
       "mode": "100644"
     },
     {
       "path": "src/server/conversation/paged-history.js",
-      "bytes": 7080,
-      "sha256": "99f14376e97c57e47047150383f72d915d6680cc51b89d5223cdcccf49557e26",
+      "bytes": 7498,
+      "sha256": "660a9a78b823f00a306d4c116c585e7cdf8778174039c4fcf10b9685b5e38641",
       "mode": "100644"
     },
     {
       "path": "src/server/conversation/thread-hub.ts",
-      "bytes": 10510,
-      "sha256": "88ab3e3bbb060f3a460098faeb7645d6eb3b7025a340049aa198e1766ed5503f",
+      "bytes": 10737,
+      "sha256": "5adbdaa0aebce96b5a96d399266b28cadc052ea7f0f3c4aefbdfcb2b1d17c81f",
       "mode": "100644"
     },
     {
@@ -797,8 +797,8 @@
     },
     {
       "path": "src/server/main.ts",
-      "bytes": 42196,
-      "sha256": "128ae4246b38a66575db1289af0db3e20e0278b96bf32ac42050138e1ab866c7",
+      "bytes": 42313,
+      "sha256": "1ab1ed3563896268dfd418e69291d1295538f34f0fc5d5c1c6cba83ae80058b0",
       "mode": "100644"
     },
     {
@@ -1247,8 +1247,8 @@
     },
     {
       "path": "tests/conversation-history-service.test.ts",
-      "bytes": 3987,
-      "sha256": "f5c676209a789d6e3ebbe85e407837e879d0bd0639c838aa0b3e08b85c52099b",
+      "bytes": 4640,
+      "sha256": "df40a9ad47bb732b265c41d5473b2adee7276203a4a731025c213a78dab453de",
       "mode": "100644"
     },
     {
@@ -1493,8 +1493,8 @@
     },
     {
       "path": "tests/paged-conversation-history-service.test.ts",
-      "bytes": 3957,
-      "sha256": "a29e4e6c63f51b779e9b934593f5fdf33b49a69f6bf96fdfbcb582f93caa6d4d",
+      "bytes": 5369,
+      "sha256": "e7e784690607900d8cf5486e1d8e5cbc5d940a646d70ddce1b011bbd18f2c45a",
       "mode": "100644"
     },
     {
@@ -1702,6 +1702,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/session-status.e2e.mjs",
+      "bytes": 2611,
+      "sha256": "f86edc091bce468497498eaf54b1684996ad3b2c15fd120d7c6c34c8c9579070",
+      "mode": "100644"
+    },
+    {
       "path": "tests/shared-approvals.e2e.mjs",
       "bytes": 2198,
       "sha256": "3083f7e21bc243a29b55822dafb53befa986978e4fbab667e2df893eb36a63ba",
@@ -1787,8 +1793,8 @@
     },
     {
       "path": "tests/thread-hub.test.ts",
-      "bytes": 4897,
-      "sha256": "2d05f5dbe92d58f460ccbbf32bd198ce03fb629c0a929a73dbf1113783e134b1",
+      "bytes": 5182,
+      "sha256": "7d543c537e07582760e5c6267a05e776343a11a6f337207403200c4682420ba5",
       "mode": "100644"
     },
     {
@@ -1846,5 +1852,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "b06bdc02b5fdb41632a6f22af6b793b38af83b30627ff2931cea923eb119a7ac"
+  "contentSha256": "44f3d98c00a5d27a0dd9c0212f8635ea8f8a1fd73d377ceb3af8efed3460f66e"
 }

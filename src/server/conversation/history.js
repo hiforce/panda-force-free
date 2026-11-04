@@ -151,6 +151,15 @@ export function createConversationHistory({ readThread, fingerprint = () => null
           )
             grouped.set(turn.historyOrder, { ...turn, items: [] });
       }
+      const newest = latest.turns.at(-1);
+      if (
+        !cursor &&
+        newest &&
+        !grouped.has(newest.historyOrder) &&
+        (mode !== "delta" ||
+          JSON.stringify(newest) !== JSON.stringify(baseline?.turns.find((turn) => turn.id === newest.id)))
+      )
+        grouped.set(newest.historyOrder, { ...newest, items: [] });
       return {
         thread: latest.thread,
         history: {

@@ -204,6 +204,7 @@ notifications.onAny((message) => {
 });
 notifications.on(["item/started", "item/completed"], (params) => scheduleGoalCommand(params.threadId, params.item));
 notifications.on(["thread/closed", "thread/deleted"], (params) => threadHub.dropSubscription(params.threadId));
+notifications.on("thread/status/changed", (params) => threadHub.recordThreadStatus(params.threadId, params.status));
 notifications.on("serverRequest/resolved", (params) => pendingCodexRequests.delete(params.requestId));
 notifications.on("account/updated", () => accountLoader.invalidate());
 notifications.on("thread/name/updated", (params) => {

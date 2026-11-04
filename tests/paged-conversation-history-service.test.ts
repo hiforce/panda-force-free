@@ -54,3 +54,22 @@ test('slow item pages return progress promptly and their cursor resumes without 
   expect(last.data.map(record => record.item.id)).toEqual(['i4']);
   expect(last.nextCursor).toBeNull();
 });
+
+test('latest metadata-only turns survive snapshots, status-only deltas and later item persistence', async()=>{
+ let newest={id:'new',status:'inProgress',items:[]};
+ let records=[{turnId:'old',item:{id:'old-message',type:'agentMessage',text:'Previous reply'}}];
+ const service=createPagedConversationHistory({getThread:async()=>({id:'A',status:{type:'active'}}),request:async(method,params)=>{
+  if(method==='thread/turns/list')return {data:[newest,{id:'old',status:'completed',items:[]}]};
+  const index=Number(params.cursor)||0;
+  return {data:records.slice(index,index+1),nextCursor:index+1<records.length?String(index+1):null};
+ }});
+ let response=await service.read({threadId:'A'}),local=mergeConversationHistory(null,response);
+ expect(local.turns.at(-1)).toMatchObject({id:'new',status:'inProgress',items:[]});
+ newest={...newest,status:'completed'};
+ response=await service.read({threadId:'A',...local.history});local=mergeConversationHistory(local,response);
+ expect(response.history.mode).toBe('delta');expect(local.turns.at(-1).status).toBe('completed');
+ records=[{turnId:'new',item:{id:'new-message',type:'agentMessage',text:'Current reply'}},...records];
+ local=mergeConversationHistory(local,await service.read({threadId:'A',...local.history}));
+ expect(local.turns.filter(turn=>turn.id==='new')).toHaveLength(1);
+ expect(local.turns.at(-1).items.map(item=>item.id)).toEqual(['new-message']);
+});

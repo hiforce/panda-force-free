@@ -823,26 +823,34 @@ function errorStatus(status) {
   const type = typeof status === "string" ? status : status?.type;
   return ["error", "errored", "failed"].includes(String(type || "").toLowerCase());
 }
+function latestSessionTurnStatus(thread) {
+  const runtime = threadRuntimeTurns.get(thread?.id),
+    history = state.active?.id === thread?.id ? state.active : thread,
+    turn = history?.turns?.at(-1);
+  if (!runtime) return turn?.status || "";
+  if (!turn || runtime.id === turn.id || runtime.historyTailId === turn.id)
+    return runtime.status === "idle" && runtime.id === turn?.id ? turn.status : runtime.status || turn?.status || "";
+  return turn.status || runtime.status || "";
+}
+
 function sessionHasSuccessfulLatestTurn(thread) {
-  const runtimeStatus = threadRuntimeTurns.get(thread?.id)?.status,
-    turnStatus = thread?.turns?.at(-1)?.status;
-  return [runtimeStatus, turnStatus].some((status) =>
-    ["completed", "interrupted", "cancelled", "canceled"].includes(status),
+  return (
+    !sessionHasActiveLatestTurn(thread) &&
+    ["completed", "interrupted", "cancelled", "canceled"].includes(latestSessionTurnStatus(thread))
   );
 }
 function sessionHasActiveLatestTurn(thread) {
   if (!thread?.id) return false;
-  const runtime = threadRuntimeTurns.get(thread.id),
-    runtimeStatus = runtime?.status,
-    turn = thread.turns?.at(-1),
-    turnStatus = turn?.status,
-    threadStatus = typeof thread.status === "string" ? thread.status : thread.status?.type;
-  if (runtimeStatus === "inProgress" || turnStatus === "inProgress") return true;
-  const terminalStatuses = ["completed", "interrupted", "cancelled", "canceled", "failed", "error", "errored"];
-  if (terminalStatuses.includes(turnStatus) || terminalStatuses.includes(runtimeStatus)) return false;
-  const runningTurnId = threadRunningTurns.get(thread.id);
-  return Boolean(runningTurnId && (!turn?.id || runningTurnId === turn.id)) || threadStatus === "active";
+  const threadStatus = typeof thread.status === "string" ? thread.status : thread.status?.type;
+  // Native activity can precede the new turn's first persisted visible item.
+  if (threadStatus === "active") return true;
+  const status = latestSessionTurnStatus(thread);
+  if (status === "inProgress") return true;
+  if (["completed", "interrupted", "cancelled", "canceled", "failed", "error", "errored"].includes(status))
+    return false;
+  return threadRunningTurns.has(thread.id);
 }
+
 function normalizeGoalStatus(value) {
   const status = String(value || "active")
     .trim()
@@ -1077,13 +1085,7 @@ function deriveSessionStatus(thread = state.active) {
   if (!thread?.id) return null;
   const error = sessionStatusError(thread),
     turn = thread.turns?.at(-1),
-    runtimeTurn = threadRuntimeTurns.get(thread.id),
-    turnStatus =
-      typeof runtimeTurn?.status === "string"
-        ? runtimeTurn.status
-        : typeof turn?.status === "string"
-          ? turn.status
-          : "",
+    turnStatus = latestSessionTurnStatus(thread),
     threadStatus = typeof thread.status === "string" ? thread.status : thread.status?.type;
   if (error)
     return {
@@ -1092,7 +1094,7 @@ function deriveSessionStatus(thread = state.active) {
       detail: error.message === t("Task failed") ? "" : error.message,
       icon: "triangleAlert",
     };
-  if (turnStatus === "inProgress")
+  if (sessionHasActiveLatestTurn(thread))
     return { state: "running", label: t("In progress"), detail: "", icon: "loaderCircle" };
   if (["completed", "interrupted", "cancelled", "canceled"].includes(turnStatus))
     return {
@@ -1106,8 +1108,6 @@ function deriveSessionStatus(thread = state.active) {
   if (thread === state.active && activeTurnId())
     return { state: "running", label: t("In progress"), detail: "", icon: "loaderCircle" };
   if (threadStatus === "active") return { state: "running", label: t("In progress"), detail: "", icon: "loaderCircle" };
-  if (runtimeTurn && runtimeTurn.status !== "inProgress")
-    return { state: "completed", label: t("Completed"), detail: "", icon: "check" };
   if (!turn) return { state: "idle", label: t("Not started"), detail: "", icon: "info" };
   return { state: "syncing", label: t("Status syncing…"), detail: "", icon: "loaderCircle" };
 }
@@ -1310,7 +1310,11 @@ async function resyncActiveConversation() {
 function updateThreadListActivity(threadId, { status, turnId, turnStatus, completed = false, timestamp } = {}) {
   if (!threadId) return;
   if (completed && turnId && threadRunningTurns.has(threadId) && threadRunningTurns.get(threadId) !== turnId) return;
-  if (turnId && turnStatus) threadRuntimeTurns.set(threadId, { id: turnId, status: turnStatus });
+  if (turnId && turnStatus) {
+    const thread =
+      state.active?.id === threadId ? state.active : state.threads.find((thread) => thread.id === threadId);
+    threadRuntimeTurns.set(threadId, { id: turnId, status: turnStatus, historyTailId: thread?.turns?.at(-1)?.id });
+  }
   if (status?.type === "active" && turnId) threadRunningTurns.set(threadId, turnId);
   else if (status && status.type !== "active") {
     threadRunningTurns.delete(threadId);
@@ -1347,7 +1351,7 @@ async function readConversation(id, previous, { limit = BACKGROUND_CONVERSATION_
         response.history.mode === "delta" &&
         !response.history.removedItemIds?.length &&
         !response.history.questionTurns?.some((turn) => turn.items?.length) &&
-        !response.history.turns.some((turn) => turn.items?.length);
+        !response.history.turns.length;
       return thread;
     }
   } catch (error) {

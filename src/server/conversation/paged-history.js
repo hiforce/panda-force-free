@@ -120,6 +120,13 @@ export function createPagedConversationHistory({ request, getThread }) {
       const removedItemIds = refresh
         ? [...stored.latest].filter(([key, rank]) => rank >= minOrder && !latest.has(key)).map(([key]) => key)
         : [];
+      // The newest turn may be running before it has any visible persisted items.
+      const newest = summaries.data[0];
+      if (!anchor && newest && !turns.has(newest.id)) {
+        const historyOrder = stored.turnOrders.get(newest.id) ?? stored.maxOrder + 1;
+        stored.turnOrders.set(newest.id, historyOrder);
+        turns.set(newest.id, { ...newest, historyOrder, itemsView: "full", items: [] });
+      }
       const resultTurns = [...turns.values()].sort((a, b) => a.historyOrder - b.historyOrder);
       const nextRevision =
         revisionPrefix +

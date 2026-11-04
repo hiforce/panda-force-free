@@ -37,3 +37,13 @@ test('a refreshed snapshot does not discard already loaded older pages',()=>{
  const merged=mergeConversationHistory(previous,refreshed);
  expect(merged.turns[0].items).toHaveLength(200);expect(merged.history.oldestItemId).toBe('turn:item-0');
 });
+
+test('empty latest turns retain their execution state in initial history and status-only refreshes',async()=>{
+ let status='inProgress',stamp='started';
+ const service=createConversationHistory({fingerprint:()=>stamp,readThread:async()=>({id:'A',turns:[{id:'empty',status,items:[]}]})});
+ let first=await service.read({threadId:'A'}),local=mergeConversationHistory(null,first);
+ expect(local.turns.at(-1)).toMatchObject({id:'empty',status:'inProgress',items:[]});
+ status='completed';stamp='finished';
+ local=mergeConversationHistory(local,await service.read({threadId:'A',...local.history}));
+ expect(local.turns.at(-1).status).toBe('completed');
+});

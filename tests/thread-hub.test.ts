@@ -61,6 +61,10 @@ test("large thread/read and metadata requests never read the full native journal
     expect(result.thread.turns[0].items.map(item => item.id)).toEqual(["item"]);
     expect(result.history.nativePages).toBe(true);
     expect(result.thread.history.revision).toBeTruthy();
+    hub.recordThreadStatus("large", { type: "active", activeFlags: [] });
+    expect((await hub.getThreadMetadata("large")).status.type).toBe("active");
+    hub.recordThreadStatus("large", { type: "idle" });
+    expect((await hub.getThreadMetadata("large")).status.type).toBe("idle");
     const previousCalls = calls.length;
     const metadata = await hub.readBrowserThread({ threadId: "large", includeTurns: false });
     expect(metadata.thread.cwd).toBe(directory);

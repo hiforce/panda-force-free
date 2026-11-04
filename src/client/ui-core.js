@@ -215,7 +215,7 @@ export function mergeConversationHistory(previous, response, { page = false } = 
     const old = turns.get(turn.id),
       items = new Map((old?.items || []).map((item) => [item.id, item]));
     for (const item of turn.items || []) items.set(item.id, item);
-    if (items.size)
+    if (items.size || (turn.id && typeof turn.status === "string"))
       turns.set(turn.id, {
         ...old,
         ...turn,

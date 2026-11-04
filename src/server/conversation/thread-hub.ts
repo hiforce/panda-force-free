@@ -228,6 +228,10 @@ export function createThreadHub({
   }
 
   return {
+    recordThreadStatus(threadId: string, status: any) {
+      const metadata = threadMetadata.get(threadId);
+      if (metadata && typeof status?.type === "string") threadMetadata.set(threadId, { ...metadata, status });
+    },
     recordFileChangeDiff,
     recordReviewDiffsFromRpc,
     recordThreadPathsFromRpc,

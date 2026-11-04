@@ -282,6 +282,7 @@
   "tests/service-logging.test.ts",
   "tests/session-bridge.test.ts",
   "tests/session-list-activity.e2e.mjs",
+  "tests/session-status.e2e.mjs",
   "tests/shared-approvals.e2e.mjs",
   "tests/shared-input-service.test.ts",
   "tests/shared-session.integration.test.ts",
