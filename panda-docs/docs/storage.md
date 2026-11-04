@@ -8,7 +8,7 @@ Local attachments currently default to `$CODEX_HOME/panda-force-uploads`. Set `P
 
 The Compose service is `panda-force`; its local image is `panda-force:local`. Volumes are `panda-force-state`, `panda-force-model-state` and `panda-force-workspace`, with a Compose project prefix.
 
-For existing volumes, set `PANDA_FORCE_STATE_VOLUME_NAME`, `PANDA_FORCE_MODEL_VOLUME_NAME` and `PANDA_FORCE_WORKSPACE_VOLUME_NAME` to their actual Docker names before recreating the service. For absolute host-directory mounts, use `PANDA_FORCE_HOME_HOST`, `CODEX_HOME_HOST` and `CODEX_WORKSPACE_HOST`. Renaming defaults does not migrate or delete old data.
+For existing volumes, set `PANDA_FORCE_STATE_VOLUME_NAME`, `PANDA_FORCE_MODEL_VOLUME_NAME` and `PANDA_FORCE_WORKSPACE_VOLUME_NAME` to their actual Docker names before recreating the service. For absolute host-directory mounts, use `PANDA_FORCE_HOME_HOST`, `PANDA_FORCE_MODEL_HOME_HOST` and `PANDA_FORCE_WORKSPACE_HOST`. Renaming defaults does not migrate or delete old data.
 
 Back up the configuration, application data, model state, attachments and workspace separately. Use SQLite online backup or stop PandaForce and copy the full data directory, including WAL/SHM files when present. `docker compose down` stops services; `docker compose down --volumes` also deletes named volumes.
 

@@ -11,8 +11,8 @@
     },
     {
       "path": ".env.example",
-      "bytes": 605,
-      "sha256": "f819a22b0784c63ce73ba547e09cec52f3c6ca10e2768afcb38c44f1f630b023",
+      "bytes": 778,
+      "sha256": "f5fe2f8604255d4d1ad2606ce8023333a13dbf6bd2f62ce3de61f1b2892ea622",
       "mode": "100644"
     },
     {
@@ -65,8 +65,8 @@
     },
     {
       "path": "docker-compose.yml",
-      "bytes": 1240,
-      "sha256": "27923fec5348bb9a766509c24914a0441fbd072f8b41127c7a5d352c134c26a7",
+      "bytes": 1348,
+      "sha256": "cdc713e6b8e271b77a23bdb3c64bd4be9acecf25f8b03d10fbeca7663e8def9f",
       "mode": "100644"
     },
     {
@@ -95,8 +95,8 @@
     },
     {
       "path": "panda-docs/docs/configuration.md",
-      "bytes": 1532,
-      "sha256": "0ac52d65b3b126363786a7eea106054b2348108e2dccd6138b6b6b23366bb044",
+      "bytes": 1634,
+      "sha256": "f6366f1cc013ba3d57447b508393da09542a8438d15269834ce24bcc146307ee",
       "mode": "100644"
     },
     {
@@ -125,8 +125,8 @@
     },
     {
       "path": "panda-docs/docs/storage.md",
-      "bytes": 1477,
-      "sha256": "8ba12278ecc72aae062a7a9c384f1eb63bf4b5029b18076fae2dae2fd38a7ecb",
+      "bytes": 1495,
+      "sha256": "eab2f1319a05572925f92dfebea3a02ddb517222ffe84ed9694e60f44dd5f408",
       "mode": "100644"
     },
     {
@@ -233,8 +233,8 @@
     },
     {
       "path": "release/community/.env.example",
-      "bytes": 605,
-      "sha256": "f819a22b0784c63ce73ba547e09cec52f3c6ca10e2768afcb38c44f1f630b023",
+      "bytes": 778,
+      "sha256": "f5fe2f8604255d4d1ad2606ce8023333a13dbf6bd2f62ce3de61f1b2892ea622",
       "mode": "100644"
     },
     {
@@ -275,8 +275,8 @@
     },
     {
       "path": "release/community/docker-compose.yml",
-      "bytes": 1240,
-      "sha256": "27923fec5348bb9a766509c24914a0441fbd072f8b41127c7a5d352c134c26a7",
+      "bytes": 1348,
+      "sha256": "cdc713e6b8e271b77a23bdb3c64bd4be9acecf25f8b03d10fbeca7663e8def9f",
       "mode": "100644"
     },
     {
@@ -1768,5 +1768,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "1222b29117930963d99bb9c7decd4b28febe3c81129d9b7a8995365de7643199"
+  "contentSha256": "70651f2f14830a635402ef4257ea92eef1f039c45a7ac5abcbfa0f90672bf47c"
 }

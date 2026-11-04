@@ -8,7 +8,7 @@ services:
     user: "${PUID:-1000}:${PGID:-1000}"
     command: ["bun", "run", "start"]
     ports:
-      - "${WEBUI_BIND_IP:-127.0.0.1}:${WEBUI_PORT:-8899}:8899"
+      - "${PANDA_FORCE_BIND_IP:-${WEBUI_BIND_IP:-127.0.0.1}}:${PANDA_FORCE_PORT:-${WEBUI_PORT:-8899}}:8899"
     environment:
       HOST: "0.0.0.0"
       PORT: "8899"
@@ -25,8 +25,8 @@ services:
       NODE_ENV: production
     volumes:
       - ${PANDA_FORCE_HOME_HOST:-panda-force-state}:/var/lib/panda-force
-      - ${CODEX_HOME_HOST:-panda-force-model-state}:/home/codex/.codex
-      - ${CODEX_WORKSPACE_HOST:-panda-force-workspace}:/home/codex/workspace
+      - ${PANDA_FORCE_MODEL_HOME_HOST:-${CODEX_HOME_HOST:-panda-force-model-state}}:/home/codex/.codex
+      - ${PANDA_FORCE_WORKSPACE_HOST:-${CODEX_WORKSPACE_HOST:-panda-force-workspace}}:/home/codex/workspace
 volumes:
   panda-force-state:
     name: ${PANDA_FORCE_STATE_VOLUME_NAME:-}

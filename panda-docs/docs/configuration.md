@@ -7,6 +7,7 @@ PandaForce settings use the `PANDA_FORCE_` prefix. Legacy environment settings r
 | Variable | Purpose |
 | --- | --- |
 | `HOST`, `PORT` | Bind address and port; defaults are localhost and 8899. |
+| `PANDA_FORCE_BIND_IP`, `PANDA_FORCE_PORT` | Compose host binding; legacy aliases remain accepted. |
 | `PANDA_FORCE_HOME` | Private application state root. |
 | `PANDA_FORCE_CWD` | Default working folder. |
 | `PANDA_FORCE_REVIEW_ROOT` | Review boundary. Required in projectless mode. |
