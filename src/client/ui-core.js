@@ -222,6 +222,14 @@ export function mergeConversationHistory(previous, response, { page = false } = 
         items: [...items.values()].sort((a, b) => (a.historyOrder ?? Infinity) - (b.historyOrder ?? Infinity)),
       });
   }
+  // Supplement only loaded turns so bounded history pages retain their boundaries.
+  for (const supplement of history.questionTurns || []) {
+    const turn = turns.get(supplement.id);
+    if (!turn) continue;
+    const items = new Map(turn.items.map((item) => [item.id, item]));
+    for (const item of supplement.items || []) if (!items.has(item.id)) items.set(item.id, item);
+    turns.set(turn.id, { ...turn, items: [...items.values()] });
+  }
   return {
     ...previous,
     ...response.thread,

@@ -123,7 +123,7 @@ export function createThreadHub({
   });
   const pagedConversationHistory = createPagedConversationHistory({ request, getThread: getThreadMetadata });
 
-  async function readConversationHistory(params: any) {
+  async function readNativeConversationHistory(params: any) {
     if (typeof params?.threadId !== "string" || !params.threadId) throw new Error("Invalid thread id");
     if (sharedMode) {
       const thread = await getThreadMetadata(params.threadId);
@@ -138,6 +138,17 @@ export function createThreadHub({
       }
     }
     return conversationHistory.read(params);
+  }
+
+  async function readConversationHistory(params: any) {
+    const result = await readNativeConversationHistory(params);
+    try {
+      // Native item pagination omits host questionnaire calls, including completed turns.
+      const live = await readLiveThread(params.threadId);
+      return { ...result, history: { ...result.history, questionTurns: live.questionTurns || [] } };
+    } catch {
+      return result;
+    }
   }
 
   async function readBrowserThread(params: any) {

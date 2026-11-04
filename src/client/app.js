@@ -1346,6 +1346,7 @@ async function readConversation(id, previous, { limit = BACKGROUND_CONVERSATION_
       thread.history.unchanged =
         response.history.mode === "delta" &&
         !response.history.removedItemIds?.length &&
+        !response.history.questionTurns?.some((turn) => turn.items?.length) &&
         !response.history.turns.some((turn) => turn.items?.length);
       return thread;
     }

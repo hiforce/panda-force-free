@@ -95,6 +95,7 @@ function newState() {
     activeCommandId: null,
     userSequence: 0,
     patchSequence: 0,
+    questionTurns: new Map(),
     lastEventAt: null,
   };
 }
@@ -151,6 +152,8 @@ export function applyRolloutEvent(state, event) {
   ) {
     state.active = false;
     state.turn.status = payload.type === "turn_aborted" ? "interrupted" : "completed";
+    const questions = state.questionTurns.get(state.turn.id);
+    if (questions) questions.status = state.turn.status;
     if (Number.isFinite(payload.completed_at)) state.turn.completedAt = payload.completed_at;
     for (const item of state.turn.items) if (item.status === "inProgress") item.status = state.turn.status;
     state.activeCommandId = null;
@@ -212,13 +215,19 @@ export function applyRolloutEvent(state, event) {
     payload.type === "function_call" &&
     /(?:^|[./_])request_user_input(?:_async)?$/.test(payload.name || "")
   ) {
-    upsertItem(state, {
+    const item = {
       id: payload.id || payload.call_id,
       type: "dynamicToolCall",
       tool: payload.name,
       arguments: payload.arguments,
       status: "completed",
-    });
+    };
+    upsertItem(state, item);
+    const questions = state.questionTurns.get(state.turn.id) || { id: state.turn.id, status: state.turn.status, items: [] };
+    if (!questions.items.some((existing) => existing.id === item.id)) questions.items.push(item);
+    questions.items = questions.items.slice(-30);
+    state.questionTurns.set(state.turn.id, questions);
+    while (state.questionTurns.size > 32) state.questionTurns.delete(state.questionTurns.keys().next().value);
     return state;
   }
   if (payload.type === "custom_tool_call") {
@@ -325,6 +334,7 @@ export class LiveSessionStore {
         active: entry.state.active,
         lastEventAt: entry.state.lastEventAt,
         turn: entry.state.active && entry.state.turn ? structuredClone(entry.state.turn) : null,
+        questionTurns: structuredClone([...entry.state.questionTurns.values()]),
       };
     } finally {
       closeSync(fd);

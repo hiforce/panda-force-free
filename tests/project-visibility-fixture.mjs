@@ -11,7 +11,7 @@ export async function waitFor(check) {
   throw new Error('Project visibility fixture timed out');
 }
 
-export async function createProjectVisibilityFixture({ freshAdministrator = false, historySessions = 0 } = {}) {
+export async function createProjectVisibilityFixture({ freshAdministrator = false, historySessions = 0, questionnaireRollout = false } = {}) {
   // Keep the project inside the application's existing folder-browsing boundary.
   const artifacts = new URL('../.artifacts/', import.meta.url).pathname;
   mkdirSync(artifacts, { recursive: true });
@@ -23,6 +23,22 @@ export async function createProjectVisibilityFixture({ freshAdministrator = fals
     { id: 'old-beta', name: 'Old beta session', cwd: beta, status: { type: 'idle' }, createdAt: 1, updatedAt: 2, turns: [], canAcceptDirectInput: true },
     { id: 'tasks', name: 'Task without a project', projectless: true, status: { type: 'idle' }, turns: [] },
   ];
+  if (questionnaireRollout) {
+    const sessions = join(dir, 'sessions');
+    mkdirSync(sessions);
+    const path = join(sessions, 'questionnaire.jsonl');
+    const turn = { id: 'questions', status: 'completed', items: [
+      { id: 'question-user', type: 'userMessage', content: [{ type: 'text', text: 'Show a questionnaire.' }] },
+      { id: 'question-reply', type: 'agentMessage', text: 'Choose an answer in the question card.' }
+    ] };
+    initial[0].path = path;
+    initial[0].turns = [turn];
+    writeFileSync(path, [
+      { type: 'event_msg', payload: { type: 'task_started', turn_id: turn.id } },
+      { type: 'response_item', payload: { id: 'async-question-1', type: 'function_call', name: 'request_user_input_async', arguments: JSON.stringify({ questions: [{ title: 'Which repository?', options: ['Public free repository', 'Private source repository'] }, { title: 'What should change?' }] }) } },
+      { type: 'event_msg', payload: { type: 'task_complete', turn_id: turn.id } }
+    ].map(event => JSON.stringify(event)).join('\n') + '\n');
+  }
   for (let n = 0; n < historySessions; n++) initial.push({ id: 'historic-' + n, name: 'Historical session ' + n, cwd: alpha, status: { type: 'idle' }, createdAt: 1, updatedAt: 1, turns: [] });
   const trace = join(dir, 'native-calls.jsonl');
   const serverRequest = join(dir, 'server-request.json');

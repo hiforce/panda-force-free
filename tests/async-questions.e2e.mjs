@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 import {createProjectVisibilityFixture} from './project-visibility-fixture.mjs';
 import {parseRollout} from '../src/server/bridge/live-session.js';
-const fixture=await createProjectVisibilityFixture();
+const fixture=await createProjectVisibilityFixture({questionnaireRollout:true});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
  const context=await browser.newContext({viewport:{width:390,height:844},locale:'en'});
@@ -17,8 +17,10 @@ try{
  ].map(event=>JSON.stringify(event)).join('\n');
  const item=parseRollout(rollout).turn.items[0];
  assert.ok(item,'Host rollout must retain the questionnaire before the browser receives it');
- await page.evaluate(item=>globalThis.__pandaForceDebug.notify('item/completed',{threadId:'old-alpha',turnId:'questions',item}),item);
  const card=page.locator('[data-async-question-card]');await card.waitFor();
+ await page.reload();
+ await page.locator('#workspacePreparation').waitFor({state:'hidden'});
+ await card.waitFor();
  assert.equal(await card.locator('fieldset').count(),2);
  await page.locator('#prompt').fill('Keep my existing draft.');
  await card.locator('[type=radio][value="0"]').check();
