@@ -1,3 +1,5 @@
+import { localizeAttribute, localizeText } from "../i18n.js";
+
 // Owns message timestamps and worked-duration projections.
 export function assembleTiming({ renderBatch, mutations, i18n, state, t }) {
   function timestampSeconds(value) {
@@ -34,16 +36,12 @@ export function assembleTiming({ renderBatch, mutations, i18n, state, t }) {
     const clock = messageClock(timestamp);
     if (!el || !clock) return;
     el.dataset.messageTime = clock;
-    el.title = t(label, { time: clock });
-    el.setAttribute("aria-label", t(label, { time: clock }));
+    localizeAttribute(el, "title", label, { time: clock }, t);
+    localizeAttribute(el, "aria-label", label, { time: clock }, t);
   }
   function formatWorkedDuration(durationMs) {
     if (!Number.isFinite(durationMs) || durationMs < 1000) return null;
-    const seconds = Math.max(1, Math.round(durationMs / 1000));
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60),
-      rest = seconds % 60;
-    return rest ? `${minutes}m ${rest}s` : `${minutes}m`;
+    return i18n.format.duration(durationMs);
   }
   function turnDurationMs(turn = {}) {
     if (Number.isFinite(turn.durationMs)) return turn.durationMs;
@@ -63,7 +61,7 @@ export function assembleTiming({ renderBatch, mutations, i18n, state, t }) {
       hasFinal = Boolean(turn.querySelector("[data-local-conversation-final-assistant]"));
     divider.hidden = !(hasActivity && hasFinal);
     const duration = formatWorkedDuration(Number(turn.dataset.durationMs));
-    divider.querySelector("span").textContent = duration ? `Worked for ${duration}` : "Worked";
+    localizeText(divider.querySelector("span"), duration ? "common.workedDuration" : "common.worked", { duration }, t);
   }
   return {
     timestampSeconds,

@@ -68,7 +68,7 @@ export function assembleGoals({ viewUpdates, transportPort, legacyState, $, t, e
   });
   async function submitGoalCommand(thread, command) {
     if (!thread?.id) {
-      noticesPort.toast(t("Start a task first"));
+      noticesPort.toast(t("workbench.startATaskFirst"));
       return;
     }
     let result;
@@ -103,7 +103,7 @@ export function assembleGoals({ viewUpdates, transportPort, legacyState, $, t, e
     $("#prompt").value = "";
     viewUpdates.request("composerLayout");
     viewUpdates.request("goals", thread.id);
-    noticesPort.toast(t(command.command === "clear" ? "Goal cleared" : "Goal updated"));
+    noticesPort.toast(t(command.command === "clear" ? "goals.goalCleared" : "goals.goalUpdated"));
   }
   return {
     submitGoalCommand,
@@ -190,7 +190,6 @@ export function assembleModels({ transportPort, legacyState, $, t, escapeHtml, w
     renderModelMenuMain,
     renderModels,
     renderPermissionMenu,
-    requestTaskNotifyPermission,
     selectedModel,
     selectedPermission,
     setPermissionMode,
@@ -226,7 +225,6 @@ export function assembleModels({ transportPort, legacyState, $, t, escapeHtml, w
     loadModels,
     loadModelsRaw,
     loadPermissionProfilesRaw,
-    requestTaskNotifyPermission,
     modelDisplay,
     selectedModel,
     reasoningLabel,

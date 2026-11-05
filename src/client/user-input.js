@@ -1,3 +1,5 @@
+import { localizeAttribute, localizeText, setOpaqueText } from "./i18n.js";
+
 export const USER_INPUT_METHODS = ["item/tool/requestUserInput", "tool/requestUserInput"];
 
 export function createUserInputCard(
@@ -8,8 +10,8 @@ export function createUserInputCard(
     onResolved,
     onError,
     draft = {},
-    submitLabel = "Submit answer",
-    headingLabel = "Waiting for your answer",
+    submitLabel = "common.submitAnswer",
+    headingLabel = "common.waitingForYourAnswer",
   },
 ) {
   const card = document.createElement("section");
@@ -19,7 +21,7 @@ export function createUserInputCard(
   const form = document.createElement("form");
   const heading = document.createElement("strong");
   heading.className = "user-input-title";
-  heading.textContent = t(headingLabel);
+  localizeText(heading, headingLabel, undefined, t);
   form.append(heading);
   const progress = document.createElement("p");
   progress.className = "user-input-progress";
@@ -30,16 +32,19 @@ export function createUserInputCard(
     const answered = fields.filter(({ question, saved }) =>
       !question.options?.length || saved.selected === "custom" ? Boolean(saved.text.trim()) : saved.selected !== "",
     ).length;
-    progress.textContent = t("Answered {answered} of {total} questions", { answered, total: fields.length });
+    localizeText(progress, "approvals.answeredAnsweredOfTotalQuestions", { answered, total: fields.length }, t);
   };
   for (const [index, question] of (request.params?.questions || []).entries()) {
     const fieldset = document.createElement("fieldset");
     fieldset.dataset.questionId = question.id;
     const legend = document.createElement("legend");
-    legend.textContent = `${index + 1} / ${request.params.questions.length}${question.header ? " · " + question.header : ""}`;
+    setOpaqueText(
+      legend,
+      `${index + 1} / ${request.params.questions.length}${question.header ? " · " + question.header : ""}`,
+    );
     const prompt = document.createElement("p");
     prompt.className = "user-input-question";
-    prompt.textContent = question.question;
+    setOpaqueText(prompt, question.question);
     fieldset.append(legend, prompt);
     // Native question IDs are opaque data, including names such as __proto__.
     let saved = Object.hasOwn(draft, question.id) ? draft[question.id] : null;
@@ -51,8 +56,11 @@ export function createUserInputCard(
     const options = question.options || [];
     const hint = document.createElement("p");
     hint.className = "user-input-hint";
-    hint.textContent = t(
-      options.length ? "Choose one option for this question." : "Enter an answer for this question.",
+    localizeText(
+      hint,
+      options.length ? "common.chooseOneOptionForThisQuestion" : "common.enterAnAnswerForThisQuestion",
+      undefined,
+      t,
     );
     fieldset.append(hint);
     const customAllowed = !options.length || question.isOther === true;
@@ -82,11 +90,11 @@ export function createUserInputCard(
       };
       const copy = document.createElement("span");
       const title = document.createElement("strong");
-      title.textContent = label;
+      setOpaqueText(title, label);
       copy.append(title);
       if (description) {
         const detail = document.createElement("small");
-        detail.textContent = description;
+        setOpaqueText(detail, description);
         copy.append(detail);
       }
       option.append(radio, copy);
@@ -94,7 +102,7 @@ export function createUserInputCard(
       radios.push(radio);
     }
     options.forEach((option, optionIndex) => addOption(option.label, option.description, String(optionIndex)));
-    if (options.length && customAllowed) addOption(t("Write your own answer"), "", "custom");
+    if (options.length && customAllowed) addOption(t("approvals.writeYourOwnAnswer"), "", "custom");
     if (customAllowed) {
       custom = document.createElement(question.isSecret ? "input" : "textarea");
       if (question.isSecret) {
@@ -103,7 +111,7 @@ export function createUserInputCard(
       } else custom.rows = 2;
       custom.className = "user-input-custom";
       custom.setAttribute("aria-label", question.question);
-      custom.placeholder = t("Write your answer…");
+      localizeAttribute(custom, "placeholder", "approvals.writeYourAnswer", undefined, t);
       custom.value = saved.text;
       custom.oninput = () => {
         saved.text = custom.value;
@@ -124,7 +132,7 @@ export function createUserInputCard(
   const submit = document.createElement("button");
   submit.type = "submit";
   submit.className = "user-input-submit";
-  submit.textContent = t(submitLabel);
+  localizeText(submit, submitLabel, undefined, t);
   form.append(error, submit);
   card.append(form);
   form.onsubmit = async (event) => {
@@ -138,7 +146,7 @@ export function createUserInputCard(
           : question.options[Number(saved.selected)]?.label;
       if (!answer) {
         if (custom) {
-          custom.setCustomValidity(t("Please enter an answer before submitting."));
+          custom.setCustomValidity(t("approvals.pleaseEnterAnAnswerBeforeSubmitting"));
           custom.reportValidity();
         }
         custom?.focus();
@@ -148,18 +156,18 @@ export function createUserInputCard(
     }
     error.hidden = true;
     submit.disabled = true;
-    submit.textContent = t("Submitting…");
+    localizeText(submit, "approvals.submitting", undefined, t);
     for (const { fieldset } of fields) fieldset.disabled = true;
     try {
       await respond(request.id, { answers });
       onResolved(request.id);
     } catch (failure) {
       if (!card.isConnected) return;
-      error.textContent = failure.message || t("Could not submit answer");
+      setOpaqueText(error, failure.message || t("errors.couldNotSubmitAnswer"));
       error.hidden = false;
       onError(error.textContent);
       submit.disabled = false;
-      submit.textContent = t(submitLabel);
+      localizeText(submit, submitLabel, undefined, t);
       for (const { fieldset } of fields) fieldset.disabled = false;
     }
   };

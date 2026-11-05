@@ -1,8 +1,9 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { ADMINISTRATOR_PASSWORD_ERROR, validAdministratorPassword } from "../../shared/password-policy.js";
+import { validAdministratorPassword } from "../../shared/password-policy.js";
 import { config } from "../config.js";
 import { readJsonBody } from "../http/body.js";
+import { errorPayload } from "../http/error-payload.js";
 import { respondJson } from "../http/respond.js";
 import type { AuthState } from "./state.js";
 import {
@@ -19,7 +20,7 @@ import {
 } from "./security.js";
 
 function sendAuthError(res: ServerResponse, status: number, error: string, headers: Record<string, string> = {}) {
-  respondJson(res, status, { error }, headers);
+  respondJson(res, status, errorPayload(error), headers);
 }
 
 function trustedRequest(req: IncomingMessage) {
@@ -101,7 +102,7 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
     refresh();
     if (url.pathname === "/api/auth/status") {
       if (req.method !== "GET") {
-        sendAuthError(res, 405, "Method not allowed", { allow: "GET" });
+        sendAuthError(res, 405, "errors.methodNotAllowed", { allow: "GET" });
         return true;
       }
       const authenticated = isAuthorized(req);
@@ -120,16 +121,16 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
       return true;
     }
     if (req.method !== "POST") {
-      sendAuthError(res, 405, "Method not allowed", { allow: "POST" });
+      sendAuthError(res, 405, "errors.methodNotAllowed", { allow: "POST" });
       return true;
     }
     if (!trustedRequest(req)) {
-      sendAuthError(res, 403, "Authentication request was rejected");
+      sendAuthError(res, 403, "auth.requestRejected");
       return true;
     }
     if (url.pathname === "/api/auth/logout") {
       if (!isAuthorized(req)) {
-        sendAuthError(res, 401, "Authentication required");
+        sendAuthError(res, 401, "auth.authenticationRequired");
         return true;
       }
       respondJson(
@@ -141,14 +142,14 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
       return true;
     }
     if (rateLimited(req)) {
-      sendAuthError(res, 429, "Too many attempts. Please try again in a few minutes.", { "retry-after": "300" });
+      sendAuthError(res, 429, "auth.tooManyAttempts", { "retry-after": "300" });
       return true;
     }
     let payload: any;
     try {
       payload = await readJsonBody(req, 4096);
     } catch {
-      sendAuthError(res, 400, "Invalid authentication request");
+      sendAuthError(res, 400, "auth.invalidRequest");
       return true;
     }
     const password = typeof payload?.password === "string" ? payload.password : "";
@@ -156,23 +157,23 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
     if (url.pathname === "/api/auth/setup") {
       const fresh = passwordSetupRequired();
       if (authState.administrator || (!fresh && !migrationRequired()) || authState.setupInProgress) {
-        sendAuthError(res, 409, "Administrator setup is no longer available");
+        sendAuthError(res, 409, "auth.setupUnavailable");
         return true;
       }
       if (!validAdministratorUsername(username)) {
-        sendAuthError(res, 400, "Use 3–64 letters, numbers, dots, underscores, @ or hyphens for the username.");
+        sendAuthError(res, 400, "auth.usernamePolicy");
         return true;
       }
       if (fresh && !validAdministratorPassword(password)) {
-        sendAuthError(res, 400, ADMINISTRATOR_PASSWORD_ERROR);
+        sendAuthError(res, 400, "auth.passwordPolicy");
         return true;
       }
       if (fresh && codeRequired(req) && !equal(payload?.installationCode, code)) {
-        sendAuthError(res, 403, "The installation code is incorrect. Check the server startup log.");
+        sendAuthError(res, 403, "auth.installationCodeIncorrect");
         return true;
       }
       if (!fresh && !isAuthorized(req)) {
-        sendAuthError(res, 401, "Verify your existing password before creating the administrator account.");
+        sendAuthError(res, 401, "auth.existingPasswordRequired");
         return true;
       }
       authState.setupInProgress = true;
@@ -186,10 +187,10 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
       } catch (error: any) {
         if (error?.code === "EEXIST") {
           refresh();
-          sendAuthError(res, 409, "Administrator setup is no longer available");
+          sendAuthError(res, 409, "auth.setupUnavailable");
         } else {
           console.error("[panda-force] administrator setup failed", error);
-          sendAuthError(res, 500, "Unable to save the administrator account");
+          sendAuthError(res, 500, "auth.saveAdministratorFailed");
         }
       } finally {
         authState.setupInProgress = false;
@@ -206,7 +207,7 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
       else if (authState.managedPassword) valid = verifyStoredPassword(password, authState.managedPassword);
     }
     if (!valid) {
-      sendAuthError(res, 401, authState.administrator ? "Incorrect username or password" : "Incorrect password");
+      sendAuthError(res, 401, authState.administrator ? "auth.incorrectCredentials" : "auth.incorrectPassword");
       return true;
     }
     issueSession(req, res);

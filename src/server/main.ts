@@ -1,3 +1,4 @@
+import { SUPPORTED_LOCALES } from "../shared/i18n/locale-policy.js";
 /**
  * HTTP/WS composition root. Authenticate before routing workspace operations.
  * Shared mode attaches to the host daemon without owning its process lifetime;
@@ -828,6 +829,7 @@ const server = createServer(async (req, res) => {
         url.pathname,
       ));
   const loginAssets = new Set([
+    ...SUPPORTED_LOCALES.map((locale) => `/locales/${locale.code}.json`),
     "/",
     "/index.html",
     "/style.css",

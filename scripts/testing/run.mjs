@@ -20,6 +20,7 @@ const integration = readdirSync(resolve(root, "tests"))
   .filter((name) => name.endsWith(".integration.test.ts"))
   .sort();
 const entries = {
+  catalogs: [{ name: "i18n-contracts", command: ["run", "check:i18n"] }],
   check: [{ name: "check", command: ["run", "check"] }],
   build: [{ name: "build-client", command: ["run", "build:client"] }],
   unit: [{ name: "unit", command: ["test", ...unit.map((name) => "tests/" + name)], timeout: 120000 }],
@@ -60,7 +61,7 @@ if (new Set(classified).size !== classified.length) throw Error("Duplicate suite
 mkdirSync(directory, { recursive: true });
 const planned =
   group === "verify"
-    ? ["check", "build-client", "unit", "integration", ...manifest.browser]
+    ? ["i18n-contracts", "check", "build-client", "unit", "integration", ...manifest.browser]
     : entries[group].filter((entry) => !requested.length || requested.includes(entry.name)).map((entry) => entry.name);
 const result = {
   group,
@@ -129,7 +130,7 @@ for (const sig of ["SIGINT", "SIGTERM"])
   });
 let passed = true;
 if (group === "verify") {
-  for (const phase of ["check", "build", "unit", "integration"]) {
+  for (const phase of ["catalogs", "check", "build", "unit", "integration"]) {
     for (const entry of entries[phase]) passed = (await run(entry)) && passed;
     if (!passed) break;
   }

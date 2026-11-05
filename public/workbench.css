@@ -11,7 +11,7 @@
   position: fixed;
   z-index: 1200;
   top: 76px;
-  right: 16px;
+  inset-inline-end: 16px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -48,7 +48,7 @@
 @media (max-width: 760px) {
   .panda-session-notice {
     top: 68px;
-    right: 12px;
+    inset-inline-end: 12px;
     width: calc(100vw - 24px);
     flex-wrap: wrap;
     gap: 8px;
@@ -722,6 +722,47 @@
   background: #151d3545;
   backdrop-filter: blur(2px);
 }
+.confirmation-dialog {
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 26px;
+}
+.confirmation-brand {
+  display: block;
+  margin-bottom: 16px;
+  color: var(--pf-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.confirmation-dialog h2 {
+  line-height: 1.5;
+}
+.confirmation-dialog p {
+  overflow-wrap: anywhere;
+  margin: 12px 0 24px;
+}
+.confirmation-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.confirmation-actions .wb-button {
+  min-height: 44px;
+  justify-content: center;
+  white-space: normal;
+}
+.confirmation-actions .danger {
+  color: var(--pf-danger);
+  border-color: color-mix(in srgb, var(--pf-danger) 55%, var(--pf-line));
+  background: color-mix(in srgb, var(--pf-danger) 10%, var(--pf-card));
+}
+.confirmation-actions .danger:hover {
+  background: color-mix(in srgb, var(--pf-danger) 18%, var(--pf-card));
+}
+.confirmation-actions .wb-button:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 3px;
+}
 .workbench-dialog header {
   display: flex;
   align-items: center;
@@ -1046,7 +1087,7 @@
     gap: 8px;
   }
   .composer-right {
-    margin-left: auto;
+    margin-inline-start: auto;
   }
   .composer-circle-button,
   .send-button,
@@ -1244,7 +1285,7 @@
   color: var(--pf-ink);
 }
 .business-project-context .wb-button {
-  margin-left: auto;
+  margin-inline-start: auto;
   min-height: 40px;
 }
 .working-folder-label {
@@ -1347,7 +1388,7 @@
   color: var(--pf-muted);
 }
 .project-form footer .wb-button {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .wb-help {
   font-size: 12px;
@@ -1420,7 +1461,7 @@
 
 .pending-approval-notice {
   position: fixed;
-  right: 16px;
+  inset-inline-end: 16px;
   bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   z-index: 1150;
   min-height: 44px;
@@ -1536,14 +1577,70 @@
 }
 
 /* Align project and working-folder context with the composer. */
-#workbenchComposerSlot{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 20px}
-#workbenchComposerSlot .business-project-context,#workbenchComposerSlot .conversation-project-picker{width:100%;margin:0;padding:0;min-height:44px;min-width:0;justify-content:flex-start}
-#workbenchComposerSlot .business-project-context select{max-width:none}
-#workbenchComposerSlot .composer-dock{grid-column:1/-1}
-#conversationProjectPicker[hidden]{display:none!important}
-@media(max-width:720px){#workbenchComposerSlot{grid-template-columns:minmax(0,1fr);gap:8px}#workbenchComposerSlot .business-project-context{padding:0}#workbenchComposerSlot .composer-project-control{max-width:100%;min-width:0}}
+#workbenchComposerSlot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px 20px;
+}
+#workbenchComposerSlot .business-project-context,
+#workbenchComposerSlot .conversation-project-picker {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  min-height: 44px;
+  min-width: 0;
+  justify-content: flex-start;
+}
+#workbenchComposerSlot .business-project-context select {
+  max-width: none;
+}
+#workbenchComposerSlot .composer-dock {
+  grid-column: 1/-1;
+}
+#conversationProjectPicker[hidden] {
+  display: none !important;
+}
+@media (max-width: 720px) {
+  #workbenchComposerSlot {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  #workbenchComposerSlot .business-project-context {
+    padding: 0;
+  }
+  #workbenchComposerSlot .composer-project-control {
+    max-width: 100%;
+    min-width: 0;
+  }
+}
 
-.async-question-card{margin:12px 0;border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow:hidden}.async-question-card>summary{padding:14px 16px;cursor:pointer;font-weight:600;min-height:44px}.async-question-hint{margin:0;padding:0 16px 12px;color:var(--muted);font-size:13px}.async-question-card .user-input-card{margin:0;border:0;box-shadow:none}.async-question-card[data-status=earlier]{opacity:.8}
+.async-question-card {
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.async-question-card > summary {
+  padding: 14px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 44px;
+}
+.async-question-hint {
+  margin: 0;
+  padding: 0 16px 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.async-question-card .user-input-card {
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+.async-question-card[data-status="earlier"] {
+  opacity: 0.8;
+}
 
 @media (max-height: 480px) {
   .mobile-device.visual-viewport-active .composer-dock {

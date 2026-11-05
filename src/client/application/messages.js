@@ -1,3 +1,5 @@
+import { localizeAttribute, messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+
 import {
   readAsyncQuestions,
   createAsyncQuestionCard,
@@ -74,7 +76,7 @@ export function assembleMessages({
         el.className = "turn user-turn";
         el.dataset.userTurnId = turnId;
         if (String(item.id).startsWith("local-")) el.dataset.optimisticUser = "true";
-        el.innerHTML = '<div class="user-message"></div>';
+        setMessageHtml(el, '<div class="user-message"></div>');
         const steer =
           item.steer ?? Boolean(root.querySelector(`.user-turn[data-user-turn-id="${CSS.escape(String(turnId))}"]`));
         if (steer) {
@@ -87,7 +89,7 @@ export function assembleMessages({
       } else if (item.type === "agentMessage") {
         const timeline = turnFramesPort.ensureTurnTimeline(turnId, root);
         el = document.createElement("div");
-        el.innerHTML = '<div class="message-text"></div>';
+        setMessageHtml(el, '<div class="message-text"></div>');
         identityPort.placeAgentMessage(el, item, timeline);
       } else if (item.type === "imageGeneration") {
         const timeline = turnFramesPort.ensureTurnTimeline(turnId, root);
@@ -132,15 +134,15 @@ export function assembleMessages({
           Date.now() / 1000;
       el.dataset.messageTimestamp = String(timingPort.timestampSeconds(userTimestamp) || Date.now() / 1000);
       timingPort.setMessageTime(el, el.dataset.messageTimestamp, "Sent at {time}");
-      el.querySelector(".user-message").textContent = composerTextFromInput(item.content);
+      setOpaqueText(el.querySelector(".user-message"), composerTextFromInput(item.content));
       let copyButton = el.querySelector(".user-message-copy");
       if (!copyButton) {
         copyButton = document.createElement("button");
         copyButton.type = "button";
         copyButton.className = "user-message-copy";
-        copyButton.setAttribute("aria-label", "Copy message");
-        copyButton.title = "Copy message";
-        copyButton.innerHTML = `${codexIcon("copy")}<span>Copy</span>`;
+        localizeAttribute(copyButton, "aria-label", "common.copyMessage", undefined);
+        localizeAttribute(copyButton, "title", "common.copyMessage", undefined);
+        setMessageHtml(copyButton, `${codexIcon("copy")}<span><span data-pf-message="files.copy">Copy</span></span>`);
         copyButton.onclick = () => clipboardPort.copyUserMessage(copyButton);
         el.append(copyButton);
       }
@@ -166,7 +168,7 @@ export function assembleMessages({
             link.dataset.fileReference = file.path;
             link.dataset.fileCwd = identityPort.imageCwd(item);
           }
-          link.textContent = file.name;
+          setOpaqueText(link, file.name);
           fileList.append(link);
         }
       } else fileList?.remove();
@@ -179,7 +181,7 @@ export function assembleMessages({
           images.className = "user-message-images";
           el.querySelector(".user-message").after(images);
         }
-        images.innerHTML = imageHtml;
+        setMessageHtml(images, imageHtml);
       } else images?.remove();
       if (item.steer || item.delivery || el.dataset.delivery || el.dataset.steer === "true") {
         if (item.steer) el.dataset.steer = "true";
@@ -194,16 +196,18 @@ export function assembleMessages({
         }
         const label =
           el.dataset.delivery === "sending"
-            ? "Sending…"
+            ? "common.sending"
             : el.dataset.delivery === "failed"
-              ? "Send failed"
+              ? "common.sendFailed"
               : el.dataset.delivery === "unconfirmed"
-                ? "Delivery unconfirmed"
-                : "Sent";
-        status.innerHTML =
+                ? "workbench.deliveryUnconfirmed"
+                : "common.sent";
+        setMessageHtml(
+          status,
           (el.dataset.steer === "true"
-            ? `<span>${escapeHtml(t("Steer"))}</span><span aria-hidden="true"> · </span>`
-            : "") + `<span>${escapeHtml(t(label))}</span>`;
+            ? `<span>${messageHtml("sessions.steer", undefined, t)}</span><span aria-hidden="true"> · </span>`
+            : "") + `<span>${messageHtml(label, undefined, t)}</span>`,
+        );
       }
     }
     if (item.type === "agentMessage") {
@@ -221,9 +225,11 @@ export function assembleMessages({
       timingPort.setMessageTime(el, el.dataset.messageTimestamp, "Received at {time}");
       identityPort.placeAgentMessage(el, item, timeline);
       body.dataset.raw = text;
-      body.innerHTML =
+      setMessageHtml(
+        body,
         renderAssistantMarkdown(text, { cwd }) +
-        renderItemImages(item, { cwd, className: "message-image-grid structured-message-images", excludeText: text });
+          renderItemImages(item, { cwd, className: "message-image-grid structured-message-images", excludeText: text }),
+      );
       timingPort.syncWorkedForDivider(turnId);
     }
     if (item.type === "imageGeneration") {
@@ -232,9 +238,11 @@ export function assembleMessages({
         className: "generated-image-grid",
         thumbnail: true,
       });
-      el.innerHTML =
+      setMessageHtml(
+        el,
         html ||
-        `<div class="generated-image-pending ${item.status === "inProgress" ? "loading-shimmer" : ""}">${item.status === "failed" ? "Image generation failed" : "Generating image"}</div>`;
+          `<div class="generated-image-pending ${item.status === "inProgress" ? "loading-shimmer" : ""}">${item.status === "failed" ? "Image generation failed" : "Generating image"}</div>`,
+      );
     }
     if (item.type === "fileChange") {
       for (const ch of item.changes || []) {

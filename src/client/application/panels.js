@@ -1,3 +1,5 @@
+import { localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
+
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { createTerminalPanel } from "../terminal-panel.js";
 import { createBrowserController } from "../browser-panel-controller.js";
@@ -24,7 +26,7 @@ export function assemblePanels({
     getAttachmentUrlPrefix: () => state.config.attachmentUrlPrefix,
     onError: () => {
       globalThis.__pandaForceCheckAuth?.();
-      noticesPort.addPersistentError(t("Could not load file preview. Please retry."));
+      noticesPort.addPersistentError(t("errors.couldNotLoadFilePreviewPleaseRetry"));
     },
   });
   const filesDialog = document.querySelector("#filesDialog");
@@ -88,7 +90,7 @@ export function assemblePanels({
   }
   function openBrowserPanel() {
     const tab = $("#utilityTab");
-    tab.textContent = "Browser";
+    localizeText(tab, "common.browser", undefined);
     tab.dataset.sidePanelTab = "browser";
     tab.hidden = false;
     setSidePanelOpen(true, false);
@@ -117,8 +119,10 @@ export function assemblePanels({
     $("#newTab").hidden = false;
     if (review) $("#reviewTab").hidden = false;
     if (utility || browser || terminal || sideTask) $("#utilityTab").hidden = false;
-    $("#sidePanelTitle").textContent =
-      title || (launcher ? "New tab" : review ? "Review" : $("#utilityTab").textContent);
+    setOpaqueText(
+      $("#sidePanelTitle"),
+      title || (launcher ? "New tab" : review ? "Review" : $("#utilityTab").textContent),
+    );
     if (view !== "utility") filesPanel?.close();
     viewUpdates.request("review");
     if (terminal)
@@ -174,14 +178,14 @@ export function assemblePanels({
     }
     const tab = $("#utilityTab");
     if (kind === "terminal") {
-      tab.textContent = "Terminal";
+      localizeText(tab, "common.terminal", undefined);
       tab.dataset.sidePanelTab = "terminal";
       setSidePanelOpen(true, false);
       setSidePanelView("terminal", "Terminal");
       return;
     }
     if (kind === "side-task") {
-      tab.textContent = "Side tasks";
+      localizeText(tab, "common.sideTasks", undefined);
       tab.dataset.sidePanelTab = "side-task";
       setSidePanelOpen(true, false);
       setSidePanelView("side-task", "Side tasks");
@@ -191,14 +195,14 @@ export function assemblePanels({
       entry = labels[kind];
     if (!entry) return;
     const [title, icon, description] = entry;
-    tab.textContent = title;
+    setOpaqueText(tab, title);
     tab.dataset.sidePanelTab = "utility";
-    $("#utilityPanelTitle").textContent = title;
-    $("#utilityPanelDescription").textContent = description;
-    $("#utilityPanelIcon").innerHTML = codexIcon(icon);
+    setOpaqueText($("#utilityPanelTitle"), title);
+    setOpaqueText($("#utilityPanelDescription"), description);
+    setMessageHtml($("#utilityPanelIcon"), codexIcon(icon));
     const action = $("#utilityPanelAction");
     action.hidden = false;
-    action.textContent = "Choose project folder";
+    localizeText(action, "common.chooseProjectFolder", undefined);
     action.onclick = (...args) => workspacePort.openFolderPicker(...args);
     setSidePanelOpen(true, false);
     setSidePanelView("utility", title);

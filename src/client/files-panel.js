@@ -1,3 +1,12 @@
+import {
+  getBrowserI18n,
+  localizeAttribute,
+  localizeText,
+  setMessageHtml,
+  setOpaqueAttribute,
+  setOpaqueText,
+} from "./i18n.js";
+
 import { codexIcon } from "./codex-icons.js";
 
 const MAX_FILE_PREVIEW_BYTES = 512 * 1024;
@@ -13,7 +22,7 @@ function formatBytes(size) {
 }
 
 export function createFilesPanel({
-  t = (value) => value,
+  t = getBrowserI18n().t,
   onOpenFile = () => {},
   onChooseProject = () => {},
   shortPath = (value) => value,
@@ -49,7 +58,7 @@ export function createFilesPanel({
   };
 
   function setStatus(message = "") {
-    status.textContent = message ? t(message) : "";
+    setOpaqueText(status, message ? t(message) : "");
     status.hidden = !message;
   }
 
@@ -58,13 +67,13 @@ export function createFilesPanel({
     const wrapper = document.createElement("div");
     wrapper.className = "files-empty";
     const text = document.createElement("p");
-    text.textContent = t(message);
+    localizeText(text, message, undefined, t);
     wrapper.append(text);
     if (action) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "files-empty-action";
-      button.textContent = t(action.label);
+      localizeText(button, action.label, undefined, t);
       button.onclick = action.onClick;
       wrapper.append(button);
     }
@@ -88,14 +97,21 @@ export function createFilesPanel({
 
   function gitLabel(code) {
     return (
-      { M: "Modified", A: "Added", D: "Deleted", R: "Renamed", C: "Conflict", U: "Unversioned" }[code] || "Changed"
+      {
+        M: "common.modified",
+        A: "common.added",
+        D: "common.deleted",
+        R: "common.renamed",
+        C: "common.conflict",
+        U: "common.unversioned",
+      }[code] || "common.changed"
     );
   }
 
   function updateGitCount() {
     if (!gitCount) return;
     const count = state.gitEntries.length;
-    gitCount.textContent = count ? String(count) : "";
+    setOpaqueText(gitCount, count ? String(count) : "");
     gitCount.hidden = !count;
   }
 
@@ -111,7 +127,7 @@ export function createFilesPanel({
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", String(active));
     });
-    title.textContent = t("Files");
+    localizeText(title, "common.files", undefined, t);
     renderTree(state.loaded.get("") || { entries: [] });
   }
 
@@ -170,23 +186,23 @@ export function createFilesPanel({
     button.className = "files-tree-button files-git-button";
     button.setAttribute("role", "treeitem");
     button.setAttribute("aria-level", String(depth + 2));
-    button.title = node.path;
+    setOpaqueAttribute(button, "title", node.path);
     const chevron = document.createElement("span");
     chevron.className = "files-tree-chevron icon-slot";
     const icon = document.createElement("span");
     icon.className = "files-tree-icon icon-slot";
     const name = document.createElement("span");
     name.className = "files-tree-name";
-    name.textContent = node.name;
+    setOpaqueText(name, node.name);
     if (node.kind === "directory") {
       const key = `${sectionKey}:${node.path}`;
       const open = state.gitExpanded.has(key);
-      chevron.innerHTML = codexIcon(open ? "chevronDown" : "chevronRight");
-      icon.innerHTML = codexIcon("folderOpen");
+      setMessageHtml(chevron, codexIcon(open ? "chevronDown" : "chevronRight"));
+      setMessageHtml(icon, codexIcon("folderOpen"));
       button.setAttribute("aria-expanded", String(open));
       const count = document.createElement("small");
       count.className = "files-git-count";
-      count.textContent = String(gitNodeCount(node));
+      setOpaqueText(count, String(gitNodeCount(node)));
       button.append(chevron, icon, name, count);
       button.onclick = () => {
         if (state.gitExpanded.has(key)) state.gitExpanded.delete(key);
@@ -199,16 +215,16 @@ export function createFilesPanel({
           row.append(renderGitNode(child, sectionKey, depth + 1));
       return row;
     }
-    chevron.innerHTML = codexIcon("file");
+    setMessageHtml(chevron, codexIcon("file"));
     icon.replaceChildren();
     const location = document.createElement("small");
     location.className = "files-tree-path";
-    location.textContent = node.path.includes("/") ? node.path.slice(0, node.path.lastIndexOf("/")) : "";
-    location.title = node.path;
+    setOpaqueText(location, node.path.includes("/") ? node.path.slice(0, node.path.lastIndexOf("/")) : "");
+    setOpaqueAttribute(location, "title", node.path);
     const badge = document.createElement("small");
     badge.className = `files-tree-git files-tree-git-${code.toLowerCase()}`;
-    badge.textContent = code;
-    badge.title = `${t(gitLabel(code))} (${node.entry.status})`;
+    setOpaqueText(badge, code);
+    setOpaqueAttribute(badge, "title", `${t(gitLabel(code))} (${node.entry.status})`);
     button.append(chevron, icon, name);
     if (location.textContent) button.append(location);
     button.append(badge);
@@ -228,11 +244,11 @@ export function createFilesPanel({
     header.setAttribute("aria-expanded", String(open));
     const chevron = document.createElement("span");
     chevron.className = "files-tree-chevron icon-slot";
-    chevron.innerHTML = codexIcon(open ? "chevronDown" : "chevronRight");
+    setMessageHtml(chevron, codexIcon(open ? "chevronDown" : "chevronRight"));
     const title = document.createElement("strong");
-    title.textContent = t(label);
+    localizeText(title, label, undefined, t);
     const count = document.createElement("small");
-    count.textContent = `${entries.length} ${t(entries.length === 1 ? "file" : "files")}`;
+    setOpaqueText(count, `${entries.length} ${t(entries.length === 1 ? "common.file" : "common.files2")}`);
     header.append(chevron, title, count);
     header.onclick = () => {
       if (state.gitExpanded.has(sectionKey)) state.gitExpanded.delete(sectionKey);
@@ -252,17 +268,17 @@ export function createFilesPanel({
     tree.replaceChildren();
     updateGitCount();
     if (!state.gitAvailable) {
-      emptyState("Git status unavailable.");
+      emptyState("common.gitStatusUnavailable");
       return;
     }
     const changes = state.gitEntries.filter((entry) => !isUnversioned(entry));
     const unversioned = state.gitEntries.filter(isUnversioned);
     if (!changes.length && !unversioned.length) {
-      emptyState("No local changes.");
+      emptyState("common.noLocalChanges");
       return;
     }
-    if (changes.length) tree.append(renderGitSection("Changes", "changes", changes));
-    if (unversioned.length) tree.append(renderGitSection("Unversioned files", "unversioned", unversioned));
+    if (changes.length) tree.append(renderGitSection("common.changes", "changes", changes));
+    if (unversioned.length) tree.append(renderGitSection("common.unversionedFiles", "unversioned", unversioned));
   }
 
   function renderEntry(entry, depth = 0) {
@@ -277,13 +293,13 @@ export function createFilesPanel({
     button.className = "files-tree-button";
     button.setAttribute("role", "treeitem");
     button.setAttribute("aria-level", String(depth + 1));
-    button.title = entry.path;
+    setOpaqueAttribute(button, "title", entry.path);
     const tooLarge = entry.kind === "file" && Number(entry.size) > MAX_FILE_PREVIEW_BYTES;
     if (tooLarge) {
       row.classList.add("files-tree-large");
       button.disabled = true;
       button.setAttribute("aria-disabled", "true");
-      button.title = t("This file is too large to preview.");
+      localizeAttribute(button, "title", "files.thisFileIsTooLargeToPreview", undefined, t);
     }
     const chevron = document.createElement("span");
     chevron.className = "files-tree-chevron icon-slot";
@@ -291,22 +307,22 @@ export function createFilesPanel({
     icon.className = "files-tree-icon icon-slot";
     const name = document.createElement("span");
     name.className = "files-tree-name";
-    name.textContent = entry.name || fileName(entry.path);
+    setOpaqueText(name, entry.name || fileName(entry.path));
     if (entry.searchResult && entry.path.includes("/")) {
       const location = document.createElement("small");
       location.className = "files-tree-path";
-      location.textContent = entry.path.slice(0, entry.path.lastIndexOf("/"));
-      location.title = entry.path;
+      setOpaqueText(location, entry.path.slice(0, entry.path.lastIndexOf("/")));
+      setOpaqueAttribute(location, "title", entry.path);
       button.append(name, location);
     }
     if (entry.kind === "directory") {
       const open = state.expanded.has(entry.path);
-      chevron.innerHTML = codexIcon(open ? "chevronDown" : "chevronRight");
-      icon.innerHTML = codexIcon("folderOpen");
+      setMessageHtml(chevron, codexIcon(open ? "chevronDown" : "chevronRight"));
+      setMessageHtml(icon, codexIcon("folderOpen"));
       button.setAttribute("aria-expanded", String(open));
       button.onclick = () => toggleDirectory(entry.path);
     } else {
-      chevron.innerHTML = codexIcon("file");
+      setMessageHtml(chevron, codexIcon("file"));
       icon.replaceChildren();
       button.onclick = tooLarge
         ? null
@@ -317,19 +333,19 @@ export function createFilesPanel({
     if (tooLarge) {
       const size = document.createElement("small");
       size.className = "files-tree-size";
-      size.textContent = t("Too large");
+      localizeText(size, "files.tooLarge", undefined, t);
       button.append(size);
     } else if (entry.kind === "file" && Number.isFinite(entry.size)) {
       const size = document.createElement("small");
       size.className = "files-tree-size";
-      size.textContent = formatBytes(entry.size);
+      setOpaqueText(size, formatBytes(entry.size));
       button.append(size);
     }
     if (git) {
       const badge = document.createElement("small");
       badge.className = `files-tree-git files-tree-git-${git.status.replace(/[^A-Z?]/g, "").toLowerCase() || "changed"}`;
-      badge.textContent = git.status === "??" ? "?" : git.status.trim();
-      badge.title = t("Git status: {status}").replace("{status}", git.status);
+      setOpaqueText(badge, git.status === "??" ? "?" : git.status.trim());
+      localizeAttribute(badge, "title", "files.gitStatusStatus", { status: git.status }, t);
       button.append(badge);
     }
     row.append(button);
@@ -341,14 +357,14 @@ export function createFilesPanel({
           const more = document.createElement("div");
           more.className = "files-tree-more";
           more.style.setProperty("--files-depth", String(depth + 1));
-          more.textContent = t("More files are hidden. Search to find them.");
+          localizeText(more, "files.moreFilesAreHiddenSearchToFindThem", undefined, t);
           row.append(more);
         }
       } else {
         const loading = document.createElement("div");
         loading.className = "files-tree-loading";
         loading.style.setProperty("--files-depth", String(depth + 1));
-        loading.textContent = t("Loading…");
+        localizeText(loading, "files.loading", undefined, t);
         row.append(loading);
       }
     }
@@ -358,7 +374,7 @@ export function createFilesPanel({
   function renderTree(result) {
     tree.replaceChildren();
     if (!result.entries.length) {
-      emptyState("No files in this folder.");
+      emptyState("common.noFilesInThisFolder");
       return;
     }
     for (const entry of result.entries) tree.append(renderEntry(entry));
@@ -366,12 +382,15 @@ export function createFilesPanel({
 
   async function loadDirectory(path = "", { force = false } = {}) {
     if (!state.cwd) {
-      emptyState("Choose a project to browse files.", { label: "Choose project folder", onClick: onChooseProject });
+      emptyState("common.chooseAProjectToBrowseFiles", {
+        label: "common.chooseProjectFolder",
+        onClick: onChooseProject,
+      });
       return;
     }
     if (!force && state.loaded.has(path)) return state.loaded.get(path);
     const requestId = ++state.requestId;
-    setStatus("Loading files…");
+    setStatus("common.loadingFiles");
     try {
       const query = new URLSearchParams({ cwd: state.cwd, path });
       const response = await fetch(`/api/workspace/tree?${query}`, { cache: "no-store" });
@@ -388,7 +407,7 @@ export function createFilesPanel({
     } catch (error) {
       if (requestId !== state.requestId) return null;
       setStatus(error.message || "Could not load files");
-      if (path === "" && state.view === "files") emptyState("Could not load files.");
+      if (path === "" && state.view === "files") emptyState("errors.couldNotLoadFiles");
       return null;
     }
   }
@@ -456,7 +475,7 @@ export function createFilesPanel({
     }
     state.searching = true;
     const requestId = ++state.searchRequestId;
-    setStatus("Searching files…");
+    setStatus("common.searchingFiles");
     try {
       const params = new URLSearchParams({ cwd: state.cwd, query: value });
       const response = await fetch(`/api/files/search?${params}`, { cache: "no-store" });
@@ -506,7 +525,7 @@ export function createFilesPanel({
       searchInput.value = "";
       searchClear.hidden = true;
       searchInput.closest(".files-search").hidden = gitView;
-      title.textContent = t(gitView ? "Git changes" : "Files");
+      localizeText(title, gitView ? "common.gitChanges" : "common.files", undefined, t);
       if (gitView) renderGitTree();
       else renderTree(state.loaded.get("") || { entries: [] });
     }),
@@ -538,11 +557,14 @@ export function createFilesPanel({
       button.classList.toggle("active", active);
       button.setAttribute("aria-selected", String(active));
     });
-    title.textContent = t("Files");
-    pathLabel.textContent = shortPath(cwd);
+    localizeText(title, "common.files", undefined, t);
+    setOpaqueText(pathLabel, shortPath(cwd));
     setStatus("");
     if (!cwd) {
-      emptyState("Choose a project to browse files.", { label: "Choose project folder", onClick: onChooseProject });
+      emptyState("common.chooseAProjectToBrowseFiles", {
+        label: "common.chooseProjectFolder",
+        onClick: onChooseProject,
+      });
       return;
     }
     loadGitStatus().then(() => loadDirectory(""));

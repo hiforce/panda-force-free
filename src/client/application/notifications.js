@@ -1,3 +1,5 @@
+import { setMessageHtml, setOpaqueText } from "../i18n.js";
+
 import { renderAssistantMarkdown } from "../rendering.js";
 
 // Interprets native lifecycle events and routes them to their owning features.
@@ -190,9 +192,12 @@ export function assembleNotifications({
       }
       const body = el.querySelector(".message-text");
       body.dataset.raw = (body.dataset.raw || "") + p.delta;
-      body.innerHTML = renderAssistantMarkdown(body.dataset.raw, {
-        cwd: identityPort.imageCwd(),
-      });
+      setMessageHtml(
+        body,
+        renderAssistantMarkdown(body.dataset.raw, {
+          cwd: identityPort.imageCwd(),
+        }),
+      );
       viewportPort.scrollBottom();
     } else if (method === "item/reasoning/summaryPartAdded") upsertReasoningDelta(p, null);
     else if (method === "item/reasoning/summaryTextDelta") upsertReasoningDelta(p, "summary");
@@ -204,7 +209,7 @@ export function assembleNotifications({
       if (item) item.aggregatedOutput = (item.aggregatedOutput || "") + (p.delta || "");
       if (row) {
         const target = row.nextElementSibling.querySelector(".command-shell-output pre") || row.nextElementSibling;
-        target.textContent = (target.classList.contains("empty") ? "" : target.textContent || "") + (p.delta || "");
+        setOpaqueText(target, (target.classList.contains("empty") ? "" : target.textContent || "") + (p.delta || ""));
         target.classList.remove("empty");
       }
     } else if (method === "item/commandExecution/terminalInteraction") applyTerminalInteraction(p);

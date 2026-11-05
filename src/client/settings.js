@@ -1,3 +1,5 @@
+import { localizeText, setOpaqueText } from "./i18n.js";
+
 import { applyThemePreference } from "./theme.js";
 /**
  * Settings dialog: page registry, /settings routing, navigation filtering and
@@ -19,50 +21,50 @@ export function createSettingsPanel({
 
   const settingsPageAliases = { general: "general-settings", account: "profile", keyboard: "keyboard-shortcuts" };
   const settingsPages = {
-    "general-settings": { title: "General" },
+    "general-settings": { title: "common.general" },
     appearance: {
-      title: "Appearance",
+      title: "common.appearance",
       rows: [
-        ["Theme", "System"],
-        ["Language", "System default"],
-        ["Interface scale", "Default"],
+        ["common.theme", "common.system"],
+        ["common.language", "common.systemDefault"],
+        ["common.interfaceScale", "common.default"],
       ],
     },
-    agent: { title: "Configuration" },
-    profile: { title: "Profile" },
-    usage: { title: "Usage" },
-    storage: { title: "Storage and logs" },
-    "keyboard-shortcuts": { title: "Keyboard shortcuts" },
+    agent: { title: "common.configuration" },
+    profile: { title: "common.profile" },
+    usage: { title: "common.usage" },
+    storage: { title: "common.storageAndLogs" },
+    "keyboard-shortcuts": { title: "common.keyboardShortcuts" },
     "plugins-settings": {
-      title: "Plugins",
+      title: "common.plugins",
       rows: [
-        ["Installed plugins", "None"],
-        ["Plugin sources", "Not configured"],
+        ["common.installedPlugins", "common.none"],
+        ["common.pluginSources", "common.notConfigured"],
       ],
     },
-    "skills-settings": { title: "Skills", rows: [["Installed skills", "Not configured"]] },
+    "skills-settings": { title: "common.skills", rows: [["common.installedSkills", "common.notConfigured"]] },
     "browser-use": {
-      title: "Browser",
+      title: "common.browser",
       rows: [
-        ["Browser access", "Not configured"],
-        ["Network access", "Inherited from permissions"],
+        ["common.browserAccess", "common.notConfigured"],
+        ["common.networkAccess", "common.inheritedFromPermissions"],
       ],
     },
-    "computer-use": { title: "Computer use", rows: [["Computer use", "Not configured"]] },
-    connections: { title: "Connections", rows: [["Connected services", "None"]] },
+    "computer-use": { title: "common.computerUse2", rows: [["common.computerUse2", "common.notConfigured"]] },
+    connections: { title: "common.connections", rows: [["common.connectedServices", "common.none"]] },
     "cloud-settings": {
-      title: "Cloud preferences",
+      title: "common.cloudPreferences",
       rows: [
-        ["Diff view", "Unified"],
-        ["Branch format", "Default"],
+        ["common.diffView", "common.unified"],
+        ["common.branchFormat", "common.default"],
       ],
     },
-    "cloud-environments": { title: "Cloud environments", rows: [["Environments", "None"]] },
-    "code-review": { title: "Code review", rows: [["Review instructions", "Not configured"]] },
-    "git-settings": { title: "Git", rows: [["Git integration", "System default"]] },
-    "hooks-settings": { title: "Hooks", rows: [["Configured hooks", "None"]] },
-    worktrees: { title: "Worktrees", rows: [["Worktree behavior", "Default"]] },
-    "data-controls": { title: "Archived chats", rows: [["Archived chats", "None"]] },
+    "cloud-environments": { title: "common.cloudEnvironments", rows: [["common.environments", "common.none"]] },
+    "code-review": { title: "common.codeReview", rows: [["common.reviewInstructions", "common.notConfigured"]] },
+    "git-settings": { title: "common.git", rows: [["common.gitIntegration", "common.systemDefault"]] },
+    "hooks-settings": { title: "common.hooks", rows: [["common.configuredHooks", "common.none"]] },
+    worktrees: { title: "common.worktrees", rows: [["common.worktreeBehavior", "common.default"]] },
+    "data-controls": { title: "common.archivedChats", rows: [["common.archivedChats", "common.none"]] },
   };
   function normalizeSettingsPage(page = "general-settings") {
     const candidate = settingsPageAliases[page] || page;
@@ -81,9 +83,9 @@ export function createSettingsPanel({
       title = $("#settingsPlaceholderTitle"),
       description = $("#settingsPlaceholderDescription"),
       rows = $("#settingsPlaceholderRows");
-    title.textContent = t(definition.title);
+    localizeText(title, definition.title, undefined, t);
     description.hidden = true;
-    description.textContent = "";
+    setOpaqueText(description, "");
     rows.replaceChildren();
     for (const [label, value] of settingsPlaceholderRows(page)) {
       const row = document.createElement("div");
@@ -91,9 +93,9 @@ export function createSettingsPanel({
       const copy = document.createElement("span"),
         strong = document.createElement("strong"),
         status = document.createElement("span");
-      strong.textContent = t(label);
+      localizeText(strong, label, undefined, t);
       copy.append(strong);
-      status.textContent = t(value);
+      localizeText(status, value, undefined, t);
       row.append(copy, status);
       rows.append(row);
     }
@@ -110,12 +112,14 @@ export function createSettingsPanel({
     if (contentPage === "placeholder") renderSettingsPlaceholder(selected);
     const currentButton = document.querySelector(`[data-settings-page="${selected}"]`);
     if (currentButton?.closest("details")) currentButton.closest("details").open = true;
-    $("#settingsProductIdentity").textContent =
+    setOpaqueText(
+      $("#settingsProductIdentity"),
       globalThis.__pandaForceIdentity?.username ||
-      globalThis.__pandaForceIdentity?.account ||
-      t("Authenticated PandaForce account");
+        globalThis.__pandaForceIdentity?.account ||
+        t("settings.authenticatedPandaforceAccount"),
+    );
     applyThemePreference();
-    $("#settingsPageTitle").textContent = t(settingsPages[selected].title);
+    localizeText($("#settingsPageTitle"), settingsPages[selected].title, undefined, t);
     $("#settingsContent")?.scrollTo({ top: 0 });
     if ($("#settingsDialog").open && matchMedia("(max-width:480px)").matches)
       $("#settingsDialog").dataset.mobilePage = "true";
@@ -133,9 +137,9 @@ export function createSettingsPanel({
         const available = button.dataset.settingsAvailable !== "false",
           keywords =
             {
-              appearance: ["Theme", "Language", "Light", "Dark"],
-              profile: ["PandaForce account", "Account and security"],
-              storage: ["Logs", "Storage", "Log retention"],
+              appearance: ["common.theme", "common.language", "common.light", "common.dark"],
+              profile: ["common.pandaforceAccount", "common.accountAndSecurity"],
+              storage: ["Logs", "Storage", "common.logRetention"],
             }[button.dataset.settingsPage] || [],
           matches =
             !normalized ||
@@ -224,10 +228,11 @@ export function createSettingsPanel({
     }
     toggleAccountMenu(false);
     syncPermissionSettings();
-    $("#settingsPermissionValue").textContent = t(permissionLabel());
-    $("#settingsProjectValue").textContent = state.projectless
-      ? t("No project")
-      : shortPath(state.active?.cwd || $("#projectPath").textContent);
+    localizeText($("#settingsPermissionValue"), permissionLabel(), undefined, t);
+    setOpaqueText(
+      $("#settingsProjectValue"),
+      state.projectless ? t("settings.noProject") : shortPath(state.active?.cwd || $("#projectPath").textContent),
+    );
     $("#settingsSearch").value = "";
     filterSettingsNavigation();
     setSettingsPage(page, { updateRoute });

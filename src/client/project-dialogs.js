@@ -1,3 +1,5 @@
+import { localizeText, messageAttributes, messageHtml, setMessageHtml } from "./i18n.js";
+
 const escape = (value) =>
   String(value ?? "").replace(
     /[&<>"']/g,
@@ -14,7 +16,10 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
   function open(title, body) {
     generation++;
     returnFocus = document.activeElement;
-    dialog.innerHTML = `<header><h2>${escape(t(title))}</h2><button type="button" class="wb-button" data-project-close>${escape(t("Close"))}</button></header>${body}<p class="project-error" role="alert" hidden></p>`;
+    setMessageHtml(
+      dialog,
+      `<header><h2>${messageHtml(title, undefined, t)}</h2><button type="button" class="wb-button" data-project-close>${messageHtml("common.close", undefined, t)}</button></header>${body}<p class="project-error" role="alert" hidden></p>`,
+    );
     dialog.querySelector("[data-project-close]").onclick = () => dialog.close();
     if (!dialog.open) dialog.showModal();
   }
@@ -22,7 +27,7 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
     const el = dialog.querySelector(".project-error");
     if (el) {
       el.hidden = false;
-      el.textContent = t(reason.message || String(reason));
+      localizeText(el, reason.messageId || reason.message || String(reason), reason.messageArgs, t);
     }
   }
   dialog.addEventListener("close", () => {
@@ -33,12 +38,12 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
     if (!catalog.ready) await catalog.load();
     const revision = catalog.revision;
     open(
-      project ? "Edit project" : "Create project",
+      project ? "common.editProject" : "common.createProject",
       `<form id="projectForm" class="project-form">
-      <label for="projectNameInput">${escape(t("Project name"))}</label><input id="projectNameInput" name="name" required maxlength="100" autocomplete="off" value="${escape(project?.name || "")}">
-      <label for="projectCodeInput">${escape(t("Project code"))}</label><input id="projectCodeInput" name="code" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" value="${escape(project?.code || "")}"><p class="wb-help">${escape(t("Unique code, 2–64 characters: letters, numbers, hyphens or underscores."))}</p>
-      <label for="projectDescriptionInput">${escape(t("Description (optional)"))}</label><textarea id="projectDescriptionInput" name="description" maxlength="2000" rows="4">${escape(project?.description || "")}</textarea>
-      <footer><button type="submit" class="wb-button primary">${escape(t(project ? "Save project" : "Create project"))}</button></footer></form>`,
+      <label for="projectNameInput">${messageHtml("projects.projectName", undefined, t)}</label><input id="projectNameInput" name="name" required maxlength="100" autocomplete="off" value="${escape(project?.name || "")}">
+      <label for="projectCodeInput">${messageHtml("projects.projectCode", undefined, t)}</label><input id="projectCodeInput" name="code" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" value="${escape(project?.code || "")}"><p class="wb-help">${messageHtml("projects.uniqueCode264CharactersLettersNumbersHyphensOrUnderscores", undefined, t)}</p>
+      <label for="projectDescriptionInput">${messageHtml("projects.descriptionOptional", undefined, t)}</label><textarea id="projectDescriptionInput" name="description" maxlength="2000" rows="4">${escape(project?.description || "")}</textarea>
+      <footer><button type="submit" class="wb-button primary">${messageHtml(project ? "common.saveProject" : "common.createProject", undefined, t)}</button></footer></form>`,
     );
     dialog.querySelector("input").focus();
     dialog.querySelector("form").onsubmit = async (event) => {
@@ -56,13 +61,13 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
         if (
           project &&
           reason.status === 409 &&
-          reason.message.includes("another window") &&
+          reason.messageId === "projects.errorProjectsChangedInAnotherWindowReviewTheLatestInformationAndTryAgain" &&
           !dialog.querySelector(".project-reload")
         ) {
           const reload = document.createElement("button");
           reload.type = "button";
           reload.className = "wb-button project-reload";
-          reload.textContent = t("Reload latest project details");
+          localizeText(reload, "projects.reloadLatestProjectDetails", undefined, t);
           reload.onclick = () => void edit(catalog.get(project.id));
           dialog.append(reload);
         }
@@ -85,17 +90,17 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
     open(
       fixedProject ? "Link existing sessions" : "Change project",
       `<form id="projectAssociationForm" class="project-form">
-      <label for="associationProject">${escape(t("Project"))}</label><select id="associationProject" ${fixedProject ? "disabled" : ""}><option value="">${escape(t("Unassigned"))}</option>${catalog
+      <label for="associationProject">${messageHtml("common.project", undefined, t)}</label><select id="associationProject" ${fixedProject ? "disabled" : ""}><option value="" data-pf-message="common.unassigned">${escape(t("common.unassigned"))}</option>${catalog
         .projects()
         .map(
           (p) =>
             `<option value="${escape(p.id)}" ${p.id === projectId ? "selected" : ""}>${escape(p.name)} · ${escape(p.code)}</option>`,
         )
         .join("")}</select>
-      <p class="wb-help">${escape(t("Linking changes only the project association. Session contents and working folders are kept."))}</p>
-      ${fixedProject ? `<label for="associationSearch">${escape(t("Search sessions"))}</label><input id="associationSearch" type="search" placeholder="${escape(t("Search by session name or working folder…"))}">` : ""}
-      <div id="associationSessions" class="project-session-picker"></div><button type="button" id="associationMore" class="wb-button" hidden>${escape(t("Load older sessions"))}</button>
-      <footer><span id="associationCount"></span><button type="submit" class="wb-button primary">${escape(t(fixedProject ? "Link selected sessions" : "Save association"))}</button></footer></form>`,
+      <p class="wb-help">${messageHtml("projects.linkingChangesOnlyTheProjectAssociationSessionContentsAndWorking", undefined, t)}</p>
+      ${fixedProject ? `<label for="associationSearch">${messageHtml("common.searchSessions", undefined, t)}</label><input id="associationSearch" type="search" ${messageAttributes("placeholder", "projects.searchBySessionNameOrWorkingFolder", undefined, t)}>` : ""}
+      <div id="associationSessions" class="project-session-picker"></div><button type="button" id="associationMore" class="wb-button" hidden>${messageHtml("projects.loadOlderSessions", undefined, t)}</button>
+      <footer><span id="associationCount"></span><button type="submit" class="wb-button primary">${messageHtml(fixedProject ? "common.linkSelectedSessions" : "common.saveAssociation", undefined, t)}</button></footer></form>`,
     );
     const opened = generation,
       form = dialog.querySelector("form"),
@@ -103,19 +108,27 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
       more = dialog.querySelector("#associationMore"),
       submit = form.querySelector('[type="submit"]');
     function render() {
-      list.innerHTML = sessions.length
-        ? sessions
-            .map((s) => {
-              const current = catalog.projectForSession(s.id),
-                already = fixedProject && current?.id === projectId;
-              return `<label class="project-session-option"><input type="checkbox" value="${escape(s.id)}" ${selected.has(s.id) ? "checked" : ""} ${already ? "disabled" : ""}><span data-i18n-ignore><strong>${escape(s.name || s.id)}</strong><small>${escape(s.cwd || t("No working folder"))}</small><small>${current ? escape(t("Currently in {project}", { project: current.name })) : escape(t("Unassigned"))}${already ? " · " + escape(t("Already linked")) : ""}</small></span></label>`;
-            })
-            .join("")
-        : `<p class="wb-help">${escape(t(busy ? "Loading sessions…" : "No matching sessions"))}</p>`;
+      setMessageHtml(
+        list,
+        sessions.length
+          ? sessions
+              .map((s) => {
+                const current = catalog.projectForSession(s.id),
+                  already = fixedProject && current?.id === projectId;
+                return `<label class="project-session-option"><input type="checkbox" value="${escape(s.id)}" ${selected.has(s.id) ? "checked" : ""} ${already ? "disabled" : ""}><span data-i18n-ignore><strong>${escape(s.name || s.id)}</strong><small>${escape(s.cwd || t("common.noWorkingFolder"))}</small><small>${current ? escape(t("projects.currentlyInProject", { project: current.name })) : escape(t("common.unassigned"))}${already ? " · " + escape(t("projects.alreadyLinked")) : ""}</small></span></label>`;
+              })
+              .join("")
+          : `<p class="wb-help">${messageHtml(busy ? "workbench.loadingSessions" : "common.noMatchingSessions", undefined, t)}</p>`,
+      );
       more.hidden = !cursor;
       more.disabled = busy;
       submit.disabled = busy || selected.size === 0 || selected.size > 100;
-      dialog.querySelector("#associationCount").textContent = t("{count} sessions selected", { count: selected.size });
+      localizeText(
+        dialog.querySelector("#associationCount"),
+        "projects.countSessionsSelected",
+        { count: selected.size },
+        t,
+      );
     }
     async function load(append = false) {
       const version = ++requestVersion;

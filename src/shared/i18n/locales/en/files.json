@@ -1,0 +1,23 @@
+{
+  "find": "Find",
+  "findInFile": "Find in file",
+  "wrap": "Wrap",
+  "unwrap": "Unwrap",
+  "enableWordWrap": "Enable word wrap",
+  "disableWordWrap": "Disable word wrap",
+  "copyFile": "Copy file",
+  "readOnly": "Read only",
+  "syntaxHighlightingWasDisabledForThisLargeFileToKeep": "Syntax highlighting was disabled for this large file to keep the browser responsive.",
+  "copyFailed": "Copy failed",
+  "download": "Download",
+  "closeFilePreview": "Close file preview",
+  "thisFileIsTooLargeToPreview": "This file is too large to preview.",
+  "onlyTheFirst20000LinesAreShown": "Only the first 20,000 lines are shown.",
+  "copy": "Copy",
+  "backToFiles": "Back to files",
+  "closeAll": "Close all",
+  "gitStatusStatus": "Git status: {status}",
+  "moreFilesAreHiddenSearchToFindThem": "More files are hidden. Search to find them.",
+  "tooLarge": "Too large",
+  "loading": "Loading…"
+}

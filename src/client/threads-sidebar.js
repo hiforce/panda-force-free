@@ -1,8 +1,19 @@
+import {
+  getBrowserI18n,
+  localizeAttribute,
+  localizeText,
+  messageHtml,
+  setMessageHtml,
+  setOpaqueAttribute,
+  setOpaqueText,
+} from "./i18n.js";
+
 import { createSessionState } from "./application/session-state.js";
 import { normalizeProjectPath } from "../shared/project-visibility.js";
 import { threadLastActivityAt } from "./ui-core.js";
 import { codexIcon } from "./codex-icons.js";
 import { storage, STORAGE_KEYS } from "./storage.js";
+import { confirmAction } from "./confirmation-dialog.js";
 
 /**
  * Session sidebar: project grouping with pin/expand/hide state, the project
@@ -69,7 +80,7 @@ export function createThreadSidebar({
     saveSidebarPinnedThreads();
     renderThreads();
   }
-  const sidebarProjectCollator = new Intl.Collator("zh-CN", { sensitivity: "base", numeric: true });
+  const sidebarProjectCollator = { compare: (left, right) => getBrowserI18n().format.compare(left, right) };
   const sidebarProjectExpansion = (() => {
     try {
       return JSON.parse(storage.get(STORAGE_KEYS.sidebarProjectExpansion) || "{}");
@@ -98,7 +109,7 @@ export function createThreadSidebar({
   }
   function sidebarProjectName(key) {
     if (key === "__pinned__") return "Pinned";
-    if (key === "__tasks__") return projectCatalog ? t("Unassigned sessions") : "Tasks";
+    if (key === "__tasks__") return projectCatalog ? t("sessions.unassignedSessions") : "Tasks";
     if (projectCatalog) return projectCatalog.get(key.slice(8))?.name || key;
     if (key === state.config.home) return "Home";
     return key.split("/").filter(Boolean).at(-1) || key;
@@ -151,12 +162,13 @@ export function createThreadSidebar({
         const snapshot = readVisibility
           ? await readVisibility()
           : await fetch("/api/projects/visibility", { cache: "no-store" }).then((response) => {
-              if (!response.ok) throw new Error(t("Could not load projects"));
+              if (!response.ok) throw new Error(t("errors.couldNotLoadProjects"));
               return response.json();
             });
         applyProjectVisibility(snapshot);
       } catch (error) {
-        if (sidebarProjectVisibility.revision < 0) $("#threadList").textContent = t("Could not load projects");
+        if (sidebarProjectVisibility.revision < 0)
+          localizeText($("#threadList"), "errors.couldNotLoadProjects", undefined, t);
         throw error;
       }
     })().finally(() => {
@@ -170,7 +182,7 @@ export function createThreadSidebar({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ project, hidden, expectedHiddenAt }),
     });
-    if (!response.ok) throw new Error(t(hidden ? "Could not hide project" : "Could not restore project"));
+    if (!response.ok) throw new Error(t(hidden ? "errors.couldNotHideProject" : "errors.couldNotRestoreProject"));
     const snapshot = await response.json();
     applyProjectVisibility(snapshot);
     return snapshot;
@@ -182,13 +194,19 @@ export function createThreadSidebar({
         hiddenAt = snapshot.hiddenProjects[project]?.hiddenAt;
       if (sidebarProjectVisibility.hiddenProjects[project]?.hiddenAt !== hiddenAt || !hiddenAt) return;
       $("#newTask").focus();
-      toast(t("Project hidden. Creating a new session will show it again."), 8000, {
+      toast(t("sessions.projectHiddenCreatingANewSessionWillShowItAgain"), 8000, {
         project,
-        label: t("Undo"),
+        label: t("sessions.undo"),
         run: async () => {
           try {
             await setProjectHidden(project, false, hiddenAt);
-            toast(t(sidebarProjectVisibility.hiddenProjects[project] ? "Project is still hidden" : "Project restored"));
+            toast(
+              t(
+                sidebarProjectVisibility.hiddenProjects[project]
+                  ? "common.projectIsStillHidden"
+                  : "common.projectRestored",
+              ),
+            );
           } catch (error) {
             addPersistentError(error.message);
           }
@@ -237,18 +255,18 @@ export function createThreadSidebar({
     const menu = document.createElement("div");
     menu.className = "sidebar-project-menu";
     menu.setAttribute("role", "menu");
-    menu.setAttribute("aria-label", t("Project options"));
+    localizeAttribute(menu, "aria-label", "sessions.projectOptions", undefined, t);
     const create = document.createElement("button");
     create.type = "button";
     create.setAttribute("role", "menuitem");
-    create.textContent = t("New session");
+    localizeText(create, "common.newSession", undefined, t);
     create.onclick = () => startNewSessionInProject(project);
     menu.append(create);
     const pinned = sidebarPinnedProjects.has(project),
       pin = document.createElement("button");
     pin.type = "button";
     pin.setAttribute("role", "menuitem");
-    pin.textContent = t(pinned ? "Unpin project" : "Pin project");
+    localizeText(pin, pinned ? "common.unpinProject" : "common.pinProject", undefined, t);
     pin.onclick = () => {
       if (pinned) sidebarPinnedProjects.delete(project);
       else sidebarPinnedProjects.add(project);
@@ -260,7 +278,7 @@ export function createThreadSidebar({
     const hide = document.createElement("button");
     hide.type = "button";
     hide.setAttribute("role", "menuitem");
-    hide.textContent = t("Hide project");
+    localizeText(hide, "sessions.hideProject", undefined, t);
     hide.onclick = () => hideSidebarProject(project);
     if (!projectCatalog) menu.append(hide);
     sidebarProjectMenu = menu;
@@ -298,11 +316,11 @@ export function createThreadSidebar({
     const menu = document.createElement("div");
     menu.className = "sidebar-project-menu";
     menu.setAttribute("role", "menu");
-    menu.setAttribute("aria-label", t("Session options"));
+    localizeAttribute(menu, "aria-label", "sessions.sessionOptions", undefined, t);
     const fork = document.createElement("button");
     fork.type = "button";
     fork.setAttribute("role", "menuitem");
-    fork.textContent = t("Fork session");
+    localizeText(fork, "sessions.forkSession", undefined, t);
     fork.onclick = () => {
       closeSidebarProjectMenu();
       void submitNativeSlashCommand(thread, "fork").catch((error) =>
@@ -314,7 +332,7 @@ export function createThreadSidebar({
       pin = document.createElement("button");
     pin.type = "button";
     pin.setAttribute("role", "menuitem");
-    pin.textContent = t(pinned ? "Unpin session" : "Pin session");
+    localizeText(pin, pinned ? "common.unpinSession" : "common.pinSession", undefined, t);
     pin.onclick = () => {
       toggleSidebarThreadPinned(thread.id);
       closeSidebarProjectMenu();
@@ -324,7 +342,7 @@ export function createThreadSidebar({
       const project = document.createElement("button");
       project.type = "button";
       project.setAttribute("role", "menuitem");
-      project.textContent = t("Change project");
+      localizeText(project, "common.changeProject", undefined, t);
       project.onclick = () => {
         closeSidebarProjectMenu();
         void onSessionProject(thread.id);
@@ -334,10 +352,10 @@ export function createThreadSidebar({
     const remove = document.createElement("button");
     remove.type = "button";
     remove.setAttribute("role", "menuitem");
-    remove.textContent = t("Delete thread");
+    localizeText(remove, "sessions.deleteSession", undefined, t);
     remove.onclick = () => {
       closeSidebarProjectMenu();
-      deleteThread(thread);
+      deleteThread(thread, trigger);
     };
     menu.append(remove);
     sidebarProjectMenu = menu;
@@ -393,10 +411,25 @@ export function createThreadSidebar({
     },
     true,
   );
-  async function deleteThread(thread) {
+  async function deleteThread(thread, returnFocus) {
     if (!thread?.id) return;
     const title = titleOf(thread);
-    if (!confirm(t("Delete “{title}”? This permanently deletes the thread and its descendants.", { title }))) return;
+    if (
+      !(await confirmAction({
+        title: "sessions.deleteSession2",
+        message: "sessions.titleAndItsDescendantSessionsWillBePermanentlyDeletedThis",
+        values: { title },
+        confirmText: "sessions.deleteSession",
+        cancelText: "common.cancel",
+        returnFocus: () =>
+          returnFocus?.isConnected
+            ? returnFocus
+            : [...$("#threadList").querySelectorAll(".thread-item")]
+                .find((row) => row.dataset.id === thread.id)
+                ?.querySelector(".thread-options"),
+      }))
+    )
+      return;
     try {
       await rpc("thread/delete", { threadId: thread.id });
       cleanupDeletedThread(thread.id);
@@ -408,23 +441,26 @@ export function createThreadSidebar({
       sessions.removeSummary(thread.id);
       await refreshThreadList();
       renderThreads();
-      toast(t("Thread deleted"));
+      toast(t("sessions.threadDeleted"));
     } catch (error) {
       console.error("Could not delete thread", error);
-      addPersistentError(error?.message || t("Could not delete thread"));
+      addPersistentError(error?.message || t("errors.couldNotDeleteThread"));
     }
   }
   function renderThreads() {
     onRender();
     closeSidebarProjectMenu();
     if (projectCatalog ? !projectCatalog.ready : sidebarProjectVisibility.revision < 0) {
-      $("#threadList").innerHTML = `<div class="list-state">${escapeHtml(t("Loading projects…"))}</div>`;
+      setMessageHtml(
+        $("#threadList"),
+        `<div class="list-state">${messageHtml("common.loadingProjects2", undefined, t)}</div>`,
+      );
       return;
     }
     const list = $("#threadList"),
       q = $("#threadSearch").value.trim().toLowerCase(),
       groups = new Map();
-    list.innerHTML = "";
+    setMessageHtml(list, "");
     for (const thread of projectCatalog ? projectCatalog.sessions() : state.threads) {
       const key = sidebarProjectKey(thread);
       if (
@@ -488,24 +524,37 @@ export function createThreadSidebar({
       heading.type = "button";
       heading.className = "sidebar-project-row";
       heading.setAttribute("aria-expanded", String(expanded));
-      heading.title = pinnedGroup
-        ? t("Pinned")
-        : projectCatalog
-          ? sidebarProjectName(group.key)
-          : group.key === "__tasks__"
-            ? t("Tasks")
-            : shortPath(group.key);
-      heading.innerHTML = `${codexIcon(pinnedGroup ? "arrowUp" : group.key === "__tasks__" ? "messageSquare" : "folderOpen")}<span ${projectCatalog && group.key.startsWith("project:") ? "data-i18n-ignore" : ""}>${escapeHtml(sidebarProjectName(group.key))}</span>${codexIcon("chevronRight", "sidebar-project-chevron")}`;
+      setOpaqueAttribute(
+        heading,
+        "title",
+        pinnedGroup
+          ? t("sessions.pinned")
+          : projectCatalog
+            ? sidebarProjectName(group.key)
+            : group.key === "__tasks__"
+              ? t("common.tasks")
+              : shortPath(group.key),
+      );
+      setMessageHtml(
+        heading,
+        `${codexIcon(pinnedGroup ? "arrowUp" : group.key === "__tasks__" ? "messageSquare" : "folderOpen")}<span ${projectCatalog && group.key.startsWith("project:") ? "data-i18n-ignore" : ""}>${escapeHtml(sidebarProjectName(group.key))}</span>${codexIcon("chevronRight", "sidebar-project-chevron")}`,
+      );
       header.append(heading);
       if (group.key !== "__tasks__" && !pinnedGroup) {
         const options = document.createElement("button");
         options.type = "button";
         options.className = "sidebar-project-options";
-        options.title = t("Project options");
-        options.setAttribute("aria-label", t("Project options for “{name}”", { name: sidebarProjectName(group.key) }));
+        localizeAttribute(options, "title", "sessions.projectOptions", undefined, t);
+        localizeAttribute(
+          options,
+          "aria-label",
+          "sessions.projectOptionsForName",
+          { name: sidebarProjectName(group.key) },
+          t,
+        );
         options.setAttribute("aria-haspopup", "menu");
         options.setAttribute("aria-expanded", "false");
-        options.innerHTML = codexIcon("ellipsis");
+        setMessageHtml(options, codexIcon("ellipsis"));
         options.onclick = () => openSidebarProjectMenu(group.key, options);
         header.append(options);
       }
@@ -526,12 +575,12 @@ export function createThreadSidebar({
         const row = document.createElement("div");
         row.className = "thread-item" + (state.active?.id === thread.id ? " active" : "");
         row.dataset.id = thread.id;
-        row.title = [titleOf(thread), shortPath(thread.cwd)].filter(Boolean).join(" — ");
+        setOpaqueAttribute(row, "title", [titleOf(thread), shortPath(thread.cwd)].filter(Boolean).join(" — "));
         row.setAttribute("role", "button");
         row.tabIndex = 0;
         const name = document.createElement("span");
         name.className = "thread-name";
-        name.textContent = titleOf(thread);
+        setOpaqueText(name, titleOf(thread));
         const meta = document.createElement("span");
         meta.className = "thread-meta";
         const spinner = document.createElement("span");
@@ -546,11 +595,11 @@ export function createThreadSidebar({
         const options = document.createElement("button");
         options.type = "button";
         options.className = "thread-options";
-        options.title = t("Session options");
-        options.setAttribute("aria-label", t("Session options for “{title}”", { title: titleOf(thread) }));
+        localizeAttribute(options, "title", "sessions.sessionOptions", undefined, t);
+        localizeAttribute(options, "aria-label", "sessions.sessionOptionsForTitle", { title: titleOf(thread) }, t);
         options.setAttribute("aria-haspopup", "menu");
         options.setAttribute("aria-expanded", "false");
-        options.innerHTML = codexIcon("ellipsis");
+        setMessageHtml(options, codexIcon("ellipsis"));
         options.onclick = (event) => {
           event.stopPropagation();
           openSidebarThreadMenu(thread, options);
@@ -576,14 +625,14 @@ export function createThreadSidebar({
       if (pinnedGroup && !visibleThreads.length) {
         const empty = document.createElement("div");
         empty.className = "sidebar-pinned-empty";
-        empty.textContent = t("No pinned sessions");
+        localizeText(empty, "sessions.noPinnedSessions", undefined, t);
         threads.append(empty);
       }
       if (hasMore) {
         const more = document.createElement("button");
         more.type = "button";
         more.className = "sidebar-sessions-more";
-        more.textContent = t("Show more sessions");
+        localizeText(more, "sessions.showMoreSessions", undefined, t);
         more.onclick = () => {
           sidebarSessionLimits.set(group.key, limit + SIDEBAR_SESSION_PAGE_SIZE);
           sidebarProjectExpansion[group.key] = true;
@@ -598,7 +647,10 @@ export function createThreadSidebar({
       list.append(section);
     }
     if (!list.children.length)
-      list.innerHTML = `<div class="list-state">${escapeHtml(t(q ? "No matching tasks" : "No visible projects"))}</div>`;
+      setMessageHtml(
+        list,
+        `<div class="list-state">${messageHtml(q ? "common.noMatchingTasks" : "common.noVisibleProjects", undefined, t)}</div>`,
+      );
   }
 
   function getProjects() {

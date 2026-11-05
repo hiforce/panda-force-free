@@ -57,8 +57,8 @@ export function buildApprovalModel(request) {
     reason: params.reason || null,
     cwd: params.cwd || null,
     command: params.command || null,
-    primary: { label: "Allow once", decision: "accept" },
-    deny: { label: "Deny", decision: "decline" },
+    primary: { label: "Allow once", labelKey: "common.allowOnce", decision: "accept" },
+    deny: { label: "Deny", labelKey: "common.deny", decision: "decline" },
     cancel: null,
     leading: null,
     scoped: null,
@@ -66,7 +66,7 @@ export function buildApprovalModel(request) {
 
   if (method === "item/commandExecution/requestApproval") {
     let scoped = hasDecision(available, "acceptForSession")
-      ? { label: "Allow this conversation", decision: "acceptForSession" }
+      ? { label: "Allow this conversation", labelKey: "common.allowThisConversation", decision: "acceptForSession" }
       : null;
     if (
       params.proposedExecpolicyAmendment?.length &&
@@ -74,6 +74,7 @@ export function buildApprovalModel(request) {
     ) {
       scoped = {
         label: "Allow similar commands",
+        labelKey: "common.allowSimilarCommands",
         decision: { acceptWithExecpolicyAmendment: { execpolicy_amendment: params.proposedExecpolicyAmendment } },
       };
     }
@@ -84,16 +85,23 @@ export function buildApprovalModel(request) {
         params.proposedNetworkPolicyAmendments[0];
       const leading = {
         label: amendment?.host ? `Always allow ${amendment.host}` : "Always allow",
+        labelKey: amendment?.host ? "approvals.alwaysAllowHost" : "common.alwaysAllow",
+        labelValues: { host: amendment?.host || "" },
         decision: { applyNetworkPolicyAmendment: { network_policy_amendment: amendment } },
       };
       return {
         ...base,
         kind: "network",
         identity: "Internet access",
+        identityKey: "common.internetAccess",
         title: `Allow ChatGPT to connect to ${network?.host || amendment?.host || "the internet"}?`,
+        titleKey: "approvals.networkTitle",
+        titleValues: { host: network?.host || amendment?.host || "internet" },
+        subtitleKey: "approvals.networkSubtitle",
+        subtitleValues: { host: network?.host || amendment?.host || "internet" },
         subtitle: `${network?.host || amendment?.host} isn't on the current network allowlist`,
         scoped: hasDecision(available, "acceptForSession")
-          ? { label: "Allow this conversation", decision: "acceptForSession" }
+          ? { label: "Allow this conversation", labelKey: "common.allowThisConversation", decision: "acceptForSession" }
           : null,
         leading,
       };
@@ -102,9 +110,14 @@ export function buildApprovalModel(request) {
       ...base,
       kind: network ? "network" : "exec",
       identity: network ? "Internet access" : "Terminal",
+      identityKey: network ? "common.internetAccess" : "common.terminal",
       title: network
         ? `Allow ChatGPT to connect to ${network.host || "the internet"}?`
         : "Allow ChatGPT to run this command?",
+      titleKey: network ? "approvals.networkTitle" : "approvals.allowCommandTitle",
+      titleValues: { host: network?.host || "internet" },
+      subtitleKey: network?.host ? "approvals.networkSubtitle" : null,
+      subtitleValues: { host: network?.host },
       subtitle: network?.host ? `${network.host} isn't on the current network allowlist` : params.cwd || null,
       scoped,
     };
@@ -115,10 +128,13 @@ export function buildApprovalModel(request) {
       ...base,
       kind: "patch",
       identity: "Edit files",
+      identityKey: "common.editFiles",
       title: `Allow ChatGPT to edit the following ${params.fileCount === 1 ? "file" : "files"}?`,
+      titleKey: "approvals.editFilesTitle",
+      titleValues: { count: params.fileCount || 0 },
       subtitle: params.grantRoot || null,
       scoped: hasDecision(available, "acceptForSession")
-        ? { label: "Allow all edits", decision: "acceptForSession" }
+        ? { label: "Allow all edits", labelKey: "common.allowAllEdits", decision: "acceptForSession" }
         : null,
     };
   }
@@ -146,12 +162,18 @@ export function buildApprovalModel(request) {
       ...base,
       kind: "permission",
       identity: network && !fileAction ? "Internet access" : "Permissions",
+      identityKey: network && !fileAction ? "common.internetAccess" : "common.permissions",
       title: `Allow ChatGPT to ${action}?`,
+      titleKey: "approvals.permissionsTitle",
       subtitle: params.reason || null,
       reason: null,
-      primary: { label: "Allow once", decision: decision("turn") },
-      scoped: { label: "Allow this conversation", decision: decision("session") },
-      deny: { label: "Deny", decision: { permissions: {}, scope: "turn" } },
+      primary: { label: "Allow once", labelKey: "common.allowOnce", decision: decision("turn") },
+      scoped: {
+        label: "Allow this conversation",
+        labelKey: "common.allowThisConversation",
+        decision: decision("session"),
+      },
+      deny: { label: "Deny", labelKey: "common.deny", decision: { permissions: {}, scope: "turn" } },
       cancel: null,
       permissions,
     };
@@ -287,7 +309,9 @@ function explorationCommand(command = "") {
       category: "read",
       detail: target,
       activeLabel: "Reading",
+      activeLabelKey: "common.reading",
       completedLabel: "Read",
+      completedLabelKey: "common.read",
       animation: "local-context",
     };
   }
@@ -298,7 +322,9 @@ function explorationCommand(command = "") {
       category: "search",
       detail: query ? `for ${query}` : "files",
       activeLabel: "Searching",
+      activeLabelKey: "common.searching",
       completedLabel: "Searched",
+      completedLabelKey: "common.searched",
       animation: "searching",
     };
   }
@@ -308,7 +334,9 @@ function explorationCommand(command = "") {
       category: "list",
       detail: target === "files" ? "files" : `files in ${target}`,
       activeLabel: "Listing",
+      activeLabelKey: "common.listing",
       completedLabel: "Listed",
+      completedLabelKey: "common.listed",
       animation: "local-context",
     };
   }
@@ -324,6 +352,13 @@ export function summarizeActivity(item) {
     const count = paths.length;
     return {
       label: active ? "Viewing images" : failed ? "Image view failed" : count === 1 ? "Viewed image" : "Viewed images",
+      labelKey: active
+        ? "common.viewingImages"
+        : failed
+          ? "common.imageViewFailed"
+          : count === 1
+            ? "common.viewedImage"
+            : "common.viewedImages",
       detail: count === 1 ? paths[0] : count ? `${count} images` : "",
       category: "image",
       animation: "local-context",
@@ -342,6 +377,7 @@ export function summarizeActivity(item) {
     if (exploration && !failed)
       return {
         label: active ? exploration.activeLabel : exploration.completedLabel,
+        labelKey: active ? exploration.activeLabelKey : exploration.completedLabelKey,
         detail: exploration.detail,
         category: exploration.category,
         animation: exploration.animation,
@@ -350,6 +386,7 @@ export function summarizeActivity(item) {
       };
     return {
       label: active ? "Running command" : failed ? "Command failed" : "Ran command",
+      labelKey: active ? "common.runningCommand" : failed ? "common.commandFailed" : "common.ranCommand",
       detail: command || "",
       category: "command",
       animation: "run-command",
@@ -361,6 +398,13 @@ export function summarizeActivity(item) {
     const count = item.changes?.length || 0;
     return {
       label: active ? "Editing files" : failed ? "File edit failed" : count === 1 ? "Edited a file" : "Edited files",
+      labelKey: active
+        ? "common.editingFiles"
+        : failed
+          ? "common.fileEditFailed"
+          : count === 1
+            ? "common.editedAFile"
+            : "common.editedFiles",
       detail: (item.changes || [])
         .map((change) => change.path || change.filePath)
         .filter(Boolean)
@@ -380,9 +424,21 @@ export function summarizeActivity(item) {
       wait: ["Waiting for side tasks", "Waited for side tasks"],
       closeAgent: ["Closing side task", "Closed side task"],
     };
+    const labelKeys = {
+      spawnAgent: ["common.startingSideTask", "common.startedSideTask"],
+      sendInput: ["common.sendingInputToSideTask", "common.sentInputToSideTask"],
+      resumeAgent: ["common.resumingSideTask", "common.resumedSideTask"],
+      wait: ["common.waitingForSideTasks", "common.waitedForSideTasks"],
+      closeAgent: ["common.closingSideTask", "common.closedSideTask"],
+    };
+    const [activeLabelKey, completedLabelKey] = labelKeys[item.tool] || [
+      "common.updatingSideTask",
+      "common.updatedSideTask",
+    ];
     const [activeLabel, completedLabel] = labels[item.tool] || ["Updating side task", "Updated side task"];
     return {
       label: active ? activeLabel : failed ? "Side task failed" : completedLabel,
+      labelKey: active ? activeLabelKey : failed ? "common.sideTaskFailed" : completedLabelKey,
       detail: item.prompt || (count ? `${count} side task${count === 1 ? "" : "s"}` : ""),
       category: "side-task",
       animation: "local-context",
@@ -398,6 +454,12 @@ export function summarizeActivity(item) {
           : item.kind === "interacted"
             ? "Side task active"
             : "Side task started",
+      labelKey:
+        item.kind === "interrupted"
+          ? "common.sideTaskInterrupted"
+          : item.kind === "interacted"
+            ? "common.sideTaskActive"
+            : "common.sideTaskStarted",
       detail: item.agentPath || item.agentThreadId || "",
       category: "side-task",
       animation: "local-context",
@@ -407,6 +469,7 @@ export function summarizeActivity(item) {
   if (item.type === "webSearch")
     return {
       label: active ? "Searching the web" : failed ? "Search failed" : "Searched the web",
+      labelKey: active ? "common.searchingTheWeb" : failed ? "common.searchFailed" : "common.searchedTheWeb",
       detail: item.query || "",
       animation: "searching",
       active,
@@ -415,6 +478,7 @@ export function summarizeActivity(item) {
   if (item.type === "reasoning")
     return {
       label: active ? "Thinking" : "Thought",
+      labelKey: active ? "common.thinking" : "common.thought",
       detail: "",
       animation: "local-context",
       active,
@@ -422,6 +486,7 @@ export function summarizeActivity(item) {
     };
   return {
     label: active ? "Working" : failed ? "Tool failed" : "Completed",
+    labelKey: active ? "common.working" : failed ? "common.toolFailed" : "sessions.completed",
     detail: item.tool || item.type || "",
     animation: "local-context",
     active,
@@ -459,13 +524,23 @@ export function splitDiffHunk(hunk = { lines: [] }) {
 
 export function permissionRows(permissions = {}) {
   const rows = [];
-  if (permissions.network?.enabled) rows.push({ label: "Network", value: "Allow network access" });
+  if (permissions.network?.enabled)
+    rows.push({
+      label: "Network",
+      labelKey: "common.network",
+      value: "Allow network access",
+      valueKey: "common.allowNetworkAccess",
+    });
   const fs = permissions.fileSystem || {};
-  for (const path of fs.read || []) rows.push({ label: "Read", value: path });
-  for (const path of fs.write || []) rows.push({ label: "Write", value: path });
+  for (const path of fs.read || []) rows.push({ label: "Read", labelKey: "common.read", value: path });
+  for (const path of fs.write || []) rows.push({ label: "Write", labelKey: "common.write", value: path });
   for (const entry of fs.entries || []) {
     const path = entry.path?.path || entry.path?.pattern || entry.path?.value?.kind || "File system";
-    rows.push({ label: entry.access?.[0]?.toUpperCase() + entry.access?.slice(1) || "Access", value: path });
+    rows.push({
+      label: entry.access?.[0]?.toUpperCase() + entry.access?.slice(1) || "Access",
+      labelKey: { read: "common.read", write: "common.write" }[entry.access] || "common.access",
+      value: path,
+    });
   }
   return rows;
 }

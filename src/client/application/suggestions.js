@@ -1,3 +1,5 @@
+import { localizeText, messageHtml, localizeAttribute, setMessageHtml, setOpaqueText } from "../i18n.js";
+
 import { slashCommandCatalog } from "./command-catalog.js";
 import { applyComposerSuggestion, getComposerAutocomplete } from "../ui-core.js";
 import { codexIcon } from "../codex-icons.js";
@@ -40,15 +42,28 @@ export function assembleSuggestions({
   function renderComposerAutocomplete() {
     const menu = $("#composerAutocomplete"),
       items = autocompleteState.items;
-    menu.innerHTML = "";
+    setMessageHtml(menu, "");
     menu.dataset.type = autocompleteState.match?.type || "";
-    menu.setAttribute("aria-label", autocompleteState.match?.type === "slash" ? "Slash command menu" : "Mention menu");
+    localizeAttribute(
+      menu,
+      "aria-label",
+      autocompleteState.match?.type === "slash" ? "composer.slashMenu" : "composer.mentionMenu",
+      undefined,
+      t,
+    );
     if (!items.length) {
       const empty = document.createElement("div");
       empty.className = "autocomplete-empty";
-      empty.textContent =
-        autocompleteState.message ||
-        (autocompleteState.match?.type === "mention" ? "Type to search for files" : "No commands");
+      const message = autocompleteState.message;
+      if (message?.messageId) localizeText(empty, message.messageId, undefined, t);
+      else if (message) setOpaqueText(empty, message);
+      else
+        localizeText(
+          empty,
+          autocompleteState.match?.type === "mention" ? "composer.typeFileSearch" : "composer.noCommands",
+          undefined,
+          t,
+        );
       menu.append(empty);
     } else
       for (const [index, item] of items.entries()) {
@@ -58,7 +73,10 @@ export function assembleSuggestions({
         button.dataset.autocompleteId = item.id;
         button.role = "option";
         button.setAttribute("aria-selected", String(index === autocompleteState.selected));
-        button.innerHTML = `${codexIcon(item.icon || "file")}<span class="autocomplete-copy"><strong class="autocomplete-title">${escapeHtml(item.title)}</strong><small class="autocomplete-description">${escapeHtml(item.description)}</small></span>`;
+        setMessageHtml(
+          button,
+          `${codexIcon(item.icon || "file")}<span class="autocomplete-copy"><strong class="autocomplete-title">${autocompleteState.match?.type === "slash" || item.source === "action" ? messageHtml(item.title, undefined, t) : escapeHtml(item.title)}</strong><small class="autocomplete-description">${autocompleteState.match?.type === "slash" || item.source === "action" ? messageHtml(item.description, undefined, t) : item.descriptionKey ? messageHtml(item.descriptionKey, item.descriptionValues, t) : escapeHtml(item.description)}</small></span>`,
+        );
         button.onpointerdown = (event) => event.preventDefault();
         button.onclick = () => selectComposerAutocomplete(index);
         menu.append(button);
@@ -75,8 +93,9 @@ export function assembleSuggestions({
       requestId = ++autocompleteState.requestId;
     if (!query) {
       autocompleteState.items = [];
-      autocompleteState.message =
-        state.projectless && !state.active ? "Choose a project to mention files" : "Type to search for files";
+      autocompleteState.message = {
+        messageId: state.projectless && !state.active ? "composer.chooseProjectMention" : "composer.typeFileSearch",
+      };
       renderComposerAutocomplete();
       return;
     }
@@ -88,7 +107,9 @@ export function assembleSuggestions({
           source: "task",
           threadId: thread.id,
           title: titleOf(thread),
-          description: `Task · ${shortPath(thread.cwd)}`,
+          description: shortPath(thread.cwd),
+          descriptionKey: "composer.taskPath",
+          descriptionValues: { path: shortPath(thread.cwd) },
           icon: "messageSquare",
         })),
       cwd = currentComposerCwd();
@@ -97,8 +118,8 @@ export function assembleSuggestions({
         {
           id: "choose-project",
           source: "action",
-          title: "Choose project",
-          description: "Select a project to mention files",
+          title: "composer.chooseProject",
+          description: "composer.selectProjectMention",
           icon: "folderOpen",
         },
         ...tasks,
@@ -109,7 +130,7 @@ export function assembleSuggestions({
       return;
     }
     autocompleteState.items = [];
-    autocompleteState.message = "Searching files…";
+    autocompleteState.message = { messageId: "composer.searchingFiles" };
     renderComposerAutocomplete();
     try {
       const response = await fetch(
@@ -131,13 +152,14 @@ export function assembleSuggestions({
           source: item.kind,
           path: item.path,
           title: parts.at(-1),
-          description: parts.length > 1 ? parts.slice(0, -1).join("/") : item.kind === "folder" ? "Folder" : "File",
+          description: parts.length > 1 ? parts.slice(0, -1).join("/") : "",
+          descriptionKey: parts.length > 1 ? null : item.kind === "folder" ? "common.folder" : "common.file",
           icon: item.kind === "folder" ? "folderOpen" : "file",
         };
       });
       autocompleteState.items = [...files, ...tasks];
       autocompleteState.selected = 0;
-      autocompleteState.message = autocompleteState.items.length ? "" : "No files or tasks found";
+      autocompleteState.message = autocompleteState.items.length ? "" : { messageId: "composer.noFileResults" };
       renderComposerAutocomplete();
     } catch (error) {
       if (requestId !== autocompleteState.requestId) return;
@@ -161,7 +183,7 @@ export function assembleSuggestions({
       autocompleteState.items = slashCommandCatalog.filter(
         (item) =>
           (!item.requiresThread || state.active) &&
-          (item.id.includes(query) || item.title.toLowerCase().includes(query)),
+          (item.id.includes(query) || t(item.title).toLowerCase().includes(query)),
       );
       autocompleteState.message = "";
       renderComposerAutocomplete();
@@ -185,12 +207,22 @@ export function assembleSuggestions({
   }
   function renderContextTray() {
     const tray = $("#composerContextTray");
-    tray.innerHTML = "";
+    setMessageHtml(tray, "");
     for (const mention of state.composerMentions) {
       const chip = document.createElement("div");
       chip.className = "composer-context-chip";
       chip.dataset.contextId = mention.id;
-      chip.innerHTML = `${codexIcon(mention.icon || "file")}<span>${escapeHtml(mention.title)}</span><button type="button" aria-label="Remove ${escapeHtml(mention.title)}">${codexIcon("x")}</button>`;
+      setMessageHtml(
+        chip,
+        `${codexIcon(mention.icon || "file")}<span>${escapeHtml(mention.title)}</span><button type="button" aria-label="Remove ${escapeHtml(mention.title)}">${codexIcon("x")}</button>`,
+      );
+      localizeAttribute(
+        chip.querySelector("button"),
+        "aria-label",
+        "composer.removeSuggestion",
+        { title: mention.title },
+        t,
+      );
       chip.querySelector("button").onclick = () => {
         mutations.set(
           "composerMentions",
@@ -226,12 +258,12 @@ export function assembleSuggestions({
     } else {
       closeComposerAutocomplete();
       if (id === "init") {
-        noticesPort.toast("Init requires the native command bridge.");
+        noticesPort.toast(t("composer.initBridgeRequired"));
       } else if (id === "goal") {
         if (state.active) {
           $("#prompt").value = "/goal ";
           viewUpdates.request("composerLayout");
-        } else noticesPort.toast(t("Start a task first"));
+        } else noticesPort.toast(t("workbench.startATaskFirst"));
       } else if (["compact", "fork", "review", "side", "fast", "feedback"].includes(id)) {
         void commandsPort.submitNativeSlashCommand(state.active, id);
       } else if (id === "plan") {
@@ -253,7 +285,7 @@ export function assembleSuggestions({
       } else if (id === "mcp") {
         $("#prompt").value = "";
         viewUpdates.request("composerLayout");
-        noticesPort.toast("MCP status requires the native desktop status surface.");
+        noticesPort.toast(t("composer.mcpSurfaceRequired"));
       } else if (id === "status") {
         $("#prompt").value = "";
         viewUpdates.request("composerLayout");

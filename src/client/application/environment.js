@@ -1,3 +1,4 @@
+import { getBrowserI18n, setMessageHtml } from "../i18n.js";
 import { createConfigurationReadiness } from "./configuration-readiness.js";
 import { createProjectionUpdates } from "./projection-updates.js";
 import { createRenderBatch } from "./render-batch.js";
@@ -8,13 +9,12 @@ import { pandaInterfaceMark } from "../panda-brand.js";
 import { createSessionState } from "./session-state.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { getWorkspacePreparation } from "../workspace-preparation.js";
-import { createI18n } from "../i18n.js";
 
 // Creates domain stores, scoped capabilities, localization and initial shell assets.
 export function assembleEnvironment({}) {
   const $ = (s) => document.querySelector(s);
-  const i18n = globalThis.__pandaForceI18n || createI18n();
-  const t = (message, values) => i18n.t(message, values);
+  const i18n = getBrowserI18n();
+  const t = i18n.t;
   const workspacePreparation = getWorkspacePreparation();
   const initialState = {
     ws: null,
@@ -88,8 +88,8 @@ export function assembleEnvironment({}) {
   }
   // Seed the static shell before route rendering replaces its empty-state DOM.
   hydrateCodexIcons();
-  $("#windowCodexMark").innerHTML = pandaInterfaceMark("window-panda-mark");
-  $("#emptyCodexMark").innerHTML = pandaInterfaceMark("empty-panda-mark");
+  setMessageHtml($("#windowCodexMark"), pandaInterfaceMark("window-panda-mark"));
+  setMessageHtml($("#emptyCodexMark"), pandaInterfaceMark("empty-panda-mark"));
   return {
     sessions,
     i18n,

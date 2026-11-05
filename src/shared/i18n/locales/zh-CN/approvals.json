@@ -1,0 +1,23 @@
+{
+  "chooseOrWriteYourAnswersThenSubmitThemDirectlyTo": "选择或填写答案，点击提交即可直接发送到对话。",
+  "earlierQuestion": "此前的提问",
+  "questionForYou": "需要你回答的问题",
+  "youContinuedTheConversationThisQuestionIsKeptAsHistory": "你已继续对话，此提问仅作为历史记录保留。",
+  "answeredAnsweredOfTotalQuestions": "已回答 {answered} / {total} 题",
+  "pleaseEnterAnAnswerBeforeSubmitting": "请填写答案后再提交。",
+  "reason": "申请原因",
+  "requestsRequiringYourAttention": "待你处理的请求",
+  "reviewRequestsCount": "处理待确认请求（{count}）",
+  "currentWorkspace": "当前工作台",
+  "writeYourOwnAnswer": "自行填写",
+  "writeYourAnswer": "填写你的回答…",
+  "submitting": "正在提交…",
+  "networkTitle": "允许助手连接到 {host} 吗？",
+  "networkSubtitle": "{host} 不在当前网络允许列表中",
+  "alwaysAllowHost": "始终允许 {host}",
+  "editFilesTitle": "允许助手编辑以下文件吗？（{count, number} 个）",
+  "permissionsTitle": "允许助手使用以下权限吗？",
+  "reviewChangedFiles": "查看 {count, number} 个更改的文件",
+  "sessionContext": "会话：{name}",
+  "allowCommandTitle": "允许助手运行此命令吗？"
+}

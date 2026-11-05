@@ -1,3 +1,5 @@
+import { messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+
 import { DEFAULT_TURN_PAGE_SIZE, createTurnWindow } from "../ui-core.js";
 import { pandaInterfaceMark } from "../panda-brand.js";
 
@@ -48,14 +50,17 @@ export function assembleTimeline({
     );
     mutations.edit("turnWindow", (record) => (record.threadId = thread.id));
     clearConversationRuntime();
-    root.innerHTML = "";
+    setMessageHtml(root, "");
     statusPort.syncThreadErrorSurface(thread.id);
     if (state.turnWindow.hiddenCount || thread.history?.nextCursor) {
       const more = document.createElement("button");
       more.className = "load-older";
-      more.textContent = state.turnWindow.hiddenCount
-        ? `Load earlier messages (${state.turnWindow.hiddenCount})`
-        : t("Load earlier messages");
+      setOpaqueText(
+        more,
+        state.turnWindow.hiddenCount
+          ? `Load earlier messages (${state.turnWindow.hiddenCount})`
+          : t("sessions.loadEarlierMessages"),
+      );
       more.onclick = async () => {
         const current = state.active?.id === thread.id ? state.active : thread;
         if (state.turnWindow.hiddenCount) {
@@ -90,7 +95,10 @@ export function assembleTimeline({
   function showEmpty() {
     queuePort.renderMessageQueue();
     const root = $("#conversation");
-    root.innerHTML = `<div class="empty-state" id="emptyState">${pandaInterfaceMark("empty-panda-mark")}<h1>${escapeHtml(t("What can I help?"))}</h1></div>`;
+    setMessageHtml(
+      root,
+      `<div class="empty-state" id="emptyState">${pandaInterfaceMark("empty-panda-mark")}<h1>${messageHtml("common.whatCanIHelp", undefined, t)}</h1></div>`,
+    );
     viewUpdates.request("pendingMessages");
     viewUpdates.request("approvals");
   }

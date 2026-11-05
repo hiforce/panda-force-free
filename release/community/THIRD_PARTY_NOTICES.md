@@ -45,3 +45,10 @@ OpenAI, Codex, Anthropic and Claude names and marks belong to their respective o
 The repository includes a small MIT-preserving patch to urllib 2.44.1's optional proxy adapter, using the public modern `proxy-agent` API. The patch is applied by Bun from `patches/`; retain it for reproducible installs. `basic-ftp` is constrained to a patched release by `package.json` overrides. Their upstream copyright and license files remain in the installed packages. The audited versions and compatibility checks are documented in the release audit.
 
 Dependency-specific license texts must accompany distributed binary/container packages where required. This file does not replace the actual installed dependency notices.
+
+## Internationalization
+
+PandaForce uses i18next 26.7.1 (MIT), i18next-icu 2.6.1 (MIT), and
+intl-messageformat 12.1.4 (BSD-3-Clause) for namespaced translations and ICU
+messages. Their copyright and full license texts remain in the installed
+packages and must accompany redistributed bundles and containers.

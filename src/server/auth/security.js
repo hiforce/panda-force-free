@@ -1,3 +1,4 @@
+import { SUPPORTED_LOCALES } from "../../shared/i18n/locale-policy.js";
 import { lstatSync, realpathSync, statSync } from "node:fs";
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { resolve } from "node:path";
@@ -32,6 +33,7 @@ const BROWSER_RPC_METHODS = new Set([
 ]);
 
 const PUBLIC_ASSETS = new Set([
+  ...SUPPORTED_LOCALES.map((locale) => `/locales/${locale.code}.json`),
   "/index.html",
   "/style.css",
   "/workbench.css",

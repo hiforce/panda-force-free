@@ -1,3 +1,4 @@
+import { localizeText } from "./i18n.js";
 import { createUserInputCard } from "./user-input.js";
 
 // These tools receive answers through later chat messages, not native approval RPCs.
@@ -48,11 +49,14 @@ export function closeAsyncQuestionCard(card, t) {
   if (["submitting", "unconfirmed", "submitted", "earlier"].includes(card.dataset.status)) return;
   card.open = false;
   card.dataset.status = "earlier";
-  card.querySelector("summary").textContent = t("Earlier question");
+  localizeText(card.querySelector("summary"), "approvals.earlierQuestion", undefined, t);
   for (const fieldset of card.querySelectorAll("fieldset")) fieldset.disabled = true;
   card.querySelector("[type=submit]").hidden = true;
-  card.querySelector(".async-question-hint").textContent = t(
-    "You continued the conversation. This question is kept as history.",
+  localizeText(
+    card.querySelector(".async-question-hint"),
+    "approvals.youContinuedTheConversationThisQuestionIsKeptAsHistory",
+    undefined,
+    t,
   );
 }
 
@@ -68,16 +72,16 @@ export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
   details.className = "async-question-card";
   details.open = true;
   const summary = document.createElement("summary");
-  summary.textContent = t("Question for you");
+  localizeText(summary, "approvals.questionForYou", undefined, t);
   const hint = document.createElement("p");
   hint.className = "async-question-hint";
-  hint.textContent = t("Choose or write your answers, then submit them directly to the conversation.");
+  localizeText(hint, "approvals.chooseOrWriteYourAnswersThenSubmitThemDirectlyTo", undefined, t);
   const form = createUserInputCard(
     { id: item.id, params: { questions } },
     {
       t,
-      submitLabel: "Submit answer",
-      headingLabel: "Choose an answer",
+      submitLabel: "common.submitAnswer",
+      headingLabel: "common.chooseAnAnswer",
       respond: async (_id, result) => {
         const text = questions
           .map((question) => question.question + "\n" + result.answers[question.id].answers.join("\n"))
@@ -95,11 +99,14 @@ export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
         details.open = false;
         const uncertain = details.dataset.status === "unconfirmed";
         details.dataset.status = uncertain ? "unconfirmed" : "submitted";
-        summary.textContent = t(uncertain ? "Delivery unconfirmed" : "Answer submitted");
-        hint.textContent = t(
+        localizeText(summary, uncertain ? "workbench.deliveryUnconfirmed" : "common.answerSubmitted", undefined, t);
+        localizeText(
+          hint,
           uncertain
-            ? "Check the message delivery status before sending again."
-            : "Your answer has been sent to the conversation.",
+            ? "common.checkTheMessageDeliveryStatusBeforeSendingAgain"
+            : "common.yourAnswerHasBeenSentToTheConversation",
+          undefined,
+          t,
         );
         form.querySelector("[type=submit]").hidden = true;
       },

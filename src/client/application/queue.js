@@ -1,3 +1,5 @@
+import { localizeText, setOpaqueText } from "../i18n.js";
+
 import { deliveryIsUncertain } from "./input-errors.js";
 import {
   buildComposerInput,
@@ -42,28 +44,38 @@ export function assembleQueue({
       const body = document.createElement("span");
       body.className = "message-queue-text";
       body.dataset.i18nIgnore = "";
-      body.textContent =
+      setOpaqueText(
+        body,
         [message.text, message.attachments?.map((attachment) => attachment.name).join(", ")]
           .filter(Boolean)
-          .join(" · ") || t("Image");
+          .join(" · ") || t("common.image"),
+      );
       const status = document.createElement("span");
       status.className = "message-queue-status";
-      status.textContent = t(
+      localizeText(
+        status,
         {
-          sending: "Queueing…",
-          queued: "Queued",
-          starting: "Starting message…",
-          failed: "Queue failed",
-          unconfirmed: "Queue unconfirmed",
-          cancelling: "Cancelling…",
+          sending: "common.queueing",
+          queued: "common.queued",
+          starting: "common.startingMessage",
+          failed: "composer.queueFailed",
+          unconfirmed: "common.queueUnconfirmed",
+          cancelling: "common.cancelling",
         }[message.status],
+        undefined,
+        t,
       );
       row.append(body, status);
       if ((message.status === "queued" && message.queueId) || message.status === "failed") {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "message-queue-cancel";
-        button.textContent = t(message.status === "failed" ? "Dismissing message" : "Cancel queued message");
+        localizeText(
+          button,
+          message.status === "failed" ? "common.dismissingMessage" : "common.cancelQueuedMessage",
+          undefined,
+          t,
+        );
         button.onclick = () => cancelQueuedMessage(message);
         row.append(button);
       }
@@ -222,7 +234,7 @@ export function assembleQueue({
           thread = created;
         },
       });
-      if (!current()) throw new Error(t("Queue failed"));
+      if (!current()) throw new Error(t("composer.queueFailed"));
       dispatchStarted = true;
       const result = await transportPort.rpc("thread/queue/add", {
         threadId: thread.id,
@@ -249,7 +261,7 @@ export function assembleQueue({
         viewUpdates.request("composerLayout");
       }
       if (current() && !message.queueId && !uncertain)
-        noticesPort.addPersistentError(error?.message || t("Queue failed"));
+        noticesPort.addPersistentError(error?.message || t("composer.queueFailed"));
       if (dispatchStarted) refreshMessageQueue(thread.id);
     } finally {
       deliveryPort.releasePromptSubmission(token);

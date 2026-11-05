@@ -1,0 +1,23 @@
+{
+  "chooseOrWriteYourAnswersThenSubmitThemDirectlyTo": "Choose or write your answers, then submit them directly to the conversation.",
+  "earlierQuestion": "Earlier question",
+  "questionForYou": "Question for you",
+  "youContinuedTheConversationThisQuestionIsKeptAsHistory": "You continued the conversation. This question is kept as history.",
+  "answeredAnsweredOfTotalQuestions": "Answered {answered} of {total} questions",
+  "pleaseEnterAnAnswerBeforeSubmitting": "Please enter an answer before submitting.",
+  "reason": "Reason",
+  "requestsRequiringYourAttention": "Requests requiring your attention",
+  "reviewRequestsCount": "Review requests ({count})",
+  "currentWorkspace": "Current workspace",
+  "writeYourOwnAnswer": "Write your own answer",
+  "writeYourAnswer": "Write your answer…",
+  "submitting": "Submitting…",
+  "networkTitle": "Allow the assistant to connect to {host}?",
+  "networkSubtitle": "{host} isn't on the current network allowlist",
+  "alwaysAllowHost": "Always allow {host}",
+  "editFilesTitle": "Allow the assistant to edit the following {count, plural, one {file} other {files}}?",
+  "permissionsTitle": "Allow the assistant to use these permissions?",
+  "reviewChangedFiles": "Review {count, plural, one {# changed file} other {# changed files}}",
+  "sessionContext": "Session: {name}",
+  "allowCommandTitle": "Allow the assistant to run this command?"
+}

@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.6`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.7`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -50,3 +50,26 @@ Folder browsing preserves the latest request and typed path. Session renames upd
 Maintainers can run `bun run verify` for build checks, unit and integration tests, and the isolated browser suite. Results include per-suite logs, timeouts, and explicit exclusions for live-service diagnostics.
 
 Sending remains reliable when background updates arrive during a pointer press, and hovered send controls keep readable colors. Answered asynchronous questions restore as collapsed history after a refresh or session switch.
+
+
+## 0.0.7
+
+The interface now uses shared language negotiation and message catalogs across
+sign-in pages and the workspace. Choose English or Simplified Chinese in
+**Settings → Appearance → Language**. Unset preferences follow the order of your
+browser languages, with English as the final fallback. Language packs load on
+demand, and supported languages are validated for matching keys and ICU parameters.
+
+Changing language preserves composer drafts, focus, text selection, attachments,
+and pending question choices. Native CLI responses, visible reasoning summaries,
+commands, logs, diagnostics, question text, options, filenames, and project names
+keep their original text.
+
+PandaForce confirmation dialogs now handle session deletion and model-account
+sign-out. Notification permission is requested only after an explicit action.
+Approvals and questionnaires retain their existing single-submission behavior.
+
+Maintainers can validate message IDs, required arguments, catalogs, generated
+indexes, and parameter types with `bun run check:i18n`. The release retains the
+shared verification entry point and adds coverage for language negotiation,
+plugin resource isolation, native-content preservation, and Git-status tooltips.

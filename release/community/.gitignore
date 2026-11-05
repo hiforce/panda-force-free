@@ -54,3 +54,6 @@ Thumbs.db
 # Generated help site
 /panda-docs/build/
 /panda-docs/.docusaurus/
+
+# Generated language packs.
+public/locales

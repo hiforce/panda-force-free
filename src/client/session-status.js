@@ -1,3 +1,5 @@
+import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "./i18n.js";
+
 import { codexIcon } from "./codex-icons.js";
 import { threadLastActivityAt, formatActivityAge } from "./ui-core.js";
 
@@ -74,7 +76,7 @@ export function createSessionStatus({
       (errorStatus(status) ? status : null);
     return value
       ? {
-          message: errorMessage(value) || t("Task failed"),
+          message: errorMessage(value) || t("sessions.taskFailed"),
           turnId: tracked?.turnId || thread.lastError?.turnId,
         }
       : null;
@@ -88,55 +90,55 @@ export function createSessionStatus({
     if (error)
       return {
         state: "error",
-        label: t("Task failed"),
-        detail: error.message === t("Task failed") ? "" : error.message,
+        label: t("sessions.taskFailed"),
+        detail: error.message === t("sessions.taskFailed") ? "" : error.message,
         icon: "triangleAlert",
       };
     if (sessionHasActiveLatestTurn(thread))
       return {
         state: "running",
-        label: t("In progress"),
+        label: t("common.inProgress"),
         detail: "",
         icon: "loaderCircle",
       };
     if (["completed", "interrupted", "cancelled", "canceled"].includes(turnStatus))
       return {
         state: "completed",
-        label: turnStatus === "completed" ? t("Completed") : t("Stopped"),
+        label: turnStatus === "completed" ? t("sessions.completed") : t("sessions.stopped"),
         detail: "",
         icon: "check",
       };
     if (["failed", "error", "errored"].includes(turnStatus))
       return {
         state: "error",
-        label: t("Task failed"),
+        label: t("sessions.taskFailed"),
         detail: "",
         icon: "triangleAlert",
       };
     if (thread === state.active && activeTurnId())
       return {
         state: "running",
-        label: t("In progress"),
+        label: t("common.inProgress"),
         detail: "",
         icon: "loaderCircle",
       };
     if (threadStatus === "active")
       return {
         state: "running",
-        label: t("In progress"),
+        label: t("common.inProgress"),
         detail: "",
         icon: "loaderCircle",
       };
     if (!turn)
       return {
         state: "idle",
-        label: t("Not started"),
+        label: t("sessions.notStarted"),
         detail: "",
         icon: "info",
       };
     return {
       state: "syncing",
-      label: t("Status syncing…"),
+      label: t("sessions.statusSyncing"),
       detail: "",
       icon: "loaderCircle",
     };
@@ -156,14 +158,17 @@ export function createSessionStatus({
     root.dataset.state = status.state;
     root.setAttribute(
       "aria-label",
-      `${t("Session status")}: ${status.label}${status.detail ? ` — ${status.detail}` : ""}`,
+      `${t("common.sessionStatus")}: ${status.label}${status.detail ? ` — ${status.detail}` : ""}`,
     );
-    root.title = status.detail || status.label;
-    root.innerHTML = `<span class="session-status-icon" aria-hidden="true">${codexIcon(status.icon)}</span><span class="session-status-copy">${escapeHtml(status.label)}</span>${status.detail ? `<span class="session-status-detail">${escapeHtml(status.detail)}</span>` : ""}`;
+    setOpaqueAttribute(root, "title", status.detail || status.label);
+    setMessageHtml(
+      root,
+      `<span class="session-status-icon" aria-hidden="true">${codexIcon(status.icon)}</span><span class="session-status-copy">${escapeHtml(status.label)}</span>${status.detail ? `<span class="session-status-detail">${escapeHtml(status.detail)}</span>` : ""}`,
+    );
   }
   function rememberThreadError(threadId, value, turnId) {
     if (!threadId) return;
-    const message = errorMessage(value) || t("Task failed");
+    const message = errorMessage(value) || t("sessions.taskFailed");
     const details = { message, turnId };
     runtime.rememberError(threadId, details);
     refreshThreadRowMetadata();
@@ -224,9 +229,9 @@ export function createSessionStatus({
     card.dataset.threadError = "true";
     card.setAttribute("role", "alert");
     const heading = document.createElement("strong");
-    heading.textContent = t("Task failed");
+    localizeText(heading, "sessions.taskFailed", undefined, t);
     const message = document.createElement("p");
-    message.textContent = error.message;
+    setOpaqueText(message, error.message);
     card.append(heading, message);
     root.prepend(card);
   }
@@ -249,7 +254,7 @@ export function createSessionStatus({
         (errorStatus(status) ? status : null);
       if (value)
         runtime.rememberError(thread.id, {
-          message: errorMessage(value) || t("Task failed"),
+          message: errorMessage(value) || t("sessions.taskFailed"),
           turnId: value?.turnId,
         });
     }
@@ -265,18 +270,24 @@ export function createSessionStatus({
     row.dataset.error = String(Boolean(error));
     row.classList.toggle("error", Boolean(error));
     spinner.hidden = !running;
-    spinner.title = t("In progress");
-    spinner.setAttribute("aria-label", t("In progress"));
-    time.textContent = timestamp ? formatActivityAge(timestamp, { locale: i18n.locale }) : "—";
-    const label = timestamp ? t("Last activity: {time}", { time: time.textContent }) : t("Activity time unavailable");
-    const errorLabel = error ? t("Task failed: {message}", { message: error.message }) : "";
-    time.title = errorLabel || label;
+    localizeAttribute(spinner, "title", "common.inProgress", undefined, t);
+    localizeAttribute(spinner, "aria-label", "common.inProgress", undefined, t);
+    setOpaqueText(time, timestamp ? formatActivityAge(timestamp, { locale: i18n.locale }) : "—");
+    const label = timestamp
+      ? t("sessions.lastActivityTime", { time: time.textContent })
+      : t("sessions.activityTimeUnavailable");
+    const errorLabel = error ? t("sessions.taskFailedMessage", { message: error.message }) : "";
+    setOpaqueAttribute(time, "title", errorLabel || label);
     time.setAttribute("aria-label", errorLabel || label);
     if (timestamp) time.dateTime = new Date(timestamp * 1000).toISOString();
     else time.removeAttribute("datetime");
-    row.title = [titleOf(thread), shortPath(thread.cwd), running ? t("In progress") : "", errorLabel, label]
-      .filter(Boolean)
-      .join(" — ");
+    setOpaqueAttribute(
+      row,
+      "title",
+      [titleOf(thread), shortPath(thread.cwd), running ? t("common.inProgress") : "", errorLabel, label]
+        .filter(Boolean)
+        .join(" — "),
+    );
   }
   function refreshThreadRowMetadata() {
     workbench?.refresh();
@@ -313,6 +324,8 @@ export function createSessionStatus({
     }
     return true;
   }
+
+  i18n?.subscribe(() => refreshThreadRowMetadata());
 
   return {
     errorStatus,

@@ -1,108 +1,59 @@
+import { resolveLocale, SUPPORTED_LOCALES } from "../../shared/i18n/locale-policy.js";
+import { requestLocale } from "../i18n/request-locale.js";
+import { serverTranslator } from "../i18n/messages.js";
 import { PANDA_ICON_DATA_URL, pandaForceMark } from "../../shared/brand.js";
 
-const COPY = {
-  en: {
-    denied: {
-      label: "Access restricted",
-      title: "This account needs access",
-      description: "Your account has not been granted access to this workspace.",
-      help: "Sign in with an authorized account, or contact your workspace administrator to request access.",
-    },
-    incomplete: {
-      label: "Sign-in incomplete",
-      title: "Let's try signing in again",
-      description: "We couldn't complete this sign-in. The login link may have expired.",
-      help: "Start a new sign-in to continue to your workspace.",
-    },
-    rejected: {
-      label: "Sign-in unsuccessful",
-      title: "We couldn't verify this request",
-      description: "Please start a new sign-in from PandaForce.",
-      help: "If this keeps happening, contact your workspace administrator.",
-    },
-    limited: {
-      label: "Please try again later",
-      title: "Too many sign-in attempts",
-      description: "There have been too many sign-in attempts. Please wait a few minutes.",
-      help: "You can start a new sign-in once the temporary limit has cleared.",
-    },
-    unavailable: {
-      label: "Temporarily unavailable",
-      title: "Sign-in is unavailable",
-      description: "The sign-in service is currently unavailable.",
-      help: "Please try again in a moment. If the issue continues, contact your workspace administrator.",
-    },
-    signedOut: {
-      label: "Signed out",
-      title: "See you next time",
-      description: "You have signed out of PandaForce.",
-      help: "Sign in again whenever you're ready to continue.",
-    },
-    action: "Sign in again",
-    continue: "Sign in",
-    footer: "Your workspace, when you're ready.",
+const PAGE_MESSAGES = {
+  denied: {
+    label: "auth.pagesDeniedLabel",
+    title: "auth.pagesDeniedTitle",
+    description: "auth.pagesDeniedDescription",
+    help: "auth.pagesDeniedHelp",
   },
-  "zh-CN": {
-    denied: {
-      label: "访问受限",
-      title: "暂时无法访问",
-      description: "当前账号尚未获得此工作区的访问权限。",
-      help: "请使用已获授权的账号重新登录，或联系工作区管理员开通权限。",
-    },
-    incomplete: {
-      label: "登录未完成",
-      title: "请重新登录",
-      description: "这次登录未能完成，登录链接可能已过期。",
-      help: "重新发起登录，即可继续访问你的工作区。",
-    },
-    rejected: {
-      label: "登录未完成",
-      title: "暂时无法验证此请求",
-      description: "请从 PandaForce 重新发起登录。",
-      help: "如果问题持续出现，请联系工作区管理员。",
-    },
-    limited: {
-      label: "请稍后重试",
-      title: "稍等片刻，再试一次",
-      description: "登录尝试次数较多，请稍后重新登录。",
-      help: "短暂等待后，你就可以重新发起登录。",
-    },
-    unavailable: {
-      label: "服务暂不可用",
-      title: "暂时无法完成登录",
-      description: "登录服务暂时不可用，请稍后重试。",
-      help: "如果问题持续出现，请联系工作区管理员。",
-    },
-    signedOut: {
-      label: "已退出登录",
-      title: "下次见",
-      description: "你已退出 PandaForce。",
-      help: "准备好后，随时登录继续使用。",
-    },
-    action: "重新登录",
-    continue: "登录",
-    footer: "准备好后，随时继续。",
+  incomplete: {
+    label: "auth.pagesIncompleteLabel",
+    title: "auth.pagesIncompleteTitle",
+    description: "auth.pagesIncompleteDescription",
+    help: "auth.pagesIncompleteHelp",
+  },
+  rejected: {
+    label: "auth.pagesRejectedLabel",
+    title: "auth.pagesRejectedTitle",
+    description: "auth.pagesRejectedDescription",
+    help: "auth.pagesRejectedHelp",
+  },
+  limited: {
+    label: "auth.pagesLimitedLabel",
+    title: "auth.pagesLimitedTitle",
+    description: "auth.pagesLimitedDescription",
+    help: "auth.pagesLimitedHelp",
+  },
+  unavailable: {
+    label: "auth.pagesUnavailableLabel",
+    title: "auth.pagesUnavailableTitle",
+    description: "auth.pagesUnavailableDescription",
+    help: "auth.pagesUnavailableHelp",
+  },
+  signedOut: {
+    label: "auth.pagesSignedOutLabel",
+    title: "auth.pagesSignedOutTitle",
+    description: "auth.pagesSignedOutDescription",
+    help: "auth.pagesSignedOutHelp",
   },
 };
 
-export function authPageLanguage(req) {
-  const languages = String(req.headers["accept-language"] || "")
-    .split(",")
-    .map((entry, index) => {
-      const [language, ...options] = entry.trim().split(";");
-      const quality = options.find((option) => option.trim().startsWith("q="));
-      return { language, index, quality: quality ? Number(quality.trim().slice(2)) : 1 };
-    })
-    .filter((entry) => /^(zh|en)(?:-|$)/i.test(entry.language) && entry.quality > 0)
-    .sort((a, b) => b.quality - a.quality || a.index - b.index);
-  return /^zh/i.test(languages[0]?.language || "") ? "zh-CN" : "en";
-}
+export const authPageLanguage = requestLocale;
 
 // A self-contained document: it must render before any app assets or scripts
 // can be accessed. Only fixed copy is included; OAuth errors and tokens stay out.
 export function sendAuthPage(res, { kind, status, language = "en", idaasOrigin = "" }) {
-  const copy = COPY[language] || COPY.en;
-  const content = copy[kind] || copy.unavailable;
+  language = resolveLocale(language, []);
+  const direction = SUPPORTED_LOCALES.find((entry) => entry.code === language)?.direction || "ltr";
+  const t = serverTranslator(language);
+  const content = Object.fromEntries(
+    Object.entries(PAGE_MESSAGES[kind] || PAGE_MESSAGES.unavailable).map(([name, id]) => [name, t(id)]),
+  );
+  const copy = { action: t("auth.pagesAction"), continue: t("auth.pagesContinue"), footer: t("auth.pagesFooter") };
   const signedOut = kind === "signedOut";
   const icon = signedOut
     ? '<path d="m8 12 2.5 2.5L16 9"/>'
@@ -118,7 +69,7 @@ export function sendAuthPage(res, { kind, status, language = "en", idaasOrigin =
     "content-security-policy": `default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; frame-ancestors 'none'; form-action 'self'${idaasOrigin ? ` ${idaasOrigin}` : ""}`,
   });
   res.end(`<!doctype html>
-<html lang="${language}">
+<html lang="${language}" dir="${direction}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">

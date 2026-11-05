@@ -1,3 +1,5 @@
+import { localizeAttribute, setMessageHtml } from "../i18n.js";
+
 import { codexIcon } from "../codex-icons.js";
 
 // Owns clipboard formatting and file-reference copy behavior.
@@ -40,17 +42,17 @@ export function assembleClipboard({ t, noticesPort }) {
     clearTimeout(button.copyResetTimer);
     try {
       await copyMessageText(text);
-      button.innerHTML = `${codexIcon("check")}<span>Copied</span>`;
-      button.setAttribute("aria-label", "Copied");
-      button.title = "Copied";
-      noticesPort.toast(t("Copied"));
+      setMessageHtml(button, `${codexIcon("check")}<span><span data-pf-message="common.copied">Copied</span></span>`);
+      localizeAttribute(button, "aria-label", "common.copied", undefined);
+      localizeAttribute(button, "title", "common.copied", undefined);
+      noticesPort.toast(t("common.copied"));
       button.copyResetTimer = setTimeout(() => {
-        button.innerHTML = `${codexIcon("copy")}<span>Copy</span>`;
-        button.setAttribute("aria-label", "Copy message");
-        button.title = "Copy message";
+        setMessageHtml(button, `${codexIcon("copy")}<span><span data-pf-message="files.copy">Copy</span></span>`);
+        localizeAttribute(button, "aria-label", "common.copyMessage", undefined);
+        localizeAttribute(button, "title", "common.copyMessage", undefined);
       }, 2000);
     } catch {
-      noticesPort.addPersistentError(t("Copy failed. Please select and copy the message manually."));
+      noticesPort.addPersistentError(t("workbench.copyFailedPleaseSelectAndCopyTheMessageManually"));
     } finally {
       button.copyPending = false;
       button.removeAttribute("aria-busy");

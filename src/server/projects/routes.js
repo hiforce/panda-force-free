@@ -1,3 +1,4 @@
+import { errorPayload } from "../http/error-payload.js";
 import { ProjectError } from "./catalog.js";
 import { readJsonBody, RequestBodyError } from "../http/body.js";
 import { respondJson } from "../http/respond.js";
@@ -12,7 +13,7 @@ export function projectRoutes({ catalog, request, getSession, recordSessions, br
           ctx.req.headers["sec-fetch-site"] === "cross-site" ||
           (origin && new URL(origin).host !== ctx.req.headers.host)
         )
-          throw new ProjectError(403, "Cross-origin request rejected");
+          throw new ProjectError(403, "projects.errorCrossOriginRequestRejected");
       }
       await handler(ctx);
     } catch (error) {
@@ -21,6 +22,7 @@ export function projectRoutes({ catalog, request, getSession, recordSessions, br
         console.warn("[panda-force] project API failed:", error?.code || error?.name || "unknown");
       const status = error instanceof ProjectError || error instanceof RequestBodyError ? error.status : 503;
       respondJson(ctx.res, status, {
+        ...(error instanceof ProjectError ? errorPayload(error.messageId) : {}),
         error:
           error instanceof ProjectError || error instanceof RequestBodyError
             ? error.message
@@ -39,8 +41,10 @@ export function projectRoutes({ catalog, request, getSession, recordSessions, br
       handler: protect(async ({ req, res }) => {
         if (req.method === "GET") return respondJson(res, 200, catalog.snapshot());
         const body = await readJsonBody(req);
-        if (req.method === "PATCH" && typeof body.id !== "string") throw new ProjectError(400, "Project not found");
-        if (req.method === "POST" && body.id !== undefined) throw new ProjectError(400, "Invalid project details");
+        if (req.method === "PATCH" && typeof body.id !== "string")
+          throw new ProjectError(400, "projects.errorProjectNotFound");
+        if (req.method === "POST" && body.id !== undefined)
+          throw new ProjectError(400, "projects.errorInvalidProjectDetails");
         changed(res, catalog.save(body, body.revision), req.method === "POST" ? 201 : 200);
       }),
     },
@@ -49,7 +53,8 @@ export function projectRoutes({ catalog, request, getSession, recordSessions, br
       method: "POST",
       handler: protect(async ({ req, res }) => {
         const { projectId, sessionIds, revision } = await readJsonBody(req);
-        if (projectId !== null && typeof projectId !== "string") throw new ProjectError(400, "Project not found");
+        if (projectId !== null && typeof projectId !== "string")
+          throw new ProjectError(400, "projects.errorProjectNotFound");
         if (projectId !== null) catalog.project(projectId);
         if (
           !Array.isArray(sessionIds) ||
@@ -57,13 +62,13 @@ export function projectRoutes({ catalog, request, getSession, recordSessions, br
           sessionIds.length > 100 ||
           sessionIds.some((id) => typeof id !== "string" || !/^[a-z0-9_-]{1,128}$/i.test(id))
         )
-          throw new ProjectError(400, "Select between 1 and 100 sessions.");
+          throw new ProjectError(400, "projects.errorSelectBetween1And100Sessions");
         const sessions = [];
         for (const id of sessionIds) {
           try {
             sessions.push(projectId === null ? { id } : candidates.get(id) || (await getSession(id)));
           } catch {
-            throw new ProjectError(404, "Session not found. Refresh the session list and try again.");
+            throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
           }
         }
         changed(res, catalog.assign(projectId, sessions, revision));
@@ -75,7 +80,7 @@ export function projectRoutes({ catalog, request, getSession, recordSessions, br
       handler: protect(async ({ res, url }) => {
         let cursor = url.searchParams.get("cursor") || null;
         const search = (url.searchParams.get("search") || "").trim().slice(0, 200).toLocaleLowerCase();
-        if (cursor && cursor.length > 4096) throw new ProjectError(400, "Invalid session cursor");
+        if (cursor && cursor.length > 4096) throw new ProjectError(400, "projects.errorInvalidSessionCursor");
         const sessions = [];
         for (let page = 0; page < (search ? 10 : 1); page++) {
           const result = await request("thread/list", {

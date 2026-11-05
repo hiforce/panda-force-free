@@ -1,3 +1,5 @@
+import { getBrowserI18n, localizeText } from "./i18n.js";
+
 const TERMINAL_RECONNECT_MS = 1000;
 
 /**
@@ -5,7 +7,7 @@ const TERMINAL_RECONNECT_MS = 1000;
  * reconnect, and fit/resize propagation. The working directory and auth
  * re-check come from the app via callbacks.
  */
-export function createTerminalPanel({ $, getCwd, onAuthCheck, t = (value) => value }) {
+export function createTerminalPanel({ $, getCwd, onAuthCheck, t = getBrowserI18n().t }) {
   const createTerminalState = (hostId, panelId) => ({
     hostId,
     panelId,
@@ -114,7 +116,7 @@ export function createTerminalPanel({ $, getCwd, onAuthCheck, t = (value) => val
         globalThis.__codexTerminals = terminalStates;
       })
       .catch(() => {
-        $(`#${terminalState.hostId}`).textContent = t("Could not load terminal. Close and reopen to retry.");
+        localizeText($(`#${terminalState.hostId}`), "errors.couldNotLoadTerminalCloseAndReopenToRetry", undefined, t);
         onAuthCheck();
       })
       .finally(() => {

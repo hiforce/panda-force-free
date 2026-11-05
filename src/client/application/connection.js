@@ -1,3 +1,5 @@
+import { localizeText } from "../i18n.js";
+
 import { createBridgeError } from "../../shared/bridge-errors.js";
 
 // Routes transport envelopes and connection transitions; native event interpretation is delegated.
@@ -34,10 +36,9 @@ export function assembleConnection({
         mutations.set("connected", true);
         transportPort.resetReconnectBackoff();
         transportPort.clearTransportReconnectTimer();
-        setStatus("connected", "Codex connected");
+        setStatus("connected", "common.codexConnected");
         if (shouldLoad) {
           startupPort.loadInitial();
-          modelsPort.requestTaskNotifyPermission();
         } else {
           synchronizationPort.refreshThreadList();
           synchronizationPort.scheduleActiveThreadSync(0);
@@ -50,7 +51,7 @@ export function assembleConnection({
         mutations.set("connected", false);
         workspacePreparation.start("connection");
         usagePort.showUsageDisconnected();
-        setStatus("connecting", "Connecting to Codex");
+        setStatus("connecting", "common.connectingToCodex");
       }
       return;
     }
@@ -71,7 +72,7 @@ export function assembleConnection({
   function setStatus(kind, text) {
     viewUpdates.request("workbench");
     $("#statusDot").className = "status-dot" + (kind === "connected" ? " connected" : kind === "error" ? " error" : "");
-    $("#statusText").textContent = t(text || kind);
+    localizeText($("#statusText"), text || kind, undefined, t);
   }
   function onDisrupted() {
     workspacePreparation.start("connection");

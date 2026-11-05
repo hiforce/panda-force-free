@@ -1,5 +1,5 @@
 import { renderAssistantMarkdown } from "../rendering.js";
-import { createDomI18n } from "../i18n.js";
+import { bindMessages } from "../i18n.js";
 
 // Delegates global shell events after every feature interface has been assembled.
 export function assembleBindings({
@@ -22,8 +22,7 @@ export function assembleBindings({
 }) {
   function bind() {
     globalThis.__renderAssistantMarkdown = renderAssistantMarkdown;
-    globalThis.__pandaForceI18n = i18n;
-    globalThis.__pandaForceDomI18n = globalThis.__pandaForceDomI18n || createDomI18n(i18n);
+    bindMessages(document);
     i18n.subscribe(() => workspacePreparation.refresh());
     addEventListener("pagehide", () => workspacePreparation.dispose(), {
       once: true,

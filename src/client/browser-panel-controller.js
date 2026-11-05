@@ -1,3 +1,4 @@
+import { setOpaqueText } from "./i18n.js";
 import { browserSandboxFor, normalizeBrowserUrl } from "./browser-panel.js";
 
 const BROWSER_LOAD_TIMEOUT_MS = 10000;
@@ -13,7 +14,7 @@ export function createBrowserController({ $ }) {
   function setBrowserStatus(text, tone = "ready") {
     const status = $("#browserStatus");
     status.dataset.tone = tone;
-    $("#browserStatusText").textContent = text;
+    setOpaqueText($("#browserStatusText"), text);
   }
   function updateBrowserControls() {
     const current = browserState.history[browserState.index] || "";
@@ -26,8 +27,8 @@ export function createBrowserController({ $ }) {
     }
   }
   function showBrowserNotice(title, description) {
-    $("#browserNoticeTitle").textContent = title;
-    $("#browserNoticeDescription").textContent = description;
+    setOpaqueText($("#browserNoticeTitle"), title);
+    setOpaqueText($("#browserNoticeDescription"), description);
     $("#browserNotice").hidden = false;
     $("#browserLoading").hidden = true;
     $("#browserFrameShell").setAttribute("aria-busy", "false");

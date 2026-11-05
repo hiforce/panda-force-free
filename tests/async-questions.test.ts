@@ -1,3 +1,5 @@
+import { createI18nRuntime } from "../src/shared/i18n/runtime.js";
+const english = createI18nRuntime().t;
 import { expect, test, afterEach } from "bun:test";
 import { JSDOM } from "jsdom";
 import {
@@ -62,7 +64,7 @@ test("answer submission is explicit, failed submission remains retryable and suc
   let fail = true,
     prepared = "";
   const card = createAsyncQuestionCard(item, readAsyncQuestions(item), {
-    t: (s: string) => s,
+    t: english,
     sendAnswer: async (text: string) => {
       if (fail) throw Error("Synthetic failure");
       prepared = text;
@@ -99,7 +101,7 @@ test("uncertain delivery does not offer a second send", async () => {
     arguments: { questions: [{ title: "Where?", options: ["Public"] }] },
   };
   const card = createAsyncQuestionCard(item, readAsyncQuestions(item), {
-    t: (s: string) => s,
+    t: english,
     sendAnswer: async () => ({ deliveryUncertain: true }),
   });
   document.body.append(card);
@@ -188,7 +190,7 @@ test("answered host supplements stay before their reply and restore as collapsed
     "confirmation",
   ]);
   const card = createAsyncQuestionCard(history.turns[0].items[1], readAsyncQuestions(question), {
-    t: (s: string) => s,
+    t: english,
     sendAnswer: async () => {
       throw Error("Historical question must not submit");
     },

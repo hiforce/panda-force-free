@@ -1,9 +1,12 @@
+import { messageHtml, setMessageHtml } from "../i18n.js";
+
 import { normalizeProjectPath } from "../../shared/project-visibility.js";
 import { trackMobileViewport } from "../mobile-viewport.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { takeStartupRead } from "../startup-reads.js";
 import { createLatestRequestGate } from "../ui-core.js";
 import { configureAttachmentUrls } from "../../shared/attachment-urls.js";
+import { confirmAction } from "../confirmation-dialog.js";
 
 // Coordinates initial reads, preparation retries, login invalidation and cache cleanup.
 export function assembleStartup({
@@ -53,7 +56,10 @@ export function assembleStartup({
     void sidebarPort.loadProjectVisibility().catch(() => {});
     if (usagePort.usagePageVisible()) usagePort.loadUsage();
     if (!state.threads.length)
-      $("#threadList").innerHTML = `<div class="list-state">${escapeHtml(t("Loading sessions…"))}</div>`;
+      setMessageHtml(
+        $("#threadList"),
+        `<div class="list-state">${messageHtml("workbench.loadingSessions", undefined, t)}</div>`,
+      );
     const report = (error) => {
       if (current() && !error?.silentTransportSwitch) noticesPort.addPersistentError(error.message);
     };
@@ -86,7 +92,10 @@ export function assembleStartup({
               sessions.replaceThreads(cached.threads);
               viewUpdates.request("sidebar");
             } else
-              $("#threadList").innerHTML = `<div class="list-state">${escapeHtml(t("Could not load sessions"))}</div>`;
+              setMessageHtml(
+                $("#threadList"),
+                `<div class="list-state">${messageHtml("errors.couldNotLoadSessions", undefined, t)}</div>`,
+              );
           }
         }
         report(error);
@@ -201,7 +210,17 @@ export function assembleStartup({
     workspacePreparation.registerRetry("permissions", () => modelsPort.loadPermissionProfilesRaw());
 
     $("#accountLogout").onclick = async () => {
-      if (!confirm("Log out?")) return;
+      viewUpdates.request("accountMenu", false);
+      if (
+        !(await confirmAction({
+          title: "workbench.logOutOfModelAccount",
+          message: "workbench.logOutOfTheModelAccountUsedByThisWorkspace",
+          confirmText: "common.logOut",
+          cancelText: "common.cancel",
+          returnFocus: $("#accountButton"),
+        }))
+      )
+        return;
       try {
         await transportPort.rpc("account/logout");
         await clearSessionCaches();

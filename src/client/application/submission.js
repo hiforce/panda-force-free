@@ -26,9 +26,9 @@ export function assembleSubmission({
     event.preventDefault();
     const submissionKey = deliveryPort.pendingMessageOwner();
     if (questionAnswer && (!questionAnswer.threadId || questionAnswer.threadId !== state.active?.id))
-      throw new Error(t("Conversation changed; reopen the question before submitting."));
+      throw new Error(t("workbench.conversationChangedReopenTheQuestionBeforeSubmitting"));
     if (deliveryPort.isSending(submissionKey)) {
-      if (questionAnswer) throw new Error(t("A message is still being sent. Please wait and try again."));
+      if (questionAnswer) throw new Error(t("workbench.aMessageIsStillBeingSentPleaseWaitAndTry"));
       return;
     }
     suggestionsPort.closeComposerAutocomplete();
@@ -199,7 +199,9 @@ export function assembleSubmission({
           viewUpdates.request("composerLayout");
         }
         if (!error?.silentTransportSwitch)
-          noticesPort.addPersistentError(uncertain ? t("Delivery unconfirmed") : threadInputErrorMessage(error));
+          noticesPort.addPersistentError(
+            uncertain ? t("workbench.deliveryUnconfirmed") : threadInputErrorMessage(error),
+          );
       }
       if (questionAnswer) {
         if (uncertain) return { deliveryUncertain: true };

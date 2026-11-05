@@ -1,3 +1,5 @@
+import { localizeAttribute, localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
+
 import { codexIcon } from "../codex-icons.js";
 
 // Owns persistent notices and transient toast actions.
@@ -21,21 +23,21 @@ export function assembleNotices({ mutations, $, state, t }) {
       card.setAttribute("role", "alert");
       const icon = document.createElement("span");
       icon.className = "persistent-error-icon";
-      icon.innerHTML = codexIcon("triangleAlert");
+      setMessageHtml(icon, codexIcon("triangleAlert"));
       icon.setAttribute("aria-hidden", "true");
       const body = document.createElement("div");
       body.className = "persistent-error-body";
       const heading = document.createElement("strong");
-      heading.textContent = t("Error");
+      localizeText(heading, "workbench.error", undefined, t);
       const message = document.createElement("p");
-      message.textContent = error.message;
+      setOpaqueText(message, error.message);
       body.append(heading, message);
       const dismiss = document.createElement("button");
       dismiss.type = "button";
       dismiss.className = "persistent-error-dismiss";
-      dismiss.setAttribute("aria-label", t("Dismiss error"));
-      dismiss.title = t("Dismiss error");
-      dismiss.innerHTML = codexIcon("x");
+      localizeAttribute(dismiss, "aria-label", "workbench.dismissError", undefined, t);
+      localizeAttribute(dismiss, "title", "workbench.dismissError", undefined, t);
+      setMessageHtml(dismiss, codexIcon("x"));
       dismiss.onclick = () => {
         mutations.set(
           "persistentErrors",
@@ -48,7 +50,7 @@ export function assembleNotices({ mutations, $, state, t }) {
     }
   }
   function addPersistentError(value, { key } = {}) {
-    const message = t(persistentErrorText(value)).trim();
+    const message = (value?.messageId ? t(value.messageId, value.messageArgs) : persistentErrorText(value)).trim();
     if (!message || message === "Bridge transport changed") return;
     const identity = key || message;
     const existing = state.persistentErrors.find((error) => error.key === identity);
@@ -71,7 +73,7 @@ export function assembleNotices({ mutations, $, state, t }) {
   }
   function toast(text, duration = 2200, action = null) {
     const e = $("#toast");
-    e.textContent = text;
+    setOpaqueText(e, text);
     e.classList.toggle("has-action", Boolean(action));
     toast.project = action?.project || null;
     const expire = () => {
@@ -82,7 +84,7 @@ export function assembleNotices({ mutations, $, state, t }) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "toast-action";
-      button.textContent = action.label;
+      setOpaqueText(button, action.label);
       button.onclick = async () => {
         button.disabled = true;
         await action.run();

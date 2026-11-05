@@ -1,3 +1,5 @@
+import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "./i18n.js";
+
 import { codexIcon } from "./codex-icons.js";
 import { localImageUrl } from "./rendering.js";
 import { attachmentDisplayUrl } from "../shared/attachment-urls.js";
@@ -32,26 +34,31 @@ export function createComposerUploads({ $, t, state, openImageViewer, addPersist
         chip.append(preview);
       } else {
         const icon = document.createElement("span");
-        icon.innerHTML = codexIcon("file");
+        setMessageHtml(icon, codexIcon("file"));
         chip.append(icon);
       }
       const label = document.createElement("span");
       label.className = "composer-attachment-name";
       label.dataset.i18nIgnore = "";
-      label.textContent = attachment.name;
-      label.title = attachment.error ? t(attachment.error) : attachment.name;
+      setOpaqueText(label, attachment.name);
+      setOpaqueAttribute(label, "title", attachment.error ? t(attachment.error) : attachment.name);
       chip.append(label);
       if (attachment.status !== "ready") {
         const status = document.createElement("span");
         status.className = "composer-attachment-status";
-        status.textContent = t(attachment.status === "uploading" ? "Uploading…" : "Upload failed");
+        localizeText(
+          status,
+          attachment.status === "uploading" ? "common.uploading" : "common.uploadFailed",
+          undefined,
+          t,
+        );
         chip.append(status);
       }
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "composer-attachment-remove";
-      remove.setAttribute("aria-label", t("Remove attachment {name}", { name: attachment.name }));
-      remove.innerHTML = codexIcon("x");
+      localizeAttribute(remove, "aria-label", "composer.removeAttachmentName", { name: attachment.name }, t);
+      setMessageHtml(remove, codexIcon("x"));
       remove.onclick = () => {
         state.composerAttachments = state.composerAttachments.filter((value) => value !== attachment);
         renderComposerAttachments();
@@ -65,15 +72,15 @@ export function createComposerUploads({ $, t, state, openImageViewer, addPersist
   async function uploadComposerFiles(files) {
     for (const file of Array.from(files || [])) {
       if (state.composerAttachments.length >= ATTACHMENT_MAX_COUNT) {
-        addPersistentError(t("You can attach up to 10 files"));
+        addPersistentError(t("composer.youCanAttachUpTo10Files"));
         break;
       }
       if (file.size > ATTACHMENT_MAX_BYTES) {
-        addPersistentError(t("Each attachment must be 25 MiB or smaller"));
+        addPersistentError(t("composer.eachAttachmentMustBe25MibOrSmaller"));
         continue;
       }
       if (!file.size) {
-        addPersistentError(t("Cannot upload an empty file"));
+        addPersistentError(t("errors.cannotUploadAnEmptyFile"));
         continue;
       }
       const attachment = {

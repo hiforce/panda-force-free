@@ -1,3 +1,4 @@
+import { setOpaqueText } from "./i18n.js";
 import { codexRateLimits, renderQuotaWindows } from "./account-usage.js";
 import { createLatestRequestGate } from "./ui-core.js";
 
@@ -21,13 +22,16 @@ export function createUsagePanel({ $, t, i18n, state, rpc }) {
   function renderUsage() {
     renderQuotaWindows($("#usageWindows"), usageLimits, { t, locale: i18n.locale });
     $("#refreshUsage").disabled = usageLoading || !state.connected;
-    $("#usageStatus").textContent = usageLoading
-      ? t("Loading usage…")
-      : usageError
-        ? t(usageError)
-        : usageUpdatedAt
-          ? `${t("Updated at")}: ${new Intl.DateTimeFormat(i18n.locale, { timeStyle: "short" }).format(usageUpdatedAt)}`
-          : "";
+    setOpaqueText(
+      $("#usageStatus"),
+      usageLoading
+        ? t("usage.loadingUsage")
+        : usageError
+          ? t(usageError)
+          : usageUpdatedAt
+            ? `${t("usage.updatedAt")}: ${new Intl.DateTimeFormat(i18n.locale, { timeStyle: "short" }).format(usageUpdatedAt)}`
+            : "",
+    );
   }
   function scheduleUsageRefresh() {
     clearTimeout(usageTimer);
@@ -37,7 +41,7 @@ export function createUsagePanel({ $, t, i18n, state, rpc }) {
   async function loadUsage() {
     if (usageLoading) return;
     if (!state.connected) {
-      usageError = "Connect to Codex to load usage";
+      usageError = "common.connectToCodexToLoadUsage";
       renderUsage();
       return;
     }
@@ -50,9 +54,9 @@ export function createUsagePanel({ $, t, i18n, state, rpc }) {
       if (!usageRequestGate.isCurrent(requestId)) return;
       usageLimits = codexRateLimits(result);
       usageUpdatedAt = new Date();
-      if (!usageLimits) usageError = "No Codex quota data. ChatGPT sign-in is required.";
+      if (!usageLimits) usageError = "common.noCodexQuotaDataChatgptSignInIsRequired";
     } catch {
-      if (usageRequestGate.isCurrent(requestId)) usageError = "Unable to load usage. Check Codex sign-in and retry.";
+      if (usageRequestGate.isCurrent(requestId)) usageError = "errors.unableToLoadUsageCheckCodexSignInAndRetry";
     } finally {
       if (usageRequestGate.isCurrent(requestId)) {
         usageLoading = false;
@@ -73,7 +77,7 @@ export function createUsagePanel({ $, t, i18n, state, rpc }) {
   /** Bridge disconnected: clear data and show the reconnect hint. */
   function showDisconnected() {
     resetUsage();
-    usageError = "Connect to Codex to load usage";
+    usageError = "common.connectToCodexToLoadUsage";
     renderUsage();
   }
   /** account/rateLimits/updated push: adopt the limits without a round-trip. */

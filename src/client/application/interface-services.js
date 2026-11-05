@@ -1,3 +1,4 @@
+import { localizeText } from "../i18n.js";
 import { createReviewController } from "../review-controller.js";
 import { createActivityRenderer } from "../activity-renderer.js";
 import { createComposerUploads } from "../composer-uploads.js";
@@ -52,7 +53,7 @@ export function assembleActivity({
       summary = group.querySelector(".activity-summary-copy");
     group.classList.toggle("waiting-approval", waiting);
     if (waiting) {
-      summary.textContent = "Waiting for approval";
+      localizeText(summary, "common.waitingForApproval", undefined);
       summary.classList.remove("loading-shimmer");
       if (row) {
         row.querySelector(".activity-name")?.classList.remove("loading-shimmer");

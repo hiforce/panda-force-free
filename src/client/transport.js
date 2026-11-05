@@ -1,3 +1,4 @@
+
 import { createBridgeError } from "../shared/bridge-errors.js";
 
 const WS_CONNECT_TIMEOUT_MS = 2500;
@@ -68,7 +69,7 @@ export function createTransport({
     if (state.events) return;
     state.transport = "sse";
     state.connected = false;
-    setStatus("connecting", "Connecting to Codex");
+    setStatus("connecting", "common.connectingToCodex");
     let events;
     try {
       events = new EventSource("/api/events");
@@ -81,7 +82,7 @@ export function createTransport({
     events.onopen = () => {
       if (state.events !== events) return;
       transportReconnectAttempt = 0;
-      setStatus("connecting", "Connecting to Codex");
+      setStatus("connecting", "common.connectingToCodex");
     };
     events.onmessage = (event) => {
       try {
@@ -97,7 +98,7 @@ export function createTransport({
       onAuthCheck();
       if (state.events !== events) return;
       state.connected = false;
-      setStatus("connecting", "Connecting to Codex");
+      setStatus("connecting", "common.connectingToCodex");
       onSseDisrupted();
       if (events.readyState === EventSource.CLOSED) {
         events.close();
@@ -139,7 +140,7 @@ export function createTransport({
     };
     state.wsFallbackTimer = setTimeout(fallback, WS_CONNECT_TIMEOUT_MS);
     ws.onopen = () => {
-      if (state.ws === ws) setStatus("connecting", "Connecting to Codex");
+      if (state.ws === ws) setStatus("connecting", "common.connectingToCodex");
     };
     ws.onmessage = (event) => {
       if (state.ws !== ws) return;
@@ -219,7 +220,7 @@ export function createTransport({
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
           state.pending.delete(id);
-          reject(new Error(translate("Could not submit answer")));
+          reject(new Error(translate("errors.couldNotSubmitAnswer")));
         }, RESPOND_TIMEOUT_MS);
         state.pending.set(id, {
           resolve: (value) => {

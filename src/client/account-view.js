@@ -1,3 +1,5 @@
+import { setMessageHtml, setOpaqueText } from "./i18n.js";
+
 import { createLatestRequestGate } from "./ui-core.js";
 import { codexIcon } from "./codex-icons.js";
 
@@ -32,23 +34,23 @@ export function createAccountView({
   }
   function renderAccount(account) {
     state.account = account;
-    const displayName = account?.displayName?.trim() || t("Settings"),
+    const displayName = account?.displayName?.trim() || t("common.settings"),
       initials = account?.initials?.trim() || "?",
       type = account?.type || "unknown",
       plan = account?.planType
         ? `${account.planType.charAt(0).toUpperCase()}${account.planType.slice(1)} plan`
         : type === "apiKey"
-          ? t("API key mode")
+          ? t("workbench.apiKeyMode")
           : type === "amazonBedrock"
             ? "Amazon Bedrock"
             : "";
     const profileMenuAvailable = type === "chatgpt";
-    $("#accountName").textContent = displayName;
-    $("#accountMenuName").textContent = displayName;
-    $("#settingsAccountName").textContent = displayName;
-    $("#accountFooterMeta").textContent = "";
-    $("#accountMenuSubtitle").textContent = plan;
-    $("#settingsAccountMeta").textContent = plan || t("Codex model account");
+    setOpaqueText($("#accountName"), displayName);
+    setOpaqueText($("#accountMenuName"), displayName);
+    setOpaqueText($("#settingsAccountName"), displayName);
+    setOpaqueText($("#accountFooterMeta"), "");
+    setOpaqueText($("#accountMenuSubtitle"), plan);
+    setOpaqueText($("#settingsAccountMeta"), plan || t("common.codexModelAccount"));
     $("#accountButton").setAttribute("aria-label", profileMenuAvailable ? "Open profile menu" : "Open settings");
     const avatarUrl =
         profileMenuAvailable &&
@@ -63,17 +65,17 @@ export function createAccountView({
     for (const avatar of profileAvatars) {
       avatar.dataset.imageUrl = avatarUrl;
       avatar.className = `${profileAvatarClass(avatar)} account-initials`;
-      avatar.textContent = initials;
+      setOpaqueText(avatar, initials);
     }
     if (profileMenuAvailable) {
       footerAvatar.dataset.imageUrl = avatarUrl;
       footerAvatar.className = "account-avatar account-initials";
-      footerAvatar.textContent = initials;
+      setOpaqueText(footerAvatar, initials);
       profileAvatars.unshift(footerAvatar);
     } else {
       footerAvatar.dataset.imageUrl = "";
       footerAvatar.className = "account-avatar account-settings-icon";
-      footerAvatar.innerHTML = codexIcon("wrench");
+      setMessageHtml(footerAvatar, codexIcon("wrench"));
     }
     if (avatarUrl) {
       const image = new Image();
@@ -90,7 +92,7 @@ export function createAccountView({
         for (const avatar of profileAvatars) {
           if (avatar.dataset.imageUrl !== avatarUrl) continue;
           avatar.className = `${profileAvatarClass(avatar)} account-initials`;
-          avatar.textContent = initials;
+          setOpaqueText(avatar, initials);
         }
       };
     }

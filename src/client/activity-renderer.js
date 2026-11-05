@@ -1,3 +1,5 @@
+import { getBrowserI18n, localizeText, messageHtml, setMessageHtml, setOpaqueText } from "./i18n.js";
+
 import { codexIcon } from "./codex-icons.js";
 import { storage } from "./storage.js";
 import { activityText, mergeReasoningItem } from "../shared/activity-text.js";
@@ -16,7 +18,12 @@ export function createActivityRenderer({
   syncWorkedForDivider,
   isRenderingTurn,
 }) {
+  const i18n = getBrowserI18n(),
+    t = i18n.t;
   const pendingActivitySummaries = new Set();
+  i18n.subscribe(() => {
+    for (const activity of document.querySelectorAll("[data-agent-activity-group]")) updateActivitySummary(activity);
+  });
   const reviewLineHtml = (line) => renderDiffLine(line, escapeHtml);
   const icons = {
     chevron: codexIcon("chevronRight", "activity-chevron"),
@@ -63,7 +70,10 @@ export function createActivityRenderer({
       activity.dataset.agentActivityGroup = "";
       activity.dataset.activityGroupAnchor = String(itemId || "activity");
       if (standalone) activity.dataset.standalone = "true";
-      activity.innerHTML = `<button class="activity-summary open"><span class="activity-summary-icon" aria-hidden="true"></span><span class="activity-summary-copy loading-shimmer">Working</span>${icons.chevron}</button><div class="activity-items open"></div>`;
+      setMessageHtml(
+        activity,
+        `<button class="activity-summary open"><span class="activity-summary-icon" aria-hidden="true"></span><span class="activity-summary-copy loading-shimmer"><span data-pf-message="common.working">Working</span></span>${icons.chevron}</button><div class="activity-items open"></div>`,
+      );
       activity.querySelector(".activity-summary").onclick = () =>
         setActivityGroupOpen(activity, !activity.querySelector(".activity-summary").classList.contains("open"), true);
       stream.append(activity);
@@ -98,29 +108,36 @@ export function createActivityRenderer({
   function commandFooter(item, data) {
     if (data.active) return { label: "", icon: "" };
     if (item.executionStatus === "interrupted" || item.status === "interrupted" || item.status === "cancelled")
-      return { label: "Stopped", icon: "" };
+      return { label: "sessions.stopped", icon: "" };
     const exitCode = commandExitCode(item);
     if (data.tone === "error")
       return {
-        label: exitCode == null ? "Failed" : `Exit code ${exitCode}`,
+        label: exitCode == null ? "common.failed" : "common.exitCode",
+        values: { code: exitCode },
         icon: "",
       };
-    return { label: "Success", icon: icons.check };
+    return { label: "common.success", icon: icons.check };
   }
   function renderCommandShell(out, item, data) {
     if (out.dataset.outputKind !== "command") {
       out.dataset.outputKind = "command";
       out.className = "activity-output command-shell-wrap";
-      out.innerHTML =
-        '<div class="command-shell"><div class="command-shell-body"><div class="command-shell-command"><span aria-hidden="true">$</span><code></code></div><div class="command-shell-output"><pre></pre></div></div><div class="command-shell-footer"></div></div>';
+      setMessageHtml(
+        out,
+        '<div class="command-shell"><div class="command-shell-body"><div class="command-shell-command"><span aria-hidden="true">$</span><code></code></div><div class="command-shell-output"><pre></pre></div></div><div class="command-shell-footer"></div></div>',
+      );
     }
     const output = activityOutput(item),
       pre = out.querySelector(".command-shell-output pre"),
       footer = commandFooter(item, data);
-    out.querySelector(".command-shell-command code").textContent = commandText(item);
-    pre.textContent = output || (data.active ? "" : "No output");
+    setOpaqueText(out.querySelector(".command-shell-command code"), commandText(item));
+    if (output || data.active) setOpaqueText(pre, output);
+    else localizeText(pre, "common.noOutput");
     pre.classList.toggle("empty", !output);
-    out.querySelector(".command-shell-footer").innerHTML = `${footer.icon}<span>${footer.label}</span>`;
+    setMessageHtml(
+      out.querySelector(".command-shell-footer"),
+      `${footer.icon}${footer.label ? messageHtml(footer.label, footer.values) : ""}`,
+    );
   }
   function inlineFileChangeDiff(change) {
     const raw = unifiedDiffFromFileChanges([change]),
@@ -137,16 +154,22 @@ export function createActivityRenderer({
     const changes = item.changes || [],
       legacy = activityOutput(item);
     if (!changes.length) {
-      out.innerHTML = `<div class="file-change-progress ${data.active ? "loading-shimmer" : ""}">${escapeHtml(legacy || (data.active ? "Waiting for patch details…" : "No patch details"))}</div>`;
+      setMessageHtml(
+        out,
+        `<div class="file-change-progress ${data.active ? "loading-shimmer" : ""}">${legacy ? escapeHtml(legacy) : messageHtml(data.active ? "common.waitingPatch" : "common.noPatchDetails")}</div>`,
+      );
       return;
     }
-    out.innerHTML = changes
-      .map((change) => {
-        const path = change.path || change.filePath || "Changed file",
-          kind = typeof change.kind === "string" ? change.kind : change.kind?.type || "update";
-        return `<section class="file-change-output-item"><div class="file-change-output-head">${codexIcon("fileDiff")}<span>${escapeHtml(shortPath(path))}</span><small>${escapeHtml(kind)}</small></div>${inlineFileChangeDiff(change)}</section>`;
-      })
-      .join("");
+    setMessageHtml(
+      out,
+      changes
+        .map((change) => {
+          const path = change.path || change.filePath || "Changed file",
+            kind = typeof change.kind === "string" ? change.kind : change.kind?.type || "update";
+          return `<section class="file-change-output-item"><div class="file-change-output-head">${codexIcon("fileDiff")}<span>${escapeHtml(shortPath(path))}</span><small>${escapeHtml(kind)}</small></div>${inlineFileChangeDiff(change)}</section>`;
+        })
+        .join(""),
+    );
   }
   function isExplorationActivity(item, data = summarizeActivity(item)) {
     return item.type === "commandExecution" && ["read", "search", "list"].includes(data.category);
@@ -155,12 +178,15 @@ export function createActivityRenderer({
     if (item.type === "imageView") {
       out.dataset.outputKind = "image";
       out.className = "activity-output activity-image-output";
-      out.innerHTML =
+      setMessageHtml(
+        out,
         renderItemImages(item, {
           cwd: imageCwd(item),
           className: "activity-image-grid",
           thumbnail: true,
-        }) || '<div class="message-image-unavailable" data-i18n-ui>Image unavailable</div>';
+        }) ||
+          '<div class="message-image-unavailable" data-i18n-ui><span data-pf-message="common.imageUnavailable">Image unavailable</span></div>',
+      );
       return;
     }
     if (item.type === "commandExecution" && data.category === "command") {
@@ -175,12 +201,12 @@ export function createActivityRenderer({
       const text = activityOutput(item);
       out.dataset.outputKind = "reasoning";
       out.className = "activity-output reasoning-output message-text";
-      out.innerHTML = text ? renderAssistantMarkdown(text, { cwd: imageCwd(item) }) : "";
+      setMessageHtml(out, text ? renderAssistantMarkdown(text, { cwd: imageCwd(item) }) : "");
       return;
     }
     out.dataset.outputKind = "plain";
     out.className = "activity-output";
-    out.textContent = isExplorationActivity(item, data) ? "" : activityOutput(item) || "";
+    setOpaqueText(out, isExplorationActivity(item, data) ? "" : activityOutput(item) || "");
   }
   function activityItemExpansionKey(row) {
     const threadId = state.active?.id,
@@ -207,7 +233,7 @@ export function createActivityRenderer({
   function mountMotion(row) {
     // Use an inspectable CSS animation rather than redistributed desktop assets.
     const holder = row.querySelector(".activity-motion");
-    if (holder) holder.innerHTML = codexIcon("loaderCircle", "motion-fallback");
+    if (holder) setMessageHtml(holder, codexIcon("loaderCircle", "motion-fallback"));
   }
 
   function activityIconName(item, data = summarizeActivity(item)) {
@@ -228,41 +254,30 @@ export function createActivityRenderer({
       data = item ? summarizeActivity(item) : { tone };
     if (!holder) return;
     const icon = activityIconName(item || {}, data);
-    holder.innerHTML = icon ? codexIcon(icon) : "";
+    setMessageHtml(holder, icon ? codexIcon(icon) : "");
   }
   function activityItemId(item) {
     return String(item.id || item.callId || item.requestId || `${item.type}-${Date.now()}`);
   }
-  function joinActivityParts(parts) {
-    return parts.length < 2 ? parts[0] || "Worked" : `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`;
-  }
   function completedActivitySummary(items) {
-    const summaries = items.map((item) => ({
-        item,
-        data: summarizeActivity(item),
-      })),
-      commands = summaries.filter(
-        ({ item, data }) => item.type === "commandExecution" && data.category === "command",
-      ).length,
-      explored = summaries.some(
-        ({ data }) => ["read", "search", "list"].includes(data.category) && data.tone !== "error",
-      ),
-      edits = summaries
-        .filter(({ item, data }) => item.type === "fileChange" && data.tone !== "error")
-        .reduce((count, { item }) => count + Math.max(1, item.changes?.length || 0), 0),
-      web = summaries.some(({ item, data }) => item.type === "webSearch" && data.tone !== "error"),
-      images = summaries.some(({ data }) => data.category === "image" && data.tone !== "error"),
-      failed = summaries.some(({ data }) => data.tone === "error"),
-      parts = [],
-      add = (leading, following) => parts.push(parts.length ? following : leading);
-    if (edits) add(edits === 1 ? "Edited a file" : "Edited files", edits === 1 ? "edited a file" : "edited files");
-    if (explored) add("Read files", "read files");
-    if (commands)
-      add(commands === 1 ? "Ran a command" : "Ran commands", commands === 1 ? "ran a command" : "ran commands");
-    if (web) add("Searched the web", "searched the web");
-    if (images) add("Viewed images", "viewed images");
-    if (!parts.length && failed) return "Activity failed";
-    return joinActivityParts(parts);
+    const summaries = items.map((item) => ({ item, data: summarizeActivity(item) }));
+    const successful = summaries.filter(({ data }) => data.tone !== "error");
+    const edits = successful
+      .filter(({ item }) => item.type === "fileChange")
+      .reduce((n, { item }) => n + Math.max(1, item.changes?.length || 0), 0);
+    const commands = summaries.filter(
+      ({ item, data }) => item.type === "commandExecution" && data.category === "command",
+    ).length;
+    const parts = [],
+      add = (key, values = {}) => parts.push(t(key, { ...values, position: parts.length ? "other" : "first" }));
+    if (edits) add("common.editedCount", { count: edits });
+    if (successful.some(({ data }) => ["read", "search", "list"].includes(data.category))) add("common.summaryRead");
+    if (commands) add("common.ranCount", { count: commands });
+    if (successful.some(({ item }) => item.type === "webSearch")) add("common.summaryWeb");
+    if (successful.some(({ data }) => data.category === "image")) add("common.summaryImages");
+    if (!parts.length)
+      return t(summaries.some(({ data }) => data.tone === "error") ? "common.activityFailed" : "common.worked");
+    return i18n.format.list(parts);
   }
   function completedActivityPrimaryItem(items) {
     const summaries = items.map((item) => ({
@@ -285,20 +300,20 @@ export function createActivityRenderer({
       icon = item && activityIconName(item);
     if (holder) {
       holder.hidden = !icon;
-      holder.innerHTML = icon ? codexIcon(icon) : "";
+      setMessageHtml(holder, icon ? codexIcon(icon) : "");
     }
   }
-  function commandRowSummary(item, data, expanded) {
-    if (data.active) return data.label;
-    const interrupted =
-        item.executionStatus === "interrupted" || item.status === "interrupted" || item.status === "cancelled",
-      command = commandText(item);
-    if (expanded) return interrupted ? "Stopped command" : "Ran command";
-    return `${interrupted ? "Stopped" : "Ran"}${command ? ` ${command}` : " command"}`;
+  function commandRowMessage(item, data, expanded) {
+    if (data.active) return [data.labelKey, {}];
+    const interrupted = item.executionStatus === "interrupted" || ["interrupted", "cancelled"].includes(item.status);
+    const command = commandText(item);
+    return expanded || !command
+      ? [interrupted ? "common.stoppedCommandLabel" : "common.ranCommand", {}]
+      : [interrupted ? "common.stoppedCommandWithCommand" : "common.ranCommandWithCommand", { command }];
   }
   function updateCommandRowSummary(row, item, data, expanded = row.classList.contains("expanded")) {
     const summary = row.querySelector(".activity-name");
-    if (summary) summary.textContent = commandRowSummary(item, data, expanded);
+    if (summary) localizeText(summary, ...commandRowMessage(item, data, expanded));
   }
   function updateActivitySummary(activity) {
     if (isRenderingTurn()) {
@@ -321,13 +336,13 @@ export function createActivityRenderer({
     if (activeItem) {
       const data = summarizeActivity(activeItem);
       setActivitySummaryIcon(activity, activeItem);
-      summary.textContent = data.label;
+      localizeText(summary, data.labelKey);
       summary.classList.add("loading-shimmer");
       activity.classList.add("active");
       setActivityGroupOpen(activity, items.length === 1 || (savedOpen ?? true));
     } else {
       setActivitySummaryIcon(activity, completedActivityPrimaryItem(items));
-      summary.textContent = completedActivitySummary(items);
+      setOpaqueText(summary, completedActivitySummary(items));
       summary.classList.remove("loading-shimmer");
       activity.classList.remove("active");
       setActivityGroupOpen(activity, items.length === 1 || (savedOpen ?? false));
@@ -371,12 +386,21 @@ export function createActivityRenderer({
     row.dataset.activityWasActive = String(data.active);
     row.className = `activity-item ${command ? "command-activity " : ""}${reasoning ? "reasoning-activity " : ""}${imageView ? "image-activity " : ""}${fileChange ? "file-change-activity " : ""}${data.active ? "active" : "settled"} ${data.tone}`;
     if (command) {
-      row.innerHTML = `<span class="activity-command-icon">${icons.terminal}</span><div class="activity-copy"><div class="activity-name ${data.active ? "loading-shimmer" : ""}">${escapeHtml(commandRowSummary(item, data, expanded))}</div></div><span class="activity-command-chevron">${icons.chevron}</span>`;
+      setMessageHtml(
+        row,
+        `<span class="activity-command-icon">${icons.terminal}</span><div class="activity-copy"><div class="activity-name ${data.active ? "loading-shimmer" : ""}">${messageHtml(...commandRowMessage(item, data, expanded))}</div></div><span class="activity-command-chevron">${icons.chevron}</span>`,
+      );
     } else if (reasoning) {
-      row.innerHTML = `<div class="activity-copy"><div class="activity-name ${data.active ? "loading-shimmer" : ""}">${escapeHtml(data.label)}</div></div><span class="activity-reasoning-chevron">${icons.chevron}</span>`;
+      setMessageHtml(
+        row,
+        `<div class="activity-copy"><div class="activity-name ${data.active ? "loading-shimmer" : ""}">${messageHtml(data.labelKey)}</div></div><span class="activity-reasoning-chevron">${icons.chevron}</span>`,
+      );
     } else {
       const detail = shortPath(data.detail || "");
-      row.innerHTML = `${motionIcon(data.animation)}<div class="activity-copy"><div class="activity-name ${data.active ? "loading-shimmer" : ""}"><span class="activity-label">${escapeHtml(data.label)}</span>${detail ? ` <span class="activity-detail">${escapeHtml(detail)}</span>` : ""}</div></div><span class="activity-result">${fileChange ? icons.chevron : ""}</span>`;
+      setMessageHtml(
+        row,
+        `${motionIcon(data.animation)}<div class="activity-copy"><div class="activity-name ${data.active ? "loading-shimmer" : ""}"><span class="activity-label">${messageHtml(data.labelKey)}</span>${detail ? ` <span class="activity-detail">${escapeHtml(detail)}</span>` : ""}</div></div><span class="activity-result">${fileChange ? icons.chevron : ""}</span>`,
+      );
     }
     const out = row.nextElementSibling;
     row.hidden = reasoning && !data.active && !activityOutput(item).trim();

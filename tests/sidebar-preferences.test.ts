@@ -1,3 +1,5 @@
+import { createI18nRuntime } from "../src/shared/i18n/runtime.js";
+const english = createI18nRuntime().t;
 import { expect, test } from "bun:test";
 import { JSDOM } from "jsdom";
 import { readFileSync } from "node:fs";
@@ -55,7 +57,7 @@ test("folder sidebar sorting, pagination and pin persistence are independent of 
       createThreadSidebar({
         state,
         $,
-        t: (message) => message,
+        t: english,
         escapeHtml: (value) => String(value),
         shortPath: (path) => path,
         titleOf: (thread) => thread.name,

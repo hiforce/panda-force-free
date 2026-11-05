@@ -1,3 +1,5 @@
+import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "../i18n.js";
+
 import { parseWorkbenchRoute } from "../workbench-route.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { createLatestRequestGate, resolveComposerPlaceholder } from "../ui-core.js";
@@ -29,7 +31,10 @@ export function assembleWorkspace({
     const generation = folderRequestGate.next();
     const list = $("#folderList");
     $("#folderConfirm").disabled = true;
-    list.innerHTML = '<div class="list-state">Loading folders…</div>';
+    setMessageHtml(
+      list,
+      '<div class="list-state"><span data-pf-message="common.loadingFolders">Loading folders…</span></div>',
+    );
     try {
       const response = await fetch(`/api/folders?path=${encodeURIComponent(path)}`),
         data = await response.json();
@@ -37,29 +42,33 @@ export function assembleWorkspace({
       if (!response.ok) throw new Error(data.error || "Cannot browse folder");
       folderBrowse = { path: data.path, parent: data.parent, selected: data.path };
       $("#folderPathInput").value = data.path;
-      $("#folderSelection").textContent = data.path;
+      setOpaqueText($("#folderSelection"), data.path);
       $("#folderConfirm").disabled = false;
       $("#folderUp").disabled = !data.parent;
-      list.innerHTML = "";
+      setMessageHtml(list, "");
       for (const folder of data.folders) {
         const b = document.createElement("button");
         b.type = "button";
         b.className = "folder-item";
-        b.innerHTML = `${icons.file}<span>${escapeHtml(folder.name)}</span>`;
+        setMessageHtml(b, `${icons.file}<span>${escapeHtml(folder.name)}</span>`);
         b.ondblclick = () => loadFolders(folder.path);
         b.onclick = () => {
           folderBrowse.selected = folder.path;
-          $("#folderSelection").textContent = folder.path;
+          setOpaqueText($("#folderSelection"), folder.path);
           $("#folderConfirm").disabled = false;
           list.querySelectorAll(".folder-item").forEach((x) => x.classList.remove("selected"));
           b.classList.add("selected");
         };
         list.append(b);
       }
-      if (!data.folders.length) list.innerHTML = '<div class="list-state">No subfolders</div>';
+      if (!data.folders.length)
+        setMessageHtml(
+          list,
+          '<div class="list-state"><span data-pf-message="common.noSubfolders">No subfolders</span></div>',
+        );
     } catch (e) {
       if (!folderRequestGate.isCurrent(generation)) return;
-      list.innerHTML = `<div class="list-state">${escapeHtml(e.message)}</div>`;
+      setMessageHtml(list, `<div class="list-state">${escapeHtml(e.message)}</div>`);
     }
   }
   function openFolderPicker() {
@@ -99,26 +108,33 @@ export function assembleWorkspace({
       hidden = Boolean(state.active) || !["workspace", "new", "task"].includes(parseWorkbenchRoute().page);
     button.hidden = hidden;
     if (picker) picker.hidden = hidden;
-    label.textContent = state.projectless
-      ? t("No working folder")
-      : $("#projectName").textContent || t("Choose working folder");
+    setOpaqueText(
+      label,
+      state.projectless
+        ? t("common.noWorkingFolder")
+        : $("#projectName").textContent || t("common.chooseWorkingFolder"),
+    );
   }
   function refreshComposerPlaceholder() {
     if (!state.active && state.composerMode === "local") {
-      $("#prompt").placeholder = t("Describe a task, add files, or start with an idea…");
+      localizeAttribute($("#prompt"), "placeholder", "workbench.describeATaskAddFilesOrStartWithAnIdea", undefined, t);
       return;
     }
     const followUpType = state.active ? (state.active.source === "cloud" ? "cloud" : "local") : undefined;
-    $("#prompt").placeholder = resolveComposerPlaceholder({
-      followUpType,
-      composerMode: state.composerMode,
-      cloudStartingState: state.cloudStartingState,
-      isBackgroundSubagentsPanelVisible: state.backgroundAgentsVisible,
-      isGoalModeActive: state.goalMode,
-      isPlanModeActive: state.planMode,
-      placeholderText: state.placeholderText,
-      isHome: !state.active,
-    });
+    setOpaqueAttribute(
+      $("#prompt"),
+      "placeholder",
+      resolveComposerPlaceholder({
+        followUpType,
+        composerMode: state.composerMode,
+        cloudStartingState: state.cloudStartingState,
+        isBackgroundSubagentsPanelVisible: state.backgroundAgentsVisible,
+        isGoalModeActive: state.goalMode,
+        isPlanModeActive: state.planMode,
+        placeholderText: state.placeholderText,
+        isHome: !state.active,
+      }),
+    );
   }
   function setWorkspace(path, refreshProfiles = true) {
     const name = path.split("/").filter(Boolean).at(-1) || path,
@@ -126,8 +142,8 @@ export function assembleWorkspace({
     workspaceContextRequestGate.next();
     mutations.set("projectless", false);
     mutations.set("workspaceContext", { cwd: resolved, project: name, environment: "Local", branch: null });
-    $("#projectPath").textContent = shortPath(path);
-    $("#projectName").textContent = name;
+    setOpaqueText($("#projectPath"), shortPath(path));
+    setOpaqueText($("#projectName"), name);
     storage.set(STORAGE_KEYS.project, path);
     syncProjectControl();
     if (!state.active) timelinePort.showEmpty();
@@ -139,12 +155,12 @@ export function assembleWorkspace({
     workspaceContextRequestGate.next();
     mutations.set("projectless", true);
     mutations.set("workspaceContext", null);
-    $("#projectPath").textContent = "~";
-    $("#projectName").textContent = t("Tasks");
+    setOpaqueText($("#projectPath"), "~");
+    localizeText($("#projectName"), "common.tasks", undefined, t);
     storage.set(STORAGE_KEYS.project, "~");
     syncProjectControl();
     if (!state.active) {
-      $("#threadPath").textContent = "";
+      setOpaqueText($("#threadPath"), "");
       timelinePort.showEmpty();
     }
     if (!$("#summaryPanel").hidden) viewUpdates.request("details");
@@ -153,7 +169,7 @@ export function assembleWorkspace({
   async function selectWorkbenchProject(path) {
     const response = await fetch(`/api/workspace/context?cwd=${encodeURIComponent(path)}`, { cache: "no-store" });
     const context = await response.json();
-    if (!response.ok) throw new Error(context.error || t("Project unavailable"));
+    if (!response.ok) throw new Error(context.error || t("workbench.projectUnavailable"));
     composerPort.saveComposerDraft();
     setWorkspace(context.cwd);
     navigationPort.startNewTask({ saveCurrentDraft: false });
@@ -162,7 +178,7 @@ export function assembleWorkspace({
   async function prepareBusinessSession(projectId) {
     if (!projectId) return;
     if (!projectsPort.businessProjects.ready) await projectsPort.businessProjects.load();
-    if (!projectsPort.businessProjects.get(projectId)) throw new Error(t("Project not found"));
+    if (!projectsPort.businessProjects.get(projectId)) throw new Error(t("errors.projectNotFound"));
   }
   async function useSelectedFolder() {
     if (!folderBrowse.selected) return;
@@ -172,7 +188,7 @@ export function assembleWorkspace({
       await selectWorkbenchProject(folderBrowse.selected);
       $("#folderDialog").close();
     } catch (error) {
-      $("#folderList").innerHTML = `<div class="list-state" role="alert">${escapeHtml(error.message)}</div>`;
+      setMessageHtml($("#folderList"), `<div class="list-state" role="alert">${escapeHtml(error.message)}</div>`);
     } finally {
       button.disabled = false;
     }
@@ -193,20 +209,20 @@ export function assembleWorkspace({
       viewUpdates.request("status");
       return;
     }
-    $("#threadTitle").textContent = titleOf(t);
+    setOpaqueText($("#threadTitle"), titleOf(t));
     if (t.projectless) {
       mutations.set("projectless", true);
       mutations.set("workspaceContext", null);
-      $("#projectName").textContent = "Tasks";
-      $("#projectPath").textContent = "~";
-      $("#threadPath").textContent = "";
+      localizeText($("#projectName"), "common.tasks", undefined);
+      setOpaqueText($("#projectPath"), "~");
+      setOpaqueText($("#threadPath"), "");
     } else {
-      $("#threadPath").textContent = shortPath(t.cwd);
+      setOpaqueText($("#threadPath"), shortPath(t.cwd));
       setWorkspace(t.cwd || state.config.home);
     }
     syncProjectControl();
     refreshComposerPlaceholder();
-    $("#threadSource").textContent = t.source || "local";
+    setOpaqueText($("#threadSource"), t.source || "local");
     viewUpdates.request("goals");
     viewUpdates.request("status");
   }

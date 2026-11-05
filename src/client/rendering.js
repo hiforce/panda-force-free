@@ -208,7 +208,10 @@ export function itemImageReferences(item = {}) {
   return references;
 }
 
-export function renderItemImages(item = {}, { cwd = "", className = "message-image-grid", excludeText = "", thumbnail = false } = {}) {
+export function renderItemImages(
+  item = {},
+  { cwd = "", className = "message-image-grid", excludeText = "", thumbnail = false } = {},
+) {
   const images = itemImageReferences(item).filter((image) => !excludeText.includes(image.source));
   if (!images.length) return "";
   return `<div class="${escapeHtml(className)}">${images.map((image) => renderImagePreview(image.source, { cwd, title: image.title, thumbnail })).join("")}</div>`;
@@ -250,7 +253,15 @@ function sanitizeHtml(html) {
   return purifier.sanitize(html, {
     ADD_ATTR: ["target", "rel"],
     FORBID_TAGS: ["style", "script", "iframe", "object", "embed"],
-    FORBID_ATTR: ["srcdoc"],
+    FORBID_ATTR: [
+      "srcdoc",
+      "data-pf-message",
+      "data-pf-values",
+      "data-pf-title",
+      "data-pf-placeholder",
+      "data-pf-aria-label",
+      "data-pf-data-tooltip",
+    ],
   });
 }
 

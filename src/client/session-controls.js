@@ -1,3 +1,5 @@
+import { localizeAttribute, localizeText, messageHtml, setMessageHtml, setOpaqueText } from "./i18n.js";
+
 import { createBridgeError } from "../shared/bridge-errors.js";
 import { createLatestRequestGate, filterAppModels, selectModelState } from "./ui-core.js";
 import { codexIcon } from "./codex-icons.js";
@@ -13,6 +15,7 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
   const permissionProfileRequestGate = createLatestRequestGate();
   let modelLoadPromise = null;
   let pendingFullAccessAction = "select";
+  let requestingNotificationPermission = false;
   function readLocalSessionModelSettings(threadId = state.active?.id) {
     if (!threadId) return null;
     try {
@@ -51,17 +54,17 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
   }
 
   const reasoningLabels = {
-    none: "None",
-    minimal: "Minimal",
-    low: "Low",
-    medium: "Medium",
-    high: "High",
-    xhigh: "Extra High",
-    max: "Max",
-    ultra: "Ultra",
+    none: "common.none",
+    minimal: "common.minimal",
+    low: "common.low",
+    medium: "common.medium",
+    high: "common.high",
+    xhigh: "common.extraHigh",
+    max: "common.max",
+    ultra: "common.ultra",
   };
   function reasoningLabel(value) {
-    return t(reasoningLabels[value] || String(value || "Medium"));
+    return t(reasoningLabels[value] || String(value || "common.medium"));
   }
   function updateModelLoadUi() {
     syncModelLabel();
@@ -100,7 +103,7 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
       }
       state.modelLoadStatus = "error";
       updateModelLoadUi();
-      addPersistentError(lastError?.message || t("Could not load models"), { key: "model-load" });
+      addPersistentError(lastError?.message || t("errors.couldNotLoadModels"), { key: "model-load" });
       return false;
     })().finally(() => {
       modelLoadPromise = null;
@@ -176,19 +179,22 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
     syncModelLabel();
     if (keepOpen) renderModelMenuMain();
     else closeModelMenu();
-    toast(`Model: ${modelDisplay(selectedModel())}`);
+    toast(t("common.modelChanged", { model: modelDisplay(selectedModel()) }));
   }
   function syncModelLabel() {
     const model = selectedModel();
-    $("#modelLabel").textContent = state.models.length
-      ? modelDisplay(model, true)
-      : t(state.modelLoadStatus === "error" ? "Model load failed · Retry" : "Loading models…");
-    $("#effortLabel").textContent = reasoningLabel($("#effortSelect").value);
+    setOpaqueText(
+      $("#modelLabel"),
+      state.models.length
+        ? modelDisplay(model, true)
+        : t(state.modelLoadStatus === "error" ? "common.modelLoadFailedRetry" : "common.loadingModels"),
+    );
+    setOpaqueText($("#effortLabel"), reasoningLabel($("#effortSelect").value));
   }
   function updateEfforts(preferred, preferPreferred = false) {
     const model = selectedModel(),
       effort = $("#effortSelect");
-    effort.innerHTML = "";
+    setMessageHtml(effort, "");
     const supported = model?.supportedReasoningEfforts || [{ reasoningEffort: "medium" }],
       values = supported.map((item) => item.reasoningEffort).filter(Boolean),
       local = readLocalSessionModelSettings(),
@@ -204,11 +210,11 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
     for (const value of values.length ? values : ["medium"]) {
       const option = document.createElement("option");
       option.value = value;
-      option.textContent = value;
+      setOpaqueText(option, value);
       option.selected = value === selected;
       effort.append(option);
     }
-    $("#effortLabel").textContent = reasoningLabel(effort.value);
+    setOpaqueText($("#effortLabel"), reasoningLabel(effort.value));
   }
   function contextUsageValue(tokenUsage) {
     const contextWindow = Number(tokenUsage?.modelContextWindow),
@@ -238,22 +244,34 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
       status = rounded >= 50 ? `${rounded}% full` : `${rounded}% used (${remaining}% left)`;
     indicator.hidden = false;
     indicator.style.setProperty("--context-percent", String(percent));
-    indicator.setAttribute("aria-label", `Context usage: ${rounded}%`);
-    indicator.dataset.tooltip = `Context window:\n${status}\n${usedThousands}k / ${windowThousands}k tokens used`;
+    localizeAttribute(indicator, "aria-label", "common.contextLabel", { percent: rounded }, t);
+    localizeAttribute(
+      indicator,
+      "data-tooltip",
+      "common.contextTooltip",
+      { percent: rounded, remaining, used: usedThousands, total: windowThousands },
+      t,
+    );
   }
   function menuTitle(text, back = false) {
-    return `<div class="model-menu-title-row">${back ? `<button type="button" class="model-menu-back" id="modelMenuBack" aria-label="Back">${codexIcon("chevronLeft")}</button>` : ""}<div class="model-menu-title">${escapeHtml(text)}</div></div>`;
+    return `<div class="model-menu-title-row">${back ? `<button type="button" class="model-menu-back" id="modelMenuBack" aria-label="Back" data-pf-aria-label="common.back">${codexIcon("chevronLeft")}</button>` : ""}<div class="model-menu-title">${messageHtml(text, undefined, t)}</div></div>`;
   }
   function renderModelMenuMain() {
     const menu = $("#modelMenu");
     if (!state.models.length) {
-      menu.innerHTML = `<div class="model-menu-title-row" role="status">${escapeHtml(t(state.modelLoadStatus === "error" ? "Could not load models" : "Loading models…"))}</div>${state.modelLoadStatus === "error" ? `<button class="model-option" type="button" id="retryModels">${escapeHtml(t("Retry loading models"))}</button>` : ""}`;
+      setMessageHtml(
+        menu,
+        `<div class="model-menu-title-row" role="status">${messageHtml(state.modelLoadStatus === "error" ? "errors.couldNotLoadModels" : "common.loadingModels", undefined, t)}</div>${state.modelLoadStatus === "error" ? `<button class="model-option" type="button" id="retryModels">${messageHtml("sessions.retryLoadingModels", undefined, t)}</button>` : ""}`,
+      );
       menu.querySelector("#retryModels")?.addEventListener("click", () => loadModels());
       return;
     }
     const model = selectedModel(),
       effort = $("#effortSelect");
-    menu.innerHTML = `<div class="model-menu-view model-menu-view-main">${menuTitle("Reasoning")}<div class="model-menu-list" data-model-menu-efforts></div><div class="model-menu-separator"></div><button type="button" class="model-submenu-button" id="modelSubmenuButton"><span>Model</span><span class="model-submenu-value">${escapeHtml(modelDisplay(model))}</span>${codexIcon("chevronRight")}</button></div>`;
+    setMessageHtml(
+      menu,
+      `<div class="model-menu-view model-menu-view-main">${menuTitle("common.reasoning")}<div class="model-menu-list" data-model-menu-efforts></div><div class="model-menu-separator"></div><button type="button" class="model-submenu-button" id="modelSubmenuButton"><span><span data-pf-message="common.model">Model</span></span><span class="model-submenu-value">${escapeHtml(modelDisplay(model))}</span>${codexIcon("chevronRight")}</button></div>`,
+    );
     const list = menu.querySelector("[data-model-menu-efforts]");
     for (const option of effort.options) {
       const button = document.createElement("button");
@@ -261,7 +279,10 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
       button.className = "model-effort-row";
       button.dataset.value = option.value;
       button.setAttribute("aria-checked", String(option.selected));
-      button.innerHTML = `<span>${escapeHtml(reasoningLabel(option.value))}</span><span class="model-check">${option.selected ? codexIcon("check") : ""}</span>`;
+      setMessageHtml(
+        button,
+        `<span>${escapeHtml(reasoningLabel(option.value))}</span><span class="model-check">${option.selected ? codexIcon("check") : ""}</span>`,
+      );
       button.onclick = () => chooseEffort(option.value);
       list.append(button);
     }
@@ -269,7 +290,10 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
   }
   function renderModelSubmenu() {
     const menu = $("#modelMenu");
-    menu.innerHTML = `<div class="model-menu-view model-menu-view-models">${menuTitle("Model", true)}<div class="model-menu-list model-list"></div></div>`;
+    setMessageHtml(
+      menu,
+      `<div class="model-menu-view model-menu-view-models">${menuTitle("common.model", true)}<div class="model-menu-list model-list"></div></div>`,
+    );
     menu.querySelector("#modelMenuBack").onclick = renderModelMenuMain;
     const list = menu.querySelector(".model-list");
     for (const model of state.models) {
@@ -279,7 +303,10 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
       button.role = "menuitemradio";
       button.dataset.model = model.model;
       button.setAttribute("aria-checked", String(model.model === state.selectedModel));
-      button.innerHTML = `<span class="model-option-copy"><strong>${escapeHtml(modelDisplay(model))}</strong>${model.description ? `<small>${escapeHtml(model.description)}</small>` : ""}</span><span class="model-check">${model.model === state.selectedModel ? codexIcon("check") : ""}</span>`;
+      setMessageHtml(
+        button,
+        `<span class="model-option-copy"><strong>${escapeHtml(modelDisplay(model))}</strong>${model.description ? `<small>${escapeHtml(model.description)}</small>` : ""}</span><span class="model-check">${model.model === state.selectedModel ? codexIcon("check") : ""}</span>`,
+      );
       button.onclick = () => chooseModel(model.model);
       list.append(button);
     }
@@ -288,7 +315,7 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
     const effort = $("#effortSelect");
     if (![...effort.options].some((option) => option.value === value)) return;
     effort.value = value;
-    $("#effortLabel").textContent = reasoningLabel(value);
+    setOpaqueText($("#effortLabel"), reasoningLabel(value));
     storage.set(STORAGE_KEYS.effortFor(state.selectedModel), value);
     if (state.active?.id) {
       state.sessionSettings.set(state.active.id, {
@@ -300,7 +327,7 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
       writeLocalSessionModelSettings(state.active.id, { model: state.selectedModel, effort: value });
     }
     closeModelMenu();
-    toast(`Reasoning: ${reasoningLabel(value)}`);
+    toast(t("common.reasoningLevel", { level: reasoningLabel(value) }));
   }
   function openModelMenu(view = "main") {
     if (view === "models") renderModelSubmenu();
@@ -323,8 +350,8 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
   const permissionModes = {
     default: {
       kind: "legacy",
-      label: "Ask for approval",
-      description: "Always ask for permission before editing external files or using the internet",
+      label: "common.askForApproval",
+      description: "common.alwaysAskForPermissionBeforeEditingExternalFilesOrUsing",
       icon: "shield",
       approvalPolicy: "on-request",
       approvalsReviewer: "user",
@@ -332,8 +359,8 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
     },
     "guardian-approvals": {
       kind: "legacy",
-      label: "Approve for me",
-      description: "Only ask for actions detected as potentially unsafe",
+      label: "common.approveForMe",
+      description: "common.onlyAskForActionsDetectedAsPotentiallyUnsafe",
       icon: "shield",
       approvalPolicy: "on-request",
       approvalsReviewer: "auto_review",
@@ -341,8 +368,8 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
     },
     "full-access": {
       kind: "legacy",
-      label: "Full access",
-      description: "Unrestricted access to the internet and any file on your computer",
+      label: "common.fullAccess",
+      description: "common.unrestrictedAccessToTheInternetAndAnyFileOnYour",
       icon: "terminal",
       approvalPolicy: "never",
       approvalsReviewer: "user",
@@ -465,7 +492,7 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
   function renderPermissionMenu() {
     const list = $("#permissionOptions");
     if (!list) return;
-    list.innerHTML = "";
+    setMessageHtml(list, "");
     const modes = ["default"];
     if (autoReviewSupported()) modes.push("guardian-approvals");
     if (state.permissionVisibility.fullAccess) modes.push("full-access");
@@ -482,7 +509,10 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
       button.disabled = option.allowed === false;
       button.setAttribute("aria-checked", String(checked));
       const description = option.allowed === false ? "Not allowed by managed settings" : option.description;
-      button.innerHTML = `<span class="permission-option-icon">${codexIcon(option.icon)}</span><span class="permission-option-copy"><strong>${escapeHtml(option.optionLabel || option.label)}</strong><small>${escapeHtml(description)}</small></span><span class="permission-option-check">${checked ? codexIcon("check") : ""}</span>`;
+      setMessageHtml(
+        button,
+        `<span class="permission-option-icon">${codexIcon(option.icon)}</span><span class="permission-option-copy"><strong>${messageHtml(option.optionLabel || option.label, undefined, t)}</strong><small>${messageHtml(description, undefined, t)}</small></span><span class="permission-option-check">${checked ? codexIcon("check") : ""}</span>`,
+      );
       button.onclick = () => choosePermissionMode(mode);
       list.append(button);
     }
@@ -503,42 +533,54 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
     const toggle = $("#settingsTaskNotifyToggle");
     if (toggle) {
       const available = "Notification" in window;
-      toggle.checked = available && taskNotifyEnabled() && Notification.permission !== "denied";
-      toggle.disabled = !available;
+      toggle.checked =
+        available &&
+        (requestingNotificationPermission || (taskNotifyEnabled() && Notification.permission === "granted"));
+      toggle.disabled = !available || requestingNotificationPermission;
+      toggle.setAttribute("aria-busy", String(requestingNotificationPermission));
     }
   }
   async function setTaskNotifyEnabled(enabled) {
+    if (requestingNotificationPermission) return;
     const on = Boolean(enabled);
-    storage.set(STORAGE_KEYS.taskNotify, String(on));
-    if (on && "Notification" in window && Notification.permission === "default") {
-      try {
-        await Notification.requestPermission();
-      } catch {}
+    if (!on || !("Notification" in window)) {
+      storage.set(STORAGE_KEYS.taskNotify, "false");
+      syncTaskNotifySettings();
+      return;
     }
-    syncTaskNotifySettings();
-    if (on && "Notification" in window && Notification.permission === "denied")
-      toast(t("Browser notifications are blocked"));
+    try {
+      requestingNotificationPermission = Notification.permission === "default";
+      syncTaskNotifySettings();
+      // This path is called only by the user's notification toggle gesture.
+      const permission = requestingNotificationPermission
+        ? await Notification.requestPermission()
+        : Notification.permission;
+      storage.set(STORAGE_KEYS.taskNotify, String(permission === "granted"));
+      if (permission === "denied") toast(t("sessions.browserNotificationsAreBlocked"));
+    } catch {
+      storage.set(STORAGE_KEYS.taskNotify, "false");
+      toast(t("errors.couldNotEnableBrowserNotifications"));
+    } finally {
+      requestingNotificationPermission = false;
+      syncTaskNotifySettings();
+    }
   }
   function maybeNotifyTaskCompleted(p) {
     if (!taskNotifyEnabled()) return;
     if (!("Notification" in window) || Notification.permission !== "granted") return;
     if (document.hasFocus() && !document.hidden) return;
     const thread = state.threads.find((x) => x.id === p.threadId),
-      title = thread?.name || t("Task completed");
+      title = thread?.name || t("sessions.taskCompleted");
     try {
-      new Notification(t("Task completed"), { body: title, tag: `codex-turn-${p.turn?.id || Date.now()}` });
+      new Notification(t("sessions.taskCompleted"), { body: title, tag: `codex-turn-${p.turn?.id || Date.now()}` });
     } catch {}
-  }
-  function requestTaskNotifyPermission() {
-    if (taskNotifyEnabled() && "Notification" in window && Notification.permission === "default")
-      Notification.requestPermission().catch(() => {});
   }
   function syncPermissionControl() {
     normalizePermissionMode();
     const selected = selectedPermission();
-    $("#modeButton .control-label").textContent = t(state.planMode ? "Plan mode" : selected.label);
+    localizeText($("#modeButton .control-label"), state.planMode ? "common.planMode" : selected.label, undefined, t);
     $("#modeButton").classList.toggle("active", state.planMode || state.permissionMode !== "default");
-    if ($("#settingsPermissionValue")) $("#settingsPermissionValue").textContent = t(selected.label);
+    if ($("#settingsPermissionValue")) localizeText($("#settingsPermissionValue"), selected.label, undefined, t);
     syncPermissionSettings();
     renderPermissionMenu();
   }
@@ -549,7 +591,7 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
     storage.set(STORAGE_KEYS.permissionMode, mode);
     syncPermissionControl();
     closePermissionMenu();
-    toast(selected.label);
+    toast(t(selected.label));
   }
   function setPermissionVisibility(kind, enabled) {
     state.permissionVisibility[kind] = Boolean(enabled);
@@ -631,7 +673,6 @@ export function createSessionControls({ $, t, state, rpc, postBridge, escapeHtml
     renderModelMenuMain,
     renderModels,
     renderPermissionMenu,
-    requestTaskNotifyPermission,
     selectedModel,
     selectedPermission,
     setPermissionMode,

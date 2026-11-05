@@ -1,31 +1,36 @@
+import {
+  bindMessages,
+  errorText,
+  getBrowserI18n,
+  localizeAttribute,
+  localizeText,
+  setMessageHtml,
+  setOpaqueText,
+} from "./i18n.js";
+
 import { applyThemePreference } from "./theme.js";
 import { installPandaForceSession } from "./auth-session.js";
 import { sessionLoginUrl } from "../shared/auth-return-path.js";
 import { pandaInterfaceMark } from "./panda-brand.js";
-import { createDomI18n, createI18n } from "./i18n.js";
+
 import { startStartupReads } from "./startup-reads.js";
 import { getWorkspacePreparation } from "./workspace-preparation.js";
-import {
-  ADMINISTRATOR_PASSWORD_ERROR,
-  MIN_ADMINISTRATOR_PASSWORD_LENGTH,
-  validAdministratorPassword,
-} from "../shared/password-policy.js";
+import { MIN_ADMINISTRATOR_PASSWORD_LENGTH, validAdministratorPassword } from "../shared/password-policy.js";
 
 applyThemePreference();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applyThemePreference());
 
 const $ = (selector) => document.querySelector(selector);
-const i18n = globalThis.__pandaForceI18n || createI18n();
-globalThis.__pandaForceI18n = i18n;
-globalThis.__pandaForceDomI18n = globalThis.__pandaForceDomI18n || createDomI18n(i18n);
-const t = (message) => i18n.t(message);
+const i18n = getBrowserI18n();
+
+const t = i18n.t;
 
 function showAuthFailure(message) {
   $("#passwordGate").hidden = false;
   $("#app").hidden = true;
-  $("#passwordStep").textContent = t("Connection unavailable");
-  $("#passwordTitle").textContent = t("Please try again");
-  $("#passwordDescription").textContent = message;
+  localizeText($("#passwordStep"), "auth.connectionUnavailable", undefined, t);
+  localizeText($("#passwordTitle"), "auth.pleaseTryAgain", undefined, t);
+  setOpaqueText($("#passwordDescription"), message);
   $("#passwordLoginForm").hidden = true;
   const retry = $("#authRetryButton");
   retry.hidden = false;
@@ -57,11 +62,13 @@ async function loadApp() {
 
 async function readStatus() {
   const response = await fetch("/api/auth/status", { cache: "no-store" });
-  if (!response.ok) throw new Error(t("Authentication is temporarily unavailable. Please retry."));
+  if (!response.ok) throw new Error(t("errors.authenticationIsTemporarilyUnavailablePleaseRetry"));
   return response.json();
 }
 
 async function start() {
+  await i18n.ready;
+  bindMessages(document);
   let status;
   try {
     status = await readStatus();
@@ -87,7 +94,8 @@ async function start() {
 
     $("#passwordGate").hidden = true;
     if (!(await loadApp())) return;
-    if (status.authMode === "idaas" || status.passwordRequired) installPandaForceSession(status, { translate: t, i18n });
+    if (status.authMode === "idaas" || status.passwordRequired)
+      installPandaForceSession(status, { translate: t, i18n });
   };
   if (status.authMode === "idaas") {
     if (!status.authenticated) {
@@ -111,7 +119,7 @@ async function start() {
     error = $("#passwordError"),
     visibility = $("#passwordVisibility");
   let mode;
-  $("#passwordCodexMark").innerHTML = pandaInterfaceMark("password-panda-mark");
+  setMessageHtml($("#passwordCodexMark"), pandaInterfaceMark("password-panda-mark"));
   const action = () =>
     mode === "setup" ? "Create administrator" : mode === "migrate" ? "Save and continue" : "Log in";
   const field = (id, element, visible) => {
@@ -124,38 +132,61 @@ async function start() {
     const setup = mode === "setup",
       migrate = mode === "migrate",
       needsUsername = setup || migrate || status.usernameRequired;
-    $("#passwordStep").textContent = t(setup ? "First-time setup" : migrate ? "One last step" : "Your workspace");
-    $("#passwordTitle").textContent = t(
-      setup ? "Create your administrator" : migrate ? "Complete your administrator account" : "Welcome back",
+    localizeText(
+      $("#passwordStep"),
+      setup ? "common.firstTimeSetup" : migrate ? "common.oneLastStep" : "common.yourWorkspace",
+      undefined,
+      t,
     );
-    $("#passwordDescription").textContent = t(
+    localizeText(
+      $("#passwordTitle"),
       setup
-        ? "Set up your account to make this workspace yours."
+        ? "common.createYourAdministrator"
         : migrate
-          ? "Your existing password is verified. Choose a username to finish setup."
-          : status.migrationRequired
-            ? "Sign in with your existing password to complete administrator setup."
-            : "Sign in to continue to your workspace.",
+          ? "common.completeYourAdministratorAccount"
+          : "common.welcomeBack",
+      undefined,
+      t,
     );
-    gate.setAttribute(
+    localizeText(
+      $("#passwordDescription"),
+      setup
+        ? "common.setUpYourAccountToMakeThisWorkspaceYours"
+        : migrate
+          ? "common.yourExistingPasswordIsVerifiedChooseAUsernameToFinish"
+          : status.migrationRequired
+            ? "common.signInWithYourExistingPasswordToCompleteAdministratorSetup"
+            : "common.signInToContinueToYourWorkspace",
+      undefined,
+      t,
+    );
+    localizeAttribute(
+      gate,
       "aria-label",
-      t(setup ? "Administrator setup" : migrate ? "Complete administrator setup" : "PandaForce login"),
+      setup ? "common.administratorSetup" : migrate ? "common.completeAdministratorSetup" : "common.pandaforceLogin",
+      undefined,
+      t,
     );
     field("#usernameField", username, needsUsername);
     if ((setup || migrate) && !username.value) username.value = "admin";
-    $("#usernameLabel").textContent = t(setup || migrate ? "Administrator username" : "Username");
+    localizeText(
+      $("#usernameLabel"),
+      setup || migrate ? "common.administratorUsername" : "common.username",
+      undefined,
+      t,
+    );
     field("#passwordField", input, !migrate);
     field("#passwordConfirmField", confirm, setup);
     confirm.hidden = !setup;
     field("#installationCodeField", code, setup && status.installationCodeRequired);
     $("#passwordHint").hidden = !setup;
-    input.placeholder = t(setup ? "New password" : "Password");
+    localizeAttribute(input, "placeholder", setup ? "common.newPassword" : "common.password", undefined, t);
     input.autocomplete = setup ? "new-password" : "current-password";
     input.minLength = setup ? MIN_ADMINISTRATOR_PASSWORD_LENGTH : 0;
     input.type = "password";
     visibility.setAttribute("aria-pressed", "false");
-    visibility.setAttribute("aria-label", t("Show password"));
-    button.textContent = t(action());
+    localizeAttribute(visibility, "aria-label", "common.showPassword", undefined, t);
+    localizeText(button, action(), undefined, t);
     requestAnimationFrame(() =>
       (setup && status.installationCodeRequired ? code : needsUsername ? username : input).focus(),
     );
@@ -164,7 +195,7 @@ async function start() {
     const show = input.type === "password";
     input.type = show ? "text" : "password";
     visibility.setAttribute("aria-pressed", String(show));
-    visibility.setAttribute("aria-label", t(show ? "Hide password" : "Show password"));
+    localizeAttribute(visibility, "aria-label", show ? "common.hidePassword" : "common.showPassword", undefined, t);
   };
   gate.hidden = false;
   configure();
@@ -174,13 +205,15 @@ async function start() {
     const submittingMode = mode;
     try {
       if ((mode !== "login" || status.usernameRequired) && !/^[a-z0-9][a-z0-9._@-]{2,63}$/i.test(username.value.trim()))
-        throw new Error(t("Use 3–64 letters, numbers, dots, underscores, @ or hyphens for the username."));
-      if (mode === "setup" && !validAdministratorPassword(input.value))
-        throw new Error(t(ADMINISTRATOR_PASSWORD_ERROR));
-      if (mode === "setup" && input.value !== confirm.value) throw new Error(t("Passwords do not match"));
+        throw new Error(t("auth.use364LettersNumbersDotsUnderscoresOrHyphensFor"));
+      if (mode === "setup" && !validAdministratorPassword(input.value)) throw new Error(t("auth.passwordPolicy"));
+      if (mode === "setup" && input.value !== confirm.value) throw new Error(t("auth.passwordsDoNotMatch"));
       button.disabled = true;
-      button.textContent = t(
-        mode === "setup" ? "Creating administrator…" : mode === "migrate" ? "Saving…" : "Logging in…",
+      localizeText(
+        button,
+        mode === "setup" ? "common.creatingAdministrator" : mode === "migrate" ? "goals.saving" : "common.loggingIn",
+        undefined,
+        t,
       );
       const response = await fetch(mode === "login" ? "/api/auth/login" : "/api/auth/setup", {
         method: "POST",
@@ -198,9 +231,9 @@ async function start() {
           input.value = "";
           confirm.value = "";
           configure();
-          throw new Error(t("An administrator account already exists. Log in to continue."));
+          throw new Error(t("auth.anAdministratorAccountAlreadyExistsLogInToContinue"));
         }
-        throw new Error(t(data.error || "Unable to log in"));
+        throw new Error(errorText(data, t, "errors.unableToLogIn"));
       }
       input.value = "";
       confirm.value = "";
@@ -214,17 +247,17 @@ async function start() {
     } catch (reason) {
       gate.hidden = false;
       $("#app").hidden = true;
-      error.textContent = reason instanceof Error ? reason.message : String(reason);
+      setOpaqueText(error, reason instanceof Error ? reason.message : String(reason));
       error.hidden = false;
       if (submittingMode === "login" && !input.disabled) input.select();
     } finally {
       button.disabled = false;
-      button.textContent = t(action());
+      localizeText(button, action(), undefined, t);
     }
   };
 }
 
 start().catch((error) => {
   console.error("[panda-force] authentication bootstrap failed", error);
-  showAuthFailure(t("Could not open the workspace. Please reload."));
+  showAuthFailure(t("errors.couldNotOpenTheWorkspacePleaseReload"));
 });

@@ -1,3 +1,5 @@
+import { getBrowserI18n, localizeText, setOpaqueText } from "./i18n.js";
+
 // Quota percentages come from app-server, independently of thread token usage.
 export function codexRateLimits(payload) {
   const buckets = payload?.rateLimitsByLimitId;
@@ -32,7 +34,11 @@ export function resetCountdown(resetsAt, now = Date.now()) {
   return { days, hours, minutes: remainingMinutes % 60 };
 }
 
-export function renderQuotaWindows(container, limits, { t = (value) => value, locale = "en", now = Date.now() } = {}) {
+export function renderQuotaWindows(
+  container,
+  limits,
+  { t = getBrowserI18n().t, locale = "en", now = Date.now() } = {},
+) {
   const document = container.ownerDocument;
   container.replaceChildren();
   const formatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
@@ -41,23 +47,29 @@ export function renderQuotaWindows(container, limits, { t = (value) => value, lo
     const card = document.createElement("div");
     card.className = "usage-card";
     const heading = document.createElement("strong");
-    heading.textContent = t(index === 0 ? "5-hour limit" : "Weekly limit");
+    localizeText(heading, index === 0 ? "common.5HourLimit" : "common.weeklyLimit", undefined, t);
     card.append(heading);
     if (window) {
       const summary = document.createElement("p");
-      summary.textContent = `${formatter.format(window.usedPercent)}% ${t("used")} · ${formatter.format(window.remainingPercent)}% ${t("remaining")}`;
+      setOpaqueText(
+        summary,
+        `${formatter.format(window.usedPercent)}% ${t("usage.used")} · ${formatter.format(window.remainingPercent)}% ${t("usage.remaining")}`,
+      );
       const progress = document.createElement("progress");
       progress.max = 100;
       progress.value = window.usedPercent;
       progress.setAttribute("aria-label", heading.textContent);
       const reset = document.createElement("small");
-      reset.textContent = window.resetsAt
-        ? `${t("Resets at")}: ${t("Resets in {days}d {hours}h {minutes}m", resetCountdown(window.resetsAt, now))}`
-        : t("Reset time unavailable");
+      setOpaqueText(
+        reset,
+        window.resetsAt
+          ? `${t("usage.resetsAt")}: ${t("usage.resetsInDaysdHourshMinutesm", resetCountdown(window.resetsAt, now))}`
+          : t("usage.resetTimeUnavailable"),
+      );
       card.append(summary, progress, reset);
     } else {
       const empty = document.createElement("p");
-      empty.textContent = t("Usage data unavailable");
+      localizeText(empty, "usage.usageDataUnavailable", undefined, t);
       card.append(empty);
     }
     container.append(card);

@@ -1,3 +1,5 @@
+import { getBrowserI18n, localizeAttribute, localizeText, setMessageHtml, setOpaqueText } from "./i18n.js";
+
 import { renderDiffLine } from "./diff-rendering.js";
 import { codexIcon } from "./codex-icons.js";
 import {
@@ -11,6 +13,7 @@ import { storage, STORAGE_KEYS } from "./storage.js";
 // Review preferences, patch actions and batched rendering have one owner.
 export function createReviewController({
   $,
+  t = getBrowserI18n().t,
   state,
   escapeHtml,
   shortPath,
@@ -76,11 +79,27 @@ export function createReviewController({
     $("#reviewWrap").disabled = !has;
     $("#reviewExpand").disabled = !has;
     $("#reviewPatch").disabled = !has || !state.active?.id || !review?.turnId;
-    $("#reviewMode").title = reviewPreferences.mode === "unified" ? "Switch to split diff" : "Switch to unified diff";
-    $("#reviewWrap").title = reviewPreferences.wrap ? "Disable word wrap" : "Enable word wrap";
-    $("#reviewExpand").title = reviewPreferences.expanded ? "Collapse all diffs" : "Expand all diffs";
-    $("#reviewPatch").title = reviewPatchState === "undo" ? "Undo changes" : "Reapply changes";
-    $("#reviewPatch").innerHTML = codexIcon(reviewPatchState === "undo" ? "undo" : "redo");
+    localizeAttribute(
+      $("#reviewMode"),
+      "title",
+      reviewPreferences.mode === "unified" ? "common.switchToSplitDiff" : "common.switchToUnifiedDiff",
+    );
+    localizeAttribute(
+      $("#reviewWrap"),
+      "title",
+      reviewPreferences.wrap ? "files.disableWordWrap" : "files.enableWordWrap",
+    );
+    localizeAttribute(
+      $("#reviewExpand"),
+      "title",
+      reviewPreferences.expanded ? "common.collapseAllDiffs" : "common.expandAllDiffs",
+    );
+    localizeAttribute(
+      $("#reviewPatch"),
+      "title",
+      reviewPatchState === "undo" ? "common.undoChanges" : "common.reapplyChanges",
+    );
+    setMessageHtml($("#reviewPatch"), codexIcon(reviewPatchState === "undo" ? "undo" : "redo"));
   }
   function renderChanges() {
     if (isRenderingTurn()) {
@@ -97,21 +116,26 @@ export function createReviewController({
     list.dataset.mode = reviewPreferences.mode;
     list.classList.toggle("wrap", reviewPreferences.wrap);
     if (review?.hasChanges) {
-      $("#changeCount").textContent = review.fileCount;
-      $("#changeSummary").textContent = `${review.fileCount} changed file${review.fileCount === 1 ? "" : "s"}`;
-      $("#reviewStats").innerHTML =
-        `<span class="plus">+${review.linesAdded}</span><span class="minus">−${review.linesDeleted}</span>`;
-      list.innerHTML = "";
+      setOpaqueText($("#changeCount"), review.fileCount);
+      localizeText($("#changeSummary"), "common.changedFiles", { count: review.fileCount }, t);
+      setMessageHtml(
+        $("#reviewStats"),
+        `<span class="plus">+${review.linesAdded}</span><span class="minus">−${review.linesDeleted}</span>`,
+      );
+      setMessageHtml(list, "");
       for (const file of review.files) {
         const section = document.createElement("section");
         section.className = "review-file";
         section.dataset.path = file.path;
-        section.innerHTML = `<button class="review-file-head" aria-expanded="${reviewPreferences.expanded}">${codexIcon("chevronDown", "review-chevron")}<span class="review-file-name">${escapeHtml(shortPath(file.path))}</span><span class="review-file-stats"><span class="plus">+${file.linesAdded}</span><span class="minus">−${file.linesDeleted}</span></span></button><div class="review-hunks"${reviewPreferences.expanded ? "" : " hidden"}></div>`;
+        setMessageHtml(
+          section,
+          `<button class="review-file-head" aria-expanded="${reviewPreferences.expanded}">${codexIcon("chevronDown", "review-chevron")}<span class="review-file-name">${escapeHtml(shortPath(file.path))}</span><span class="review-file-stats"><span class="plus">+${file.linesAdded}</span><span class="minus">−${file.linesDeleted}</span></span></button><div class="review-hunks"${reviewPreferences.expanded ? "" : " hidden"}></div>`,
+        );
         const body = section.querySelector(".review-hunks");
         for (const hunk of file.hunks) {
           const h = document.createElement("div");
           h.className = "review-hunk";
-          h.innerHTML = `<div class="review-hunk-head">${escapeHtml(hunk.header)}</div>${reviewHunkHtml(hunk)}`;
+          setMessageHtml(h, `<div class="review-hunk-head">${escapeHtml(hunk.header)}</div>${reviewHunkHtml(hunk)}`);
           body.append(h);
         }
         section.querySelector(".review-file-head").onclick = (e) => {
@@ -124,19 +148,29 @@ export function createReviewController({
       syncReviewControls(review);
       return;
     }
-    $("#reviewStats").textContent = "";
-    $("#changeCount").textContent = state.changes.size;
-    $("#changeSummary").textContent = state.changes.size
-      ? `${state.changes.size} changed file${state.changes.size === 1 ? "" : "s"}`
-      : "No changes yet";
-    list.innerHTML = "";
+    setOpaqueText($("#reviewStats"), "");
+    setOpaqueText($("#changeCount"), state.changes.size);
+    localizeText(
+      $("#changeSummary"),
+      state.changes.size ? "common.changedFiles" : "common.noChangesYet",
+      { count: state.changes.size },
+      t,
+    );
+    setMessageHtml(list, "");
     for (const [path, ch] of state.changes) {
       const el = document.createElement("div");
       el.className = "change-item";
-      el.innerHTML = `<div class="change-path">${codexIcon("file")}<span>${escapeHtml(shortPath(path))}</span></div><div class="change-stats"><span class="plus">+${ch.additions || 0}</span> <span class="minus">−${ch.deletions || 0}</span></div>`;
+      setMessageHtml(
+        el,
+        `<div class="change-path">${codexIcon("file")}<span>${escapeHtml(shortPath(path))}</span></div><div class="change-stats"><span class="plus">+${ch.additions || 0}</span> <span class="minus">−${ch.deletions || 0}</span></div>`,
+      );
       list.append(el);
     }
-    if (!state.changes.size) list.innerHTML = '<div class="panel-empty">Changes will appear here.</div>';
+    if (!state.changes.size)
+      setMessageHtml(
+        list,
+        '<div class="panel-empty"><span data-pf-message="common.changesWillAppearHere">Changes will appear here.</span></div>',
+      );
     syncReviewControls(null);
   }
   async function applyActiveReviewPatch() {
@@ -145,7 +179,7 @@ export function createReviewController({
     const action = reviewPatchState,
       button = $("#reviewPatch");
     button.disabled = true;
-    button.innerHTML = codexIcon("loaderCircle", "review-loading");
+    setMessageHtml(button, codexIcon("loaderCircle", "review-loading"));
     try {
       const response = await fetch("/api/review/patch", {
           method: "POST",

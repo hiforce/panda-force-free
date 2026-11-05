@@ -1,0 +1,10 @@
+{
+  "used": "used",
+  "remaining": "remaining",
+  "resetsAt": "Resets at",
+  "resetsInDaysdHourshMinutesm": "Resets in {days}d {hours}h {minutes}m",
+  "updatedAt": "Updated at",
+  "resetTimeUnavailable": "Reset time unavailable",
+  "usageDataUnavailable": "Usage data unavailable",
+  "loadingUsage": "Loading usage…"
+}

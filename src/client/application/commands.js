@@ -40,21 +40,23 @@ export function assembleCommands({
     } else if (command === "project") {
       workspacePort.openFolderPicker();
     } else if (command === "status") {
-      noticesPort.toast(state.active?.id ? `Task ${state.active.id}` : "No active task");
+      noticesPort.toast(
+        state.active?.id ? t("composer.taskIdentity", { id: state.active.id }) : t("composer.noActiveTask"),
+      );
     } else if (command === "init") {
-      noticesPort.toast("Init requires the native command bridge.");
+      noticesPort.toast(t("composer.initBridgeRequired"));
     } else if (command === "mcp") {
-      noticesPort.toast("MCP status requires the native desktop status surface.");
+      noticesPort.toast(t("composer.mcpSurfaceRequired"));
     }
   }
   async function submitNativeSlashCommand(thread, command) {
     if (!thread?.id) {
-      noticesPort.toast(t("Start a task first"));
+      noticesPort.toast(t("workbench.startATaskFirst"));
       return;
     }
     if (command === "compact") {
       await transportPort.rpc("thread/compact/start", { threadId: thread.id });
-      noticesPort.toast("Compaction started");
+      noticesPort.toast(t("composer.compactionStarted"));
       return;
     }
     if (command === "review") {
@@ -63,7 +65,7 @@ export function assembleCommands({
         target: { type: "uncommittedChanges" },
         delivery: "inline",
       });
-      noticesPort.toast("Review started");
+      noticesPort.toast(t("composer.reviewStarted"));
       return;
     }
     if (command === "fork") {

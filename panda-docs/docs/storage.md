@@ -6,7 +6,7 @@ PandaForce source installs use `$HOME/.panda-force`; containers use `/var/lib/pa
 
 Local attachments currently default to `$CODEX_HOME/panda-force-uploads`. Set `PANDA_FORCE_ATTACHMENT_ROOT` for a separate persistent directory. Project association metadata is `data/projects.sqlite` under the application state root.
 
-The Compose service is `panda-force`; its default release image is `hiforceai/panda-force:0.0.6`; the development overlay uses `panda-force:local`. Volumes are `panda-force-state`, `panda-force-model-state` and `panda-force-workspace`, with a Compose project prefix.
+The Compose service is `panda-force`; its default release image is `hiforceai/panda-force:0.0.7`; the development overlay uses `panda-force:local`. Volumes are `panda-force-state`, `panda-force-model-state` and `panda-force-workspace`, with a Compose project prefix.
 
 For existing volumes, set `PANDA_FORCE_STATE_VOLUME_NAME`, `PANDA_FORCE_MODEL_VOLUME_NAME` and `PANDA_FORCE_WORKSPACE_VOLUME_NAME` to their actual Docker names before recreating the service. For absolute host-directory mounts, use `PANDA_FORCE_HOME_HOST`, `PANDA_FORCE_MODEL_HOME_HOST` and `PANDA_FORCE_WORKSPACE_HOST`. Renaming defaults does not migrate or delete old data.
 

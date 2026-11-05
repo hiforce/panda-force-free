@@ -20,20 +20,28 @@
     <script src="/auth-bootstrap.js" type="module"></script>
   </head>
   <body>
-    <section class="password-gate" id="passwordGate" aria-label="PandaForce login" hidden="">
+    <section
+      class="password-gate"
+      id="passwordGate"
+      aria-label="PandaForce login"
+      hidden=""
+      data-pf-aria-label="common.pandaforceLogin"
+    >
       <header class="auth-brand">
         <span class="auth-brand-mark" aria-hidden="true"><img src="/favicon.svg" width="18" height="18" alt="" /></span
-        >PandaForce
+        ><span data-pf-message="common.pandaforce">PandaForce</span>
       </header>
       <div class="auth-stage">
         <div class="password-login-card" aria-labelledby="passwordTitle">
           <span class="auth-symbol" id="passwordCodexMark"></span>
-          <p class="auth-eyebrow" id="passwordStep">Your workspace</p>
-          <h1 id="passwordTitle">Welcome back</h1>
-          <p class="auth-description" id="passwordDescription">Sign in to continue to your workspace.</p>
+          <p class="auth-eyebrow" id="passwordStep" data-pf-message="common.yourWorkspace">Your workspace</p>
+          <h1 id="passwordTitle" data-pf-message="common.welcomeBack">Welcome back</h1>
+          <p class="auth-description" id="passwordDescription" data-pf-message="common.signInToContinueToYourWorkspace">
+            Sign in to continue to your workspace.
+          </p>
           <form class="password-login" id="passwordLoginForm">
             <div class="auth-field" id="installationCodeField" hidden="">
-              <label for="installationCodeInput">Installation code</label>
+              <label for="installationCodeInput" data-pf-message="common.installationCode">Installation code</label>
               <input
                 id="installationCodeInput"
                 type="text"
@@ -42,10 +50,14 @@
                 maxlength="128"
                 disabled=""
               />
-              <p class="auth-field-hint">Find this one-time code in the server startup log.</p>
+              <p class="auth-field-hint" data-pf-message="common.findThisOneTimeCodeInTheServerStartupLog">
+                Find this one-time code in the server startup log.
+              </p>
             </div>
             <div class="auth-field" id="usernameField" hidden="">
-              <label for="usernameInput" id="usernameLabel">Administrator username</label>
+              <label for="usernameInput" id="usernameLabel" data-pf-message="common.administratorUsername"
+                >Administrator username</label
+              >
               <input
                 id="usernameInput"
                 type="text"
@@ -58,7 +70,7 @@
               />
             </div>
             <div class="auth-field" id="passwordField">
-              <label for="passwordInput" id="passwordLabel">Password</label>
+              <label for="passwordInput" id="passwordLabel" data-pf-message="common.password">Password</label>
               <div class="password-input-wrap">
                 <input
                   id="passwordInput"
@@ -67,6 +79,7 @@
                   autocomplete="current-password"
                   maxlength="256"
                   required=""
+                  data-pf-placeholder="common.password"
                 />
                 <button
                   class="password-visibility"
@@ -74,6 +87,7 @@
                   type="button"
                   aria-label="Show password"
                   aria-pressed="false"
+                  data-pf-aria-label="common.showPassword"
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path>
@@ -81,12 +95,17 @@
                   </svg>
                 </button>
               </div>
-              <p class="auth-field-hint" id="passwordHint" hidden="">
+              <p
+                class="auth-field-hint"
+                id="passwordHint"
+                hidden=""
+                data-pf-message="common.useAtLeast6CharactersIncludingUppercaseAndLowercaseLetters"
+              >
                 Use at least 6 characters, including uppercase and lowercase letters and a number.
               </p>
             </div>
             <div class="auth-field" id="passwordConfirmField" hidden="">
-              <label for="passwordConfirmInput">Confirm password</label>
+              <label for="passwordConfirmInput" data-pf-message="common.confirmPassword">Confirm password</label>
               <input
                 id="passwordConfirmInput"
                 type="password"
@@ -95,16 +114,23 @@
                 maxlength="256"
                 disabled=""
                 hidden=""
+                data-pf-placeholder="common.confirmPassword"
               />
             </div>
             <div class="password-error" id="passwordError" role="alert" hidden=""></div>
-            <button id="passwordLoginButton" type="submit">Log in</button>
+            <button id="passwordLoginButton" type="submit" data-pf-message="common.logIn">Log in</button>
           </form>
-          <button class="password-retry" id="authRetryButton" type="button" hidden="">Retry</button>
-          <p class="auth-account-note">Your PandaForce account is separate from your Codex account.</p>
+          <button class="password-retry" id="authRetryButton" type="button" hidden="" data-pf-message="common.retry">
+            Retry
+          </button>
+          <p class="auth-account-note" data-pf-message="common.yourPandaforceAccountIsSeparateFromYourCodexAccount">
+            Your PandaForce account is separate from your Codex account.
+          </p>
         </div>
       </div>
-      <footer class="auth-footer">Your own workspace. Ready when you are.</footer>
+      <footer class="auth-footer" data-pf-message="common.yourOwnWorkspaceReadyWhenYouAre">
+        Your own workspace. Ready when you are.
+      </footer>
     </section>
     <section
       id="workspacePreparation"
@@ -113,9 +139,14 @@
       hidden=""
     >
       <div class="workspace-preparation-card">
-        <p class="workspace-preparation-brand">PandaForce</p>
-        <h2 id="workspacePreparationTitle">Preparing your workspace</h2>
-        <p id="workspacePreparationMessage" role="status" aria-live="polite">
+        <p class="workspace-preparation-brand" data-pf-message="common.pandaforce">PandaForce</p>
+        <h2 id="workspacePreparationTitle" data-pf-message="common.preparingYourWorkspace">Preparing your workspace</h2>
+        <p
+          id="workspacePreparationMessage"
+          role="status"
+          aria-live="polite"
+          data-pf-message="common.gettingYourProjectsSessionsAndToolsReady"
+        >
           Getting your projects, sessions and tools ready.
         </p>
         <progress
@@ -130,16 +161,29 @@
         </div>
         <ul class="workspace-preparation-steps"></ul>
         <div class="workspace-preparation-actions">
-          <button id="workspacePreparationRetry" type="button" hidden="">Retry remaining steps</button
-          ><button id="workspacePreparationReload" type="button" hidden="">Reload workspace</button
-          ><button id="workspacePreparationContinue" type="button" disabled="">Continue to workspace</button>
+          <button id="workspacePreparationRetry" type="button" hidden="" data-pf-message="common.retryRemainingSteps">
+            Retry remaining steps</button
+          ><button id="workspacePreparationReload" type="button" hidden="" data-pf-message="common.reloadWorkspace">
+            Reload workspace</button
+          ><button
+            id="workspacePreparationContinue"
+            type="button"
+            disabled=""
+            data-pf-message="common.continueToWorkspace"
+          >
+            Continue to workspace
+          </button>
         </div>
       </div>
     </section>
     <div id="app" class="app-shell" hidden="" inert="" aria-hidden="true">
       <header class="topbar">
-        <div class="window-brand"><span id="windowCodexMark"></span><strong>PandaForce</strong></div>
-        <div class="thread-heading"><span id="threadTitle">New session</span><span id="threadPath"></span></div>
+        <div class="window-brand">
+          <span id="windowCodexMark"></span><strong data-pf-message="common.pandaforce">PandaForce</strong>
+        </div>
+        <div class="thread-heading">
+          <span id="threadTitle" data-pf-message="common.newSession">New session</span><span id="threadPath"></span>
+        </div>
         <div class="top-actions">
           <button
             class="icon-button"
@@ -148,6 +192,7 @@
             aria-controls="sidebar"
             aria-expanded="true"
             aria-pressed="true"
+            data-pf-title="common.toggleSidebar"
           >
             <span class="icon-slot" data-icon="panelLeft"></span>
           </button>
@@ -159,6 +204,8 @@
             aria-controls="sidePanel"
             aria-expanded="false"
             aria-pressed="false"
+            data-pf-title="common.openFiles"
+            data-pf-aria-label="common.openFiles"
           >
             <span class="icon-slot" data-icon="file"></span>
           </button>
@@ -169,6 +216,7 @@
             aria-controls="summaryPanel"
             aria-expanded="false"
             aria-pressed="false"
+            data-pf-title="common.toggleSummary"
           >
             <span class="icon-slot" data-icon="info"></span>
           </button>
@@ -179,6 +227,7 @@
             aria-controls="sidePanel"
             aria-expanded="false"
             aria-pressed="false"
+            data-pf-title="common.toggleSidePanel"
           >
             <span class="icon-slot" data-icon="panelRight"></span>
           </button>
@@ -188,8 +237,15 @@
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-top">
           <div class="sidebar-mode-row">
-            <button class="sidebar-product" id="productModeButton" type="button" aria-label="Current engine: Codex">
-              <strong>PandaForce</strong><span class="icon-slot chevron" data-icon="chevronDown"></span>
+            <button
+              class="sidebar-product"
+              id="productModeButton"
+              type="button"
+              aria-label="Current engine: Codex"
+              data-pf-aria-label="common.currentEngineCodex"
+            >
+              <strong data-pf-message="common.pandaforce">PandaForce</strong
+              ><span class="icon-slot chevron" data-icon="chevronDown"></span>
             </button>
             <button
               class="sidebar-toolbar-button"
@@ -199,6 +255,8 @@
               aria-label="Search sessions"
               aria-expanded="false"
               aria-controls="sidebarSearchPanel"
+              data-pf-title="common.search"
+              data-pf-aria-label="common.searchSessions"
             >
               <span class="icon-slot" data-icon="search"></span>
             </button>
@@ -206,7 +264,13 @@
           <div class="sidebar-search-panel" id="sidebarSearchPanel" hidden="">
             <label class="sidebar-search-field"
               ><span class="icon-slot" data-icon="search"></span
-              ><input id="threadSearch" type="search" placeholder="Search sessions" aria-label="Search sessions"
+              ><input
+                id="threadSearch"
+                type="search"
+                placeholder="Search sessions"
+                aria-label="Search sessions"
+                data-pf-placeholder="common.searchSessions"
+                data-pf-aria-label="common.searchSessions"
             /></label>
             <button
               class="sidebar-search-close"
@@ -214,46 +278,58 @@
               type="button"
               title="Close search"
               aria-label="Close search"
+              data-pf-title="common.closeSearch"
+              data-pf-aria-label="common.closeSearch"
             >
               <span class="icon-slot" data-icon="x"></span>
             </button>
           </div>
           <button class="sidebar-row new-task" id="newTask">
-            <span class="icon-slot" data-icon="plus"></span><span>New session</span><kbd>⌘⇧K</kbd>
+            <span class="icon-slot" data-icon="plus"></span><span data-pf-message="common.newSession">New session</span
+            ><kbd>⌘⇧K</kbd>
           </button>
         </div>
         <div class="sidebar-scroll">
-          <span id="projectName" hidden="">Project</span><span id="projectPath" hidden="">Choose working folder</span>
+          <span id="projectName" hidden="" data-pf-message="common.project">Project</span
+          ><span id="projectPath" hidden="" data-pf-message="common.chooseWorkingFolder">Choose working folder</span>
           <button class="sidebar-row projects-button" id="projectButton" type="button">
-            <span class="icon-slot" data-icon="folderOpen"></span><span>Projects</span>
+            <span class="icon-slot" data-icon="folderOpen"></span
+            ><span data-pf-message="common.projects">Projects</span>
           </button>
-          <div class="thread-list" id="threadList"><div class="list-state">Connecting to Codex…</div></div>
+          <div class="thread-list" id="threadList">
+            <div class="list-state" data-pf-message="common.connectingToCodex2">Connecting to Codex…</div>
+          </div>
         </div>
         <div class="sidebar-footer">
           <div class="account-menu" id="accountMenu" hidden="">
             <div class="account-menu-identity">
               <span class="account-menu-avatar account-initials" id="accountMenuAvatar">?</span
-              ><span><strong id="accountMenuName">Settings</strong><small id="accountMenuSubtitle"></small></span>
+              ><span
+                ><strong id="accountMenuName" data-pf-message="common.settings">Settings</strong
+                ><small id="accountMenuSubtitle"></small
+              ></span>
             </div>
             <div class="account-menu-separator"></div>
             <button type="button" class="account-menu-row" id="accountProfile">
-              <span class="icon-slot" data-icon="userRound"></span><span>Profile</span>
+              <span class="icon-slot" data-icon="userRound"></span><span data-pf-message="common.profile">Profile</span>
             </button>
             <button type="button" class="account-menu-row" id="accountUsage">
-              <span class="icon-slot" data-icon="info"></span><span>Usage</span>
+              <span class="icon-slot" data-icon="info"></span><span data-pf-message="common.usage">Usage</span>
             </button>
             <button type="button" class="account-menu-row" id="accountSettings">
-              <span class="icon-slot" data-icon="wrench"></span><span>Settings</span>
+              <span class="icon-slot" data-icon="wrench"></span><span data-pf-message="common.settings">Settings</span>
             </button>
             <button type="button" class="account-menu-row" id="accountShortcuts">
-              <span class="icon-slot" data-icon="command"></span><span>Keyboard shortcuts</span>
+              <span class="icon-slot" data-icon="command"></span
+              ><span data-pf-message="common.keyboardShortcuts">Keyboard shortcuts</span>
             </button>
             <div class="account-menu-separator"></div>
             <div class="account-menu-status">
-              <span class="status-dot" id="statusDot"></span><span id="statusText">Connecting</span>
+              <span class="status-dot" id="statusDot"></span
+              ><span id="statusText" data-pf-message="common.connecting">Connecting</span>
             </div>
             <button type="button" class="account-menu-row" id="accountLogout">
-              <span class="icon-slot" data-icon="logOut"></span><span>Log out</span>
+              <span class="icon-slot" data-icon="logOut"></span><span data-pf-message="common.logOut">Log out</span>
             </button>
           </div>
           <div class="sidebar-footer-row">
@@ -266,7 +342,8 @@
             >
               <span class="account-avatar account-initials" id="accountAvatar">?</span>
               <span class="account-button-copy"
-                ><strong id="accountName">Settings</strong><small id="accountFooterMeta" aria-hidden="true"></small
+                ><strong id="accountName" data-pf-message="common.settings">Settings</strong
+                ><small id="accountFooterMeta" aria-hidden="true"></small
               ></span>
             </button>
             <button
@@ -277,22 +354,25 @@
               aria-label="Help"
               aria-expanded="false"
               aria-controls="sidebarHelpMenu"
+              data-pf-title="common.help"
+              data-pf-aria-label="common.help"
             >
               <span class="icon-slot" data-icon="circleHelp"></span>
             </button>
           </div>
           <div class="sidebar-help-menu" id="sidebarHelpMenu" hidden="">
             <button type="button" id="sidebarHelpSettings">
-              <span class="icon-slot" data-icon="wrench"></span><span>Settings</span>
+              <span class="icon-slot" data-icon="wrench"></span><span data-pf-message="common.settings">Settings</span>
             </button>
             <button type="button" id="sidebarHelpShortcuts">
-              <span class="icon-slot" data-icon="command"></span><span>Keyboard shortcuts</span>
+              <span class="icon-slot" data-icon="command"></span
+              ><span data-pf-message="common.keyboardShortcuts">Keyboard shortcuts</span>
             </button>
             <a href="https://developers.openai.com/codex/" target="_blank" rel="noopener noreferrer"
-              ><span class="icon-slot" data-icon="circleHelp"></span><span>Help</span></a
+              ><span class="icon-slot" data-icon="circleHelp"></span><span data-pf-message="common.help">Help</span></a
             >
           </div>
-          <span id="threadSource" hidden="">local</span>
+          <span id="threadSource" hidden="" data-pf-message="common.local">local</span>
         </div>
       </aside>
 
@@ -303,18 +383,20 @@
           aria-label="Errors"
           aria-live="assertive"
           hidden=""
+          data-pf-aria-label="common.errors"
         ></section>
         <div class="conversation-project-picker" id="conversationProjectPicker">
-          <span class="working-folder-label">Working folder</span>
+          <span class="working-folder-label" data-pf-message="common.workingFolder">Working folder</span>
           <button
             type="button"
             class="composer-text-button composer-project-control"
             id="composerProjectButton"
             data-composer-control="project"
             aria-label="Working folder"
+            data-pf-aria-label="common.workingFolder"
           >
             <span class="icon-slot" data-icon="folderOpen"></span
-            ><span id="composerProjectLabel">Choose working folder</span
+            ><span id="composerProjectLabel" data-pf-message="common.chooseWorkingFolder">Choose working folder</span
             ><span class="icon-slot chevron" data-icon="chevronDown"></span>
           </button>
         </div>
@@ -322,7 +404,7 @@
           <section class="conversation" id="conversation">
             <div class="empty-state" id="emptyState">
               <span id="emptyCodexMark"></span>
-              <h1>What can I help?</h1>
+              <h1 data-pf-message="common.whatCanIHelp">What can I help?</h1>
             </div>
           </section>
           <button
@@ -332,12 +414,21 @@
             title="Jump to latest messages"
             aria-label="Jump to latest messages"
             hidden=""
+            data-pf-title="common.jumpToLatestMessages"
+            data-pf-aria-label="common.jumpToLatestMessages"
           >
             <span class="icon-slot" data-icon="chevronsDown"></span>
           </button>
         </div>
         <div class="composer-dock">
-          <div id="messageQueue" class="message-queue" aria-label="Queued messages" aria-live="polite" hidden=""></div>
+          <div
+            id="messageQueue"
+            class="message-queue"
+            aria-label="Queued messages"
+            aria-live="polite"
+            hidden=""
+            data-pf-aria-label="common.queuedMessages"
+          ></div>
           <div id="goalStatus" class="goal-status" role="status" aria-live="polite" hidden=""></div>
           <div id="sessionStatus" class="session-status" role="status" aria-live="polite" hidden=""></div>
           <form class="composer" id="composer">
@@ -347,17 +438,32 @@
               role="listbox"
               aria-label="Composer suggestions"
               hidden=""
+              data-pf-aria-label="common.composerSuggestions"
             ></div>
-            <div class="composer-context-tray" id="composerContextTray" aria-label="Attached context" hidden=""></div>
+            <div
+              class="composer-context-tray"
+              id="composerContextTray"
+              aria-label="Attached context"
+              hidden=""
+              data-pf-aria-label="common.attachedContext"
+            ></div>
             <div
               class="composer-attachments"
               id="composerAttachments"
               aria-label="Attachments"
               aria-live="polite"
               hidden=""
+              data-pf-aria-label="common.attachments"
             ></div>
             <input type="file" id="attachmentInput" multiple="" hidden="" />
-            <textarea id="prompt" rows="1" placeholder="Do anything" aria-label="Task prompt"></textarea>
+            <textarea
+              id="prompt"
+              rows="1"
+              placeholder="Do anything"
+              aria-label="Task prompt"
+              data-pf-placeholder="common.doAnything"
+              data-pf-aria-label="common.taskPrompt"
+            ></textarea>
             <div class="composer-footer">
               <div class="composer-left">
                 <button
@@ -366,6 +472,8 @@
                   data-composer-control="add"
                   title="Attach files"
                   aria-label="Attach files"
+                  data-pf-title="common.attachFiles"
+                  data-pf-aria-label="common.attachFiles"
                 >
                   <span class="icon-slot" data-icon="plus"></span>
                 </button>
@@ -377,8 +485,10 @@
                     title="Change permissions"
                     aria-haspopup="menu"
                     aria-expanded="false"
+                    data-pf-title="common.changePermissions"
                   >
-                    <span class="icon-slot" data-icon="shield"></span><span class="control-label">Ask for approval</span
+                    <span class="icon-slot" data-icon="shield"></span
+                    ><span class="control-label" data-pf-message="common.askForApproval">Ask for approval</span
                     ><span class="icon-slot chevron" data-icon="chevronDown"></span>
                   </button>
                   <div
@@ -387,6 +497,7 @@
                     role="menu"
                     aria-label="How should agent actions be approved?"
                     hidden=""
+                    data-pf-aria-label="common.howShouldAgentActionsBeApproved"
                   >
                     <div class="permission-options" id="permissionOptions"></div>
                   </div>
@@ -400,12 +511,18 @@
                     aria-haspopup="menu"
                     aria-expanded="false"
                   >
-                    <span id="modelLabel">Loading models…</span><span id="effortLabel">Medium</span
+                    <span id="modelLabel" data-pf-message="common.loadingModels">Loading models…</span
+                    ><span id="effortLabel" data-pf-message="common.medium">Medium</span
                     ><span class="icon-slot chevron" data-icon="chevronDown"></span>
                   </button>
                   <div class="model-menu" id="modelMenu" role="menu" hidden=""></div>
-                  <select id="effortSelect" class="sr-only" aria-label="Reasoning effort">
-                    <option value="medium">medium</option>
+                  <select
+                    id="effortSelect"
+                    class="sr-only"
+                    aria-label="Reasoning effort"
+                    data-pf-aria-label="common.reasoningEffort"
+                  >
+                    <option value="medium" data-pf-message="common.medium2">medium</option>
                   </select>
                 </div>
               </div>
@@ -417,6 +534,7 @@
                   tabindex="0"
                   aria-label="Context usage"
                   hidden=""
+                  data-pf-aria-label="common.contextUsage"
                 >
                   <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
                     <circle class="context-usage-track" cx="6" cy="6" r="5" pathLength="100"></circle>
@@ -431,8 +549,10 @@
                   title="Queue message (Tab)"
                   aria-label="Queue message (Tab)"
                   disabled=""
+                  data-pf-title="common.queueMessageTab"
+                  data-pf-aria-label="common.queueMessageTab"
                 >
-                  <span class="icon-slot" data-icon="list"></span><span>Queue</span>
+                  <span class="icon-slot" data-icon="list"></span><span data-pf-message="common.queue">Queue</span>
                 </button>
                 <button
                   class="send-button"
@@ -441,6 +561,8 @@
                   type="submit"
                   title="Send message"
                   aria-label="Send message"
+                  data-pf-title="common.sendMessage"
+                  data-pf-aria-label="common.sendMessage"
                 >
                   <span class="icon-slot" data-icon="arrowUp"></span>
                 </button>
@@ -452,7 +574,12 @@
 
       <aside class="side-panel" id="sidePanel" hidden="">
         <div class="side-panel-toolbar">
-          <div class="side-panel-tabs" role="tablist" aria-label="Task side panel">
+          <div
+            class="side-panel-tabs"
+            role="tablist"
+            aria-label="Task side panel"
+            data-pf-aria-label="common.taskSidePanel"
+          >
             <button
               class="side-panel-tab active"
               id="newTab"
@@ -460,6 +587,7 @@
               role="tab"
               aria-selected="true"
               data-side-panel-tab="launcher"
+              data-pf-message="common.newTab"
             >
               New tab
             </button>
@@ -472,7 +600,7 @@
               data-side-panel-tab="review"
               hidden=""
             >
-              Review <span id="changeCount">0</span>
+              <span data-pf-message="common.review">Review</span> <span id="changeCount">0</span>
             </button>
             <button
               class="side-panel-tab"
@@ -485,54 +613,98 @@
             ></button>
           </div>
           <div class="side-panel-tools">
-            <button class="icon-button small" id="openSidePanelTab" type="button" title="Open side panel tab">
+            <button
+              class="icon-button small"
+              id="openSidePanelTab"
+              type="button"
+              title="Open side panel tab"
+              data-pf-title="common.openSidePanelTab"
+            >
               <span class="icon-slot" data-icon="plus"></span>
             </button>
-            <button class="icon-button small" title="Close panel" id="closeSidePanel" type="button">
+            <button
+              class="icon-button small"
+              title="Close panel"
+              id="closeSidePanel"
+              type="button"
+              data-pf-title="common.closePanel"
+            >
               <span class="icon-slot" data-icon="x"></span>
             </button>
           </div>
         </div>
-        <span class="sr-only" id="sidePanelTitle">New tab</span>
+        <span class="sr-only" id="sidePanelTitle" data-pf-message="common.newTab">New tab</span>
         <section class="side-panel-launcher" id="sidePanelLauncher" role="tabpanel">
           <div class="side-panel-launcher-list">
             <button class="side-panel-launcher-action" type="button" data-side-panel-action="review">
-              <span class="icon-slot" data-icon="fileDiff"></span><span>Review</span>
+              <span class="icon-slot" data-icon="fileDiff"></span><span data-pf-message="common.review">Review</span>
             </button>
             <button class="side-panel-launcher-action" type="button" data-side-panel-action="terminal">
-              <span class="icon-slot" data-icon="terminal"></span><span>Terminal</span>
+              <span class="icon-slot" data-icon="terminal"></span
+              ><span data-pf-message="common.terminal">Terminal</span>
             </button>
             <button class="side-panel-launcher-action" type="button" data-side-panel-action="browser">
-              <span class="icon-slot" data-icon="globe"></span><span>Browser</span>
+              <span class="icon-slot" data-icon="globe"></span><span data-pf-message="common.browser">Browser</span>
             </button>
             <button class="side-panel-launcher-action" type="button" data-side-panel-action="files">
-              <span class="icon-slot" data-icon="folderOpen"></span><span>Files</span>
+              <span class="icon-slot" data-icon="folderOpen"></span><span data-pf-message="common.files">Files</span>
             </button>
             <button class="side-panel-launcher-action" type="button" data-side-panel-action="side-task">
-              <span class="icon-slot" data-icon="messageSquare"></span><span>Side task</span>
+              <span class="icon-slot" data-icon="messageSquare"></span
+              ><span data-pf-message="common.sideTask">Side task</span>
             </button>
           </div>
         </section>
         <section class="review-panel-content" id="reviewPanelContent" role="tabpanel" hidden="">
           <div id="changesPanel">
             <div class="change-summary">
-              <span id="changeSummary">No changes yet</span><span class="review-stats" id="reviewStats"></span
-              ><button class="icon-button small" title="Toggle word wrap" id="reviewWrap">
+              <span id="changeSummary" data-pf-message="common.noChangesYet">No changes yet</span
+              ><span class="review-stats" id="reviewStats"></span
+              ><button
+                class="icon-button small"
+                title="Toggle word wrap"
+                id="reviewWrap"
+                data-pf-title="common.toggleWordWrap"
+              >
                 <span class="icon-slot" data-icon="wrapText"></span></button
-              ><button class="icon-button small" title="Collapse all diffs" id="reviewExpand">
+              ><button
+                class="icon-button small"
+                title="Collapse all diffs"
+                id="reviewExpand"
+                data-pf-title="common.collapseAllDiffs"
+              >
                 <span class="icon-slot" data-icon="chevronsUp"></span></button
-              ><button class="icon-button small" title="Switch to split diff" id="reviewMode">
+              ><button
+                class="icon-button small"
+                title="Switch to split diff"
+                id="reviewMode"
+                data-pf-title="common.switchToSplitDiff"
+              >
                 <span class="icon-slot" data-icon="columns2"></span></button
-              ><button class="icon-button small" title="Undo changes" id="reviewPatch">
+              ><button
+                class="icon-button small"
+                title="Undo changes"
+                id="reviewPatch"
+                data-pf-title="common.undoChanges"
+              >
                 <span class="icon-slot" data-icon="undo"></span>
               </button>
             </div>
-            <div class="change-list" id="changeList"><div class="panel-empty">Changes will appear here.</div></div>
+            <div class="change-list" id="changeList">
+              <div class="panel-empty" data-pf-message="common.changesWillAppearHere">Changes will appear here.</div>
+            </div>
           </div>
         </section>
-        <section class="side-panel-browser" id="browserPanel" role="tabpanel" hidden="" aria-label="Browser">
+        <section
+          class="side-panel-browser"
+          id="browserPanel"
+          role="tabpanel"
+          hidden=""
+          aria-label="Browser"
+          data-pf-aria-label="common.browser"
+        >
           <div class="browser-toolbar">
-            <div class="browser-nav" aria-label="Browser navigation">
+            <div class="browser-nav" aria-label="Browser navigation" data-pf-aria-label="common.browserNavigation">
               <button
                 class="icon-button small"
                 id="browserBack"
@@ -540,6 +712,8 @@
                 title="Go back"
                 aria-label="Go back"
                 disabled=""
+                data-pf-title="common.goBack"
+                data-pf-aria-label="common.goBack"
               >
                 <span class="icon-slot" data-icon="chevronLeft"></span>
               </button>
@@ -550,6 +724,8 @@
                 title="Go forward"
                 aria-label="Go forward"
                 disabled=""
+                data-pf-title="common.goForward"
+                data-pf-aria-label="common.goForward"
               >
                 <span class="icon-slot" data-icon="chevronRight"></span>
               </button>
@@ -560,13 +736,15 @@
                 title="Refresh page"
                 aria-label="Refresh page"
                 disabled=""
+                data-pf-title="common.refreshPage"
+                data-pf-aria-label="common.refreshPage"
               >
                 <span class="icon-slot" data-icon="refreshCw"></span>
               </button>
             </div>
             <form class="browser-address-form" id="browserAddressForm">
               <span class="icon-slot" data-icon="globe" aria-hidden="true"></span>
-              <label class="sr-only" for="browserUrl">Browser URL</label>
+              <label class="sr-only" for="browserUrl" data-pf-message="common.browserUrl">Browser URL</label>
               <input
                 id="browserUrl"
                 type="text"
@@ -575,8 +753,16 @@
                 spellcheck="false"
                 placeholder="Enter URL"
                 aria-describedby="browserStatusText"
+                data-pf-placeholder="common.enterUrl"
               />
-              <button class="browser-go" type="submit" title="Go to URL" aria-label="Go to URL">
+              <button
+                class="browser-go"
+                type="submit"
+                title="Go to URL"
+                aria-label="Go to URL"
+                data-pf-title="common.goToUrl"
+                data-pf-aria-label="common.goToUrl"
+              >
                 <span class="icon-slot" data-icon="arrowUp"></span>
               </button>
             </form>
@@ -588,16 +774,22 @@
               target="_blank"
               rel="noopener noreferrer"
               hidden=""
+              data-pf-title="common.openInNewTab"
+              data-pf-aria-label="common.openInNewTab"
               ><span class="icon-slot" data-icon="monitor"></span
             ></a>
           </div>
           <div class="browser-status" id="browserStatus" role="status" aria-live="polite">
-            <span class="browser-status-dot" aria-hidden="true"></span><span id="browserStatusText">Ready</span>
+            <span class="browser-status-dot" aria-hidden="true"></span
+            ><span id="browserStatusText" data-pf-message="common.ready">Ready</span>
           </div>
           <div class="browser-frame-shell" id="browserFrameShell">
             <div class="browser-empty" id="browserEmpty">
-              <span class="icon-slot" data-icon="globe"></span><strong>Enter a URL to browse</strong
-              ><span>Pages stay in their original site context. Some sites do not allow embedding.</span>
+              <span class="icon-slot" data-icon="globe"></span
+              ><strong data-pf-message="common.enterAUrlToBrowse">Enter a URL to browse</strong
+              ><span data-pf-message="common.pagesStayInTheirOriginalSiteContextSomeSitesDo"
+                >Pages stay in their original site context. Some sites do not allow embedding.</span
+              >
             </div>
             <iframe
               id="browserFrame"
@@ -606,26 +798,53 @@
               referrerpolicy="no-referrer-when-downgrade"
               sandbox="allow-downloads allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-presentation allow-scripts"
               hidden=""
+              data-pf-title="common.embeddedBrowserPage"
             ></iframe>
             <div class="browser-loading" id="browserLoading" hidden="">
-              <span class="icon-slot" data-icon="loaderCircle"></span><span>Loading page…</span>
+              <span class="icon-slot" data-icon="loaderCircle"></span
+              ><span data-pf-message="common.loadingPage">Loading page…</span>
             </div>
           </div>
           <div class="browser-notice" id="browserNotice" role="alert" hidden="">
             <span class="icon-slot" data-icon="triangleAlert"></span>
             <div>
-              <strong id="browserNoticeTitle">Page could not be embedded</strong>
+              <strong id="browserNoticeTitle" data-pf-message="common.pageCouldNotBeEmbedded"
+                >Page could not be embedded</strong
+              >
               <p id="browserNoticeDescription"></p>
             </div>
-            <a id="browserNoticeExternal" target="_blank" rel="noopener noreferrer" hidden="">Open externally</a>
+            <a
+              id="browserNoticeExternal"
+              target="_blank"
+              rel="noopener noreferrer"
+              hidden=""
+              data-pf-message="common.openExternally"
+              >Open externally</a
+            >
           </div>
         </section>
-        <section class="side-panel-terminal" id="sideTerminalPanel" role="tabpanel" hidden="" aria-label="Terminal">
+        <section
+          class="side-panel-terminal"
+          id="sideTerminalPanel"
+          role="tabpanel"
+          hidden=""
+          aria-label="Terminal"
+          data-pf-aria-label="common.terminal"
+        >
           <div class="terminal-host side-terminal-host" id="sideTerminalHost" data-connected="false"></div>
         </section>
-        <section class="side-task-panel" id="sideTaskPanel" role="tabpanel" hidden="" aria-label="Side tasks">
+        <section
+          class="side-task-panel"
+          id="sideTaskPanel"
+          role="tabpanel"
+          hidden=""
+          aria-label="Side tasks"
+          data-pf-aria-label="common.sideTasks"
+        >
           <div class="side-task-list" id="sideTaskList">
-            <div class="side-task-empty">Side tasks started by this chat will appear here.</div>
+            <div class="side-task-empty" data-pf-message="common.sideTasksStartedByThisChatWillAppearHere">
+              Side tasks started by this chat will appear here.
+            </div>
           </div>
         </section>
         <section class="side-panel-utility" id="utilityPanelContent" role="tabpanel" hidden="">
@@ -639,34 +858,44 @@
       </aside>
       <aside class="summary-panel" id="summaryPanel" hidden="">
         <div class="summary-panel-toolbar">
-          <strong>Summary</strong
-          ><button class="icon-button small" title="Close summary" id="closeSummaryPanel" type="button">
+          <strong data-pf-message="common.summary">Summary</strong
+          ><button
+            class="icon-button small"
+            title="Close summary"
+            id="closeSummaryPanel"
+            type="button"
+            data-pf-title="common.closeSummary"
+          >
             <span class="icon-slot" data-icon="x"></span>
           </button>
         </div>
         <div class="summary-panel-scroll">
           <section class="summary-section summary-usage">
             <div class="usage-box">
-              <h2 class="summary-section-title">Usage</h2>
-              <p class="usage-description">Codex model account quota across all sessions.</p>
+              <h2 class="summary-section-title" data-pf-message="common.usage">Usage</h2>
+              <p class="usage-description" data-pf-message="common.codexModelAccountQuotaAcrossAllSessions">
+                Codex model account quota across all sessions.
+              </p>
               <div class="usage-toolbar">
-                <button type="button" id="refreshUsage">Refresh</button
+                <button type="button" id="refreshUsage" data-pf-message="common.refresh">Refresh</button
                 ><span id="usageStatus" role="status" data-i18n-ignore=""></span>
               </div>
               <div id="usageWindows" class="usage-windows" data-i18n-ignore=""></div>
             </div>
           </section>
           <section class="summary-section">
-            <h2 class="summary-section-title">Environment</h2>
+            <h2 class="summary-section-title" data-pf-message="common.environment">Environment</h2>
             <div class="summary-row">
-              <span class="icon-slot" data-icon="folderOpen"></span><span id="summaryWorkspace">Workspace</span>
+              <span class="icon-slot" data-icon="folderOpen"></span
+              ><span id="summaryWorkspace" data-pf-message="common.workspace">Workspace</span>
             </div>
             <div class="summary-row">
-              <span class="icon-slot" data-icon="gitBranch"></span><span id="summaryBranch">Local workspace</span>
+              <span class="icon-slot" data-icon="gitBranch"></span
+              ><span id="summaryBranch" data-pf-message="common.localWorkspace">Local workspace</span>
             </div>
           </section>
           <section class="summary-section">
-            <h2 class="summary-section-title" id="summarySessionTitle">Session</h2>
+            <h2 class="summary-section-title" id="summarySessionTitle" data-pf-message="common.session">Session</h2>
             <div class="summary-row summary-session-row">
               <span class="icon-slot" data-icon="messageSquare"></span>
               <code id="summarySessionMarker" class="summary-session-marker">—</code>
@@ -677,6 +906,8 @@
                 title="Copy session marker"
                 aria-label="Copy session marker"
                 disabled=""
+                data-pf-title="common.copySessionMarker"
+                data-pf-aria-label="common.copySessionMarker"
               >
                 <span class="icon-slot" data-icon="copy"></span>
               </button>
@@ -685,7 +916,9 @@
               <span class="icon-slot" data-icon="wrench"></span><span id="summarySessionModel">—</span
               ><span id="summarySessionEffort" class="summary-session-effort"></span>
             </div>
-            <label class="summary-session-name-label" for="summarySessionName">Session name</label>
+            <label class="summary-session-name-label" for="summarySessionName" data-pf-message="common.sessionName"
+              >Session name</label
+            >
             <div class="summary-session-name-row">
               <input
                 id="summarySessionName"
@@ -694,41 +927,67 @@
                 autocomplete="off"
                 placeholder="Auto-generated from first message"
                 disabled=""
+                data-pf-placeholder="common.autoGeneratedFromFirstMessage"
               />
-              <button id="saveSummarySessionName" type="button" disabled="">Save</button>
+              <button id="saveSummarySessionName" type="button" disabled="" data-pf-message="common.save">Save</button>
             </div>
-            <p class="summary-session-help" id="summarySessionHelp">
+            <p
+              class="summary-session-help"
+              id="summarySessionHelp"
+              data-pf-message="common.sendThisMarkerWhenReportingASessionProblem"
+            >
               Send this marker when reporting a session problem.
             </p>
           </section>
           <section class="summary-section">
-            <h2 class="summary-section-title">Scheduled</h2>
-            <div class="summary-empty">Scheduled task data requires the native desktop bridge.</div>
+            <h2 class="summary-section-title" data-pf-message="common.scheduled">Scheduled</h2>
+            <div class="summary-empty" data-pf-message="common.scheduledTaskDataRequiresTheNativeDesktopBridge">
+              Scheduled task data requires the native desktop bridge.
+            </div>
           </section>
           <section class="summary-section">
-            <h2 class="summary-section-title">Computer Use</h2>
-            <div class="summary-empty">Computer Use controls require the native desktop bridge.</div>
+            <h2 class="summary-section-title" data-pf-message="common.computerUse">Computer Use</h2>
+            <div class="summary-empty" data-pf-message="common.computerUseControlsRequireTheNativeDesktopBridge">
+              Computer Use controls require the native desktop bridge.
+            </div>
           </section>
           <section class="summary-section">
-            <h2 class="summary-section-title">Plan</h2>
-            <div class="summary-empty" id="summaryPlan">Plan data is not exposed by app-server.</div>
+            <h2 class="summary-section-title" data-pf-message="common.plan">Plan</h2>
+            <div class="summary-empty" id="summaryPlan" data-pf-message="common.planDataIsNotExposedByAppServer">
+              Plan data is not exposed by app-server.
+            </div>
           </section>
           <section class="summary-section">
-            <h2 class="summary-section-title">Side tasks</h2>
-            <div class="summary-empty" id="summarySideTasks">Side task data requires the native desktop bridge.</div>
+            <h2 class="summary-section-title" data-pf-message="common.sideTasks">Side tasks</h2>
+            <div
+              class="summary-empty"
+              id="summarySideTasks"
+              data-pf-message="common.sideTaskDataRequiresTheNativeDesktopBridge"
+            >
+              Side task data requires the native desktop bridge.
+            </div>
           </section>
           <section class="summary-section">
-            <h2 class="summary-section-title">Sources</h2>
-            <div class="summary-empty" id="summarySource">Conversation source data is not exposed by app-server.</div>
+            <h2 class="summary-section-title" data-pf-message="common.sources">Sources</h2>
+            <div
+              class="summary-empty"
+              id="summarySource"
+              data-pf-message="common.conversationSourceDataIsNotExposedByAppServer"
+            >
+              Conversation source data is not exposed by app-server.
+            </div>
           </section>
         </div>
       </aside>
     </div>
     <dialog class="files-dialog" id="filesDialog" aria-labelledby="filesPanelTitle">
       <div class="files-dialog-card">
-        <div class="files-panel" id="filesPanel" hidden="" aria-label="Files">
+        <div class="files-panel" id="filesPanel" hidden="" aria-label="Files" data-pf-aria-label="common.files">
           <div class="files-panel-heading">
-            <div><strong id="filesPanelTitle">Files</strong><small id="filesPanelPath"></small></div>
+            <div>
+              <strong id="filesPanelTitle" data-pf-message="common.files">Files</strong
+              ><small id="filesPanelPath"></small>
+            </div>
             <div class="files-panel-heading-actions">
               <button
                 class="icon-button small"
@@ -736,6 +995,8 @@
                 type="button"
                 title="Refresh files"
                 aria-label="Refresh files"
+                data-pf-title="common.refreshFiles"
+                data-pf-aria-label="common.refreshFiles"
               >
                 <span class="icon-slot" data-icon="refreshCw"></span></button
               ><button
@@ -744,16 +1005,19 @@
                 type="button"
                 title="Close files"
                 aria-label="Close files"
+                data-pf-title="common.closeFiles"
+                data-pf-aria-label="common.closeFiles"
               >
                 <span class="icon-slot" data-icon="x"></span>
               </button>
             </div>
           </div>
-          <div class="files-view-toggle" role="tablist" aria-label="File view">
+          <div class="files-view-toggle" role="tablist" aria-label="File view" data-pf-aria-label="common.fileView">
             <button type="button" class="active" data-files-view="files" role="tab" aria-selected="true">
-              <span class="icon-slot" data-icon="folderOpen"></span><span>Files</span></button
+              <span class="icon-slot" data-icon="folderOpen"></span
+              ><span data-pf-message="common.files">Files</span></button
             ><button type="button" data-files-view="git" role="tab" aria-selected="false" hidden="">
-              <span class="icon-slot" data-icon="gitBranch"></span><span>Git</span
+              <span class="icon-slot" data-icon="gitBranch"></span><span data-pf-message="common.git">Git</span
               ><small id="filesGitCount" hidden=""></small>
             </button>
           </div>
@@ -764,79 +1028,125 @@
               type="search"
               placeholder="Search files"
               aria-label="Search files"
-              autocomplete="off" /><button
+              autocomplete="off"
+              data-pf-placeholder="common.searchFiles"
+              data-pf-aria-label="common.searchFiles" /><button
               class="icon-button small"
               id="filesSearchClear"
               type="button"
               title="Clear file search"
               aria-label="Clear file search"
               hidden=""
+              data-pf-title="common.clearFileSearch"
+              data-pf-aria-label="common.clearFileSearch"
             >
               <span class="icon-slot" data-icon="x"></span></button
           ></label>
           <div class="files-panel-status" id="filesPanelStatus" role="status" aria-live="polite"></div>
-          <div class="files-tree" id="filesTree" role="tree" aria-label="Session files"></div>
+          <div
+            class="files-tree"
+            id="filesTree"
+            role="tree"
+            aria-label="Session files"
+            data-pf-aria-label="common.sessionFiles"
+          ></div>
         </div>
       </div>
     </dialog>
     <dialog class="folder-dialog" id="folderDialog">
       <form method="dialog" class="folder-card">
         <div class="folder-head">
-          <div><strong>Working folder</strong><span>Choose where new sessions should work.</span></div>
-          <button class="icon-button" value="cancel" aria-label="Close">
+          <div>
+            <strong data-pf-message="common.workingFolder">Working folder</strong
+            ><span data-pf-message="common.chooseWhereNewSessionsShouldWork"
+              >Choose where new sessions should work.</span
+            >
+          </div>
+          <button class="icon-button" value="cancel" aria-label="Close" data-pf-aria-label="common.close">
             <span class="icon-slot" data-icon="x"></span>
           </button>
         </div>
         <button type="button" class="projectless-option" id="projectlessOption">
           <span class="icon-slot" data-icon="messageSquare"></span
-          ><span><strong>None</strong><small>No working folder</small></span
+          ><span
+            ><strong data-pf-message="common.none">None</strong
+            ><small data-pf-message="common.noWorkingFolder">No working folder</small></span
           ><span class="projectless-check icon-slot" data-icon="check"></span>
         </button>
         <div class="folder-path-row">
-          <button type="button" class="icon-button" id="folderUp" title="Parent folder">
+          <button
+            type="button"
+            class="icon-button"
+            id="folderUp"
+            title="Parent folder"
+            data-pf-title="common.parentFolder"
+          >
             <span class="icon-slot" data-icon="arrowUp"></span></button
           ><input id="folderPathInput" spellcheck="false" autocomplete="off" /><button
             type="button"
             class="folder-go"
             id="folderGo"
+            data-pf-message="common.go"
           >
             Go
           </button>
         </div>
-        <div class="folder-list" id="folderList"><div class="list-state">Loading folders…</div></div>
+        <div class="folder-list" id="folderList">
+          <div class="list-state" data-pf-message="common.loadingFolders">Loading folders…</div>
+        </div>
         <div class="folder-actions">
-          <span id="folderSelection">No folder selected</span
-          ><button value="cancel" class="folder-cancel">Cancel</button
-          ><button type="button" class="folder-confirm" id="folderConfirm" disabled="">Use this folder</button>
+          <span id="folderSelection" data-pf-message="common.noFolderSelected">No folder selected</span
+          ><button value="cancel" class="folder-cancel" data-pf-message="common.cancel">Cancel</button
+          ><button
+            type="button"
+            class="folder-confirm"
+            id="folderConfirm"
+            disabled=""
+            data-pf-message="common.useThisFolder"
+          >
+            Use this folder
+          </button>
         </div>
       </form>
     </dialog>
     <dialog class="goal-dialog" id="goalDialog" aria-labelledby="goalDialogTitle">
       <form class="goal-dialog-card">
         <div class="goal-dialog-head">
-          <div><strong id="goalDialogTitle">Goal details</strong><span id="goalDialogStatus"></span></div>
-          <button class="icon-button" id="closeGoalDialog" type="button" aria-label="Close">
+          <div>
+            <strong id="goalDialogTitle" data-pf-message="common.goalDetails">Goal details</strong
+            ><span id="goalDialogStatus"></span>
+          </div>
+          <button
+            class="icon-button"
+            id="closeGoalDialog"
+            type="button"
+            aria-label="Close"
+            data-pf-aria-label="common.close"
+          >
             <span class="icon-slot" data-icon="x"></span>
           </button>
         </div>
         <label class="goal-dialog-field"
-          ><span>Objective</span><textarea id="goalDialogObjective" rows="5" maxlength="4000"></textarea>
+          ><span data-pf-message="common.objective">Objective</span
+          ><textarea id="goalDialogObjective" rows="5" maxlength="4000"></textarea>
         </label>
         <div class="goal-dialog-detail" id="goalDialogDetail"></div>
         <p id="goalDialogError" class="goal-dialog-error" role="alert" hidden=""></p>
         <div class="goal-dialog-actions">
-          <button type="button" class="folder-cancel" id="cancelGoalDialog">Cancel</button
-          ><button type="submit" class="folder-confirm" id="saveGoalDialog">Save</button>
+          <button type="button" class="folder-cancel" id="cancelGoalDialog" data-pf-message="common.cancel">
+            Cancel</button
+          ><button type="submit" class="folder-confirm" id="saveGoalDialog" data-pf-message="common.save">Save</button>
         </div>
       </form>
     </dialog>
     <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
       <div class="settings-card">
-        <aside class="settings-nav" aria-label="Settings">
-          <strong class="sr-only" id="settingsTitle">Settings</strong>
+        <aside class="settings-nav" aria-label="Settings" data-pf-aria-label="common.settings">
+          <strong class="sr-only" id="settingsTitle" data-pf-message="common.settings">Settings</strong>
           <div class="settings-nav-toolbar-spacer" aria-hidden="true"></div>
           <button class="settings-nav-back" id="closeSettingsNav" type="button">
-            <span class="icon-slot" data-icon="chevronLeft"></span><span>Back to app</span>
+            <span class="icon-slot" data-icon="chevronLeft"></span
+            ><span data-pf-message="common.backToApp">Back to app</span>
           </button>
           <label class="settings-search"
             ><span class="icon-slot" data-icon="search"></span
@@ -845,73 +1155,96 @@
               type="search"
               aria-label="Search settings"
               placeholder="Search settings…"
-              autocomplete="off" /><button
+              autocomplete="off"
+              data-pf-placeholder="common.searchSettings2"
+              data-pf-aria-label="common.searchSettings" /><button
               class="settings-search-clear icon-button small"
               id="clearSettingsSearch"
               type="button"
               aria-label="Clear settings search"
               hidden=""
+              data-pf-aria-label="common.clearSettingsSearch"
             >
               <span class="icon-slot" data-icon="x"></span></button
           ></label>
           <div class="settings-nav-scroll" id="settingsNavScroll">
             <details class="settings-nav-group" data-settings-group="general" open="">
-              <summary>General</summary>
+              <summary data-pf-message="common.general">General</summary>
               <button type="button" class="active" data-settings-page="general-settings">
-                <span class="icon-slot" data-icon="wrench"></span><span>General</span></button
+                <span class="icon-slot" data-icon="wrench"></span
+                ><span data-pf-message="common.general">General</span></button
               ><button type="button" data-settings-page="keyboard-shortcuts">
-                <span class="icon-slot" data-icon="command"></span><span>Keyboard shortcuts</span></button
+                <span class="icon-slot" data-icon="command"></span
+                ><span data-pf-message="common.keyboardShortcuts">Keyboard shortcuts</span></button
               ><button type="button" data-settings-page="data-controls">
-                <span class="icon-slot" data-icon="list"></span><span>Archived chats</span>
+                <span class="icon-slot" data-icon="list"></span
+                ><span data-pf-message="common.archivedChats">Archived chats</span>
               </button>
             </details>
             <details class="settings-nav-group" data-settings-group="appearance">
-              <summary>Appearance</summary>
+              <summary data-pf-message="common.appearance">Appearance</summary>
               <button type="button" data-settings-page="appearance">
-                <span class="icon-slot" data-icon="monitor"></span><span>Appearance</span>
+                <span class="icon-slot" data-icon="monitor"></span
+                ><span data-pf-message="common.appearance">Appearance</span>
               </button>
             </details>
             <details class="settings-nav-group" data-settings-group="engine">
-              <summary>Engines and tools</summary>
+              <summary data-pf-message="common.enginesAndTools">Engines and tools</summary>
               <button type="button" data-settings-page="agent">
-                <span class="icon-slot" data-icon="terminal"></span><span>Configuration</span></button
+                <span class="icon-slot" data-icon="terminal"></span
+                ><span data-pf-message="common.configuration">Configuration</span></button
               ><button type="button" data-settings-page="plugins-settings">
-                <span class="icon-slot" data-icon="wrench"></span><span>Plugins</span></button
+                <span class="icon-slot" data-icon="wrench"></span
+                ><span data-pf-message="common.plugins">Plugins</span></button
               ><button type="button" data-settings-page="skills-settings">
-                <span class="icon-slot" data-icon="file"></span><span>Skills</span></button
+                <span class="icon-slot" data-icon="file"></span
+                ><span data-pf-message="common.skills">Skills</span></button
               ><button type="button" data-settings-page="browser-use">
-                <span class="icon-slot" data-icon="globe"></span><span>Browser</span></button
+                <span class="icon-slot" data-icon="globe"></span
+                ><span data-pf-message="common.browser">Browser</span></button
               ><button type="button" data-settings-page="computer-use">
-                <span class="icon-slot" data-icon="monitor"></span><span>Computer use</span></button
+                <span class="icon-slot" data-icon="monitor"></span
+                ><span data-pf-message="common.computerUse2">Computer use</span></button
               ><button type="button" data-settings-page="connections">
-                <span class="icon-slot" data-icon="monitor"></span><span>Connections</span></button
+                <span class="icon-slot" data-icon="monitor"></span
+                ><span data-pf-message="common.connections">Connections</span></button
               ><button type="button" data-settings-page="cloud-settings">
-                <span class="icon-slot" data-icon="globe"></span><span>Cloud preferences</span></button
+                <span class="icon-slot" data-icon="globe"></span
+                ><span data-pf-message="common.cloudPreferences">Cloud preferences</span></button
               ><button type="button" data-settings-page="cloud-environments">
-                <span class="icon-slot" data-icon="globe"></span><span>Cloud environments</span></button
+                <span class="icon-slot" data-icon="globe"></span
+                ><span data-pf-message="common.cloudEnvironments">Cloud environments</span></button
               ><button type="button" data-settings-page="code-review">
-                <span class="icon-slot" data-icon="fileDiff"></span><span>Code review</span></button
+                <span class="icon-slot" data-icon="fileDiff"></span
+                ><span data-pf-message="common.codeReview">Code review</span></button
               ><button type="button" data-settings-page="git-settings">
-                <span class="icon-slot" data-icon="gitBranch"></span><span>Git</span></button
+                <span class="icon-slot" data-icon="gitBranch"></span
+                ><span data-pf-message="common.git">Git</span></button
               ><button type="button" data-settings-page="hooks-settings">
-                <span class="icon-slot" data-icon="wrench"></span><span>Hooks</span></button
+                <span class="icon-slot" data-icon="wrench"></span
+                ><span data-pf-message="common.hooks">Hooks</span></button
               ><button type="button" data-settings-page="worktrees">
-                <span class="icon-slot" data-icon="list"></span><span>Worktrees</span>
+                <span class="icon-slot" data-icon="list"></span
+                ><span data-pf-message="common.worktrees">Worktrees</span>
               </button>
             </details>
             <details class="settings-nav-group" data-settings-group="storage">
-              <summary>Storage and logs</summary>
+              <summary data-pf-message="common.storageAndLogs">Storage and logs</summary>
               <button type="button" data-settings-page="storage">
-                <span class="icon-slot" data-icon="file"></span><span>Storage and logs</span>
+                <span class="icon-slot" data-icon="file"></span
+                ><span data-pf-message="common.storageAndLogs">Storage and logs</span>
               </button>
             </details>
             <details class="settings-nav-group" data-settings-group="identity">
-              <summary>Account and security</summary>
+              <summary data-pf-message="common.accountAndSecurity">Account and security</summary>
               <button type="button" data-settings-page="profile">
-                <span class="icon-slot" data-icon="userRound"></span><span>Profile</span>
+                <span class="icon-slot" data-icon="userRound"></span
+                ><span data-pf-message="common.profile">Profile</span>
               </button>
             </details>
-            <div id="settingsNavEmpty" class="settings-nav-empty" hidden="">No results found</div>
+            <div id="settingsNavEmpty" class="settings-nav-empty" hidden="" data-pf-message="common.noResultsFound">
+              No results found
+            </div>
           </div>
         </aside>
         <main class="settings-content" id="settingsContent">
@@ -922,35 +1255,58 @@
                 id="settingsMobileBack"
                 type="button"
                 aria-label="Back to settings"
+                data-pf-aria-label="common.backToSettings"
               >
                 <span class="icon-slot" data-icon="chevronLeft"></span>
               </button>
-              <h1 id="settingsPageTitle">General</h1>
+              <h1 id="settingsPageTitle" data-pf-message="common.general">General</h1>
             </header>
-            <div class="settings-section-title">Permissions</div>
+            <div class="settings-section-title" data-pf-message="common.permissions">Permissions</div>
             <label class="settings-row settings-toggle-row" id="settingsAutoReviewRow">
-              <span><strong>Auto-review</strong><small>Show “Approve for me” in the composer</small></span>
+              <span
+                ><strong data-pf-message="common.autoReview">Auto-review</strong
+                ><small data-pf-message="common.showApproveForMeInTheComposer"
+                  >Show “Approve for me” in the composer</small
+                ></span
+              >
               <input id="settingsAutoReviewToggle" type="checkbox" />
               <span class="settings-switch" aria-hidden="true"></span>
             </label>
             <label class="settings-row settings-toggle-row" id="settingsFullAccessRow">
-              <span><strong>Full access</strong><small>Show unrestricted access in the composer</small></span>
+              <span
+                ><strong data-pf-message="common.fullAccess">Full access</strong
+                ><small data-pf-message="common.showUnrestrictedAccessInTheComposer"
+                  >Show unrestricted access in the composer</small
+                ></span
+              >
               <input id="settingsFullAccessToggle" type="checkbox" />
               <span class="settings-switch" aria-hidden="true"></span>
             </label>
             <div class="settings-row">
-              <span><strong>Selected mode</strong><small>Permission mode used for new turns</small></span
-              ><span id="settingsPermissionValue">Ask for approval</span>
+              <span
+                ><strong data-pf-message="common.selectedMode">Selected mode</strong
+                ><small data-pf-message="common.permissionModeUsedForNewTurns"
+                  >Permission mode used for new turns</small
+                ></span
+              ><span id="settingsPermissionValue" data-pf-message="common.askForApproval">Ask for approval</span>
             </div>
             <div class="settings-row">
-              <span><strong>Working folder</strong><small>Working folder used for new sessions</small></span
+              <span
+                ><strong data-pf-message="common.workingFolder">Working folder</strong
+                ><small data-pf-message="common.workingFolderUsedForNewSessions"
+                  >Working folder used for new sessions</small
+                ></span
               ><span id="settingsProjectValue"></span>
             </div>
-            <div class="settings-section-title settings-section-spaced">Notifications</div>
+            <div class="settings-section-title settings-section-spaced" data-pf-message="common.notifications">
+              Notifications
+            </div>
             <label class="settings-row settings-toggle-row" id="settingsTaskNotifyRow">
               <span
-                ><strong>Task notifications</strong
-                ><small>Show a browser notification when a task completes</small></span
+                ><strong data-pf-message="common.taskNotifications">Task notifications</strong
+                ><small data-pf-message="common.showABrowserNotificationWhenATaskCompletesPermissionIs"
+                  >Show a browser notification when a task completes. Permission is requested when enabled.</small
+                ></span
               >
               <input id="settingsTaskNotifyToggle" type="checkbox" />
               <span class="settings-switch" aria-hidden="true"></span>
@@ -958,36 +1314,64 @@
           </section>
           <section class="settings-page" data-settings-content="profile" hidden="">
             <header class="settings-page-heading">
-              <button class="settings-mobile-back icon-button" type="button" aria-label="Back to settings">
+              <button
+                class="settings-mobile-back icon-button"
+                type="button"
+                aria-label="Back to settings"
+                data-pf-aria-label="common.backToSettings"
+              >
                 <span class="icon-slot" data-icon="chevronLeft"></span>
               </button>
-              <h1>Profile</h1>
+              <h1 data-pf-message="common.profile">Profile</h1>
             </header>
             <div class="wb-card">
-              <h2>PandaForce account</h2>
+              <h2 data-pf-message="common.pandaforceAccount">PandaForce account</h2>
               <p id="settingsProductIdentity"></p>
-              <p>Your PandaForce account is separate from your Codex account.</p>
+              <p data-pf-message="common.yourPandaforceAccountIsSeparateFromYourCodexAccount">
+                Your PandaForce account is separate from your Codex account.
+              </p>
             </div>
-            <h2 class="settings-section-title">Codex model account</h2>
+            <h2 class="settings-section-title" data-pf-message="common.codexModelAccount">Codex model account</h2>
             <div class="settings-account-identity">
               <span class="account-avatar account-initials" id="settingsAccountAvatar">?</span
-              ><span><strong id="settingsAccountName">Settings</strong><small id="settingsAccountMeta"></small></span>
+              ><span
+                ><strong id="settingsAccountName" data-pf-message="common.settings">Settings</strong
+                ><small id="settingsAccountMeta"></small
+              ></span>
             </div>
           </section>
           <section class="settings-page" data-settings-content="keyboard-shortcuts" hidden="">
             <header class="settings-page-heading">
-              <button class="settings-mobile-back icon-button" type="button" aria-label="Back to settings">
+              <button
+                class="settings-mobile-back icon-button"
+                type="button"
+                aria-label="Back to settings"
+                data-pf-aria-label="common.backToSettings"
+              >
                 <span class="icon-slot" data-icon="chevronLeft"></span>
               </button>
-              <h1>Keyboard shortcuts</h1>
+              <h1 data-pf-message="common.keyboardShortcuts">Keyboard shortcuts</h1>
             </header>
-            <div class="shortcut-row"><span>New chat</span><kbd>⌘ / Ctrl ⇧ K</kbd></div>
-            <div class="shortcut-row"><span>Toggle sidebar</span><kbd>⌘ B</kbd></div>
-            <div class="shortcut-row"><span>Search anything</span><kbd>⌘ / Ctrl K</kbd></div>
+            <div class="shortcut-row">
+              <span data-pf-message="common.newChat">New chat</span
+              ><kbd data-pf-message="common.ctrlK">⌘ / Ctrl ⇧ K</kbd>
+            </div>
+            <div class="shortcut-row">
+              <span data-pf-message="common.toggleSidebar">Toggle sidebar</span><kbd>⌘ B</kbd>
+            </div>
+            <div class="shortcut-row">
+              <span data-pf-message="common.searchAnything">Search anything</span
+              ><kbd data-pf-message="common.ctrlK2">⌘ / Ctrl K</kbd>
+            </div>
           </section>
           <section class="settings-page" data-settings-content="placeholder" hidden="">
             <header class="settings-page-heading">
-              <button class="settings-mobile-back icon-button" type="button" aria-label="Back to settings">
+              <button
+                class="settings-mobile-back icon-button"
+                type="button"
+                aria-label="Back to settings"
+                data-pf-aria-label="common.backToSettings"
+              >
                 <span class="icon-slot" data-icon="chevronLeft"></span>
               </button>
               <h1 id="settingsPlaceholderTitle"></h1>
@@ -997,46 +1381,63 @@
           </section>
           <section class="settings-page" data-settings-content="appearance" hidden="">
             <header class="settings-page-heading">
-              <button class="settings-mobile-back icon-button" type="button" aria-label="Back to settings">
+              <button
+                class="settings-mobile-back icon-button"
+                type="button"
+                aria-label="Back to settings"
+                data-pf-aria-label="common.backToSettings"
+              >
                 <span class="icon-slot" data-icon="chevronLeft"></span>
               </button>
-              <h1>Appearance</h1>
+              <h1 data-pf-message="common.appearance">Appearance</h1>
             </header>
             <label class="settings-row settings-select-row"
-              ><span><strong>Theme</strong><small>Choose light, dark, or follow your system</small></span
+              ><span
+                ><strong data-pf-message="common.theme">Theme</strong
+                ><small data-pf-message="common.chooseLightDarkOrFollowYourSystem"
+                  >Choose light, dark, or follow your system</small
+                ></span
               ><select class="settings-select" id="themeSelect">
-                <option value="system">System default</option>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
+                <option value="system" data-pf-message="common.systemDefault">System default</option>
+                <option value="light" data-pf-message="common.light">Light</option>
+                <option value="dark" data-pf-message="common.dark">Dark</option>
               </select></label
             ><label class="settings-row settings-select-row"
-              ><span><strong>Language</strong><small>Interface language</small></span
+              ><span
+                ><strong data-pf-message="common.language">Language</strong
+                ><small data-pf-message="common.interfaceLanguage">Interface language</small></span
               ><select class="settings-select" id="languageSelect">
-                <option value="system">System default</option>
+                <option value="system" data-pf-message="common.systemDefault">System default</option>
                 <option value="zh-CN">简体中文</option>
-                <option value="en">English</option>
+                <option value="en" data-pf-message="common.english">English</option>
               </select></label
             >
           </section>
           <section class="settings-page" data-settings-content="storage" hidden="">
             <header class="settings-page-heading">
-              <button class="settings-mobile-back icon-button" type="button" aria-label="Back to settings">
+              <button
+                class="settings-mobile-back icon-button"
+                type="button"
+                aria-label="Back to settings"
+                data-pf-aria-label="common.backToSettings"
+              >
                 <span class="icon-slot" data-icon="chevronLeft"></span>
               </button>
-              <h1>Storage and logs</h1>
+              <h1 data-pf-message="common.storageAndLogs">Storage and logs</h1>
             </header>
             <div class="settings-row">
               <span
-                ><strong>Persistent storage</strong
+                ><strong data-pf-message="common.persistentStorage">Persistent storage</strong
                 ><small
+                  data-pf-message="common.configurationAttachmentsLogsPluginsCacheAndBackupsUseSeparateDirectories"
                   >Configuration, attachments, logs, plugins, cache and backups use separate directories.</small
                 ></span
               >
             </div>
             <div class="settings-row">
               <span
-                ><strong>Log retention</strong
-                ><small
+                ><strong data-pf-message="common.logRetention">Log retention</strong
+                ><small data-pf-message="common.logsAreWrittenToTheConsoleAndRollingFilesRetention2"
                   >Logs are written to the console and rolling files. Retention is managed by instance
                   configuration.</small
                 ></span
@@ -1044,8 +1445,8 @@
             </div>
             <div class="settings-row">
               <span
-                ><strong>Storage configuration</strong
-                ><small
+                ><strong data-pf-message="common.storageConfiguration">Storage configuration</strong
+                ><small data-pf-message="common.readOnlyHereYourAdministratorManagesStorageAndLogSettings"
                   >Read only here. Your administrator manages storage and log settings for this instance.</small
                 ></span
               >
@@ -1059,8 +1460,8 @@
         <div class="permission-confirm-head">
           <span class="icon-slot" data-icon="triangleAlert"></span>
           <div>
-            <strong id="fullAccessTitle">Turn on Full Access?</strong>
-            <p>
+            <strong id="fullAccessTitle" data-pf-message="common.turnOnFullAccess">Turn on Full Access?</strong>
+            <p data-pf-message="common.theConnectedAgentCanRunCommandsAccessTheInternetAnd2">
               The connected agent can run commands, access the internet, and create or edit files anywhere in its
               execution environment without asking for approval.
             </p>
@@ -1070,28 +1471,34 @@
           <div>
             <span class="icon-slot" data-icon="file"></span
             ><span
-              ><strong>Files and folders</strong
-              ><small>Read, create, modify, upload, or delete files anywhere on this computer</small></span
+              ><strong data-pf-message="common.filesAndFolders">Files and folders</strong
+              ><small data-pf-message="common.readCreateModifyUploadOrDeleteFilesAnywhereOnThis"
+                >Read, create, modify, upload, or delete files anywhere on this computer</small
+              ></span
             >
           </div>
           <div>
             <span class="icon-slot" data-icon="terminal"></span
             ><span
-              ><strong>Terminal commands</strong
-              ><small>Run commands, install software, and change system settings</small></span
+              ><strong data-pf-message="common.terminalCommands">Terminal commands</strong
+              ><small data-pf-message="common.runCommandsInstallSoftwareAndChangeSystemSettings"
+                >Run commands, install software, and change system settings</small
+              ></span
             >
           </div>
           <div>
             <span class="icon-slot" data-icon="globe"></span
             ><span
-              ><strong>Internet and connected apps</strong
-              ><small>Access websites, send data, and use enabled plugins</small></span
+              ><strong data-pf-message="common.internetAndConnectedApps">Internet and connected apps</strong
+              ><small data-pf-message="common.accessWebsitesSendDataAndUseEnabledPlugins"
+                >Access websites, send data, and use enabled plugins</small
+              ></span
             >
           </div>
         </div>
         <div class="permission-confirm-actions">
-          <button value="cancel">Cancel</button
-          ><button type="button" class="danger" id="confirmFullAccess">Confirm</button>
+          <button value="cancel" data-pf-message="common.cancel">Cancel</button
+          ><button type="button" class="danger" id="confirmFullAccess" data-pf-message="common.confirm">Confirm</button>
         </div>
       </form>
     </dialog>
@@ -1099,18 +1506,37 @@
       <div class="image-viewer-card">
         <div class="image-viewer-toolbar">
           <div class="image-viewer-heading">
-            <strong id="imageViewerTitle">Image</strong><span id="imageViewerPath"></span>
+            <strong id="imageViewerTitle" data-pf-message="common.image">Image</strong
+            ><span id="imageViewerPath"></span>
           </div>
-          <a class="image-viewer-original" id="imageViewerOriginal" target="_blank" rel="noopener noreferrer"
+          <a
+            class="image-viewer-original"
+            id="imageViewerOriginal"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-pf-message="common.openOriginal"
             >Open original</a
           >
-          <button class="icon-button" id="closeImageViewer" type="button" aria-label="Close image viewer">
+          <button
+            class="icon-button"
+            id="closeImageViewer"
+            type="button"
+            aria-label="Close image viewer"
+            data-pf-aria-label="common.closeImageViewer"
+          >
             <span class="icon-slot" data-icon="x"></span>
           </button>
         </div>
         <div class="image-viewer-stage">
           <img id="imageViewerImage" alt="" />
-          <div class="image-viewer-error" id="imageViewerError" hidden="">Image could not be loaded.</div>
+          <div
+            class="image-viewer-error"
+            id="imageViewerError"
+            hidden=""
+            data-pf-message="common.imageCouldNotBeLoaded"
+          >
+            Image could not be loaded.
+          </div>
         </div>
       </div>
     </dialog>

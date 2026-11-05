@@ -1,3 +1,5 @@
+import { localizeText, setMessageHtml } from "../i18n.js";
+
 import { mergeConversationHistory } from "../ui-core.js";
 
 // Reads and merges paged history with navigation guards and explicit recovery.
@@ -29,8 +31,8 @@ export function assembleHistory({
     notice.dataset.conversationLoading = "true";
     notice.setAttribute("role", "status");
     notice.setAttribute("aria-live", "polite");
-    notice.innerHTML = '<span class="conversation-loading-spinner" aria-hidden="true"></span><span></span>';
-    notice.lastElementChild.textContent = t("Loading conversation…");
+    setMessageHtml(notice, '<span class="conversation-loading-spinner" aria-hidden="true"></span><span></span>');
+    localizeText(notice.lastElementChild, "workbench.loadingConversation", undefined, t);
     root.prepend(notice);
   }
   let conversationResyncInFlight = false,
@@ -43,23 +45,24 @@ export function assembleHistory({
     const generation = selection.current;
     syncConversationLoadingSurface(true);
     const notice = $("#conversation").querySelector("[data-conversation-loading]");
-    if (notice?.lastElementChild) notice.lastElementChild.textContent = t("Refreshing conversation…");
+    if (notice?.lastElementChild)
+      localizeText(notice.lastElementChild, "workbench.refreshingConversation", undefined, t);
     try {
       const thread = await readConversation(threadId, state.active, {
         getCurrent: () => state.active,
       });
       if (generation !== selection.current || state.active?.id !== threadId) return false;
-      if (!thread) throw new Error(t("Could not refresh conversation"));
+      if (!thread) throw new Error(t("errors.couldNotRefreshConversation"));
       sessions.replaceActive(thread);
       repositoriesPort.cacheConversation(thread);
       viewUpdates.request("header");
       viewUpdates.request("conversation", { thread: thread, loadMore: 0 });
       viewUpdates.request("sidebar");
-      noticesPort.toast(t("Conversation resynchronized"));
+      noticesPort.toast(t("workbench.conversationResynchronized"));
       return true;
     } catch (error) {
       console.warn("[panda-force] conversation resync failed:", error);
-      noticesPort.addPersistentError(error?.message || t("Could not refresh conversation"));
+      noticesPort.addPersistentError(error?.message || t("errors.couldNotRefreshConversation"));
       return false;
     } finally {
       conversationResyncInFlight = false;

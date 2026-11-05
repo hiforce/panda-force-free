@@ -1059,3 +1059,21 @@ body.workspace-booting #pendingApprovalNotice{visibility:hidden}
 .activity-motion .motion-fallback{animation:spin 1s linear infinite}
 .activity-group.waiting-approval .motion-fallback{animation-play-state:paused}
 @media(prefers-reduced-motion:reduce){.activity-motion .motion-fallback{animation:none}}
+
+/* UI direction never changes the order of commands, source or terminal output. */
+pre,
+code,
+.cm-editor,
+.xterm,
+.command-shell,
+.terminal-content {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: start;
+}
+[dir="rtl"] .sidebar {
+  text-align: start;
+}
+[dir="rtl"] .activity-chevron {
+  transform: scaleX(-1);
+}

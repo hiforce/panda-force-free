@@ -1,3 +1,12 @@
+import {
+  getBrowserI18n,
+  localizeAttribute,
+  localizeText,
+  setMessageHtml,
+  setOpaqueAttribute,
+  setOpaqueText,
+} from "./i18n.js";
+
 import { localDownloadUrl, renderAssistantMarkdown } from "./rendering.js";
 import { createCodeViewer, languageName } from "./code-viewer.js";
 import { configureAttachmentUrls } from "../shared/attachment-urls.js";
@@ -34,7 +43,11 @@ async function readPreview(response, limit) {
   return new Blob(chunks);
 }
 
-export function createFilePreview({ t = (value) => value, onBackToFiles = () => {}, getAttachmentUrlPrefix = () => "" } = {}) {
+export function createFilePreview({
+  t = getBrowserI18n().t,
+  onBackToFiles = () => {},
+  getAttachmentUrlPrefix = () => "",
+} = {}) {
   configureAttachmentUrls(getAttachmentUrlPrefix());
   if (!document.querySelector("#filePreviewStyles")) {
     const stylesheet = document.createElement("link");
@@ -47,12 +60,14 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
   dialog.id = "filePreview";
   dialog.className = "file-preview";
   dialog.setAttribute("aria-labelledby", "filePreviewTitle");
-  dialog.innerHTML = `<div class="file-preview-shell">
+  setMessageHtml(
+    dialog,
+    `<div class="file-preview-shell">
     <header class="file-preview-header">
       <div class="file-preview-heading"><strong id="filePreviewTitle"></strong><small id="filePreviewPath"></small></div>
       <button id="backToFiles" class="file-preview-back" type="button">‹</button><a id="filePreviewDownload"></a><button id="closeFilePreview" type="button">×</button>
     </header>
-    <nav class="file-preview-tabs" aria-label="Open files"><button id="closeAllFileTabs" class="file-preview-close-all" type="button"></button></nav>
+    <nav class="file-preview-tabs" aria-label="Open files" data-pf-aria-label="common.openFiles"><button id="closeAllFileTabs" class="file-preview-close-all" type="button"></button></nav>
     <div class="file-preview-toolbar" hidden>
       <button type="button" data-file-view="preview"></button><button type="button" data-file-view="source"></button><button type="button" data-file-view="diff" hidden></button><button type="button" data-file-view="history" hidden></button>
       <span class="file-preview-toolbar-spacer"></span>
@@ -60,7 +75,8 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
       <span class="file-preview-language"></span><span class="file-preview-readonly"></span>
     </div>
     <div id="filePreviewContent" class="file-preview-content" aria-busy="false"></div>
-  </div>`;
+  </div>`,
+  );
   document.body.append(dialog);
   const title = dialog.querySelector("#filePreviewTitle");
   const pathLabel = dialog.querySelector("#filePreviewPath");
@@ -97,21 +113,21 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
 
   function renderTabs() {
     tabsHost.replaceChildren(closeAllButton);
-    closeAllButton.textContent = t("Close all");
+    localizeText(closeAllButton, "files.closeAll", undefined, t);
     closeAllButton.hidden = tabs.length === 0;
     for (const tab of tabs) {
       const item = document.createElement("div");
       item.className = `file-preview-tab${tab === activeTab ? " active" : ""}`;
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = tab.name;
-      button.title = tab.path;
+      setOpaqueText(button, tab.name);
+      setOpaqueAttribute(button, "title", tab.path);
       button.onclick = () => open(tab);
       const closeTab = document.createElement("button");
       closeTab.type = "button";
       closeTab.className = "file-preview-tab-close";
-      closeTab.textContent = "×";
-      closeTab.setAttribute("aria-label", `${t("Close")} ${tab.name}`);
+      setOpaqueText(closeTab, "×");
+      closeTab.setAttribute("aria-label", `${t("common.close")} ${tab.name}`);
       closeTab.onclick = (event) => {
         event.stopPropagation();
         const index = tabs.indexOf(tab);
@@ -144,7 +160,7 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
     const element = document.createElement("p");
     element.className = "file-preview-status";
     element.setAttribute("role", "status");
-    element.textContent = t(message);
+    localizeText(element, message, undefined, t);
     content.replaceChildren(element);
   }
   function close() {
@@ -186,7 +202,7 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
             : line.startsWith("@@") || line.startsWith("diff ")
               ? "diff-header"
               : "diff-context";
-      row.textContent = line || " ";
+      setOpaqueText(row, line || " ");
       pre.append(row);
     }
     content.replaceChildren(pre);
@@ -222,10 +238,13 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
         button.type = "button";
         button.className = "file-history-item";
         const date = new Date(item.date);
-        button.innerHTML = `<strong></strong><small></small><time></time>`;
-        button.querySelector("strong").textContent = `${item.shortHash} ${item.subject}`;
-        button.querySelector("small").textContent = item.author;
-        button.querySelector("time").textContent = Number.isNaN(date.valueOf()) ? item.date : date.toLocaleString();
+        setMessageHtml(button, `<strong></strong><small></small><time></time>`);
+        setOpaqueText(button.querySelector("strong"), `${item.shortHash} ${item.subject}`);
+        setOpaqueText(button.querySelector("small"), item.author);
+        setOpaqueText(
+          button.querySelector("time"),
+          Number.isNaN(date.valueOf()) ? item.date : getBrowserI18n().format.dateTime(date),
+        );
         button.onclick = () =>
           loadGit("diff", { ...details, scope: "commit", commit: item.hash, controller: details.controller });
         list.append(button);
@@ -250,8 +269,8 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
     findButton.hidden = true;
     wrapButton.hidden = true;
     copyButton.hidden = true;
-    languageLabel.textContent = languageName(path);
-    readonlyLabel.textContent = t("Read only");
+    setOpaqueText(languageLabel, languageName(path));
+    localizeText(readonlyLabel, "files.readOnly", undefined, t);
     const render = (mode) => {
       content.scrollTop = 0;
       viewButtons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.fileView === mode)));
@@ -277,20 +296,20 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
         copyButton.hidden = true;
         const article = document.createElement("article");
         article.className = "message-text file-preview-markdown";
-        article.innerHTML = renderAssistantMarkdown(text, { cwd });
+        setMessageHtml(article, renderAssistantMarkdown(text, { cwd }));
         content.replaceChildren(article);
         return;
       }
       findButton.hidden = false;
       wrapButton.hidden = false;
       copyButton.hidden = false;
-      findButton.textContent = t("Find");
-      findButton.setAttribute("aria-label", t("Find in file"));
-      wrapButton.textContent = wrap ? t("Unwrap") : t("Wrap");
-      wrapButton.setAttribute("aria-label", wrap ? t("Disable word wrap") : t("Enable word wrap"));
+      localizeText(findButton, "files.find", undefined, t);
+      localizeAttribute(findButton, "aria-label", "files.findInFile", undefined, t);
+      setOpaqueText(wrapButton, wrap ? t("files.unwrap") : t("files.wrap"));
+      wrapButton.setAttribute("aria-label", wrap ? t("files.disableWordWrap") : t("files.enableWordWrap"));
       wrapButton.setAttribute("aria-pressed", String(wrap));
-      copyButton.textContent = t("Copy");
-      copyButton.setAttribute("aria-label", t("Copy file"));
+      localizeText(copyButton, "files.copy", undefined, t);
+      localizeAttribute(copyButton, "aria-label", "files.copyFile", undefined, t);
       const host = document.createElement("div");
       host.className = "file-preview-editor";
       content.replaceChildren(host);
@@ -306,30 +325,30 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
       wrapButton.onclick = () => {
         wrap = !wrap;
         editor?.setWrap(wrap);
-        wrapButton.textContent = wrap ? t("Unwrap") : t("Wrap");
-        wrapButton.setAttribute("aria-label", wrap ? t("Disable word wrap") : t("Enable word wrap"));
+        setOpaqueText(wrapButton, wrap ? t("files.unwrap") : t("files.wrap"));
+        wrapButton.setAttribute("aria-label", wrap ? t("files.disableWordWrap") : t("files.enableWordWrap"));
         wrapButton.setAttribute("aria-pressed", String(wrap));
       };
       copyButton.onclick = async () => {
         try {
           await editor?.copy();
-          copyButton.textContent = t("Copied");
+          localizeText(copyButton, "common.copied", undefined, t);
           clearTimeout(copyResetTimer);
           copyResetTimer = setTimeout(() => {
-            if (copyButton.isConnected) copyButton.textContent = t("Copy");
+            if (copyButton.isConnected) localizeText(copyButton, "files.copy", undefined, t);
           }, 1400);
         } catch {
-          copyButton.textContent = t("Copy failed");
+          localizeText(copyButton, "files.copyFailed", undefined, t);
           clearTimeout(copyResetTimer);
           copyResetTimer = setTimeout(() => {
-            if (copyButton.isConnected) copyButton.textContent = t("Copy");
+            if (copyButton.isConnected) localizeText(copyButton, "files.copy", undefined, t);
           }, 1800);
         }
       };
       if (lines.length > MAX_LINES) {
         const notice = document.createElement("p");
         notice.className = "file-preview-status";
-        notice.textContent = t("Only the first 20,000 lines are shown.");
+        localizeText(notice, "files.onlyTheFirst20000LinesAreShown", undefined, t);
         content.append(notice);
       }
       if (
@@ -338,7 +357,7 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
       ) {
         const notice = document.createElement("p");
         notice.className = "file-preview-status file-preview-performance-notice";
-        notice.textContent = t("Syntax highlighting was disabled for this large file to keep the browser responsive.");
+        localizeText(notice, "files.syntaxHighlightingWasDisabledForThisLargeFileToKeep", undefined, t);
         content.append(notice);
       }
       requestAnimationFrame(() => {
@@ -346,14 +365,17 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
       });
     };
     for (const button of viewButtons) {
-      button.textContent = t(
+      localizeText(
+        button,
         button.dataset.fileView === "preview"
-          ? "Preview"
+          ? "common.preview"
           : button.dataset.fileView === "source"
-            ? "Source"
+            ? "common.source"
             : button.dataset.fileView === "diff"
-              ? "Diff"
-              : "History",
+              ? "common.diff"
+              : "common.history",
+        undefined,
+        t,
       );
       button.onclick = () => render(button.dataset.fileView);
     }
@@ -366,7 +388,7 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
     const tab = arguments[0];
     let existing = tabs.find((item) => item.path === path && item.cwd === cwd);
     if (!existing && tabs.length >= MAX_OPEN_TABS) {
-      status("You can open up to 9 files at once. Close a tab first.");
+      status("common.youCanOpenUpTo9FilesAtOnceClose");
       return;
     }
     if (!existing) {
@@ -384,15 +406,15 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
     } catch {
       /* Preserve literal filenames. */
     }
-    title.textContent = filename;
-    pathLabel.textContent = `${path}${lineStart ? `:${lineStart}${lineEnd ? `-${lineEnd}` : ""}` : ""}`;
-    download.textContent = t("Download");
+    setOpaqueText(title, filename);
+    setOpaqueText(pathLabel, `${path}${lineStart ? `:${lineStart}${lineEnd ? `-${lineEnd}` : ""}` : ""}`);
+    localizeText(download, "files.download", undefined, t);
     download.href = localDownloadUrl(path, cwd);
     download.download = filename;
-    closeButton.setAttribute("aria-label", t("Close file preview"));
-    backButton.setAttribute("aria-label", t("Back to files"));
+    localizeAttribute(closeButton, "aria-label", "files.closeFilePreview", undefined, t);
+    localizeAttribute(backButton, "aria-label", "files.backToFiles", undefined, t);
     toolbar.hidden = true;
-    status("Loading file…");
+    status("common.loadingFile");
     content.setAttribute("aria-busy", "true");
     if (!dialog.open) {
       // The desktop workspace already has the files dialog as its modal
@@ -414,7 +436,7 @@ export function createFilePreview({ t = (value) => value, onBackToFiles = () => 
         objectUrl = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
         const frame = document.createElement("iframe");
         frame.className = "file-preview-pdf";
-        frame.title = filename;
+        setOpaqueAttribute(frame, "title", filename);
         frame.src = objectUrl;
         content.replaceChildren(frame);
       } else {

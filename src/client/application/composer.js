@@ -1,3 +1,5 @@
+import { localizeAttribute, setMessageHtml } from "../i18n.js";
+
 import { createComposerDrafts } from "../composer-drafts.js";
 import { codexIcon } from "../codex-icons.js";
 import { attachmentsFromInput, composerTextFromInput } from "../composer-attachments.js";
@@ -86,15 +88,15 @@ export function assembleComposer({
           ? "steer"
           : "stop"
         : "send",
-      label = mode === "stop" ? "Stop" : mode === "steer" ? "Steer" : "Send message";
+      label = mode === "stop" ? "common.stop" : mode === "steer" ? "sessions.steer" : "common.sendMessage";
     // Preserve the pressed element when polling refreshes an unchanged control.
     if (button.dataset.submitMode !== mode || !button.firstElementChild)
-      button.innerHTML = codexIcon(mode === "stop" ? "square" : "arrowUp");
+      setMessageHtml(button, codexIcon(mode === "stop" ? "square" : "arrowUp"));
     button.dataset.submitMode = mode;
     button.classList.toggle("stop", mode === "stop");
     button.classList.toggle("steer", mode === "steer");
-    button.title = t(label);
-    button.setAttribute("aria-label", t(label));
+    localizeAttribute(button, "title", label, undefined, t);
+    localizeAttribute(button, "aria-label", label, undefined, t);
   }
   function setActiveTurnId(turnId = "") {
     const threadId = state.active?.id,

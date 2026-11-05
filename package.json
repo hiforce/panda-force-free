@@ -1,6 +1,6 @@
 {
   "name": "panda-force-free",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -15,7 +15,7 @@
     "test:browser": "bun scripts/testing/run.mjs browser",
     "test:e2e": "bun scripts/testing/run.mjs browser",
     "test:browser:failure-paths": "bun scripts/testing/run.mjs failure-paths",
-    "build:client": "bun build src/client/app.js --target=browser --minify --outfile=public/app.bundle.js --external=/file-preview.bundle.js --external=/terminal-runtime.bundle.js && bun build src/client/auth-bootstrap.js src/client/i18n.js src/client/panda-brand.js --target=browser --minify --outdir=public --external=/app.bundle.js && bun build src/client/file-preview.js --target=browser --minify --outfile=public/file-preview.bundle.js && bun build src/client/terminal-runtime.js --target=browser --minify --outfile=public/terminal-runtime.bundle.js",
+    "build:client": "bun scripts/build-client.mjs",
     "build:server": "bun build src/server/main.ts --target=bun --outfile=dist/server.js && bun -e \"await Bun.write('dist/worker.js', Bun.file('src/server/terminal/worker.js'))\" && bun build scripts/start.ts --target=bun --outfile=dist/start.js",
     "test:browser:runtime": "bun scripts/testing/run.mjs runtime",
     "test:architecture": "bun test tests/client-architecture.test.ts",
@@ -25,7 +25,8 @@
     "release:export": "bun scripts/release/export-free.mjs",
     "release:verify": "bun scripts/release/verify-free.mjs",
     "verify": "bun scripts/testing/run.mjs verify",
-    "test:live": "bun scripts/testing/run.mjs live"
+    "test:live": "bun scripts/testing/run.mjs live",
+    "check:i18n": "bun scripts/i18n/validate.mjs"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
@@ -42,6 +43,9 @@
     "ali-oss": "^6.23.0",
     "codemirror": "^6.0.2",
     "dompurify": "^3.4.17",
+    "i18next": "26.7.1",
+    "i18next-icu": "2.6.1",
+    "intl-messageformat": "12.1.4",
     "jsdom": "^26.1.0",
     "katex": "^0.18.2",
     "marked": "^16.4.2",

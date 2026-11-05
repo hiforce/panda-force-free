@@ -1,3 +1,4 @@
+import { setOpaqueText } from "../i18n.js";
 // Owns image-dialog focus, source lifetime and dismissal.
 export function assembleImages({ $ }) {
   let imageViewerReturnFocus = null;
@@ -14,8 +15,8 @@ export function assembleImages({ $ }) {
     const dialog = $("#imageViewer"),
       image = $("#imageViewerImage");
     imageViewerReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    $("#imageViewerTitle").textContent = title || "Image";
-    $("#imageViewerPath").textContent = path || title || "";
+    setOpaqueText($("#imageViewerTitle"), title || "Image");
+    setOpaqueText($("#imageViewerPath"), path || title || "");
     $("#imageViewerError").hidden = true;
     image.hidden = false;
     image.alt = title || "";

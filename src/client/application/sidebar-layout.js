@@ -40,7 +40,7 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
     return document.documentElement.classList.contains("mobile-device") || innerWidth < 720;
   }
   function bind() {
-    $("#productModeButton").onclick = () => noticesPort.toast(t("Current engine: Codex"));
+    $("#productModeButton").onclick = () => noticesPort.toast(t("common.currentEngineCodex"));
     $("#sidebarSearchButton").onclick = (event) => {
       event.stopPropagation();
       setSidebarSearchOpen($("#sidebarSearchPanel").hidden);

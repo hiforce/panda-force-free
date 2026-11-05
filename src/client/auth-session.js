@@ -1,10 +1,12 @@
+import { getBrowserI18n, localizeText } from "./i18n.js";
+
 import { sessionLoginUrl } from "../shared/auth-return-path.js";
 
 const CHECK_INTERVAL_MS = 5 * 60_000;
 const CHECK_TIMEOUT_MS = 20_000;
 const NOTICE_DELAY_MS = 15_000;
 
-export function installPandaForceSession(status, { translate: t = (message) => message, i18n } = {}) {
+export function installPandaForceSession(status, { translate: t = getBrowserI18n().t, i18n } = {}) {
   const originalFetch = globalThis.fetch.bind(globalThis);
   let checking = null,
     navigating = false,
@@ -70,12 +72,15 @@ export function installPandaForceSession(status, { translate: t = (message) => m
     const expired = condition === "expired";
     notice.hidden = false;
     notice.dataset.status = condition;
-    notice.querySelector("span").textContent = t(
+    localizeText(
+      notice.querySelector("span"),
       expired
-        ? "Your sign-in has expired. Your page and draft are kept here. Sign in again to continue."
-        : "Sign-in verification is temporarily unavailable. Retrying in the background.",
+        ? "common.yourSignInHasExpiredYourPageAndDraftAre"
+        : "common.signInVerificationIsTemporarilyUnavailableRetryingInTheBackground",
+      undefined,
+      t,
     );
-    notice.querySelector("button").textContent = t(expired ? "Sign in again" : "Retry");
+    localizeText(notice.querySelector("button"), expired ? "common.signInAgain" : "common.retry", undefined, t);
   }
 
   function setCondition(value) {
@@ -163,7 +168,12 @@ export function installPandaForceSession(status, { translate: t = (message) => m
   button.type = "button";
   button.id = "pandaLogout";
   button.className = "account-menu-row";
-  button.textContent = `${t("Log out")} (PandaForce · ${status.identity?.username || status.identity?.account || "PandaForce"})`;
+  localizeText(
+    button,
+    "common.logoutIdentity",
+    { account: status.identity?.username || status.identity?.account || "PandaForce" },
+    t,
+  );
   button.onclick = async () => {
     button.disabled = true;
     try {

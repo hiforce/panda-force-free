@@ -1,3 +1,4 @@
+import { setMessageHtml } from "./i18n.js";
 // Exact Lucide 0.456.0 icon nodes extracted from Codex.app's app.asar.
 // Lucide is ISC licensed; see THIRD_PARTY_NOTICES.md in this project.
 export const codexIconNodes = {
@@ -71,5 +72,5 @@ export function codexIcon(name, className = "") {
 }
 
 export function hydrateCodexIcons(root = document) {
-  for (const node of root.querySelectorAll("[data-icon]")) node.innerHTML = codexIconSvg(node.dataset.icon);
+  for (const node of root.querySelectorAll("[data-icon]")) setMessageHtml(node, codexIconSvg(node.dataset.icon));
 }

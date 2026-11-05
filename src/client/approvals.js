@@ -1,3 +1,5 @@
+import { localizeText, messageHtml, setMessageHtml } from "./i18n.js";
+
 import {
   buildApprovalModel,
   permissionRows,
@@ -44,19 +46,22 @@ export function createApprovals({
   const inbox = document.createElement("dialog");
   inbox.id = "approvalInboxDialog";
   inbox.className = "workbench-dialog approval-inbox";
-  inbox.innerHTML = `<header><h2>${escapeHtml(t("Requests requiring your attention"))}</h2><button type="button" class="wb-button">${escapeHtml(t("Close"))}</button></header><div class="approval-inbox-list"></div>`;
+  setMessageHtml(
+    inbox,
+    `<header><h2>${messageHtml("approvals.requestsRequiringYourAttention", undefined, t)}</h2><button type="button" class="wb-button">${messageHtml("common.close", undefined, t)}</button></header><div class="approval-inbox-list"></div>`,
+  );
   document.body.append(inbox);
   inbox.querySelector("header button").onclick = () => inbox.close();
   function pendingChanged() {
     notice.hidden = pendingApprovals.size === 0;
-    notice.textContent = t("Review requests ({count})", { count: pendingApprovals.size });
+    localizeText(notice, "approvals.reviewRequestsCount", { count: pendingApprovals.size }, t);
     onPendingChange();
     if (!pendingApprovals.size && inbox.open) inbox.close();
   }
   i18n?.subscribe(() => {
     pendingChanged();
-    inbox.querySelector("header h2").textContent = t("Requests requiring your attention");
-    inbox.querySelector("header button").textContent = t("Close");
+    localizeText(inbox.querySelector("header h2"), "approvals.requestsRequiringYourAttention", undefined, t);
+    localizeText(inbox.querySelector("header button"), "common.close", undefined, t);
   });
   notice.onclick = () => {
     inbox.showModal();
@@ -104,13 +109,13 @@ export function createApprovals({
     if (model.kind === "patch") {
       const review = diffForTurn(p.turnId);
       return review?.hasChanges
-        ? `<button type="button" class="approval-review-link">${codexIcon("fileDiff")}<span>Review ${review.fileCount} changed file${review.fileCount === 1 ? "" : "s"}</span><span class="plus">+${review.linesAdded}</span><span class="minus">−${review.linesDeleted}</span></button>`
+        ? `<button type="button" class="approval-review-link">${codexIcon("fileDiff")}${messageHtml("approvals.reviewChangedFiles", { count: review.fileCount }, t)}<span class="plus">+${review.linesAdded}</span><span class="minus">−${review.linesDeleted}</span></button>`
         : "";
     }
     return permissionRows(p.permissions)
       .map(
         (row) =>
-          `<div class="permission-row"><span>${escapeHtml(row.label)}</span><code>${escapeHtml(shortPath(row.value))}</code></div>`,
+          `<div class="permission-row"><span>${messageHtml(row.labelKey, undefined, t)}</span><code>${row.valueKey ? messageHtml(row.valueKey, undefined, t) : escapeHtml(shortPath(row.value))}</code></div>`,
       )
       .join("");
   }
@@ -158,10 +163,17 @@ export function createApprovals({
       if (container) {
         const session = document.createElement("p");
         session.className = "approval-session-context";
-        session.textContent =
-          t("Session") +
-          ": " +
-          (state.threads.find((thread) => thread.id === p.threadId)?.name || p.threadId || t("Current workspace"));
+        localizeText(
+          session,
+          "approvals.sessionContext",
+          {
+            name:
+              state.threads.find((thread) => thread.id === p.threadId)?.name ||
+              p.threadId ||
+              t("approvals.currentWorkspace"),
+          },
+          t,
+        );
         card.prepend(session);
       }
       (container || ensureTurnTimeline(p.turnId || "questions").querySelector(".turn-event-stream")).append(card);
@@ -191,14 +203,24 @@ export function createApprovals({
       card = document.createElement("section");
     card.className = "approval-card";
     card.dataset.codexApprovalSurface = "";
-    card.innerHTML = `<div class="approval-content"><div class="approval-identity">${approvalIcon(model.kind)}<span>${escapeHtml(t(model.identity))}</span></div><div class="approval-title">${escapeHtml(t(model.title))}</div>${model.subtitle ? `<div class="approval-subtitle">${escapeHtml(shortPath(model.subtitle))}</div>` : ""}${model.reason ? `<div class="approval-reason"><span>${escapeHtml(t("Reason"))}</span><p>${escapeHtml(model.reason)}</p></div>` : ""}</div><div class="approval-body">${approvalBody(model, p)}</div><form class="approval-actions">${model.leading ? `<button type="button" class="approval-leading">${escapeHtml(t(model.leading.label))}</button>` : ""}<div class="approval-actions-main"><button type="submit" class="approval-primary">${escapeHtml(t(model.primary.label))}</button>${model.scoped ? `<button type="button" class="approval-scoped">${escapeHtml(t(model.scoped.label))}</button>` : ""}<button type="button" class="approval-deny danger">${escapeHtml(t(model.deny.label))}</button></div></form>`;
+    setMessageHtml(
+      card,
+      `<div class="approval-content"><div class="approval-identity">${approvalIcon(model.kind)}<span>${messageHtml(model.identityKey, model.identityValues, t)}</span></div><div class="approval-title">${messageHtml(model.titleKey, model.titleValues, t)}</div>${model.subtitle ? `<div class="approval-subtitle">${model.subtitleKey ? messageHtml(model.subtitleKey, model.subtitleValues, t) : escapeHtml(shortPath(model.subtitle))}</div>` : ""}${model.reason ? `<div class="approval-reason"><span>${messageHtml("approvals.reason", undefined, t)}</span><p>${escapeHtml(model.reason)}</p></div>` : ""}</div><div class="approval-body">${approvalBody(model, p)}</div><form class="approval-actions">${model.leading ? `<button type="button" class="approval-leading">${messageHtml(model.leading.labelKey, model.leading.labelValues, t)}</button>` : ""}<div class="approval-actions-main"><button type="submit" class="approval-primary">${messageHtml(model.primary.labelKey, model.primary.labelValues, t)}</button>${model.scoped ? `<button type="button" class="approval-scoped">${messageHtml(model.scoped.labelKey, model.scoped.labelValues, t)}</button>` : ""}<button type="button" class="approval-deny danger">${messageHtml(model.deny.labelKey, model.deny.labelValues, t)}</button></div></form>`,
+    );
     if (container) {
       const session = document.createElement("p");
       session.className = "approval-session-context";
-      session.textContent =
-        t("Session") +
-        ": " +
-        (state.threads.find((thread) => thread.id === p.threadId)?.name || p.threadId || t("Current workspace"));
+      localizeText(
+        session,
+        "approvals.sessionContext",
+        {
+          name:
+            state.threads.find((thread) => thread.id === p.threadId)?.name ||
+            p.threadId ||
+            t("approvals.currentWorkspace"),
+        },
+        t,
+      );
       card.prepend(session);
       container.append(card);
     } else group.after(card);
@@ -224,7 +246,7 @@ export function createApprovals({
             message.setAttribute("role", "alert");
             card.append(message);
           }
-          message.textContent = t("Could not submit the decision. The request is still waiting; please retry.");
+          localizeText(message, "errors.couldNotSubmitTheDecisionTheRequestIsStillWaiting", undefined, t);
           if (!error?.silentTransportSwitch) addPersistentError(error.message);
         }
       }

@@ -1,3 +1,4 @@
+import { errorText, getBrowserI18n } from "./i18n.js";
 export function createProjectCatalog({ state, onChange = () => {} }) {
   let snapshot = { revision: -1, projects: [], assignments: [] },
     loading = null;
@@ -22,7 +23,11 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
     const data = await response.json();
     if (!response.ok) {
       if (response.status === 409) await load();
-      throw Object.assign(new Error(data.error || "Could not update project"), { status: response.status });
+      throw Object.assign(new Error(errorText(data, getBrowserI18n().t, "errors.couldNotUpdateProject")), {
+        status: response.status,
+        messageId: data.messageId,
+        messageArgs: data.messageArgs,
+      });
     }
     return data;
   }

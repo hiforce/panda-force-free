@@ -1,0 +1,23 @@
+{
+  "find": "查找",
+  "findInFile": "在文件中查找",
+  "wrap": "换行",
+  "unwrap": "取消换行",
+  "enableWordWrap": "启用自动换行",
+  "disableWordWrap": "关闭自动换行",
+  "copyFile": "复制文件内容",
+  "readOnly": "只读",
+  "syntaxHighlightingWasDisabledForThisLargeFileToKeep": "文件较大，已关闭语法高亮以保持浏览器响应。",
+  "copyFailed": "复制失败",
+  "download": "下载",
+  "closeFilePreview": "关闭文件预览",
+  "thisFileIsTooLargeToPreview": "文件过大，无法预览。",
+  "onlyTheFirst20000LinesAreShown": "仅显示前 20,000 行。",
+  "copy": "复制",
+  "backToFiles": "返回文件",
+  "closeAll": "关闭全部",
+  "gitStatusStatus": "Git 状态：{status}",
+  "moreFilesAreHiddenSearchToFindThem": "还有更多文件未显示，请使用搜索查找。",
+  "tooLarge": "文件过大",
+  "loading": "加载中…"
+}

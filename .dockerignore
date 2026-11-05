@@ -39,3 +39,6 @@ panda-force-auth.json
 panda-docs/node_modules
 panda-docs/build
 panda-docs/.docusaurus
+
+# Generated language packs.
+public/locales

@@ -1,17 +1,19 @@
+import { getBrowserI18n, setOpaqueText } from "./i18n.js";
+
 const GLOBAL_KEY = "__pandaForceWorkspacePreparation";
 const STEPS = [
-  ["interface", "Preparing the interface"],
-  ["connection", "Connecting to your workspace"],
-  ["configuration", "Loading workspace settings"],
-  ["projects", "Loading projects"],
-  ["sessions", "Loading recent sessions"],
-  ["models", "Loading available models"],
-  ["permissions", "Loading permissions"],
+  ["interface", "common.preparingTheInterface"],
+  ["connection", "common.connectingToYourWorkspace"],
+  ["configuration", "common.loadingWorkspaceSettings"],
+  ["projects", "common.loadingProjects"],
+  ["sessions", "common.loadingRecentSessions"],
+  ["models", "common.loadingAvailableModels"],
+  ["permissions", "common.loadingPermissions"],
 ];
 
 export function createWorkspacePreparation({
   root = globalThis.document,
-  translate = (message, values = {}) => message.replace(/\{(\w+)\}/g, (_, key) => values[key] ?? `{${key}}`),
+  translate = (message, values) => getBrowserI18n().t(message, values),
   now = () => Date.now(),
   slowAfterMs = 5000,
   timeoutMs = 45000,
@@ -82,46 +84,50 @@ export function createWorkspacePreparation({
     panel.hidden = dismissed;
     panel.dataset.status = finished ? "ready" : failed ? "error" : "loading";
     panel.setAttribute("aria-busy", String(!finished));
-    panel.querySelector("#workspacePreparationTitle").textContent = translate(
-      finished ? "Your workspace is ready" : "Preparing your workspace",
+    setOpaqueText(
+      panel.querySelector("#workspacePreparationTitle"),
+      translate(finished ? "common.yourWorkspaceIsReady" : "common.preparingYourWorkspace"),
     );
     const message = translate(
       finished
-        ? "Everything is ready. You can get started."
+        ? "common.everythingIsReadyYouCanGetStarted"
         : failed
-          ? "Some information could not be loaded. Reload to try again."
+          ? "common.someInformationCouldNotBeLoadedReloadToTryAgain"
           : slow
-            ? "Still loading. Your workspace is taking a little longer to respond."
-            : "Getting your projects, sessions and tools ready.",
+            ? "common.stillLoadingYourWorkspaceIsTakingALittleLongerTo"
+            : "common.gettingYourProjectsSessionsAndToolsReady",
     );
     const messageElement = panel.querySelector("#workspacePreparationMessage");
-    if (messageElement.textContent !== message) messageElement.textContent = message;
+    if (messageElement.textContent !== message) setOpaqueText(messageElement, message);
     const progress = panel.querySelector("#workspacePreparationProgress");
     progress.max = steps.size;
     progress.value = ready;
-    const count = translate("{completed} of {total} steps ready", { completed: ready, total: steps.size });
+    const count = translate("common.completedOfTotalStepsReady", { completed: ready, total: steps.size });
     progress.setAttribute("aria-valuetext", count);
-    panel.querySelector("#workspacePreparationCount").textContent = count;
-    panel.querySelector("#workspacePreparationElapsed").textContent = translate("Elapsed: {seconds}s", {
-      seconds: Math.floor((now() - startedAt) / 1000),
-    });
+    setOpaqueText(panel.querySelector("#workspacePreparationCount"), count);
+    setOpaqueText(
+      panel.querySelector("#workspacePreparationElapsed"),
+      translate("common.elapsedSecondss", {
+        seconds: Math.floor((now() - startedAt) / 1000),
+      }),
+    );
     panel.querySelector("#workspacePreparationElapsed").hidden = !slow;
     const reload = panel.querySelector("#workspacePreparationReload");
     reload.hidden = !failed && !slow;
-    reload.textContent = translate("Reload workspace");
+    setOpaqueText(reload, translate("common.reloadWorkspace"));
     const retry = panel.querySelector("#workspacePreparationRetry");
     if (retry) {
       retry.hidden = !failed && !slow;
-      retry.textContent = translate("Retry remaining steps");
+      setOpaqueText(retry, translate("common.retryRemainingSteps"));
     }
     const proceed = panel.querySelector("#workspacePreparationContinue");
     proceed.disabled = steps.get("interface").status !== "ready";
-    proceed.textContent = translate("Continue to workspace");
+    setOpaqueText(proceed, translate("common.continueToWorkspace"));
     for (const [id, step] of steps) {
       const { row, mark, label } = rows.get(id);
       row.dataset.status = step.status;
-      mark.textContent = step.status === "ready" ? "✓" : step.status === "error" ? "!" : "";
-      label.textContent = translate(step.label);
+      setOpaqueText(mark, step.status === "ready" ? "✓" : step.status === "error" ? "!" : "");
+      setOpaqueText(label, translate(step.label));
     }
   }
   function settle() {

@@ -63,7 +63,7 @@ export function assembleSidebar({
         const response = await fetch("/api/projects/visibility", {
           cache: "no-store",
         });
-        if (!response.ok) throw new Error(t("Could not load projects"));
+        if (!response.ok) throw new Error(t("errors.couldNotLoadProjects"));
         return response.json();
       }),
     rpc: (method, params) => transportPort.rpc(method, params),

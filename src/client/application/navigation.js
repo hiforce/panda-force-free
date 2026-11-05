@@ -1,3 +1,5 @@
+import { localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
+
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { parseWorkbenchRoute } from "../workbench-route.js";
 
@@ -55,8 +57,8 @@ export function assembleNavigation({
     mutations.collection("changes").clear();
     reviewPort.resetReviewState();
     suggestionsPort.closeComposerAutocomplete();
-    $("#threadTitle").textContent = t("New session");
-    $("#threadPath").textContent = state.projectless ? "" : $("#projectPath").textContent;
+    localizeText($("#threadTitle"), "common.newSession", undefined, t);
+    setOpaqueText($("#threadPath"), state.projectless ? "" : $("#projectPath").textContent);
     composerPort.restoreComposerDraft();
     composerPort.setPlanMode(false);
     viewUpdates.request("workspaceContext");
@@ -94,8 +96,10 @@ export function assembleNavigation({
       composerPort.syncTurnRuntime(thread.turns.at(-1));
       viewportPort.scrollOpenedThreadToBottom();
     } else {
-      $("#conversation").innerHTML =
-        `<div class="list-state conversation-loading">${fromCache ? "No conversation history loaded. Send a message to continue." : "Loading conversation…"}</div>`;
+      setMessageHtml(
+        $("#conversation"),
+        `<div class="list-state conversation-loading">${fromCache ? "No conversation history loaded. Send a message to continue." : "Loading conversation…"}</div>`,
+      );
       statusPort.syncThreadErrorSurface(thread.id);
       viewUpdates.request("pendingMessages");
     }
@@ -168,8 +172,10 @@ export function assembleNavigation({
       } else showThread(thread);
       historyPort.syncConversationLoadingSurface(false);
       if (!thread.turns?.length) {
-        $("#conversation").innerHTML =
-          '<div class="list-state conversation-loading">No conversation history loaded. Send a message to continue.</div>';
+        setMessageHtml(
+          $("#conversation"),
+          '<div class="list-state conversation-loading">No conversation history loaded. Send a message to continue.</div>',
+        );
         statusPort.syncThreadErrorSurface(thread.id);
         viewUpdates.request("pendingMessages");
       }
@@ -198,8 +204,10 @@ export function assembleNavigation({
         return false;
       }
       if (!summary || state.active?.id !== id) return false;
-      $("#conversation").innerHTML =
-        '<div class="list-state conversation-loading">Could not load history. Send a message to start fresh.</div>';
+      setMessageHtml(
+        $("#conversation"),
+        '<div class="list-state conversation-loading">Could not load history. Send a message to start fresh.</div>',
+      );
       statusPort.syncThreadErrorSurface(id);
       historyPort.syncConversationLoadingSurface(false);
       viewUpdates.request("pendingMessages");

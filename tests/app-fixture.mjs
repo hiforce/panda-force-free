@@ -29,6 +29,7 @@ export async function createAppFixture({
   questionnaireRollout = false,
   sharedApprovals = false,
   models = null,
+  account = null,
   workspaceDirectory = null,
 } = {}) {
   // Keep the project inside the application's existing folder-browsing boundary.
@@ -145,6 +146,7 @@ import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { appendFileSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 let count=0;
+let account=${JSON.stringify(account)};
 const threads=${JSON.stringify(initial)};
 const queues=new Map();
 let sharedSocket;
@@ -159,7 +161,8 @@ const handleLine=line=>{
   let result={};
   if(m.method==='initialize')result={codexHome:${JSON.stringify(dir)}};
   else if(m.method==='model/list')result={data:${JSON.stringify(models)}||[{id:'gpt-fixture',model:'gpt-fixture',displayName:'GPT Fixture',defaultReasoningEffort:'medium',supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]};
-  else if(m.method==='account/read')result={account:null};
+  else if(m.method==='account/read')result={account};
+  else if(m.method==='account/logout')account=null;
   else if(m.method==='thread/list'){const offset=Number(p.cursor)||0,limit=p.limit||50;result={data:threads.slice(offset,offset+limit),nextCursor:offset+limit<threads.length?String(offset+limit):null}}
   else if(m.method==='thread/start'){
     if(p.model==='fail'){send({id:m.id,error:{message:'Fixture creation failed'}});return}
@@ -177,6 +180,8 @@ const handleLine=line=>{
   }else if(m.method==='thread/queue/add'){
     const queuedSubmission={id:'queue-'+(++count),clientUserMessageId:p.clientUserMessageId,input:p.input};
     queues.set(p.threadId,[queuedSubmission]);result={queuedSubmission};
+  }else if(m.method==='thread/delete'){
+    const index=threads.findIndex(thread=>thread.id===p.threadId);if(index>=0)threads.splice(index,1);
   }else if(m.method==='thread/queue/list')result={data:queues.get(p.threadId)||[]};
   else if(m.method==='thread/turns/list')result={data:threads.find(thread=>thread.id===p.threadId)?.turns||[]};
   else if(m.method==='thread/items/list'){const records=(threads.find(thread=>thread.id===p.threadId)?.turns||[]).flatMap(turn=>turn.items.map(item=>({turnId:turn.id,item}))).reverse();const cursor=Number(p.cursor)||0;result={data:records.slice(cursor,cursor+1),nextCursor:cursor+1<records.length?String(cursor+1):null}}

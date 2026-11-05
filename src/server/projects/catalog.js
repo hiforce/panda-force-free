@@ -1,25 +1,28 @@
+import { errorPayload } from "../http/error-payload.js";
 import { Database } from "bun:sqlite";
 import { randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 export class ProjectError extends Error {
-  constructor(status, message) {
-    super(message);
+  constructor(status, messageId) {
+    const payload = errorPayload(messageId);
+    super(payload.error);
+    this.messageId = messageId;
     this.status = status;
   }
 }
 
 export function projectFields(input) {
-  if (!input || typeof input !== "object") throw new ProjectError(400, "Invalid project details");
+  if (!input || typeof input !== "object") throw new ProjectError(400, "projects.errorInvalidProjectDetails");
   const name = typeof input.name === "string" ? input.name.trim() : "";
   const code = typeof input.code === "string" ? input.code.trim().toLowerCase() : "";
   const description = input.description == null ? "" : input.description;
-  if (!name || name.length > 100) throw new ProjectError(400, "Project name must contain 1–100 characters.");
+  if (!name || name.length > 100) throw new ProjectError(400, "projects.errorProjectNameMustContain1100Characters");
   if (!/^[a-z0-9][a-z0-9_-]{1,63}$/.test(code))
-    throw new ProjectError(400, "Project code must contain 2–64 letters, numbers, hyphens or underscores.");
+    throw new ProjectError(400, "projects.errorProjectCodeMustContain264LettersNumbersHyphensOrUnderscores");
   if (typeof description !== "string" || description.length > 2000)
-    throw new ProjectError(400, "Project description must be 2000 characters or fewer.");
+    throw new ProjectError(400, "projects.errorProjectDescriptionMustBe2000CharactersOrFewer");
   return { name, code, description: description.trim() };
 }
 
@@ -60,7 +63,7 @@ export class ProjectCatalog {
         "SELECT id, code, name, description, created_at AS createdAt, updated_at AS updatedAt FROM projects WHERE id=?",
       )
       .get(id);
-    if (!result) throw new ProjectError(404, "Project not found");
+    if (!result) throw new ProjectError(404, "projects.errorProjectNotFound");
     return result;
   }
   snapshot() {
@@ -84,7 +87,7 @@ export class ProjectCatalog {
         if (!Number.isSafeInteger(revision) || revision !== this.revision())
           throw new ProjectError(
             409,
-            "Projects changed in another window. Review the latest information and try again.",
+            "projects.errorProjectsChangedInAnotherWindowReviewTheLatestInformationAndTryAgain",
           );
         callback();
         this.db.exec("UPDATE catalog_meta SET revision=revision+1 WHERE id=1");
@@ -100,7 +103,7 @@ export class ProjectCatalog {
       const duplicate = this.db
         .query("SELECT id FROM projects WHERE code=? COLLATE NOCASE AND id<>?")
         .get(fields.code, id);
-      if (duplicate) throw new ProjectError(409, "A project with this code already exists.");
+      if (duplicate) throw new ProjectError(409, "projects.errorAProjectWithThisCodeAlreadyExists");
       const now = Date.now();
       this.db
         .query(
@@ -112,11 +115,11 @@ export class ProjectCatalog {
   }
   assign(projectId, sessions, revision) {
     if (!Array.isArray(sessions) || sessions.length < 1 || sessions.length > 100)
-      throw new ProjectError(400, "Select between 1 and 100 sessions.");
+      throw new ProjectError(400, "projects.errorSelectBetween1And100Sessions");
     const seen = new Set();
     for (const session of sessions) {
       if (typeof session?.id !== "string" || !/^[a-z0-9_-]{1,128}$/i.test(session.id) || seen.has(session.id))
-        throw new ProjectError(400, "Invalid session selection");
+        throw new ProjectError(400, "projects.errorInvalidSessionSelection");
       seen.add(session.id);
     }
     return this.mutate(revision, () => {

@@ -9,6 +9,29 @@ const files = readdirSync(folder)
   .filter((f) => f.endsWith(".js"))
   .map((f) => resolve(folder, f));
 const ast = (file) => parse(readFileSync(file, "utf8"), { ecmaVersion: "latest", sourceType: "module" });
+test("application decisions use branded dialogs instead of browser-native prompts", () => {
+  const violations = [];
+  function inspect(directory) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const file = resolve(directory, entry.name);
+      if (entry.isDirectory()) inspect(file);
+      else if (entry.name.endsWith(".js"))
+        walk(ast(file), (node) => {
+          if (node.type !== "CallExpression") return;
+          const callee = node.callee;
+          const name =
+            callee.type === "Identifier"
+              ? callee.name
+              : ["window", "globalThis"].includes(callee.object?.name)
+                ? callee.property?.name || callee.property?.value
+                : null;
+          if (["alert", "confirm", "prompt"].includes(name)) violations.push(relative(root, file) + ": " + name);
+        });
+    }
+  }
+  inspect(root);
+  expect(violations).toEqual([]);
+});
 function walk(node, visit) {
   if (!node || typeof node !== "object") return;
   if (node.type) visit(node);

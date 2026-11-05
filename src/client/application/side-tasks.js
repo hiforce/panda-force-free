@@ -1,3 +1,5 @@
+import { setMessageHtml, setOpaqueText } from "../i18n.js";
+
 import { codexIcon } from "../codex-icons.js";
 
 // Projects child-task activity and owns deferred side-task rendering.
@@ -41,13 +43,16 @@ export function assembleSideTasks({ renderBatch, mutations, state, $, escapeHtml
     }
     const list = $("#sideTaskList");
     if (!list) return;
-    list.innerHTML = "";
+    setMessageHtml(list, "");
     for (const task of state.sideTasks.values()) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "side-task-card";
       button.dataset.threadId = task.threadId;
-      button.innerHTML = `${codexIcon("messageSquare")}<span class="side-task-copy"><strong>${escapeHtml(task.agentPath || task.model || "Side task")}</strong><small>${escapeHtml(task.message || task.prompt || task.threadId)}</small></span><span class="side-task-status ${escapeHtml(task.status || "running")}">${escapeHtml(task.status || "running")}</span>`;
+      setMessageHtml(
+        button,
+        `${codexIcon("messageSquare")}<span class="side-task-copy"><strong>${escapeHtml(task.agentPath || task.model || "Side task")}</strong><small>${escapeHtml(task.message || task.prompt || task.threadId)}</small></span><span class="side-task-status ${escapeHtml(task.status || "running")}">${escapeHtml(task.status || "running")}</span>`,
+      );
       button.onclick = async () => {
         button.disabled = true;
         button.setAttribute("aria-busy", "true");
@@ -67,12 +72,18 @@ export function assembleSideTasks({ renderBatch, mutations, state, $, escapeHtml
       list.append(button);
     }
     if (!state.sideTasks.size)
-      list.innerHTML = '<div class="side-task-empty">Side tasks started by this chat will appear here.</div>';
+      setMessageHtml(
+        list,
+        '<div class="side-task-empty"><span data-pf-message="common.sideTasksStartedByThisChatWillAppearHere">Side tasks started by this chat will appear here.</span></div>',
+      );
     const summary = $("#summarySideTasks");
     if (summary)
-      summary.textContent = state.sideTasks.size
-        ? `${state.sideTasks.size} side task${state.sideTasks.size === 1 ? "" : "s"}`
-        : "No side tasks";
+      setOpaqueText(
+        summary,
+        state.sideTasks.size
+          ? `${state.sideTasks.size} side task${state.sideTasks.size === 1 ? "" : "s"}`
+          : "No side tasks",
+      );
   }
   return {
     renderSideTasks,

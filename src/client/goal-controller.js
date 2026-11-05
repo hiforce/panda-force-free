@@ -1,3 +1,5 @@
+import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "./i18n.js";
+
 import { codexIcon } from "./codex-icons.js";
 
 // Goal dialog identity, event ordering and focus restoration stay together.
@@ -51,24 +53,28 @@ export function createGoalController({
     goalDialogThreadId = threadId;
     goalDialogGoalId = goal.goalId;
     goalDialogReturnFocus = document.activeElement;
-    $("#goalDialogStatus").textContent = t(
+    localizeText(
+      $("#goalDialogStatus"),
       {
-        active: "Goal in progress",
-        paused: "Goal paused",
-        blocked: "Goal blocked",
-        usage_limited: "Goal usage limited",
-        budget_limited: "Goal budget limited",
-        completed: "Goal completed",
-        failed: "Goal failed",
-      }[goal.status] || "Goal in progress",
+        active: "common.goalInProgress",
+        paused: "common.goalPaused",
+        blocked: "common.goalBlocked",
+        usage_limited: "common.goalUsageLimited",
+        budget_limited: "common.goalBudgetLimited",
+        completed: "common.goalCompleted",
+        failed: "common.goalFailed",
+      }[goal.status] || "common.goalInProgress",
+      undefined,
+      t,
     );
     $("#goalDialogObjective").value = goal.objective || "";
     $("#goalDialogObjective").setCustomValidity("");
-    $("#goalDialogDetail").textContent = [goal.detail || goal.message, goalProgressText(goal.progress)]
-      .filter(Boolean)
-      .join(" · ");
+    setOpaqueText(
+      $("#goalDialogDetail"),
+      [goal.detail || goal.message, goalProgressText(goal.progress)].filter(Boolean).join(" · "),
+    );
     $("#goalDialogError").hidden = true;
-    $("#goalDialogObjective").setAttribute("aria-label", t("Goal objective"));
+    localizeAttribute($("#goalDialogObjective"), "aria-label", "goals.goalObjective", undefined, t);
     if (!dialog.open) dialog.showModal();
     requestAnimationFrame(() => $("#goalDialogObjective").focus());
   }
@@ -81,14 +87,14 @@ export function createGoalController({
       button = $("#saveGoalDialog");
     if (button.disabled || !goal || goal.goalId !== goalId) return;
     if (!objective) {
-      input.setCustomValidity(t("Goal objective cannot be empty"));
+      input.setCustomValidity(t("goals.goalObjectiveCannotBeEmpty"));
       input.reportValidity();
       return;
     }
     input.setCustomValidity("");
     $("#goalDialogError").hidden = true;
     button.disabled = true;
-    button.textContent = t("Saving…");
+    localizeText(button, "goals.saving", undefined, t);
     try {
       const result = await rpc("thread/goal/set", {
         threadId,
@@ -101,15 +107,15 @@ export function createGoalController({
           goal: result.goal,
         });
       if (goalDialogThreadId === threadId && goalDialogGoalId === goalId) closeGoalDialog();
-      toast(t("Goal updated"));
+      toast(t("goals.goalUpdated"));
     } catch (error) {
       if (goalDialogThreadId === threadId) {
-        $("#goalDialogError").textContent = error.message;
+        setOpaqueText($("#goalDialogError"), error.message);
         $("#goalDialogError").hidden = false;
       }
     } finally {
       button.disabled = false;
-      button.textContent = t("Save");
+      localizeText(button, "common.save", undefined, t);
     }
   }
   function syncGoalStatusSurface(threadId = state.active?.id) {
@@ -124,13 +130,13 @@ export function createGoalController({
       return;
     }
     const labels = {
-        active: "Goal in progress",
-        paused: "Goal paused",
-        blocked: "Goal blocked",
-        usage_limited: "Goal usage limited",
-        budget_limited: "Goal budget limited",
-        completed: "Goal completed",
-        failed: "Goal failed",
+        active: "common.goalInProgress",
+        paused: "common.goalPaused",
+        blocked: "common.goalBlocked",
+        usage_limited: "common.goalUsageLimited",
+        budget_limited: "common.goalBudgetLimited",
+        completed: "common.goalCompleted",
+        failed: "common.goalFailed",
       },
       icons = {
         active: "loaderCircle",
@@ -146,9 +152,12 @@ export function createGoalController({
     root.hidden = false;
     root.dataset.state = goal.status;
     root.dataset.goalId = goal.goalId;
-    root.setAttribute("aria-label", `${t("Goal status")}: ${label}${progress ? ` — ${progress}` : ""}`);
-    root.title = `${label}${progress ? ` · ${progress}` : ""}`;
-    root.innerHTML = `<span class="goal-status-icon" aria-hidden="true">${codexIcon(icons[goal.status] || icons.active)}</span><span class="goal-status-copy">${escapeHtml(label)}</span>${progress ? `<span class="goal-status-progress">${escapeHtml(progress)}</span>` : ""}<button type="button" class="goal-status-toggle" aria-haspopup="dialog" aria-controls="goalDialog">${t("Show Goal details")}</button>`;
+    root.setAttribute("aria-label", `${t("goals.goalStatus")}: ${label}${progress ? ` — ${progress}` : ""}`);
+    setOpaqueAttribute(root, "title", `${label}${progress ? ` · ${progress}` : ""}`);
+    setMessageHtml(
+      root,
+      `<span class="goal-status-icon" aria-hidden="true">${codexIcon(icons[goal.status] || icons.active)}</span><span class="goal-status-copy">${escapeHtml(label)}</span>${progress ? `<span class="goal-status-progress">${escapeHtml(progress)}</span>` : ""}<button type="button" class="goal-status-toggle" aria-haspopup="dialog" aria-controls="goalDialog">${t("goals.showGoalDetails")}</button>`,
+    );
     root.querySelector(".goal-status-toggle").onclick = (event) => {
       event.stopPropagation();
       openGoalDialog(threadId);
@@ -168,7 +177,7 @@ export function createGoalController({
       const menu = document.createElement("div");
       menu.className = "goal-status-menu";
       menu.setAttribute("role", "menu");
-      menu.setAttribute("aria-label", t("Goal actions"));
+      localizeAttribute(menu, "aria-label", "goals.goalActions", undefined, t);
       for (const [command, labelKey] of [
         ["resume", "Resume goal"],
         ["clear", "Clear goal"],
@@ -176,7 +185,7 @@ export function createGoalController({
         const button = document.createElement("button");
         button.type = "button";
         button.setAttribute("role", "menuitem");
-        button.textContent = t(labelKey);
+        localizeText(button, labelKey, undefined, t);
         button.onclick = () => {
           menu.remove();
           void submitGoalCommand(state.active, { command }).catch((error) =>
