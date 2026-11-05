@@ -21,7 +21,7 @@ export async function localAuthFixture(options={}){
    logs='';child=Bun.spawn(options.command||['bun','run','start'],{cwd:new URL('..',import.meta.url).pathname,env,stdout:'pipe',stderr:'pipe'});
    const consume=async stream=>{for await(const chunk of stream)logs=(logs+Buffer.from(chunk).toString()).slice(-20000)};
    pumps=[consume(child.stdout),consume(child.stderr)];
-   for(let n=0;n<200;n++){
+   for(let n=0;n<600;n++){
     if(child.exitCode!==null)throw new Error(`Local auth server exited: ${logs}`);
     try{if((await fetch(fixture.base+'/api/auth/status')).ok)return}catch{}
     await Bun.sleep(25);

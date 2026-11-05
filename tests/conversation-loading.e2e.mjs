@@ -1,25 +1,25 @@
+import { createBrowserFixture } from "./browser-runtime.mjs";
 import assert from 'node:assert/strict';
-import { createServer } from 'node:net';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { chromium } from 'playwright';
-import { root, launchOptions } from './browser-runtime.mjs';
+
+
+
+
+
+import { launchOptions } from "./browser-runtime.mjs";
 import { createConversationHistory } from '../src/server/conversation/history.js';
 
-const port=await new Promise(resolve=>{const probe=createServer();probe.listen(0,'127.0.0.1',()=>{const port=probe.address().port;probe.close(()=>resolve(port))})});
-const testDirectory=await mkdtemp(join(tmpdir(),'conversation-cache-'));
-const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...process.env,HOST:'127.0.0.1',PORT:String(port),CODEX_HOME:testDirectory,PANDA_FORCE_APP_SERVER_MODE:'isolated',PANDA_FORCE_AUTH_STORE:join(testDirectory,'auth.json'),PANDA_FORCE_PASSWORD:'',PANDA_FORCE_ACCESS_TOKEN:''},stdout:'ignore',stderr:'ignore'});
+const runtime=await createBrowserFixture();
+const port=Number(new URL(runtime.base).port),base=runtime.base;
 let browser;
 try{
  const base=`http://127.0.0.1:${port}`;
- for(let i=0;i<400;i++){try{if((await fetch(`${base}/api/health`)).ok)break}catch{}await Bun.sleep(50)}
- const fixtureCwd=(await fetch(`${base}/api/config`).then(response=>response.json())).home;
+ for(let i=0;i<400;i++){try{if((await fetch(`${base}/api/health`,{headers:runtime.headers})).ok)break}catch{}await Bun.sleep(50)}
+ const fixtureCwd=(await fetch(`${base}/api/config`,{headers:runtime.headers}).then(response=>response.json())).home;
  const thread={id:'paged',cwd:fixtureCwd,turns:[{id:'turn',status:'completed',items:Array.from({length:250},(_,i)=>i===0?{id:'user',type:'userMessage',content:[{type:'text',text:'Original prompt'}]}:i===249?{id:'final',type:'agentMessage',phase:'final_answer',text:'Latest answer'}:{id:`tool-${i}`,type:'commandExecution',status:'completed',command:'echo history',aggregatedOutput:`output ${i}`})}]};
  const history=createConversationHistory({readThread:async()=>thread,fingerprint:()=>1});
  const first=await history.read({threadId:'paged'}),second=await history.read({threadId:'paged',cursor:first.history.nextCursor}),third=await history.read({threadId:'paged',cursor:second.history.nextCursor});
  const unchanged=await history.read({threadId:'paged',revision:first.history.revision,oldestItemId:third.history.oldestItemId});
- browser=await chromium.launch(launchOptions());const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ browser=await runtime.launchBrowser(launchOptions());const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base,{waitUntil:'networkidle'});await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.connected);
  await page.evaluate(({first,second,third,unchanged})=>{
   const api=globalThis.__pandaForceDebug;api.state.ws.onmessage=null;api.state.events?.close();api.state.transport='sse';api.startNewTask();
@@ -67,7 +67,7 @@ try{
  });
  const syncRequest=page.waitForRequest(request=>request.url().endsWith('/api/rpc')&&request.postDataJSON()?.method==='host/thread/history');
  await page.reload({waitUntil:'domcontentloaded'});
- await page.waitForSelector('[data-local-conversation-final-assistant]');
+ await page.waitForSelector('[data-local-conversation-final-assistant]',{state:'attached'});
  const cachedReloadMs=Math.round(performance.now()-reloadStarted);
  assert.equal((await page.locator('[data-local-conversation-final-assistant]').textContent()).trim(),'Latest answer');
  assert.equal(await page.locator('.conversation-loading').count(),0);
@@ -91,7 +91,7 @@ try{
   const originalNow=Date.now;let expiredAfterRefresh;
   try{Date.now=()=>now+2*hour;await cache.put(recent);expiredAfterRefresh=await cache.get(recent.id)===null}finally{Date.now=originalNow}
   // Seed an entry written by the previous cache version to verify physical cleanup.
-  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('panda-force-conversations-v1',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
+  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('panda-force-conversations-v1'+(globalThis.__pandaForceIdentityKey?':'+globalThis.__pandaForceIdentityKey:''),1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
   const access=(mode,action)=>new Promise((resolve,reject)=>{const tx=db.transaction('entries',mode);action(tx.objectStore('entries'));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
   await access('readwrite',store=>store.put({id:'legacy',updatedAt:now,thread:{...old,id:'legacy'}}));
   await cache.prune();let legacy;
@@ -108,13 +108,13 @@ try{
  await page.addInitScript(()=>Object.defineProperty(globalThis,'indexedDB',{get(){throw new DOMException('Storage disabled','SecurityError')}}));
  await page.unroute('**/api/rpc');
  let deletedByUI=false;
- await page.route('**/api/rpc',route=>{const call=route.request().postDataJSON();if(call.method==='thread/delete')deletedByUI=true;const result=call.method==='host/thread/history'?first:call.method==='thread/list'?{data:deletedByUI?[]:[{id:'paged',name:'Paged history',cwd:fixtureCwd}]}:{data:[]};return route.fulfill({json:{type:'rpc/result',id:call.id,result}})});
- await page.reload({waitUntil:'domcontentloaded'});await page.waitForSelector('[data-local-conversation-final-assistant]');
+ await page.route('**/api/rpc',route=>{const call=route.request().postDataJSON();if(!['host/thread/history','thread/list','thread/delete'].includes(call.method))return route.continue();if(call.method==='thread/delete')deletedByUI=true;const result=call.method==='host/thread/history'?first:call.method==='thread/list'?{data:deletedByUI?[]:[{id:'paged',name:'Paged history',cwd:fixtureCwd}]}:{data:[]};return route.fulfill({json:{type:'rpc/result',id:call.id,result}})});
+ await page.reload({waitUntil:'domcontentloaded'});await page.waitForSelector('[data-local-conversation-final-assistant]',{state:'attached'});
  assert.equal((await page.locator('[data-local-conversation-final-assistant]').textContent()).trim(),'Latest answer');assert.deepEqual(errors,[]);
- page.on('dialog',dialog=>dialog.accept());await page.locator('.thread-item[data-id="paged"] .thread-options').click();
+ await page.locator('#workspacePreparation').waitFor({state:'hidden'});page.on('dialog',dialog=>dialog.accept());await page.evaluate(()=>globalThis.__pandaForceDebug.setSidebarOpen(true));await page.locator('.thread-item[data-id="paged"] .thread-options').click();
  await page.getByRole('menuitem',{name:'Delete thread',exact:true}).click();
  await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.active===null);
  assert.equal(deletedByUI,true);await page.waitForFunction(()=>!globalThis.__pandaForceDebug.state.threads.some(thread=>thread.id==='paged'));
  assert.deepEqual(errors,[]);
  console.log(JSON.stringify({boundedHistory:true,olderPages:true,persistentReloadBeforeNetwork:true,cachedReloadMs,revisionRevalidation:true,storageUnavailableFallback:true,inactive48HourEviction:true,deletionEviction:true}));
-}finally{await browser?.close();server.kill();await server.exited;await rm(testDirectory,{recursive:true,force:true})}
+}finally{await browser?.close();await runtime.dispose()}

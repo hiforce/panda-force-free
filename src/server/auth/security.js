@@ -232,10 +232,10 @@ export function resolvePublicAsset(pathname, publicDir) {
 }
 
 export function unauthorizedResponse(res) {
+  // PandaForce owns sign-in; a Basic challenge would open the browser's native login dialog.
   res.writeHead(401, {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
-    "www-authenticate": 'Basic realm="PandaForce", charset="UTF-8"',
     "x-content-type-options": "nosniff",
   });
   res.end(JSON.stringify({ error: "Authentication required" }));

@@ -1,0 +1,105 @@
+{
+  "browser": [
+    "account-usage.e2e.mjs",
+    "activity-state.e2e.mjs",
+    "app-runtime-refactor.e2e.mjs",
+    "approval-menu.e2e.mjs",
+    "async-questions.e2e.mjs",
+    "auth-session.e2e.mjs",
+    "browser-panel.e2e.mjs",
+    "browser-site-compat.e2e.mjs",
+    "browser-smoke.mjs",
+    "cached-session-recovery.e2e.mjs",
+    "chrome-layout.e2e.mjs",
+    "code-viewer-i18n.e2e.mjs",
+    "composer-attachments.e2e.mjs",
+    "composer-autocomplete.e2e.mjs",
+    "composer-click-refresh.e2e.mjs",
+    "composer-focus-paste.e2e.mjs",
+    "composer-history.e2e.mjs",
+    "composer-native.e2e.mjs",
+    "composer-submit-state.e2e.mjs",
+    "conversation-loading.e2e.mjs",
+    "conversation-native.e2e.mjs",
+    "desktop-shell.e2e.mjs",
+    "file-download.e2e.mjs",
+    "i18n.e2e.mjs",
+    "idaas-auth.e2e.mjs",
+    "image-viewer.e2e.mjs",
+    "malformed-url.e2e.mjs",
+    "message-queue.e2e.mjs",
+    "mobile-device-mode.e2e.mjs",
+    "mobile-layout.test.mjs",
+    "mobile-model-loading.e2e.mjs",
+    "mobile-viewport.e2e.mjs",
+    "multi-session.e2e.mjs",
+    "optimistic-send.e2e.mjs",
+    "panda-workbench.e2e.mjs",
+    "password-login.e2e.mjs",
+    "password-setup.e2e.mjs",
+    "product-projects.e2e.mjs",
+    "project-visibility.e2e.mjs",
+    "projectless-composer.e2e.mjs",
+    "questionnaire.e2e.mjs",
+    "refactor-failure-paths.e2e.mjs",
+    "rendering-security.e2e.mjs",
+    "responsive-panels.e2e.mjs",
+    "review-turn-selection.e2e.mjs",
+    "runtime-activity.e2e.mjs",
+    "session-list-activity.e2e.mjs",
+    "session-status.e2e.mjs",
+    "shared-approvals.e2e.mjs",
+    "side-utilities.e2e.mjs",
+    "sidebar-refresh.e2e.mjs",
+    "startup-loading.e2e.mjs",
+    "summary-scroll.e2e.mjs",
+    "surfaces-browser.mjs",
+    "terminal-native.e2e.mjs",
+    "theme-colors.e2e.mjs",
+    "theme-preference.e2e.mjs",
+    "user-message.e2e.mjs",
+    "workspace-preparation.e2e.mjs",
+    "ws-sse-fallback.e2e.mjs"
+  ],
+  "groups": {
+    "runtime": [
+      "app-runtime-refactor.e2e.mjs",
+      "session-status.e2e.mjs",
+      "async-questions.e2e.mjs",
+      "shared-approvals.e2e.mjs",
+      "message-queue.e2e.mjs",
+      "composer-click-refresh.e2e.mjs"
+    ],
+    "failure-paths": ["refactor-failure-paths.e2e.mjs"],
+    "workbench": ["panda-workbench.e2e.mjs"],
+    "projects": ["product-projects.e2e.mjs", "questionnaire.e2e.mjs"]
+  },
+  "live": [
+    {
+      "file": "account-api.e2e.mjs",
+      "requires": "A deliberately configured local authenticated account on port 8899; provider privacy diagnostic."
+    },
+    {
+      "file": "approval-e2e.mjs",
+      "requires": "A disposable authenticated local real CLI on port 8899; executes a native command."
+    },
+    {
+      "file": "review-api-e2e.mjs",
+      "requires": "A disposable local review server on port 8899; exercises patch routes."
+    },
+    {
+      "file": "oss-attachments.e2e.mjs",
+      "requires": "PANDA_FORCE_OSS_TEST_CONFIG points to a private disposable OSS test configuration."
+    },
+    {
+      "file": "clipboard-oss-native.e2e.mjs",
+      "requires": "A disposable authenticated CLI and private OSS test configuration; native image input."
+    }
+  ],
+  "tooling": [
+    {
+      "file": "dev-watch.e2e.mjs",
+      "requires": "Run separately: modifies and restores tracked source timestamps to test the development watcher."
+    }
+  ]
+}

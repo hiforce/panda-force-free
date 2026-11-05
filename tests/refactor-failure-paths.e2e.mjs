@@ -1,17 +1,14 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { launchOptions } from "./browser-runtime.mjs";
-import { createProjectVisibilityFixture } from "./project-visibility-fixture.mjs";
+import { createAppFixture } from "./app-fixture.mjs";
 
-const fixture = await createProjectVisibilityFixture();
+const fixture = await createAppFixture();
 let browser;
 
 async function openPage() {
   const context = await browser.newContext();
-  const login = await context.request.post(`${fixture.base}/api/auth/login`, {
-    data: { password: "visibility-test" },
-  });
-  assert.equal(login.ok(), true);
+  await fixture.signIn(context);
   await context.addInitScript(() => {
     if (window === window.top) localStorage.setItem("panda-force-locale", "en");
   });

@@ -80,6 +80,9 @@ export function createLatestRequestGate() {
     isCurrent(value) {
       return value === generation;
     },
+    get current() {
+      return generation;
+    },
   };
 }
 
@@ -227,8 +230,19 @@ export function mergeConversationHistory(previous, response, { page = false } = 
     const turn = turns.get(supplement.id);
     if (!turn) continue;
     const items = new Map(turn.items.map((item) => [item.id, item]));
-    for (const item of supplement.items || []) if (!items.has(item.id)) items.set(item.id, item);
-    turns.set(turn.id, { ...turn, items: [...items.values()] });
+    for (const item of supplement.items || []) items.set(item.id, { ...items.get(item.id), ...item });
+    const ordered = [...items.values()];
+    for (const item of supplement.items || []) {
+      if (!Number.isSafeInteger(item.questionUserSequence) || item.questionUserSequence < 1) continue;
+      const index = ordered.findIndex((entry) => entry.id === item.id);
+      const [question] = ordered.splice(index, 1);
+      let userSequence = 0;
+      const nextUser = ordered.findIndex(
+        (entry) => entry.type === "userMessage" && ++userSequence > item.questionUserSequence,
+      );
+      ordered.splice(nextUser < 0 ? ordered.length : nextUser, 0, question);
+    }
+    turns.set(turn.id, { ...turn, items: ordered });
   }
   return {
     ...previous,

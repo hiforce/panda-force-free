@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { artifact, launchOptions } from './browser-runtime.mjs';
-import { createProjectVisibilityFixture, waitFor } from './project-visibility-fixture.mjs';
+import { createAppFixture, waitFor } from './app-fixture.mjs';
 
-const fixture=await createProjectVisibilityFixture({freshAdministrator:true});
+const fixture=await createAppFixture({freshAdministrator:true});
 let browser;
 try{
  browser=await chromium.launch(launchOptions());
  const context=await browser.newContext({locale:'en',viewport:{width:1280,height:900}});
+    await context.addInitScript(()=>{globalThis.__pandaForceTest=true});
  await context.addInitScript(()=>{if(window===window.top)window.WebSocket=class{static OPEN=1;constructor(){throw new Error('Use the SSE test transport')}}});
  const page=await context.newPage(),errors=[],held=new Map(),seen=new Set();let bundle,events,failSessions=false;
  page.on('pageerror',error=>errors.push(error.message));

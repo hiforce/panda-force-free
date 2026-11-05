@@ -20,7 +20,9 @@ async function rejectedUpgrade(url: string) {
     const socket = new WebSocket(url);
     const timer = setTimeout(() => { socket.terminate(); reject(new Error('Upgrade timed out')); }, 3000);
     socket.on('unexpected-response', (_req, response) => {
-      clearTimeout(timer); response.resume(); socket.terminate(); resolve(response.statusCode!);
+      clearTimeout(timer); response.resume(); socket.terminate();
+      if(response.headers['www-authenticate'])reject(new Error('Browser-native authentication challenge was sent'));
+      else resolve(response.statusCode!);
     });
     socket.on('open', () => { clearTimeout(timer); socket.close(); reject(new Error('Unauthenticated upgrade accepted')); });
     socket.on('error', () => {});
@@ -61,7 +63,7 @@ describe('authentication deployment boundary', () => {
         const base = `http://127.0.0.1:${port}`;
         try {
           let ready = false;
-          for (let attempt = 0; attempt < 100; attempt++) {
+          for (let attempt = 0; attempt < 500; attempt++) {
             try { if ((await fetch(`${base}/api/auth/status`)).ok) { ready = true; break; } } catch {}
             if (child.exitCode !== null) throw new Error(`Server exited: ${child.exitCode}`);
             await Bun.sleep(30);
@@ -69,7 +71,9 @@ describe('authentication deployment boundary', () => {
           expect(ready).toBe(true);
           expect((await fetch(`${base}/api/auth/status`).then(res => res.json())).authenticated).toBe(false);
           for (const path of ['/api/health', '/api/events', '/api/rpc', '/app.bundle.js']) {
-            expect((await fetch(`${base}${path}`)).status).toBe(401);
+            const denied = await fetch(`${base}${path}`);
+            expect(denied.status).toBe(401);
+            expect(denied.headers.get('www-authenticate')).toBeNull();
           }
           expect(await rejectedUpgrade(`ws://127.0.0.1:${port}/ws`)).toBe(401);
           expect(await rejectedUpgrade(`ws://127.0.0.1:${port}/terminal`)).toBe(401);

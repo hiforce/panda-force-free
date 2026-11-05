@@ -1,6 +1,9 @@
+import { createBrowserFixture } from "./browser-runtime.mjs";
 import { createServer } from 'node:http';
-import { chromium } from 'playwright';
+
 import { launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
 
 const site=createServer((req,res)=>{
   if(req.url==='/start'){res.writeHead(302,{location:'/app/'});res.end();return}
@@ -13,8 +16,8 @@ const site=createServer((req,res)=>{
 await new Promise(resolve=>site.listen(0,'127.0.0.1',resolve));
 const address=site.address();
 const target=`http://127.0.0.1:${address.port}/start`;
-const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
-const browser=await chromium.launch(launchOptions());
+const base=runtime.base;
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:760},colorScheme:'dark'});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));

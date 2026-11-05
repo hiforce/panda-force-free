@@ -1,11 +1,14 @@
-import { chromium } from 'playwright';
-import { artifact, launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const browser=await chromium.launch(launchOptions());
+import { artifact, launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:1018,height:980},colorScheme:'dark'});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
-await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(runtime.base,{waitUntil:'networkidle'});
 await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state?.config?.defaultCwd);
 await page.click('#newTask');
 
@@ -47,7 +50,7 @@ const mentionSelected=await page.evaluate(()=>({value:document.querySelector('#p
 await page.click('#newTask');
 const reset=await page.evaluate(()=>({value:document.querySelector('#prompt').value,trayHidden:document.querySelector('#composerContextTray').hidden,chips:document.querySelectorAll('#composerContextTray .composer-context-chip').length}));
 const mobile=await browser.newPage({viewport:{width:360,height:780},colorScheme:'dark'});
-await mobile.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await mobile.goto(runtime.base,{waitUntil:'networkidle'});
 await mobile.locator('#prompt').fill('/');
 await mobile.waitForSelector('#composerAutocomplete:not([hidden])');
 const mobileLayout=await mobile.evaluate(()=>{const menu=document.querySelector('#composerAutocomplete').getBoundingClientRect(),composer=document.querySelector('.composer').getBoundingClientRect();return{left:menu.left,right:menu.right,top:menu.top,bottom:menu.bottom,composerTop:composer.top,scrollWidth:document.documentElement.scrollWidth,innerWidth}});
@@ -64,7 +67,7 @@ if(errors.length
   ||slash.items.some(item=>!item.title||!item.description)
   ||filtered.length!==1||!/Plan mode/i.test(filtered[0])
   ||!plan.active
-  ||plan.placeholder!=='Describe your task to generate a plan...'
+  ||plan.placeholder!=='Describe a task, add files, or start with an idea…'
   ||plan.value!==''
   ||!plan.menuHidden
   ||plan.approval!=='Plan mode'
@@ -80,9 +83,9 @@ if(errors.length
   ||!mentionSelected.menuHidden
   ||mentionSelected.trayHidden
   ||!mentionSelected.chips.includes('package.json')
-  ||reset.value!==''
-  ||!reset.trayHidden
-  ||reset.chips!==0
+  ||reset.value!=='@package.json '
+  ||reset.trayHidden
+  ||reset.chips!==1
   ||mobileLayout.left<0||mobileLayout.right>mobileLayout.innerWidth
   ||mobileLayout.top<46||mobileLayout.bottom>mobileLayout.composerTop
   ||mobileLayout.scrollWidth>mobileLayout.innerWidth)process.exit(1);

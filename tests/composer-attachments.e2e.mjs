@@ -1,27 +1,23 @@
+import { createBrowserFixture } from "./browser-runtime.mjs";
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createServer } from 'node:net';
-import { chromium } from 'playwright';
+
+
 import { artifact, launchOptions } from './browser-runtime.mjs';
 
-const root=new URL('..',import.meta.url).pathname;
-const uploadsHome=mkdtempSync(join(tmpdir(),'panda-attachment-browser-'));
 const png=readFileSync(new URL('../public/assets/panda-icon.png',import.meta.url));
 const image={name:'截图.png',mimeType:'image/png',buffer:png};
 const notes={name:'notes.txt',mimeType:'text/plain',buffer:Buffer.from('Attachment notes')};
-const port=await new Promise(resolve=>{const probe=createServer();probe.listen(0,'127.0.0.1',()=>{const address=probe.address();probe.close(()=>resolve(address.port))})});
-const base=`http://127.0.0.1:${port}`;
-const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...process.env,HOST:'127.0.0.1',PORT:String(port),CODEX_HOME:uploadsHome},stdout:'ignore',stderr:'ignore'});
+const runtime=await createBrowserFixture();
+const port=Number(new URL(runtime.base).port),base=runtime.base;
 let browser;
 try{
-  for(let i=0;i<400;i++){try{if((await fetch(`${base}/api/health`)).ok)break}catch{}await Bun.sleep(50)}
-  assert.equal((await fetch(`${base}/api/attachments`)).status,405);
-  assert.equal((await fetch(`${base}/api/attachments?name=fake.png`,{method:'POST',body:'invalid'})).status,400);
-  assert.equal((await fetch(`${base}/api/attachments?name=empty.txt`,{method:'POST',body:''})).status,400);
+  assert.equal((await fetch(`${base}/api/attachments`,{headers:runtime.headers})).status,405);
+  assert.equal((await fetch(`${base}/api/attachments?name=fake.png`,{method:'POST',headers:runtime.headers,body:'invalid'})).status,400);
+  assert.equal((await fetch(`${base}/api/attachments?name=empty.txt`,{method:'POST',headers:runtime.headers,body:''})).status,400);
   assert.equal((await fetch(`${base}/api/attachments?name=cross-site.txt`,{method:'POST',headers:{'sec-fetch-site':'cross-site'},body:'denied'})).status,401);
-  browser=await chromium.launch(launchOptions());
+  browser=await runtime.launchBrowser(launchOptions());
   const context=await browser.newContext({viewport:{width:1018,height:760}});
   await context.addInitScript(()=>{if(window===window.top){localStorage.clear();localStorage.setItem('panda-force-locale','en')}});
   const page=await context.newPage(),errors=[];
@@ -32,7 +28,7 @@ try{
     const api=globalThis.__pandaForceDebug;
     api.state.ws.onmessage=null;api.state.events?.close();api.state.transport='sse';
     api.startNewTask();
-    api.state.active={id:'attachment-thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:true};
+    (api.state.active={id:'attachment-thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:true}, api.workbench.threadOpened(api.state.active.id));
     window.__attachmentCalls=[];window.__attachmentSequence=0;
     const original=window.fetch;
     window.fetch=async(resource,options={})=>{
@@ -56,11 +52,11 @@ try{
   await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.composerAttachments.length===2&&globalThis.__pandaForceDebug.state.composerAttachments.every(file=>file.status==='ready'));
   const attachments=await page.evaluate(()=>globalThis.__pandaForceDebug.state.composerAttachments);
   assert.equal(attachments[0].kind,'image');assert.equal(attachments[1].kind,'file');
-  assert.ok(attachments.every(file=>file.path.startsWith(uploadsHome)));
+  assert.ok(attachments.every(file=>file.path.startsWith(join(runtime.dir,'panda-state','attachments'))));
   assert.deepEqual(readFileSync(attachments[0].path),png);
   await page.waitForFunction(()=>document.querySelector('.composer-attachment-preview img')?.naturalWidth>0);
-  assert.equal((await fetch(`${base}/api/images/local?path=${encodeURIComponent(attachments[0].path)}`)).headers.get('content-type'),'image/png');
-  assert.equal(await (await fetch(`${base}/api/files/download?path=${encodeURIComponent(attachments[1].path)}`)).text(),'Attachment notes');
+  assert.equal((await fetch(`${base}/api/images/local?path=${encodeURIComponent(attachments[0].path)}`,{headers:runtime.headers})).headers.get('content-type'),'image/png');
+  assert.equal(await (await fetch(`${base}/api/files/download?path=${encodeURIComponent(attachments[1].path)}`,{headers:runtime.headers})).text(),'Attachment notes');
   await page.click('.composer-attachment-preview');await page.waitForFunction(()=>document.querySelector('#imageViewer').open);
   await page.keyboard.press('Escape');
   await page.screenshot({path:artifact('composer-attachments-desktop.png'),animations:'disabled'});
@@ -129,7 +125,7 @@ try{
   assert.equal(await page.locator('.composer-attachment').count(),0);
   await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('attachment-thread'));
   assert.equal(await page.locator('.composer-attachment').count(),1);
-  await page.keyboard.press('Control+k');assert.equal(await page.locator('.composer-attachment').count(),0);
+  await page.keyboard.press('Control+Shift+k');assert.equal(await page.locator('.composer-attachment').count(),0);
   // Upload failures are visible and must not be silently dropped on submit.
   await page.locator('#attachmentInput').setInputFiles({name:'invalid.png',mimeType:'image/png',buffer:Buffer.from('invalid')});
   await page.waitForFunction(()=>globalThis.__pandaForceDebug.state.composerAttachments[0]?.status==='failed');
@@ -153,5 +149,5 @@ try{
   assert.deepEqual(errors,[]);
   console.log('Attachment upload, image/file send, queue, steer, recovery, clipboard/drop and draft checks passed.');
 }finally{
-  await browser?.close();server.kill();await server.exited;rmSync(uploadsHome,{recursive:true,force:true});
+  await browser?.close();await runtime.dispose();
 }

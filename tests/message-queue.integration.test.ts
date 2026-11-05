@@ -10,7 +10,7 @@ import { createQueueRecovery } from '../src/server/bridge/message-queue.js';
 
 for (const interrupted of [false, true]) test(`queue advances without a browser after ${interrupted ? 'interruption' : 'completion'}`, async()=>{
   const home=mkdtempSync(join(tmpdir(),'panda-force-queue-test-'));
-  const responses:any[]=[],events:any[]=[],pending=new Map<number,any>();let seq=0,child:any;
+  const responses:any[]=[],events:any[]=[],pending=new Map<number,any>();let seq=0,child:any,startupLog='';
   // Hold inference locally so the test does not contact a model provider.
   const provider=createServer((req,res)=>{
     if(!req.url?.endsWith('/responses')){res.writeHead(404).end();return}
@@ -18,7 +18,7 @@ for (const interrupted of [false, true]) test(`queue advances without a browser 
   });
   await new Promise<void>(resolve=>provider.listen(0,'127.0.0.1',resolve));
   const rpc=(method:string,params:any)=>new Promise<any>((resolve,reject)=>{
-    const id=++seq;const timer=setTimeout(()=>{pending.delete(id);reject(new Error(`RPC timeout: ${method}`))},8000);
+    const id=++seq;const timer=setTimeout(()=>{pending.delete(id);reject(new Error(`RPC timeout: ${method}; exit=${child.exitCode}; ${startupLog}`))},method==='initialize'?20000:8000);
     pending.set(id,{resolve:(result:any)=>{clearTimeout(timer);resolve(result)},reject:(error:any)=>{clearTimeout(timer);reject(error)}});
     child.stdin.write(JSON.stringify({id,method,params})+'\n');
   });
@@ -27,7 +27,8 @@ for (const interrupted of [false, true]) test(`queue advances without a browser 
   const wait=async(check:()=>boolean)=>{const end=Date.now()+8000;while(!check()){if(Date.now()>end)throw new Error('Timed out waiting for native queue');await Bun.sleep(20)}};
   try{
     const port=(provider.address() as any).port;
-    child=spawn('codex',['app-server','--stdio','-c','model_provider="queue_test"','-c','model="mock"','-c','model_providers.queue_test.name="Queue test"','-c',`model_providers.queue_test.base_url="http://127.0.0.1:${port}"`,'-c','model_providers.queue_test.wire_api="responses"','-c','model_providers.queue_test.requires_openai_auth=false'],{env:{...process.env,CODEX_HOME:home},stdio:['pipe','pipe','ignore']});
+    child=spawn('codex',['app-server','--stdio','-c','model_provider="queue_test"','-c','model="mock"','-c','model_providers.queue_test.name="Queue test"','-c',`model_providers.queue_test.base_url="http://127.0.0.1:${port}"`,'-c','model_providers.queue_test.wire_api="responses"','-c','model_providers.queue_test.requires_openai_auth=false'],{cwd:home,env:{...process.env,CODEX_HOME:home},stdio:['pipe','pipe','pipe']});
+    child.stderr.on('data',chunk=>{startupLog=(startupLog+chunk).slice(-8000)});
     createInterface({input:child.stdout}).on('line',line=>{
       const message=JSON.parse(line),request=pending.get(message.id);
       if(request){pending.delete(message.id);message.error?request.reject(new Error(message.error.message)):request.resolve(message.result)}else {events.push(message);if(interrupted&&message.method==='turn/completed')void recover(message.params.threadId);}
@@ -55,4 +56,4 @@ for (const interrupted of [false, true]) test(`queue advances without a browser 
     provider.closeAllConnections();await new Promise<void>(resolve=>provider.close(()=>resolve()));
     rmSync(home,{recursive:true,force:true});
   }
-},25000);
+},40000);

@@ -1,20 +1,23 @@
+import { createBrowserFixture } from "./browser-runtime.mjs";
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { chromium } from 'playwright';
+
+const runtime=await createBrowserFixture();
+
 
 const chrome = process.env.PLAYWRIGHT_CHROME || [
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   '/Applications/Microsoft Edge Canary.app/Contents/MacOS/Microsoft Edge Canary',
 ].find(existsSync);
-const browser = await chromium.launch({ headless: true, ...(chrome ? { executablePath: chrome } : {}) });
+const browser = await runtime.launchBrowser({ headless: true, ...(chrome ? { executablePath: chrome } : {}) });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 
 const terminalFixture = mkdtempSync(join(tmpdir(), 'panda-force-terminal-'));
 const vimFile = join(terminalFixture, 'vim-test.txt');
-await page.goto(process.env.PANDA_FORCE_TEST_URL || 'http://127.0.0.1:8899', { waitUntil: 'networkidle' });
+await page.goto(runtime.base, { waitUntil: 'networkidle' });
 await page.fill('#prompt', '检查输入框横线与终端键盘支持');
 
 const composer = await page.evaluate(() => ({

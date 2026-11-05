@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.5`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.6`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -38,3 +38,15 @@ Shared sessions now subscribe to live events and approval requests even when his
 Approval actions appear together in one row: allow once, allow similar commands (or this conversation when supported), then deny. Buttons share their available width and touch-target height. Deny uses danger styling in Light and Dark themes.
 
 Session status now follows native activity and the newest turn, including a turn with no visible items yet. Older completion events cannot mark a newer task complete. Status-only history updates refresh both the conversation and sidebar, and live thread status updates invalidate cached activity metadata.
+
+## 0.0.6
+
+- Rejected HTTP and WebSocket requests keep the normal PandaForce sign-in flow without triggering the browser's native Basic authentication dialog. Existing valid sessions remain usable after reconnecting.
+
+The frontend is organized into bounded feature modules with explicit service interfaces. Domain state has scoped read and write capabilities, and view updates use a closed projection channel. Conversation state stays independent of its rendered DOM.
+
+Folder browsing preserves the latest request and typed path. Session renames update the conversation and sidebar together. Explicit project visibility persists independently of working folders. Dark-theme denial actions have clearer contrast, and the composer fits the keyboard viewport in mobile landscape mode.
+
+Maintainers can run `bun run verify` for build checks, unit and integration tests, and the isolated browser suite. Results include per-suite logs, timeouts, and explicit exclusions for live-service diagnostics.
+
+Sending remains reliable when background updates arrive during a pointer press, and hovered send controls keep readable colors. Answered asynchronous questions restore as collapsed history after a refresh or session switch.

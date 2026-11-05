@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { chromium, devices } from 'playwright';
 import { artifact, launchOptions } from './browser-runtime.mjs';
-import { createProjectVisibilityFixture, waitFor } from './project-visibility-fixture.mjs';
+import { createAppFixture, waitFor } from './app-fixture.mjs';
 
-const fixture = await createProjectVisibilityFixture();
+const fixture = await createAppFixture();
 let browser;
 try {
   browser = await chromium.launch(launchOptions());

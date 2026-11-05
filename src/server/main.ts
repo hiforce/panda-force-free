@@ -924,11 +924,11 @@ server.on("upgrade", async (req, socket, head) => {
     (idaasAuth ? !idaasSession : !passwordAuth.isAuthorized(req))
   ) {
     const body = JSON.stringify({ error: "Authentication required" });
+    // Reconnect failures must not trigger browser-native Basic authentication prompts.
     socket.end(
       [
         `HTTP/1.1 ${status} ${status === 503 ? "Service Unavailable" : status === 403 ? "Forbidden" : "Unauthorized"}`,
         "Connection: close",
-        'WWW-Authenticate: Basic realm="PandaForce", charset="UTF-8"',
         "Content-Type: application/json; charset=utf-8",
         `Content-Length: ${Buffer.byteLength(body)}`,
         "X-Content-Type-Options: nosniff",

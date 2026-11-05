@@ -1,25 +1,24 @@
+import { createBrowserFixture } from "./browser-runtime.mjs";
 import assert from 'node:assert/strict';
-import { createServer } from 'node:net';
-import { chromium } from 'playwright';
-import { root, launchOptions } from './browser-runtime.mjs';
 
-const port=await new Promise(resolve=>{const probe=createServer();probe.listen(0,'127.0.0.1',()=>{const port=probe.address().port;probe.close(()=>resolve(port))})});
-const base=`http://127.0.0.1:${port}`;
-const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...process.env,HOST:'127.0.0.1',PORT:String(port)},stdout:'ignore',stderr:'ignore'});
+
+import { launchOptions } from "./browser-runtime.mjs";
+
+const runtime=await createBrowserFixture();
+const port=Number(new URL(runtime.base).port),base=runtime.base;
 let browser;
 try{
-  for(let i=0;i<400;i++){try{if((await fetch(`${base}/api/health`)).ok)break}catch{}await Bun.sleep(50)}
-  const compressed=await fetch(`${base}/app.bundle.js`,{headers:{'accept-encoding':'gzip'}});
+  const compressed=await fetch(`${base}/app.bundle.js`,{headers:{...runtime.headers,'accept-encoding':'gzip'}});
   assert.equal(compressed.headers.get('content-encoding'),'gzip');
   assert.equal(compressed.headers.get('cache-control'),'private, no-cache');
   const bytes=Number(compressed.headers.get('content-length'));
   await compressed.arrayBuffer();
   assert.ok(bytes<400_000);
-  const cached=await fetch(`${base}/app.bundle.js`,{headers:{'if-none-match':compressed.headers.get('etag')}});
+  const cached=await fetch(`${base}/app.bundle.js`,{headers:{...runtime.headers,'if-none-match':compressed.headers.get('etag')}});
   assert.equal(cached.status,304);
   assert.equal((await cached.arrayBuffer()).byteLength,0);
-  assert.equal((await fetch(`${base}/api/config`)).headers.get('cache-control'),'no-store');
-  browser=await chromium.launch(launchOptions());
+  assert.equal((await fetch(`${base}/api/config`,{headers:runtime.headers})).headers.get('cache-control'),'no-store');
+  browser=await runtime.launchBrowser(launchOptions());
   const page=await browser.newPage(),errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   let configuration;
@@ -62,5 +61,5 @@ try{
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({gzipBytes:bytes,cacheRevalidation:304,configAndConnectionParallel:true,independentSessionLoading:true}));
 }finally{
-  await browser?.close();server.kill();await server.exited;
+  await browser?.close();await runtime.dispose();
 }

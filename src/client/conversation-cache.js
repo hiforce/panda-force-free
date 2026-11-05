@@ -1,3 +1,4 @@
+import { canonicalData } from "./application/read-model.js";
 import { threadLastActivityAt } from "./ui-core.js";
 
 const DATABASE = "panda-force-conversations-v1",
@@ -16,10 +17,14 @@ export function createConversationCache({ indexedDB, maxThreads = 8, maxItems = 
   let databasePromise,
     lastWrite = 0;
   const removed = new Set();
+  let epoch = 0;
   function expired(entry, now) {
     return (
       entry.id !== SIDEBAR &&
-      isConversationCacheExpired(entry.thread, { now, cachedAt: entry.activityAt || entry.updatedAt })
+      isConversationCacheExpired(entry.thread, {
+        now,
+        cachedAt: entry.activityAt || entry.updatedAt,
+      })
     );
   }
   function pruneEntries(store, now, set = () => {}) {
@@ -89,7 +94,7 @@ export function createConversationCache({ indexedDB, maxThreads = 8, maxItems = 
     for (let index = (thread.turns || []).length - 1; index >= 0 && remaining > 0; index--) {
       const turn = thread.turns[index],
         items = (turn.items || []).slice(-remaining);
-      if (items.length) {
+      if (items.length || index === thread.turns.length - 1) {
         turns.unshift({ ...turn, items });
         remaining -= items.length;
       }
@@ -126,18 +131,30 @@ export function createConversationCache({ indexedDB, maxThreads = 8, maxItems = 
     },
     async put(thread) {
       if (!thread?.id || removed.has(thread.id)) return;
-      const value = compact(thread);
-      return transaction("readwrite", (store) => {
+      const value = canonicalData(compact(thread));
+      const generation = epoch;
+      return transaction("readwrite", (store, set) => {
+        if (generation !== epoch) return;
         const request = store.get(thread.id);
         request.onsuccess = () => {
           const now = Date.now(),
             activityAt =
               threadLastActivityAt(thread) * 1000 || request.result?.activityAt || request.result?.updatedAt || now;
-          if (removed.has(thread.id) || isConversationCacheExpired(thread, { now, cachedAt: activityAt }))
+          if (
+            generation !== epoch ||
+            removed.has(thread.id) ||
+            isConversationCacheExpired(thread, { now, cachedAt: activityAt })
+          )
             store.delete(thread.id);
           else {
             lastWrite = Math.max(now, lastWrite + 1);
-            store.put({ id: thread.id, updatedAt: lastWrite, activityAt, thread: value });
+            store.put({
+              id: thread.id,
+              updatedAt: lastWrite,
+              activityAt,
+              thread: value,
+            });
+            set(true);
           }
           pruneEntries(store, now);
         };
@@ -150,15 +167,17 @@ export function createConversationCache({ indexedDB, maxThreads = 8, maxItems = 
       });
     },
     async saveSummaries(threads) {
-      return transaction("readwrite", (store) =>
+      const generation = epoch;
+      return transaction("readwrite", (store) => {
+        if (generation !== epoch) return;
         store.put({
           id: SIDEBAR,
           threads: threads
             .filter((thread) => !removed.has(thread.id))
             .slice(0, 50)
             .map(({ turns, history, ...summary }) => summary),
-        }),
-      );
+        });
+      });
     },
     async prune() {
       return transaction("readwrite", (store, set) => pruneEntries(store, Date.now(), set));
@@ -170,11 +189,15 @@ export function createConversationCache({ indexedDB, maxThreads = 8, maxItems = 
         const request = store.get(SIDEBAR);
         request.onsuccess = () => {
           if (request.result)
-            store.put({ ...request.result, threads: request.result.threads.filter((thread) => thread.id !== id) });
+            store.put({
+              ...request.result,
+              threads: request.result.threads.filter((thread) => thread.id !== id),
+            });
         };
       });
     },
     async clear() {
+      epoch++;
       return transaction("readwrite", (store) => store.clear());
     },
   };

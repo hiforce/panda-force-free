@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
-import { createServer } from 'node:net';
 import { chromium } from 'playwright';
-import { root, launchOptions } from './browser-runtime.mjs';
-const port=await new Promise(resolve=>{const probe=createServer();probe.listen(0,'127.0.0.1',()=>{const port=probe.address().port;probe.close(()=>resolve(port))})});
-const base=`http://127.0.0.1:${port}`;
-const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...process.env,HOST:'127.0.0.1',PORT:String(port)},stdout:'ignore',stderr:'ignore'});
+import { launchOptions } from './browser-runtime.mjs';
+import { createAppFixture } from './app-fixture.mjs';
+const runtime=await createAppFixture();
+const base=runtime.base;
 let browser;
 async function fixture(page,entries=[]){
   await page.evaluate(async entries=>{
@@ -37,8 +36,7 @@ async function fixture(page,entries=[]){
   },entries);
 }
 try{
-  for(let i=0;i<400;i++){try{if((await fetch(`${base}/api/health`)).ok)break}catch{}await Bun.sleep(50)}
-  browser=await chromium.launch(launchOptions());const context=await browser.newContext();
+  browser=await chromium.launch(launchOptions());const context=await browser.newContext();await runtime.signIn(context);
   await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.goto(base,{waitUntil:'networkidle'});await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state.modelLoadStatus==='ready');await fixture(page);
@@ -80,4 +78,4 @@ try{
   await page.evaluate(()=>globalThis.__pandaForceI18n.setPreference('zh-CN'));await page.locator('#prompt').fill('Queue');await page.locator('#queueButton').click();await page.waitForFunction(()=>document.querySelectorAll('.message-queue-row[data-status=queued]').length===2);
   assert.equal(await page.locator('.message-queue-text').last().textContent(),'Queue');assert.equal(await page.locator('.message-queue-status').last().textContent(),'已排队');assert.ok((await page.locator('#queueButton').textContent()).includes('排队'));
   assert.deepEqual(errors,[]);console.log('message queue e2e passed');
-}finally{await browser?.close();server.kill();await server.exited}
+}finally{await browser?.close();await runtime.dispose()}

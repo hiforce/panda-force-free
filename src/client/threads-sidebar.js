@@ -1,3 +1,4 @@
+import { createSessionState } from "./application/session-state.js";
 import { normalizeProjectPath } from "../shared/project-visibility.js";
 import { threadLastActivityAt } from "./ui-core.js";
 import { codexIcon } from "./codex-icons.js";
@@ -9,6 +10,7 @@ import { storage, STORAGE_KEYS } from "./storage.js";
  * behavior (opening threads, starting tasks, toasts) is injected.
  */
 export function createThreadSidebar({
+  sessions,
   $,
   t,
   state,
@@ -41,6 +43,7 @@ export function createThreadSidebar({
   cleanupDeletedThread,
   removeCachedConversation,
 }) {
+  sessions ??= createSessionState(state);
   const sidebarPinnedProjects = (() => {
     try {
       const keys = JSON.parse(storage.get(STORAGE_KEYS.sidebarPinnedProjects) || "[]");
@@ -402,7 +405,7 @@ export function createThreadSidebar({
       const wasActive = state.active?.id === thread.id;
       if (wasActive) startNewTask();
       await removeCachedConversation(thread.id);
-      state.threads = state.threads.filter((item) => item.id !== thread.id);
+      sessions.removeSummary(thread.id);
       await refreshThreadList();
       renderThreads();
       toast(t("Thread deleted"));
@@ -425,7 +428,7 @@ export function createThreadSidebar({
     for (const thread of projectCatalog ? projectCatalog.sessions() : state.threads) {
       const key = sidebarProjectKey(thread);
       if (
-        (projectCatalog || !Object.hasOwn(sidebarProjectVisibility.hiddenProjects, key)) &&
+        !Object.hasOwn(sidebarProjectVisibility.hiddenProjects, key) &&
         (!q ||
           titleOf(thread).toLowerCase().includes(q) ||
           thread.cwd?.toLowerCase().includes(q) ||
@@ -439,7 +442,11 @@ export function createThreadSidebar({
     if (projectCatalog)
       for (const p of projectCatalog.projects()) {
         const key = "project:" + p.id;
-        if (!groups.has(key) && (!q || [p.name, p.code].join(" ").toLowerCase().includes(q)))
+        if (
+          !Object.hasOwn(sidebarProjectVisibility.hiddenProjects, key) &&
+          !groups.has(key) &&
+          (!q || [p.name, p.code].join(" ").toLowerCase().includes(q))
+        )
           groups.set(key, { key, threads: [] });
       }
     const pinnedThreads = state.threads.filter(
@@ -596,14 +603,12 @@ export function createThreadSidebar({
 
   function getProjects() {
     if (projectCatalog)
-      return projectCatalog
-        .projects()
-        .map((p) => ({
-          key: "project:" + p.id,
-          hidden: false,
-          pinned: sidebarPinnedProjects.has("project:" + p.id),
-          threads: p.threads,
-        }));
+      return projectCatalog.projects().map((p) => ({
+        key: "project:" + p.id,
+        hidden: Object.hasOwn(sidebarProjectVisibility.hiddenProjects, "project:" + p.id),
+        pinned: sidebarPinnedProjects.has("project:" + p.id),
+        threads: p.threads,
+      }));
     const groups = new Map();
     for (const thread of state.threads) {
       if (thread.projectless || !thread.cwd) continue;

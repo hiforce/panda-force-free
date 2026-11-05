@@ -11,3 +11,9 @@ export function normalizeProjectPath(path, home = "") {
   }
   return "/" + parts.join("/");
 }
+
+// Visibility identities include explicit product projects and legacy folder paths.
+export function normalizeProjectVisibilityKey(value, home = "") {
+  if (typeof value === "string" && /^project:[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value)) return value;
+  return normalizeProjectPath(value, home);
+}

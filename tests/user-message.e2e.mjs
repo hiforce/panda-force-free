@@ -12,12 +12,13 @@ const server=Bun.serve({hostname:'127.0.0.1',port:0,async fetch(request,server){
   if(path==='/api/auth/status')return Response.json({authenticated:true});
   if(path==='/api/config')return Response.json({home:'/tmp',defaultCwd:'/tmp'});
   if(path==='/api/projects/visibility')return Response.json({revision:0,hiddenProjects:{}});
+  if(path==='/api/rpc'){const call=await request.json();return Response.json({type:'rpc/result',id:call.id,result:{data:call.method==='model/list'?[{id:'gpt-fixture',model:'gpt-fixture',supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]:[]}})}
   if(path.startsWith('/api/'))return Response.json({entries:[],data:[]});
   if(path==='/app.bundle.js')return new Response(bundle,{headers:{'content-type':'text/javascript'}});
   if(path.startsWith('/vendor/'))return new Response('',{headers:{'content-type':'text/css'}});
   const file=Bun.file(`${root}/public${path==='/'?'/index.html':path}`);
   return await file.exists()?new Response(file):new Response('',{status:404});
-},websocket:{message(){}}});
+},websocket:{open(ws){ws.send(JSON.stringify({type:'bridge/status',status:'connected'}))},message(ws,raw){const call=JSON.parse(raw);if(call.type==='rpc')ws.send(JSON.stringify({type:'rpc/result',id:call.id,result:{data:[]}}))}}});
 const browser=await chromium.launch(launchOptions());
 const results=[];
 const message='复制这条消息\n\n保留换行、<标签> 和 `代码`。';
@@ -27,6 +28,7 @@ try{
   for(const scheme of ['light','dark'])for(const mobile of [false,true]){
     const locale=mobile?'zh-CN':'en';
     const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1280,height:800},colorScheme:scheme,hasTouch:mobile,permissions:['clipboard-read','clipboard-write']});
+    await context.addInitScript(()=>{globalThis.__pandaForceTest=true});
     await context.addInitScript(locale=>{if(window===window.top)localStorage.setItem('panda-force-locale',locale)},locale);
     const page=await context.newPage(),errors=[];
     page.on('pageerror',error=>errors.push(error.message));

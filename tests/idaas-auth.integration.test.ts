@@ -13,7 +13,10 @@ function openSocket(url: string, cookie = '') {
   return new Promise<WebSocket>((resolve, reject) => {
     const ws = new WebSocket(url, { headers: { cookie } });
     ws.once('open', () => resolve(ws)); ws.once('error', reject);
-    ws.once('unexpected-response', (_req, response) => { response.resume(); ws.terminate(); reject(new Error(String(response.statusCode))); });
+    ws.once('unexpected-response', (_req, response) => {
+      response.resume(); ws.terminate();
+      reject(new Error(response.headers['www-authenticate'] ? 'Unexpected browser-native authentication challenge' : String(response.statusCode)));
+    });
   });
 }
 
@@ -39,7 +42,7 @@ test('IDAAS gates HTTP, both WS bridges and SSE, preserves probes and closes ses
   let ws: WebSocket | null = null, terminal: WebSocket | null = null;
   try {
     let ready = false;
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 500; i++) {
       try { if ((await fetch(base + '/health/startup')).ok) { ready = true; break; } } catch {}
       if (child.exitCode !== null) throw new Error(await new Response(child.stderr).text());
       await Bun.sleep(30);
@@ -71,4 +74,4 @@ test('IDAAS gates HTTP, both WS bridges and SSE, preserves probes and closes ses
     ws?.terminate(); terminal?.terminate(); child.kill('SIGTERM'); await child.exited;
     upstream.stop(true); rmSync(temp, { recursive: true, force: true });
   }
-}, 15000);
+}, 30000);

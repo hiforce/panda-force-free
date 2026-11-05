@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { createProjectVisibilityFixture } from "./project-visibility-fixture.mjs";
+import { createAppFixture } from "./app-fixture.mjs";
 
 test("authenticated projects persist across restart and associate historical native IDs without resuming sessions", async () => {
-  const f = await createProjectVisibilityFixture({ historySessions: 1250 });
+  const f = await createAppFixture({ historySessions: 1250 });
   const request = async (path: string, method = "GET", data?: any, extra = {}) => {
     const response = await fetch(f.base + path, { method, headers: { ...f.headers, "content-type": "application/json", ...extra }, ...(data ? { body: JSON.stringify(data) } : {}) });
     return { status: response.status, body: await response.json() };

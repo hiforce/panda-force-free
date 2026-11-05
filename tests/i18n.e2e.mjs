@@ -1,8 +1,11 @@
-import { chromium } from 'playwright';
-import { artifact, launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
-const browser=await chromium.launch(launchOptions());
+import { artifact, launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const base=runtime.base;
+const browser=await runtime.launchBrowser(launchOptions());
 const context=await browser.newContext({viewport:{width:1120,height:760},colorScheme:'dark'});
 await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','zh-CN')});
 const page=await context.newPage();
@@ -12,7 +15,7 @@ page.on('pageerror',error=>errors.push(error.message));
 
 await page.goto(base,{waitUntil:'domcontentloaded'});
 await page.waitForFunction(()=>globalThis.__pandaForceDebug?.openSettings);
-await page.waitForFunction(()=>document.documentElement.lang==='zh-CN');
+await page.waitForFunction(()=>document.documentElement.lang==='zh-CN');await page.locator('#workspacePreparation').waitFor({state:'hidden'});
 await page.evaluate(()=>{
   globalThis.__pandaForceDebug.startNewTask();
   const effort=document.querySelector('#effortSelect');
@@ -41,8 +44,8 @@ const chinese=await page.evaluate(()=>({
 }));
 await page.screenshot({path:artifact('i18n-zh-cn.png'),fullPage:false});
 
-await page.selectOption('#languageSelect','en');
-await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.querySelector('#settingsPageTitle')?.textContent==='General');
+await page.evaluate(()=>globalThis.__pandaForceDebug.openSettings('appearance'));await page.selectOption('#languageSelect','en');
+await page.waitForFunction(()=>document.documentElement.lang==='en'&&document.querySelector('#settingsPageTitle')?.textContent==='Appearance');
 const english=await page.evaluate(()=>({
   lang:document.documentElement.lang,
   preference:localStorage.getItem('panda-force-locale'),
@@ -68,7 +71,7 @@ console.log(JSON.stringify({chinese,english,persisted,errors},null,2));
 await browser.close();
 if(
   errors.length||
-  chinese.lang!=='zh-CN'||chinese.preference!=='zh-CN'||chinese.newChat!=='新对话'||chinese.threadTitle!=='新任务'||chinese.settings!=='设置'||chinese.page!=='通用'||chinese.language!=='zh-CN'||chinese.systemOption!=='跟随系统'||chinese.effort!=='低'||chinese.content!=='Settings Running command'||
-  english.lang!=='en'||english.preference!=='en'||english.newChat!=='New chat'||english.threadTitle!=='New task'||english.page!=='General'||english.language!=='en'||english.effort!=='Low'||english.content!=='Settings Running command'||
-  persisted.lang!=='zh-CN'||persisted.preference!=='zh-CN'||persisted.language!=='zh-CN'||persisted.page!=='通用'
+  chinese.lang!=='zh-CN'||chinese.preference!=='zh-CN'||chinese.newChat!=='新建会话'||chinese.threadTitle!=='新建会话'||chinese.settings!=='设置'||chinese.page!=='通用'||chinese.language!=='zh-CN'||chinese.systemOption!=='跟随系统'||chinese.effort!=='低'||chinese.content!=='Settings Running command'||
+  english.lang!=='en'||english.preference!=='en'||english.newChat!=='New session'||english.threadTitle!=='New session'||english.page!=='Appearance'||english.language!=='en'||english.effort!=='Low'||english.content!=='Settings Running command'||
+  persisted.lang!=='zh-CN'||persisted.preference!=='zh-CN'||persisted.language!=='zh-CN'||persisted.page!=='外观'
 )process.exit(1);

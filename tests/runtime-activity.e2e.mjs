@@ -1,8 +1,11 @@
-import { chromium } from 'playwright';
-import { launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
-const browser=await chromium.launch(launchOptions());
+import { launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const base=runtime.base;
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:1180,height:820},colorScheme:'dark'});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
@@ -11,7 +14,7 @@ await page.waitForFunction(()=>globalThis.__pandaForceDebug?.notify);
 
 await page.evaluate(()=>{
   const api=globalThis.__pandaForceDebug;
-  api.state.active={id:'runtime-thread',name:'Runtime thread',cwd:api.state.config.defaultCwd,turns:[]};
+  (api.state.active={id:'runtime-thread',name:'Runtime thread',cwd:api.state.config.defaultCwd,turns:[]}, api.workbench.threadOpened(api.state.active.id));
   api.notify('item/started',{turnId:'runtime-turn',item:{id:'runtime-command',type:'commandExecution',command:'bun test'}});
   api.notify('item/commandExecution/outputDelta',{turnId:'runtime-turn',itemId:'runtime-command',delta:'starting tests\n'});
   api.notify('item/started',{turnId:'runtime-turn',item:{id:'runtime-interactive',type:'commandExecution',command:'',commandActions:[]}});

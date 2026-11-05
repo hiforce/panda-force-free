@@ -1,13 +1,16 @@
-import { chromium } from 'playwright';
+import { createBrowserFixture } from "./browser-runtime.mjs";
+
 import { artifact, launchOptions } from './browser-runtime.mjs';
-const browser=await chromium.launch(launchOptions());
+const runtime=await createBrowserFixture();
+
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:720}});
 const errors=[];page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('404 (Not Found)'))errors.push(m.text())});page.on('pageerror',e=>errors.push(e.message));
-await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(runtime.base,{waitUntil:'networkidle'});
 await page.waitForSelector('#newTask');
 await page.click('#newTask');
 const dialogAfterNewTask=await page.locator('#folderDialog').evaluate(e=>e.open);
-await page.click('#projectButton');
+await page.click('#composerProjectButton');
 await page.waitForSelector('#folderDialog[open]');
 await page.waitForSelector('.folder-item');
 const folders=await page.locator('.folder-item').count();
@@ -18,7 +21,7 @@ const selectedPath=await page.locator('#projectPath').textContent();
 const workspaceName=await page.locator('#projectName').textContent();
 await page.click('#toggleSummaryPanel');
 await page.waitForFunction(()=>!document.querySelector('#summaryPanel').hidden);
-await page.click('#projectButton');
+await page.click('#composerProjectButton');
 await page.waitForFunction(()=>{const dialog=document.querySelector('#folderDialog');return dialog?.open&&(dialog.querySelector('.folder-item')||dialog.querySelector('.list-state')?.textContent?.includes('No subfolders'))});
 if(!await page.locator('#folderDialog .folder-item').count()){
   await page.click('#folderUp');
@@ -35,4 +38,4 @@ const markdown={heading:await page.locator('#smokeMarkdown h2').count(),katex:aw
 await page.screenshot({path:artifact('browser-smoke.png'),fullPage:false});
 console.log(JSON.stringify({dialogAfterNewTask,folders,confirmEnabled,selectedPath,workspaceName,nextWorkspaceName,nextHeading,summarySync,markdown,errors},null,2));
 await browser.close();
-if(dialogAfterNewTask||!folders||!confirmEnabled||!workspaceName||!nextWorkspaceName||!nextHeading?.includes(nextWorkspaceName)||summarySync.workspace!==nextWorkspaceName||!summarySync.open||!markdown.heading||!markdown.katex||!markdown.code||errors.length)process.exit(1);
+if(dialogAfterNewTask||!folders||!confirmEnabled||!workspaceName||!nextWorkspaceName||!nextHeading||summarySync.workspace!==nextWorkspaceName||!summarySync.open||!markdown.heading||!markdown.katex||!markdown.code||errors.length)process.exit(1);

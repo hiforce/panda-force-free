@@ -1,11 +1,14 @@
-import { chromium } from 'playwright';
-import { artifact, launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const browser=await chromium.launch(launchOptions());
+import { artifact, launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:1018,height:980},colorScheme:'dark'});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
-await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(runtime.base,{waitUntil:'networkidle'});
 await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state?.config?.defaultCwd);
 await page.click('#newTask');
 await page.waitForFunction(()=>document.querySelector('#modelLabel')?.textContent?.trim()&&!/loading/i.test(document.querySelector('#modelLabel').textContent));
@@ -35,7 +38,7 @@ const home=await page.evaluate(()=>{
 });
 const contextUsage=await page.evaluate(()=>{
   const api=globalThis.__pandaForceDebug,initiallyHidden=document.querySelector('#contextUsage').hidden;
-  api.state.active={id:'context-thread',cwd:api.state.config.defaultCwd};
+  (api.state.active={id:'context-thread',cwd:api.state.config.defaultCwd}, api.workbench.threadOpened(api.state.active.id));
   api.notify('thread/tokenUsage/updated',{threadId:'context-thread',tokenUsage:{modelContextWindow:200000,last:{totalTokens:80000}}});
   const indicator=document.querySelector('#contextUsage'),progress=indicator.querySelector('.context-usage-progress'),queue=document.querySelector('[data-composer-control="queue"]');
   return {
@@ -91,10 +94,10 @@ const mobileModel=await page.evaluate(()=>{
 console.log(JSON.stringify({home,contextUsage,modelFilter,modelMain,effortSelection,modelSubmenu,lunaEfforts,solEfforts,mobileModel,errors},null,2));
 await browser.close();
 
-const expected=['add','project','approval','model','queue','send'];
+const expected=['add','approval','model','queue','send'];
 if(errors.length
-  ||!/^What can I help with in .+\?$/.test(home.heading||'')
-  ||home.placeholder!=='Do anything'
+  ||home.heading!=='What can I help?'
+  ||home.placeholder!=='Describe a task, add files, or start with an idea…'
   ||home.fixedContextVisible
   ||home.contextTrayHidden!==true
   ||JSON.stringify(home.controls)!==JSON.stringify(expected)
@@ -123,12 +126,12 @@ if(errors.length
   ||lunaEfforts.includes('Light')
   ||solEfforts.includes('Light')
   ||lunaEfforts.includes('Ultra')
-  ||!lunaEfforts.includes('Max')
-  ||!solEfforts.includes('Ultra')
+  ||!lunaEfforts.includes('High')
+  ||!solEfforts.includes('Extra High')
   ||!mobileModel.label
   ||mobileModel.labelDisplay==='none'
   ||mobileModel.labelWidth<1
   ||!mobileModel.triggerText?.includes(mobileModel.label)
   ||mobileModel.horizontalOverflow
-  ||parseFloat(home.composer.borderRadius)<20
+  ||parseFloat(home.composer.borderRadius)<12
   ||Math.abs(home.send.width-home.send.height)>.5)process.exit(1);

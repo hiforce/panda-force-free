@@ -1,15 +1,14 @@
+import { createBrowserFixture } from "./browser-runtime.mjs";
 import assert from 'node:assert/strict';
-import { createServer } from 'node:net';
-import { chromium, devices } from 'playwright';
-import { root, launchOptions } from './browser-runtime.mjs';
 
-const port=await new Promise(resolve=>{const probe=createServer();probe.listen(0,'127.0.0.1',()=>{const port=probe.address().port;probe.close(()=>resolve(port))})});
-const base=`http://127.0.0.1:${port}`;
-const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...process.env,HOST:'127.0.0.1',PORT:String(port)},stdout:'ignore',stderr:'ignore'});
+import { devices } from "playwright";
+import { launchOptions } from "./browser-runtime.mjs";
+
+const runtime=await createBrowserFixture();
+const port=Number(new URL(runtime.base).port),base=runtime.base;
 let browser;
 try{
-  for(let i=0;i<400;i++){try{if((await fetch(`${base}/api/health`)).ok)break}catch{}await Bun.sleep(50)}
-  browser=await chromium.launch(launchOptions());
+  browser=await runtime.launchBrowser(launchOptions());
   const context=await browser.newContext({...devices['Pixel 7']});
   await context.addInitScript(()=>{
     if(window!==window.top)return;
@@ -59,5 +58,5 @@ try{
   assert.deepEqual(errors,[]);
   console.log('Mobile Chrome model reads, transient failure recovery, bounded timeout and click-to-retry passed.');
 }finally{
-  await browser?.close();server.kill();await server.exited;
+  await browser?.close();await runtime.dispose();
 }

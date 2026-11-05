@@ -1,18 +1,18 @@
+import { createBrowserFixture } from "./browser-runtime.mjs";
 import assert from 'node:assert/strict';
-import { createServer } from 'node:net';
-import { chromium } from 'playwright';
+
+
 import { artifact, launchOptions } from './browser-runtime.mjs';
 
 const root=new URL('..',import.meta.url).pathname;
-async function freePort(){return await new Promise((resolve,reject)=>{const probe=createServer();probe.once('error',reject);probe.listen(0,'127.0.0.1',()=>{const address=probe.address();if(!address||typeof address==='string')return reject(new Error('Could not allocate composer test port'));probe.close(error=>error?reject(error):resolve(address.port))})})}
-async function waitFor(check,timeout=20_000){const started=Date.now();while(Date.now()-started<timeout){try{if(await check())return}catch{}await Bun.sleep(50)}throw new Error('Timed out waiting for composer test server')}
 
-const port=await freePort(),base=`http://127.0.0.1:${port}`;
-const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...process.env,HOST:'127.0.0.1',PORT:String(port)},stdout:'ignore',stderr:'ignore'});
+
+
+const runtime=await createBrowserFixture();
+const port=Number(new URL(runtime.base).port),base=runtime.base;
 let browser;
 try{
-  await waitFor(async()=>(await fetch(`${base}/api/health`)).ok);
-  browser=await chromium.launch(launchOptions());
+  browser=await runtime.launchBrowser(launchOptions());
   const context=await browser.newContext({viewport:{width:1018,height:760},colorScheme:'dark'});
   await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
   const page=await context.newPage(),errors=[];
@@ -21,7 +21,7 @@ try{
   await page.waitForFunction(()=>globalThis.__pandaForceDebug?.syncTurnSnapshot);
   await page.evaluate(()=>{
     const api=globalThis.__pandaForceDebug;
-    api.state.active={id:'composer-thread',name:'Composer thread',cwd:api.state.config.defaultCwd,turns:[]};
+    (api.state.active={id:'composer-thread',name:'Composer thread',cwd:api.state.config.defaultCwd,turns:[]}, api.workbench.threadOpened(api.state.active.id));
     api.syncTurnSnapshot({id:'composer-turn',status:'inProgress',itemsView:'full',items:[]});
     api.notify('turn/started',{threadId:'other-thread',turn:{id:'other-turn'}});
     window.__composerRpcCalls=[];
@@ -136,7 +136,7 @@ try{
   assert.equal(fallback.calls[1].params.input[0].text,'Send after the task ended.');
   assert.deepEqual(fallback.messages,[{turn:'fallback-turn',steer:undefined,inTimeline:false}]);assert.equal(fallback.draft,'');
   await page.evaluate(()=>window.__noActiveSteer=false);
-  await page.evaluate(()=>{const api=globalThis.__pandaForceDebug;api.state.active={id:'external-thread',name:'External thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:null};api.syncTurnSnapshot({id:'external-turn',status:'inProgress',itemsView:'full',items:[]});window.__composerConflictMode=true;window.__composerConflictCallStart=window.__composerRpcCalls.length});
+  await page.evaluate(()=>{const api=globalThis.__pandaForceDebug;(api.state.active={id:'external-thread',name:'External thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:null}, api.workbench.threadOpened(api.state.active.id));api.syncTurnSnapshot({id:'external-turn',status:'inProgress',itemsView:'full',items:[]});window.__composerConflictMode=true;window.__composerConflictCallStart=window.__composerRpcCalls.length});
   await page.locator('#prompt').fill('Keep this message when the CLI owns the task.');
   await page.click('#sendButton');
   await page.waitForFunction(()=>document.querySelector('#prompt')?.value==='Keep this message when the CLI owns the task.'&&[...document.querySelectorAll('.persistent-error-body p')].some(node=>node.textContent.includes('another Codex app or CLI')));
@@ -146,6 +146,5 @@ try{
   if(!ime.autocompleteUnchanged||!ime.autocompleteWorks||ime.scenarios.some(test=>test.composingPrevented||test.legacyPrevented||test.nativePrevented||test.keptText!=='拼音输入'||test.imeSubmissions||test.shiftSubmissions||!test.enterPrevented||test.enterSubmissions!==1)||mobile.overflow||mobile.left<0||mobile.right>390||repeated!==2||pending.text!=='Change direction while this task is running.'||pending.delivery!=='sending'||pending.status!=='Steer · Sending…'||echoed.count!==1||echoed.status!=='Steer · Sent'||echoed.optimistic||rejected.count!==2||!rejected.texts.includes('Rejected steering message.')||errors.length||stop.mode!=='stop'||stop.title!=='Stop'||stop.turnId!=='composer-turn'||!stop.stopped||!stop.square||steer.mode!=='steer'||steer.title!=='Steer'||steer.label!==''||steer.stopped||!steer.arrow||afterSteer.input!==''||afterSteer.mode!=='stop'||afterSteer.call?.params?.threadId!=='composer-thread'||afterSteer.call?.params?.expectedTurnId!=='composer-turn'||afterSteer.call?.params?.input?.[0]?.text!=='Change direction while this task is running.'||interrupt.mode!=='stop'||interrupt.call?.params?.threadId!=='composer-thread'||interrupt.call?.params?.turnId!=='composer-turn'||send.mode!=='send'||send.title!=='Send message'||send.stopped||!send.arrow||conflict.input!=='Keep this message when the CLI owns the task.'||conflict.persistentError!=='This task is currently running in another Codex app or CLI. Close it there, then try again.'||conflict.activeId!=='external-thread'||JSON.stringify(conflict.calls)!==JSON.stringify(['thread/resume'])||conflict.mode!=='steer')process.exitCode=1;
 }finally{
   await browser?.close();
-  server.kill();
-  await server.exited;
+  await runtime.dispose();
 }

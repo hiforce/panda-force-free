@@ -1,8 +1,11 @@
-import { chromium } from 'playwright';
-import { launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
-const browser=await chromium.launch(launchOptions());
+import { launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const base=runtime.base;
+const browser=await runtime.launchBrowser(launchOptions());
 const results=[];
 
 for(const viewport of [{width:1280,height:720},{width:360,height:700}]){

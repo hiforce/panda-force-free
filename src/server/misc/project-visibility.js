@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { normalizeProjectPath } from "../../shared/project-visibility.js";
+import { normalizeProjectVisibilityKey } from "../../shared/project-visibility.js";
 
 export class ProjectVisibilityStore {
   constructor(path, home) {
@@ -26,7 +26,7 @@ export class ProjectVisibilityStore {
     }
     for (const [key, value] of Object.entries(data.hiddenProjects)) {
       if (
-        normalizeProjectPath(key) !== key ||
+        normalizeProjectVisibilityKey(key) !== key ||
         !Number.isSafeInteger(value?.hiddenAt) ||
         value.hiddenAt <= 0 ||
         value.hiddenAt > data.revision
@@ -43,7 +43,7 @@ export class ProjectVisibilityStore {
   }
 
   setHidden(path, hidden, expectedHiddenAt) {
-    const key = normalizeProjectPath(path, this.home);
+    const key = normalizeProjectVisibilityKey(path, this.home);
     if (!key || typeof hidden !== "boolean") throw new Error("Invalid project visibility request");
     if (expectedHiddenAt !== undefined && (!Number.isSafeInteger(expectedHiddenAt) || expectedHiddenAt <= 0))
       throw new Error("Invalid hidden project version");

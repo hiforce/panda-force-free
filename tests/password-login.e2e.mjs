@@ -31,12 +31,12 @@ try{
   const fallbackPage=await fallback.newPage();await fallbackPage.goto(f.base);
   await fallbackPage.getByRole('heading',{name:'Create your administrator',exact:true}).waitFor();
   assert.equal(await fallbackPage.locator('html').getAttribute('lang'),'en');
-  assert.equal(await fallbackPage.locator('#passwordHint').textContent(),'Use at least 6 characters, including uppercase and lowercase letters and a number.');
+  assert.equal((await fallbackPage.locator('#passwordHint').textContent()).trim(),'Use at least 6 characters, including uppercase and lowercase letters and a number.');
   assert.equal(await fallbackPage.locator('#passwordHint').isVisible(),true);await fallback.close();
   const context=await browser.newContext({viewport:{width:390,height:844},locale:'zh-CN',extraHTTPHeaders:{'x-forwarded-for':'203.0.113.12'}});
   const page=await context.newPage();await page.goto(f.base);
   await page.getByRole('heading',{name:'创建管理员账号',exact:true}).waitFor();assert.equal(await page.locator('#installationCodeField').isVisible(),true);
-  assert.equal(await page.locator('#passwordHint').textContent(),'至少 6 位，须包含大写字母、小写字母和数字。');
+  assert.equal((await page.locator('#passwordHint').textContent()).trim(),'至少 6 位，须包含大写字母、小写字母和数字。');
   assert.equal(await page.locator('#passwordHint').isVisible(),true);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:artifact('administrator-remote-setup-mobile.png')});

@@ -61,7 +61,7 @@ try {
   await context.addInitScript(() => { if (window === window.top) { localStorage.clear(); localStorage.setItem("panda-force-locale", "en"); } });
   const page = await context.newPage(), errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  await page.goto(base, { waitUntil: "networkidle" });
+  await page.addInitScript(()=>{globalThis.__pandaForceTest=true});await page.goto(base, { waitUntil: "networkidle" });
   await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.config.attachmentUrlPrefix);
   for (const source of ["system-clipboard", "items-only-no-extension", "nameless-image", "transcoded-original-name"]) {
     const { thread } = await rpc("thread/start", { cwd: home, model: "mock" });

@@ -1,12 +1,15 @@
-import { chromium } from 'playwright';
+import { createBrowserFixture } from "./browser-runtime.mjs";
+
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
 
-const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
-const browser=await chromium.launch(launchOptions());
+
+const base=runtime.base;
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:760},colorScheme:'dark'});
-const errors=[];
+const originalWait=page.waitForFunction.bind(page);page.waitForFunction=async(...args)=>{try{return await originalWait(...args)}catch(error){console.error('Wait failed:',String(args[0]),await page.evaluate(()=>({active:globalThis.__pandaForceDebug.state.active?.id,errors:document.querySelector('#persistentErrors')?.textContent})));throw error}};const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 async function waitForTerminalOutput(kind,expected){
   try{
@@ -40,6 +43,7 @@ const terminal=await page.evaluate(()=>({
   hasOutputLine:[...Array(globalThis.__codexTerminals.side.term.buffer.active.length)].some((_,index)=>globalThis.__codexTerminals.side.term.buffer.active.getLine(index)?.translateToString(true).trim()==='SIDE_TERMINAL_OK'),
 }));
 
+await page.evaluate(()=>{const api=globalThis.__pandaForceDebug;api.state.active={id:'parent-thread',cwd:api.state.config.defaultCwd,turns:[]};api.workbench.threadOpened('parent-thread');});
 await page.evaluate(()=>globalThis.__pandaForceDebug.notify('item/started',{turnId:'side-task-turn',item:{id:'spawn-side-task',type:'collabAgentToolCall',tool:'spawnAgent',status:'inProgress',senderThreadId:'parent-thread',receiverThreadIds:['child-thread'],prompt:'Inspect the browser compatibility issue.',model:'gpt-5.6-terra',reasoningEffort:'medium',agentsStates:{'child-thread':{status:'running',message:'Checking redirects'}}}}));
 await page.click('#openSidePanelTab');
 await page.click('[data-side-panel-action="side-task"]');
@@ -61,7 +65,8 @@ await page.evaluate(()=>{
       const pending=state.pending.get(request.id);
       if(!pending)return;
       state.pending.delete(request.id);
-      if(request.method==='thread/read'&&request.params.threadId==='child-thread')pending.resolve({thread:{id:'child-thread',cwd,source:'local',turns:[{id:'child-turn',items:[{id:'child-agent',type:'agentMessage',phase:'final_answer',text:'Child task result'}]}]}});
+      if(request.method==='host/thread/history'){pending.reject(new Error('Unsupported method'));return;}
+      if(request.method==='thread/read'&&request.params.threadId==='child-thread')pending.resolve({thread:{id:'child-thread',name:'gpt-5.6-terra',cwd,source:'local',turns:[{id:'child-turn',items:[{id:'child-agent',type:'agentMessage',phase:'final_answer',text:'Child task result'}]}]}});
       else pending.reject(new Error(`Unexpected RPC ${request.method}`));
     });
   }};
@@ -80,12 +85,12 @@ await page.evaluate(()=>globalThis.__pandaForceDebug.notify('item/started',{turn
 await page.click('#openSidePanelTab');
 await page.click('[data-side-panel-action="side-task"]');
 await page.click('.side-task-card[data-thread-id="missing-child-thread"]');
-await page.waitForFunction(()=>document.querySelector('#toast')?.classList.contains('show'));
+await page.waitForFunction(()=>document.querySelector('#persistentErrors')?.textContent.includes('Unexpected RPC thread/read'));
 const failedSideTaskNavigation=await page.evaluate(()=>({
   activeId:globalThis.__pandaForceDebug.state.active?.id,
   storedId:localStorage.getItem('panda-force-active-thread'),
   heading:document.querySelector('#threadTitle')?.textContent.trim(),
-  toast:document.querySelector('#toast')?.textContent.trim(),
+  toast:document.querySelector('#persistentErrors')?.textContent.trim(),
   disabled:document.querySelector('.side-task-card[data-thread-id="missing-child-thread"]')?.disabled,
   busy:document.querySelector('.side-task-card[data-thread-id="missing-child-thread"]')?.getAttribute('aria-busy'),
 }));

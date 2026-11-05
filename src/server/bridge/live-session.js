@@ -1,5 +1,6 @@
 import { closeSync, fstatSync, openSync, readSync } from "node:fs";
 import { StringDecoder } from "node:string_decoder";
+import { createHash } from "node:crypto";
 import { createEvictionLogger } from "../misc/eviction-log.js";
 const logEviction = createEvictionLogger("live-sessions");
 
@@ -94,6 +95,8 @@ function newState() {
     commandCalls: new Map(),
     activeCommandId: null,
     userSequence: 0,
+    eventSequence: 0,
+    lastUserRecord: null,
     patchSequence: 0,
     questionTurns: new Map(),
     lastEventAt: null,
@@ -126,6 +129,7 @@ function finishActiveCommand(state, raw) {
 
 export function applyRolloutEvent(state, event) {
   if (!event || typeof event !== "object") return state;
+  state.eventSequence += 1;
   if (typeof event.timestamp === "string") state.lastEventAt = event.timestamp;
   const payload = event.payload || {};
   if (event.type === "event_msg" && payload.type === "task_started") {
@@ -134,6 +138,7 @@ export function applyRolloutEvent(state, event) {
     state.commandCalls.clear();
     state.activeCommandId = null;
     state.userSequence = 0;
+    state.lastUserRecord = null;
     state.patchSequence = 0;
     state.turn = {
       id: payload.turn_id,
@@ -159,16 +164,51 @@ export function applyRolloutEvent(state, event) {
     state.activeCommandId = null;
     return state;
   }
-  if (event.type === "event_msg" && payload.type === "user_message") {
-    state.userSequence += 1;
-    const text = String(payload.message || "").trim();
+  const legacyUser = event.type === "event_msg" && payload.type === "user_message";
+  const nativeUser = event.type === "response_item" && payload.type === "message" && payload.role === "user";
+  if (legacyUser || nativeUser) {
+    const text = legacyUser ? String(payload.message || "").trim() : contentText(payload.content).trim();
+    const nativeImages =
+      nativeUser && Array.isArray(payload.content)
+        ? payload.content.filter((part) => ["input_image", "image"].includes(part?.type))
+        : [];
     const content = [
       ...(text ? [{ type: "text", text }] : []),
       ...(payload.local_images || []).map((path) => ({ type: "localImage", path })),
       ...(payload.images || []).map((url) => ({ type: "image", url })),
     ];
+    if (!content.length && !nativeImages.length) return state;
+    const key = createHash("sha256")
+      .update(text)
+      .update("\0" + (nativeImages.length + (payload.images?.length || 0) + (payload.local_images?.length || 0)))
+      .digest("hex");
+    const timestamp = Date.parse(event.timestamp),
+      previous = state.lastUserRecord;
+    // Some CLI versions journal the same input in both formats. Only pair
+    // different formats; repeated input in one format remains a distinct reply.
+    if (
+      previous &&
+      previous.source !== event.type &&
+      previous.key === key &&
+      (previous.sequence === state.eventSequence - 1 ||
+        (Number.isFinite(timestamp) && Math.abs(timestamp - previous.timestamp) <= 250))
+    ) {
+      state.lastUserRecord = null;
+      return state;
+    }
+    state.lastUserRecord = { source: event.type, key, sequence: state.eventSequence, timestamp };
+    state.userSequence += 1;
+    // A later user message retires earlier async prompts, including same-turn
+    // steering replies. Keep this in journal-derived data so reloads agree.
+    if (content.length || nativeImages.length)
+      for (const questions of state.questionTurns.values())
+        for (const item of questions.items) {
+          if (item.questionState === "earlier") continue;
+          item.questionState = "earlier";
+          if (questions.id === state.turn.id) upsertItem(state, item);
+        }
     // thread/read already owns the opening prompt; rollout is needed for later CLI steering messages.
-    if (state.userSequence > 1 && content.length) {
+    if (legacyUser && state.userSequence > 1 && content.length) {
       upsertItem(state, {
         id: `host-user-${state.turn.id}-${state.userSequence}`,
         type: "userMessage",
@@ -211,19 +251,23 @@ export function applyRolloutEvent(state, event) {
     return state;
   }
   // Host rollouts use function calls for questionnaires, even when native thread reads omit them.
-  if (
-    payload.type === "function_call" &&
-    /(?:^|[./_])request_user_input(?:_async)?$/.test(payload.name || "")
-  ) {
+  if (payload.type === "function_call" && /(?:^|[./_])request_user_input(?:_async)?$/.test(payload.name || "")) {
     const item = {
       id: payload.id || payload.call_id,
       type: "dynamicToolCall",
       tool: payload.name,
       arguments: payload.arguments,
       status: "completed",
+      ...(state.userSequence > 0 ? { questionUserSequence: state.userSequence } : {}),
     };
+    const previousQuestion = state.questionTurns.get(state.turn.id)?.items.find((previous) => previous.id === item.id);
+    if (previousQuestion?.questionState) item.questionState = previousQuestion.questionState;
     upsertItem(state, item);
-    const questions = state.questionTurns.get(state.turn.id) || { id: state.turn.id, status: state.turn.status, items: [] };
+    const questions = state.questionTurns.get(state.turn.id) || {
+      id: state.turn.id,
+      status: state.turn.status,
+      items: [],
+    };
     if (!questions.items.some((existing) => existing.id === item.id)) questions.items.push(item);
     questions.items = questions.items.slice(-30);
     state.questionTurns.set(state.turn.id, questions);

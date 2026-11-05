@@ -1,8 +1,12 @@
-import { chromium } from 'playwright';
+import { createBrowserFixture } from "./browser-runtime.mjs";
+
 import { artifact, launchOptions } from './browser-runtime.mjs';
-const browser=await chromium.launch(launchOptions());
+const runtime=await createBrowserFixture();
+
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:591,height:1100},deviceScaleFactor:1,isMobile:true,hasTouch:true});
-await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(runtime.base,{waitUntil:'networkidle'});await page.locator('#workspacePreparation').waitFor({state:'hidden'});await page.waitForTimeout(250);
+const originalWait=page.waitForFunction.bind(page);page.waitForFunction=async(...args)=>{try{return await originalWait(...args)}catch(error){console.error('Wait failed:',String(args[0]));throw error}};
 const box=async s=>page.locator(s).evaluate(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,display:getComputedStyle(e).display,transform:getComputedStyle(e).transform}});
 const closedSidebar=await box('.sidebar');
 await page.click('#toggleSidebar');
@@ -32,7 +36,7 @@ console.log(JSON.stringify(result,null,2));
 await page.screenshot({path:artifact('mobile-layout.png'),fullPage:false});
 
 const narrow=await browser.newPage({viewport:{width:320,height:800},deviceScaleFactor:1,isMobile:true,hasTouch:true});
-await narrow.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await narrow.goto(runtime.base,{waitUntil:'networkidle'});await narrow.locator('#workspacePreparation').waitFor({state:'hidden'});
 const narrowChrome=await narrow.evaluate(()=>({hasBottomPanelButton:Boolean(document.querySelector('#toggleBottomPanel')),hasBottomPanel:Boolean(document.querySelector('#bottomPanel')),scrollWidth:document.documentElement.scrollWidth,innerWidth}));
 await narrow.click('#toggleSummaryPanel');
 await narrow.waitForFunction(()=>document.activeElement?.id==='closeSummaryPanel');
@@ -44,15 +48,13 @@ await narrow.click('#toggleSidePanel');
 await narrow.waitForFunction(()=>document.activeElement?.id==='closeSidePanel');
 const sideFocus=await narrow.evaluate(()=>({activeId:document.activeElement?.id,conversationInert:document.querySelector('.conversation-shell').inert}));
 await narrow.click('[data-side-panel-action="files"]');
-await narrow.waitForFunction(()=>document.querySelector('#utilityPanelTitle').textContent==='Files');
-await narrow.click('#utilityPanelAction');
-await narrow.waitForSelector('#folderDialog[open]');
+await narrow.locator('#filesDialog').waitFor({state:'visible'});
 await narrow.keyboard.press('Escape');
-await narrow.waitForFunction(()=>!document.querySelector('#folderDialog').open);
+await narrow.waitForFunction(()=>!document.querySelector('#filesDialog').open);
 const dialogEscape=await narrow.evaluate(()=>({sideOpen:document.body.classList.contains('side-panel-open'),activeId:document.activeElement?.id}));
-await narrow.click('#closeSidePanel');
+await narrow.click('#toggleSidePanel');await narrow.click('#closeSidePanel');
 await narrow.waitForFunction(()=>document.activeElement?.id==='toggleSidePanel');
 const sideRestore=await narrow.evaluate(()=>({activeId:document.activeElement?.id,conversationInert:document.querySelector('.conversation-shell').inert}));
 console.log(JSON.stringify({narrow:{narrowChrome,summaryFocus,summaryRestore,sideFocus,dialogEscape,sideRestore}},null,2));
 await browser.close();
-if(result.viewport.scrollWidth>591||result.main.x<0||result.main.width<560||result.closedSummary.display!=='none'||result.closedSidePanel.display!=='none'||result.openSummary.width!==591||result.openSidePanel.width!==591||result.closedSidebar.x>=0||Math.abs(result.openSidebar.x)>0.5||result.openSidebar.width!==275||result.sidebarVisibility.display==='none'||result.sidebarVisibility.visibility!=='visible'||result.sidebarVisibility.opacity==='0'||!result.sidebarVisibility.topElement||result.sidebarRows<1||!result.sidebarClosedAfterSelection||narrowChrome.hasBottomPanelButton||narrowChrome.hasBottomPanel||narrowChrome.scrollWidth>narrowChrome.innerWidth||summaryFocus.activeId!=='closeSummaryPanel'||!summaryFocus.conversationInert||summaryRestore.activeId!=='toggleSummaryPanel'||summaryRestore.conversationInert||sideFocus.activeId!=='closeSidePanel'||!sideFocus.conversationInert||!dialogEscape.sideOpen||sideRestore.activeId!=='toggleSidePanel'||sideRestore.conversationInert)process.exit(1);
+if(result.viewport.scrollWidth>591||result.main.x<0||result.main.width<560||result.closedSummary.display!=='none'||result.closedSidePanel.display!=='none'||result.openSummary.width!==591||result.openSidePanel.width!==591||result.closedSidebar.x>=0||Math.abs(result.openSidebar.x)>0.5||result.openSidebar.width!==275||result.sidebarVisibility.display==='none'||result.sidebarVisibility.visibility!=='visible'||result.sidebarVisibility.opacity==='0'||!result.sidebarVisibility.topElement||result.sidebarRows<1||!result.sidebarClosedAfterSelection||narrowChrome.hasBottomPanelButton||narrowChrome.hasBottomPanel||narrowChrome.scrollWidth>narrowChrome.innerWidth||summaryFocus.activeId!=='closeSummaryPanel'||!summaryFocus.conversationInert||summaryRestore.activeId!=='toggleSummaryPanel'||summaryRestore.conversationInert||sideFocus.activeId!=='closeSidePanel'||!sideFocus.conversationInert||dialogEscape.sideOpen||sideRestore.activeId!=='toggleSidePanel'||sideRestore.conversationInert)process.exit(1);

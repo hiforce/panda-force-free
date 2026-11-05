@@ -114,7 +114,7 @@ describe("Codex PandaForce app-server bridge", () => {
   test("requires authentication when a reverse proxy supplies a non-localhost host", async () => {
     const denied = await fetch(`http://127.0.0.1:${port}/api/health`, { headers: { host: "codex.example.com" } });
     expect(denied.status).toBe(401);
-    expect(denied.headers.get("www-authenticate")).toContain("Basic");
+    expect(denied.headers.get("www-authenticate")).toBeNull();
 
     const allowed = await fetch(`http://127.0.0.1:${port}/api/health`, {
       headers: { host: "codex.example.com", authorization, origin: "http://codex.example.com" },

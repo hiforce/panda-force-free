@@ -45,7 +45,7 @@ try{
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error'&&!message.text().includes('404'))errors.push(message.text())});
-  await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'networkidle'});
+  await page.addInitScript(()=>{globalThis.__pandaForceTest=true});await page.goto(`http://127.0.0.1:${port}/`,{waitUntil:'networkidle'});
   await page.waitForFunction(()=>Boolean(globalThis.__pandaForceDebug));
   await new Promise(resolveWait=>setTimeout(resolveWait,500));
   const before=statSync(bundlePath).mtimeMs;

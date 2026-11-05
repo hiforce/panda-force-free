@@ -1,5 +1,8 @@
-import { chromium } from 'playwright';
+import { createBrowserFixture } from "./browser-runtime.mjs";
+
 import { launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
 
 function rgb(value){
   const match=value.match(/rgba?\((?:\s*)?(\d+(?:\.\d+)?)[,\s]+(\d+(?:\.\d+)?)[,\s]+(\d+(?:\.\d+)?)/);
@@ -12,17 +15,17 @@ function luminance(value){
 function contrast(a,b){const l1=luminance(a),l2=luminance(b);return (Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05)}
 function overlap(a,b){return Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top))}
 
-const browser=await chromium.launch(launchOptions());
+const browser=await runtime.launchBrowser(launchOptions());
 const results=[];
 for(const scheme of ['light','dark']){
   const page=await browser.newPage({viewport:{width:1440,height:900},colorScheme:scheme});
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
-  await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+  await page.goto(runtime.base,{waitUntil:'networkidle'});
   await page.waitForFunction(()=>globalThis.__pandaForceDebug);
   await page.evaluate(async()=>{
     const api=globalThis.__pandaForceDebug;
-    api.state.active={id:'theme-thread',cwd:'/tmp/theme-demo',source:'local'};
+    (api.state.active={id:'theme-thread',cwd:'/tmp/theme-demo',source:'local'}, api.workbench.threadOpened(api.state.active.id));
     document.querySelector('#conversation').innerHTML='<article class="turn user-turn"><div class="user-message">Review the complete command before approval.</div></article>';
     api.notify('item/completed',{turnId:'theme-turn',item:{id:'theme-agent',type:'agentMessage',text:'Use `bun test` and read the [verification guide](https://example.com).\n\n```ts\nconst theme = "system";\n```\n\n| Surface | State |\n| --- | --- |\n| Panel | Ready |'}});
     api.notify('item/started',{turnId:'theme-turn',item:{id:'theme-command',type:'commandExecution',status:'inProgress',command:'bun test tests/theme-colors.e2e.mjs --reporter=verbose',aggregatedOutput:'Theme command output'}});
@@ -50,7 +53,6 @@ for(const scheme of ['light','dark']){
       composerAdd:style('[data-composer-control="add"]'),
       composerApproval:style('[data-composer-control="approval"]'),
       composerModel:style('[data-composer-control="model"] #modelButton'),
-      composerMic:style('[data-composer-control="dictation"]'),
       composerSend:style('[data-composer-control="send"]'),
       inlineCode:style('.message-text code'),
       codeBlock:style('.message-text pre'),
@@ -87,7 +89,6 @@ for(const scheme of ['light','dark']){
     composerAdd:contrast(result.composerAdd.color,result.composer.background),
     composerApproval:contrast(result.composerApproval.color,result.composer.background),
     composerModel:contrast(result.composerModel.color,result.composer.background),
-    composerMic:contrast(result.composerMic.color,result.composer.background),
     composerSend:contrast(result.composerSend.color,result.composerSend.background),
     inlineCode:contrast(result.inlineCode.color,result.inlineCode.background),
     codeBlock:contrast(result.codeBlockText.color,result.codeBlock.background),

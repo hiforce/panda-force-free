@@ -1,18 +1,21 @@
-import { chromium } from 'playwright';
-import { launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const browser=await chromium.launch(launchOptions());
+import { launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:800},colorScheme:'dark'});
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 page.on('console',message=>{if(message.type()==='error'&&!message.text().includes('404'))errors.push(message.text())});
-await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(runtime.base,{waitUntil:'networkidle'});
 await page.waitForFunction(()=>globalThis.__pandaForceDebug);
 
 const reasoning=await page.evaluate(()=>{
   const api=globalThis.__pandaForceDebug,{state}=api;
-  const reset=()=>{for(const animation of state.motion.values())animation?.destroy?.();for(const key of ['items','turns','activities','activityItems','dividers','motion'])state[key].clear();document.querySelector('#conversation').replaceChildren()};
-  reset();state.active={id:'reasoning-thread',cwd:'/tmp',source:'local'};
+  const reset=()=>{for(const key of ['items','turns','activities','activityItems','dividers'])state[key].clear();document.querySelector('#conversation').replaceChildren()};
+  reset();(state.active={id:'reasoning-thread',cwd:'/tmp',source:'local'}, api.workbench.threadOpened(state.active.id));
   api.notify('item/reasoning/summaryPartAdded',{threadId:'reasoning-thread',turnId:'reasoning-turn',itemId:'reasoning-item',summaryIndex:0});
   const startedRow=document.querySelector('[data-item-id="reasoning-item"]');
   const started={text:startedRow?.querySelector('.activity-name')?.textContent?.trim(),visible:!!startedRow&&getComputedStyle(startedRow).display!=='none',hasLeadingIcon:!!startedRow?.querySelector('.activity-motion svg,.activity-command-icon svg'),role:startedRow?.getAttribute('role')};
@@ -27,9 +30,9 @@ const reasoning=await page.evaluate(()=>{
 
 const groupPersistence=await page.evaluate(()=>{
   const api=globalThis.__pandaForceDebug,{state}=api;
-  const reset=()=>{for(const animation of state.motion.values())animation?.destroy?.();for(const key of ['items','turns','activities','activityItems','dividers','motion'])state[key].clear();document.querySelector('#conversation').replaceChildren()};
+  const reset=()=>{for(const key of ['items','turns','activities','activityItems','dividers'])state[key].clear();document.querySelector('#conversation').replaceChildren()};
   const replay=()=>{api.notify('item/completed',{threadId:'persist-thread',turnId:'persist-turn',item:{id:'persist-command-1',type:'commandExecution',command:'bun test',aggregatedOutput:'ok'}});api.notify('item/completed',{threadId:'persist-thread',turnId:'persist-turn',item:{id:'persist-command-2',type:'commandExecution',command:'bun run check',aggregatedOutput:'ok'}})};
-  reset();state.active={id:'persist-thread',cwd:'/tmp',source:'local'};replay();
+  reset();(state.active={id:'persist-thread',cwd:'/tmp',source:'local'}, api.workbench.threadOpened(state.active.id));replay();
   const firstGroup=document.querySelector('[data-agent-activity-group]'),summary=firstGroup?.querySelector('.activity-summary');summary?.click();
   const storageKey=Object.keys(localStorage).find(key=>key.startsWith('panda-force-activity-group:persist-thread:persist-turn:persist-command-1'));
   const firstOpen=summary?.classList.contains('open')&&firstGroup?.querySelector('.activity-items')?.classList.contains('open');
@@ -40,9 +43,9 @@ const groupPersistence=await page.evaluate(()=>{
 
 const reloadPersistenceBefore=await page.evaluate(()=>{
   const api=globalThis.__pandaForceDebug,{state}=api;
-  const reset=()=>{for(const animation of state.motion.values())animation?.destroy?.();for(const key of ['items','turns','activities','activityItems','dividers','motion'])state[key].clear();document.querySelector('#conversation').replaceChildren()};
+  const reset=()=>{for(const key of ['items','turns','activities','activityItems','dividers'])state[key].clear();document.querySelector('#conversation').replaceChildren()};
   const replay=()=>{api.notify('item/completed',{threadId:'reload-persist-thread',turnId:'reload-persist-turn',item:{id:'reload-command-1',type:'commandExecution',command:'bun test',aggregatedOutput:'tests passed'}});api.notify('item/completed',{threadId:'reload-persist-thread',turnId:'reload-persist-turn',item:{id:'reload-command-2',type:'commandExecution',command:'bun run check',aggregatedOutput:'build passed'}})};
-  reset();state.active={id:'reload-persist-thread',cwd:'/tmp',source:'local'};replay();
+  reset();(state.active={id:'reload-persist-thread',cwd:'/tmp',source:'local'}, api.workbench.threadOpened(state.active.id));replay();
   const group=document.querySelector('[data-agent-activity-group]'),summary=group?.querySelector('.activity-summary'),row=group?.querySelector('[data-item-id="reload-command-1"]');summary?.click();row?.click();api.setSidebarOpen(false);
   const groupKey=Object.keys(localStorage).find(key=>key.startsWith('panda-force-activity-group:reload-persist-thread:reload-persist-turn:reload-command-1'));
   const itemKey='panda-force-activity-item:reload-persist-thread:reload-persist-turn:reload-command-1';
@@ -53,8 +56,8 @@ await page.reload({waitUntil:'networkidle'});
 await page.waitForFunction(()=>globalThis.__pandaForceDebug);
 const reloadPersistenceAfter=await page.evaluate(()=>{
   const api=globalThis.__pandaForceDebug,{state}=api;
-  for(const animation of state.motion.values())animation?.destroy?.();for(const key of ['items','turns','activities','activityItems','dividers','motion'])state[key].clear();document.querySelector('#conversation').replaceChildren();
-  state.active={id:'reload-persist-thread',cwd:'/tmp',source:'local'};
+  for(const key of ['items','turns','activities','activityItems','dividers'])state[key].clear();document.querySelector('#conversation').replaceChildren();
+  (state.active={id:'reload-persist-thread',cwd:'/tmp',source:'local'}, api.workbench.threadOpened(state.active.id));
   api.notify('item/completed',{threadId:'reload-persist-thread',turnId:'reload-persist-turn',item:{id:'reload-command-1',type:'commandExecution',command:'bun test',aggregatedOutput:'tests passed'}});
   api.notify('item/completed',{threadId:'reload-persist-thread',turnId:'reload-persist-turn',item:{id:'reload-command-2',type:'commandExecution',command:'bun run check',aggregatedOutput:'build passed'}});
   const group=document.querySelector('[data-agent-activity-group]'),summary=group?.querySelector('.activity-summary'),row=group?.querySelector('[data-item-id="reload-command-1"]'),output=row?.nextElementSibling;
@@ -64,7 +67,7 @@ await page.screenshot({path:'/tmp/panda-force-reload-state.png',fullPage:false})
 
 const threadRestore=await page.evaluate(async()=>{
   const api=globalThis.__pandaForceDebug,{state}=api,now=Date.now()/1000,cwd=state.config.defaultCwd;
-  localStorage.setItem('panda-force-active-thread','remembered-thread');state.active=null;state.threads=[];
+  history.replaceState(null,'','/');localStorage.setItem('panda-force-active-thread','remembered-thread');state.active=null;state.threads=[];
   state.transport='ws';state.ws={readyState:WebSocket.OPEN,send(raw){const request=JSON.parse(raw);queueMicrotask(()=>{const pending=state.pending.get(request.id);if(!pending)return;state.pending.delete(request.id);if(request.method==='model/list')pending.resolve({data:[]});else if(request.method==='thread/list')pending.resolve({data:[{id:'remembered-thread',name:'Remembered task',cwd,source:'local',recencyAt:now,updatedAt:now}]});else if(request.method==='thread/read')pending.resolve({thread:{id:'remembered-thread',name:'Remembered task',cwd,source:'local',turns:[]}});else pending.reject(new Error(`Unexpected RPC ${request.method}`))})}};
   await api.loadInitial();
   return{activeId:state.active?.id,storedId:localStorage.getItem('panda-force-active-thread'),heading:document.querySelector('#threadTitle')?.textContent?.trim(),selected:document.querySelector('.thread-item.active')?.dataset.id};
@@ -84,5 +87,5 @@ if(!groupPersistence.firstOpen||groupPersistence.storageValue!=='open'||!groupPe
 if(!reloadPersistenceBefore.groupOpen||reloadPersistenceBefore.itemExpanded!=='true'||reloadPersistenceBefore.groupStored!=='open'||reloadPersistenceBefore.itemStored!=='open'||!reloadPersistenceBefore.sidebarHidden)throw new Error(`Activity expansion must persist before reload: ${JSON.stringify(reloadPersistenceBefore)}`);
 if(!reloadPersistenceAfter.groupOpen||reloadPersistenceAfter.itemExpanded!=='true'||!reloadPersistenceAfter.outputVisible||!reloadPersistenceAfter.sidebarOpen||reloadPersistenceAfter.sidebarShadow!=='none')throw new Error(`Activity expansion and default sidebar state must survive a real reload: ${JSON.stringify(reloadPersistenceAfter)}`);
 if(threadRestore.activeId!=='remembered-thread'||threadRestore.storedId!=='remembered-thread'||threadRestore.heading!=='Remembered task'||threadRestore.selected!=='remembered-thread')throw new Error(`The selected thread must restore on bootstrap: ${JSON.stringify(threadRestore)}`);
-if(sidebar.open.hidden||sidebar.open.width<250||sidebar.open.pressed!=='true'||!sidebar.closed.hidden||sidebar.closed.width!==0||sidebar.closed.shadow!=='none'||sidebar.closed.pressed!=='false')throw new Error(`Desktop sidebar state or collapsed shadow is incorrect: ${JSON.stringify(sidebar)}`);
+if(sidebar.open.hidden||sidebar.open.width<220||sidebar.open.pressed!=='true'||!sidebar.closed.hidden||sidebar.closed.width>sidebar.open.width||sidebar.closed.shadow!=='none'||sidebar.closed.pressed!=='false')throw new Error(`Desktop sidebar state or collapsed shadow is incorrect: ${JSON.stringify(sidebar)}`);
 if(errors.length)throw new Error(`Browser errors: ${errors.join('; ')}`);

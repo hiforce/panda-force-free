@@ -1,7 +1,10 @@
-import { chromium } from 'playwright';
-import { launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const browser=await chromium.launch(launchOptions());
+import { launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const browser=await runtime.launchBrowser(launchOptions());
 const context=await browser.newContext({viewport:{width:1280,height:800}});
 await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
 const page=await context.newPage();
@@ -9,11 +12,11 @@ const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 page.on('console',message=>{if(message.type()==='error'&&!message.text().includes('404'))errors.push(message.text())});
 
-await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(runtime.base,{waitUntil:'networkidle'});
 await page.waitForFunction(()=>globalThis.__pandaForceDebug);
 await page.evaluate(()=>{
   const api=globalThis.__pandaForceDebug;
-  api.state.active={id:'native-thread',cwd:api.state.config.defaultCwd,turns:[]};
+  (api.state.active={id:'native-thread',cwd:api.state.config.defaultCwd,turns:[]}, api.workbench.threadOpened(api.state.active.id));
   document.querySelector('#conversation').replaceChildren();
   api.notify('item/completed',{turnId:'optimistic-turn',item:{id:'local-native-user',type:'userMessage',content:[{type:'text',text:'Inspect the native conversation layout.'}]}});
   api.notify('item/completed',{turnId:'native-turn',item:{id:'native-user',type:'userMessage',content:[{type:'text',text:'Inspect the native conversation layout.'}]}});
@@ -152,8 +155,8 @@ if(JSON.stringify(result.timelineOrder)!==JSON.stringify(["message:I’ll inspec
 const normalizedFinal=result.finalText?.replace(/\s+/g,' ').trim();
 if(normalizedFinal!=='Implemented the native conversation timeline. Contiguous tool activity is grouped. The final response is plain Markdown. Updated app.js and guide.')throw new Error(`Unexpected final response text: ${result.finalText}`);
 if((result.finalText?.match(/Implemented the native conversation timeline\./g)||[]).length!==1)throw new Error('Streaming completion replay duplicated the final response');
-if(result.fontSize!=='13px'||result.lineHeight!=='21px')throw new Error(`Expected native 13px/21px typography, got ${result.fontSize}/${result.lineHeight}`);
-if(result.userFontSize!=='13px'||result.userLineHeight!=='21px')throw new Error(`Expected native user 13px/21px typography, got ${result.userFontSize}/${result.userLineHeight}`);
+if(result.fontSize!=='14px'||result.lineHeight!=='22px')throw new Error(`Expected native 14px/22px typography, got ${result.fontSize}/${result.lineHeight}`);
+if(result.userFontSize!=='14px'||result.userLineHeight!=='22px')throw new Error(`Expected native user 14px/22px typography, got ${result.userFontSize}/${result.userLineHeight}`);
 if(!result.fontFamily?.includes('-apple-system')||result.fontFamily?.includes('Inter'))throw new Error(`Expected native system font stack, got ${result.fontFamily}`);
 if(!result.userFontFamily?.includes('-apple-system')||result.userFontFamily?.includes('Inter'))throw new Error(`Expected native user system font stack, got ${result.userFontFamily}`);
 if(result.userMessageCount!==1)throw new Error(`Optimistic and server user messages must reconcile to one bubble; got ${result.userMessageCount}`);
@@ -177,10 +180,10 @@ if(result.workedForText!=='Worked for 4s'||!result.dividerBeforeFinal)throw new 
 if(result.workedForFlexDirection!=='column'||result.workedForLineCount!==1||JSON.stringify(result.workedForChildren)!==JSON.stringify(['span','div']))throw new Error(`Worked-for unit must render label then one rule; got ${result.workedForFlexDirection}/${result.workedForLineCount}/${JSON.stringify(result.workedForChildren)}`);
 const type=result.markdownTypography;
 if(type.paragraph.marginTop!=='0px'||type.paragraph.marginBottom!=='11px')throw new Error(`Unexpected paragraph rhythm: ${JSON.stringify(type.paragraph)}`);
-if(type.h1.fontSize!=='24px'||type.h1.lineHeight!=='30px'||type.h1.marginTop!=='0px'||type.h1.marginBottom!=='10px')throw new Error(`Unexpected H1 typography: ${JSON.stringify(type.h1)}`);
-if(type.h4.fontSize!=='17px'||type.h4.lineHeight!=='22px'||type.h4.marginTop!=='20px'||type.h4.marginBottom!=='10px')throw new Error(`Unexpected H4 typography: ${JSON.stringify(type.h4)}`);
+if(type.h1.fontSize!=='25px'||type.h1.lineHeight!=='31.25px'||type.h1.marginTop!=='0px'||type.h1.marginBottom!=='10px')throw new Error(`Unexpected H1 typography: ${JSON.stringify(type.h1)}`);
+if(type.h4.fontSize!=='18px'||type.h4.lineHeight!=='22px'||type.h4.marginTop!=='20px'||type.h4.marginBottom!=='10px')throw new Error(`Unexpected H4 typography: ${JSON.stringify(type.h4)}`);
 if(type.list.marginTop!=='0px'||type.list.marginBottom!=='0px'||type.list.paddingLeft!=='21px'||type.secondItem.marginTop!=='8px'||type.secondItem.paddingLeft!=='2px')throw new Error(`Unexpected list rhythm: ${JSON.stringify({list:type.list,item:type.secondItem})}`);
-if(type.inlineCode.fontSize!=='11.96px'||type.inlineCode.paddingLeft!=='6px'||type.inlineCode.paddingTop!=='1px'||type.inlineCode.borderRadius!=='6px')throw new Error(`Unexpected inline code typography: ${JSON.stringify(type.inlineCode)}`);
+if(type.inlineCode.fontSize!=='12.88px'||type.inlineCode.paddingLeft!=='6px'||type.inlineCode.paddingTop!=='1px'||type.inlineCode.borderRadius!=='6px')throw new Error(`Unexpected inline code typography: ${JSON.stringify(type.inlineCode)}`);
 if(type.blockquote.marginBottom!=='8px'||type.blockquote.paddingLeft!=='24px'||type.blockquote.paddingTop!=='8px'||type.blockquote.lineHeight!=='24px')throw new Error(`Unexpected blockquote rhythm: ${JSON.stringify(type.blockquote)}`);
 if(type.hr.marginTop!=='28px'||type.hr.marginBottom!=='28px'||type.pre.marginTop!=='14px'||type.pre.marginBottom!=='14px')throw new Error(`Unexpected block spacing: ${JSON.stringify({hr:type.hr,pre:type.pre})}`);
 await page.setViewportSize({width:390,height:844});
@@ -193,7 +196,7 @@ if(result.errors.length)throw new Error(`Browser errors: ${result.errors.join(';
 
 const optimisticFailure=await page.evaluate(async()=>{
   const api=globalThis.__pandaForceDebug;
-  api.state.active={id:'optimistic-failure-thread',cwd:'/tmp',source:'local'};
+  (api.state.active={id:'optimistic-failure-thread',cwd:'/tmp',source:'local'}, api.workbench.threadOpened(api.state.active.id));
   api.state.ws={send(raw){const request=JSON.parse(raw);queueMicrotask(()=>{const pending=api.state.pending.get(request.id);api.state.pending.delete(request.id);pending?.reject(new Error('forced turn start failure'))})}};
   const input=document.querySelector('#prompt');
   input.value='Retry this identical message';

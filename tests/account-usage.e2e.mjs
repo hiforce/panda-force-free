@@ -19,6 +19,7 @@ try {
   await page.clock.install();
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname;
+    if(path==='/api/rpc'){const call=route.request().postDataJSON();return route.fulfill({json:{type:'rpc/result',id:call.id,result:{data:call.method==='model/list'?[{id:'gpt-fixture',model:'gpt-fixture',supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]:[]}}})}
     const data = path === '/api/auth/status' ? { authenticated: true }
       : path === '/api/config' ? { home: '/tmp', defaultCwd: '/tmp' }
       : path === '/api/account' ? { type: 'chatgpt', displayName: 'Test Account', initials: 'T', planType: 'plus' } : {};
@@ -36,10 +37,10 @@ try {
         usageReads++;
         if (defer) { pending = request; return; }
         ws.send(JSON.stringify(failure ? { type: 'rpc/error', id: request.id, error: 'unavailable' } : { type: 'rpc/result', id: request.id, result: empty ? {} : limits(25) }));
-      } else ws.send(JSON.stringify({ type: 'rpc/result', id: request.id, result: { data: [] } }));
+      } else ws.send(JSON.stringify({ type: 'rpc/result', id: request.id, result: { data: request.method === 'model/list' ? [{id:'gpt-fixture',model:'gpt-fixture',displayName:'Fixture',supportedReasoningEfforts:[{reasoningEffort:'medium'}]}] : [] } }));
     });
   });
-  await page.goto(`http://127.0.0.1:${server.port}/settings/usage`);
+  await page.addInitScript(()=>{globalThis.__pandaForceTest=true});await page.goto(`http://127.0.0.1:${server.port}/settings/usage`);
   await page.waitForFunction(() => document.querySelector('#usageWindows')?.textContent.includes('25% 已用'));
   assert.equal(await page.locator('#usageWindows progress').count(), 2);
   assert.equal(await page.locator('[data-settings-page="usage"]').count(), 0);

@@ -44,18 +44,20 @@ export function readAsyncQuestions(item) {
   return questions;
 }
 
+export function closeAsyncQuestionCard(card, t) {
+  if (["submitting", "unconfirmed", "submitted", "earlier"].includes(card.dataset.status)) return;
+  card.open = false;
+  card.dataset.status = "earlier";
+  card.querySelector("summary").textContent = t("Earlier question");
+  for (const fieldset of card.querySelectorAll("fieldset")) fieldset.disabled = true;
+  card.querySelector("[type=submit]").hidden = true;
+  card.querySelector(".async-question-hint").textContent = t(
+    "You continued the conversation. This question is kept as history.",
+  );
+}
+
 export function closeEarlierAsyncQuestions(root, t) {
-  for (const card of root.querySelectorAll("[data-async-question-card]")) {
-    if (["submitting", "unconfirmed", "submitted"].includes(card.dataset.status)) continue;
-    card.open = false;
-    card.dataset.status = "earlier";
-    card.querySelector("summary").textContent = t("Earlier question");
-    for (const fieldset of card.querySelectorAll("fieldset")) fieldset.disabled = true;
-    card.querySelector("[type=submit]").hidden = true;
-    card.querySelector(".async-question-hint").textContent = t(
-      "You continued the conversation. This question is kept as history.",
-    );
-  }
+  for (const card of root.querySelectorAll("[data-async-question-card]")) closeAsyncQuestionCard(card, t);
 }
 
 export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
@@ -105,5 +107,6 @@ export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
     },
   );
   details.append(summary, hint, form);
+  if (item.questionState === "earlier") closeAsyncQuestionCard(details, t);
   return details;
 }

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { createProjectVisibilityFixture } from "./project-visibility-fixture.mjs";
-const fixture = await createProjectVisibilityFixture(),
+import { createAppFixture } from "./app-fixture.mjs";
+const fixture = await createAppFixture(),
   browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
 const artifacts = process.env.PANDA_I1_ARTIFACTS || ".artifacts/panda-force-i1";
 await mkdir(artifacts, { recursive: true });
@@ -17,6 +17,8 @@ try {
   await fixture.signIn(context);
   const page = await context.newPage();
   page.on("pageerror", (e) => result.errors.push(e.message));
+  const originalWait=page.waitForFunction.bind(page);
+  page.waitForFunction=async(...args)=>{try{return await originalWait(...args)}catch(error){console.error('Wait failed:',String(args[0]));throw error}};
   const start = Date.now();
   await page.goto(fixture.base + "/workspace");
   await page.locator(".wb-task-row").first().waitFor();
@@ -172,7 +174,7 @@ try {
   result.result = "passed";
   await writeFile(join(artifacts, "browser-results.json"), JSON.stringify(result, null, 2) + "\n");
   console.log(JSON.stringify(result));
-} finally {
+} catch(error) { console.error("Workbench failure", result); throw error; } finally {
   await browser.close();
   await fixture.dispose();
 }

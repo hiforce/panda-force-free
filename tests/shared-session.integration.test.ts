@@ -45,7 +45,7 @@ test("PandaForce and an SSH-style client share active input, events, and daemon 
       "-c", `model_providers.shared_test.base_url="http://127.0.0.1:${providerPort}"`,
       "-c", 'model_providers.shared_test.wire_api="responses"',
       "-c", "model_providers.shared_test.requires_openai_auth=false"],
-      { env: { ...process.env, CODEX_HOME: home }, stdout: "ignore", stderr: "ignore" });
+      { cwd: home, env: { ...process.env, CODEX_HOME: home }, stdout: "ignore", stderr: "ignore" });
     await waitFor(async () => {
       const candidate = new WebSocket(`ws+unix://${socketPath}:/`);
       return new Promise(resolve => {

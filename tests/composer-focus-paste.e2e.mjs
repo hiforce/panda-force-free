@@ -1,7 +1,7 @@
 import {chromium} from 'playwright';
 import {readFileSync} from 'node:fs';
-import {createProjectVisibilityFixture} from './project-visibility-fixture.mjs';
-const fixture=await createProjectVisibilityFixture();const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+import {createAppFixture} from './app-fixture.mjs';
+const fixture=await createAppFixture();const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{const context=await browser.newContext({permissions:['clipboard-read','clipboard-write']});await fixture.signIn(context);const page=await context.newPage();await page.goto(fixture.base+'/workspace');await page.locator('#workspacePreparation').waitFor({state:'hidden'});
 await page.evaluate(async data=>{const blob=await(await fetch('data:image/png;base64,'+data)).blob();await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);},readFileSync('public/assets/panda-icon.png').toString('base64'));
 await page.locator('#prompt').fill('Retain this draft');

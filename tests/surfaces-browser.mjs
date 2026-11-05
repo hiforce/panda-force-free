@@ -1,15 +1,18 @@
-import { chromium } from 'playwright';
+import { createBrowserFixture } from "./browser-runtime.mjs";
+
 import { artifact, launchOptions } from './browser-runtime.mjs';
-const browser=await chromium.launch(launchOptions());
+const runtime=await createBrowserFixture();
+
+const browser=await runtime.launchBrowser(launchOptions());
 async function run(width,height,name){
  const page=await browser.newPage({viewport:{width,height},isMobile:width<720,hasTouch:width<720});
  const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.log(name,'pageerror',e.message)});page.on('console',m=>{console.log(name,'console',m.type(),m.text());if(m.type()==='error'&&!m.text().includes('404'))errors.push(m.text())});
- await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+ await page.goto(runtime.base,{waitUntil:'networkidle'});
  await page.waitForTimeout(1000);
  console.log(name,'debug-state',await page.evaluate(()=>({debug:!!globalThis.__pandaForceDebug,scripts:[...document.scripts].map(s=>s.src)})));
  await page.waitForFunction(()=>globalThis.__pandaForceDebug);
  await page.evaluate(async()=>{
-   const api=globalThis.__pandaForceDebug;
+   const api=globalThis.__pandaForceDebug;api.state.active={id:'thread-demo',cwd:api.state.config.defaultCwd,turns:[]};api.workbench.threadOpened('thread-demo');
    api.notify('item/started',{turnId:'turn-demo',item:{id:'cmd-demo',type:'commandExecution',status:'inProgress',command:'bun test tests/codex-surfaces.test.ts'}});
    api.notify('turn/diff/updated',{turnId:'turn-demo',threadId:'thread-demo',diff:'diff --git a/src/app.ts b/src/app.ts\n--- a/src/app.ts\n+++ b/src/app.ts\n@@ -1,2 +1,3 @@\n const app = true;\n-old();\n+next();\n+export { next };\n'});
    await api.request({id:'approval-demo',method:'item/commandExecution/requestApproval',params:{threadId:'thread-demo',turnId:'turn-demo',itemId:'cmd-demo',command:'bun test tests/codex-surfaces.test.ts',cwd:globalThis.__pandaForceDebug.state.config.defaultCwd||'.',reason:'Run the focused test suite to verify the UI changes.',proposedExecpolicyAmendment:['bun','test'],startedAtMs:Date.now()}});

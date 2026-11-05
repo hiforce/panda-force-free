@@ -1,9 +1,12 @@
-import { chromium } from 'playwright';
-import { launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const browser=await chromium.launch(launchOptions());
+import { launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:800},colorScheme:'dark'});
-const baseUrl=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
+const baseUrl=runtime.base;
 const pageErrors=[];
 page.on('pageerror',error=>pageErrors.push(error.message));
 await page.goto(baseUrl,{waitUntil:'networkidle'});
@@ -82,7 +85,7 @@ await browser.close();
 
 const expectedActions=['Review','Terminal','Browser','Files','Side task'];
 const valid=pageErrors.length===0
-  &&initial.topbarHeight===46
+  &&initial.topbarHeight===64
   &&initial.hasBottomPanelButton===false
   &&initial.hasSummaryPanelButton
   &&initial.hasSidePanelButton
@@ -103,7 +106,7 @@ const valid=pageErrors.length===0
   &&initial.hasHardcodedTerminalPlaceholder===false
   &&summary.width>=280
   &&summary.pressed==='true'
-  &&JSON.stringify(summary.sections)===JSON.stringify(['Environment','Scheduled','Computer Use','Plan','Side tasks','Sources'])
+  &&JSON.stringify(summary.sections)===JSON.stringify(['Usage','Environment','Session','Scheduled','Computer Use','Plan','Side tasks','Sources'])
   &&summary.unavailable.every(text=>/native|app-server/i.test(text))
   &&Math.abs(summary.geometry.total-summary.geometry.panelHeight)<1
   &&summary.geometry.scrollBottom<=summary.geometry.panelBottom+.5

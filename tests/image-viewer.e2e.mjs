@@ -1,10 +1,10 @@
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createServer } from 'node:net';
+
 import sharp from 'sharp';
-import { chromium } from 'playwright';
-import { launchOptions } from './browser-runtime.mjs';
+
+import { createBrowserFixture, launchOptions } from './browser-runtime.mjs';
 
 const directory=mkdtempSync(join(tmpdir(),'panda-force-agent-images-'));
 const imageA=join(directory,'panda-force-agent-image-a.png');
@@ -13,31 +13,26 @@ const png=readFileSync(new URL('../public/assets/panda-icon.png',import.meta.url
 const largePng=await sharp(png).resize(2400,1800,{fit:'fill'}).png().toBuffer();
 writeFileSync(imageA,largePng);
 writeFileSync(imageB,png);
-let base=process.env.PANDA_FORCE_TEST_URL,server;
-if(!base){
-  const port=await new Promise(resolve=>{const probe=createServer();probe.listen(0,'127.0.0.1',()=>{const {port}=probe.address();probe.close(()=>resolve(port))})});
-  base=`http://127.0.0.1:${port}`;
-  server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:new URL('..',import.meta.url).pathname,
-    env:{...process.env,HOME:directory,HOST:'127.0.0.1',PORT:String(port),CODEX_HOME:join(directory,'codex'),PANDA_FORCE_CWD:directory,PANDA_FORCE_AUTH_MODE:'none',PANDA_FORCE_PASSWORD:'',PANDA_FORCE_ACCESS_TOKEN:'',PANDA_FORCE_APP_SERVER_MODE:'isolated',PANDA_FORCE_ATTACHMENT_STORAGE:'local'},stdout:'ignore',stderr:'ignore'});
-}
+const runtime=await createBrowserFixture({workspaceDirectory:directory});
+const base=runtime.base;
 
 let browser,page,stage='startup';
 try{
-  for(let i=0;i<200;i++){try{if((await fetch(`${base}/health/liveness`)).ok)break}catch{}await Bun.sleep(50)}
-  const imageResponse=await fetch(`${base}/api/images/local?path=${encodeURIComponent(imageA)}&cwd=${encodeURIComponent('/tmp')}`);
+  for(let i=0;i<200;i++){try{if((await fetch(`${base}/health/liveness`,{headers:runtime.headers})).ok)break}catch{}await Bun.sleep(50)}
+  const imageResponse=await fetch(`${base}/api/images/local?path=${encodeURIComponent(imageA)}&cwd=${encodeURIComponent('/tmp')}`,{headers:runtime.headers});
   if(!imageResponse.ok||imageResponse.headers.get('content-type')!=='image/png'||!Buffer.from(await imageResponse.arrayBuffer()).equals(largePng))throw new Error('Local image endpoint did not return the original PNG');
-  const thumbnailResponse=await fetch(`${base}/api/images/local?path=${encodeURIComponent(imageA)}&thumbnail=1`);
+  const thumbnailResponse=await fetch(`${base}/api/images/local?path=${encodeURIComponent(imageA)}&thumbnail=1`,{headers:runtime.headers});
   const compressed=Buffer.from(await thumbnailResponse.arrayBuffer()),metadata=await sharp(compressed).metadata();
   if(!thumbnailResponse.ok||thumbnailResponse.headers.get('content-type')!=='image/webp'||metadata.width!==640||metadata.height!==480||compressed.length>=largePng.length)throw new Error('Activity image endpoint did not compress the original');
   if(!readFileSync(imageA).equals(largePng))throw new Error('Thumbnail generation modified the original file');
-  const deniedResponse=await fetch(`${base}/api/images/local?path=${encodeURIComponent(new URL('../package.json',import.meta.url).pathname)}`);
+  const deniedResponse=await fetch(`${base}/api/images/local?path=${encodeURIComponent(new URL('../package.json',import.meta.url).pathname)}`,{headers:runtime.headers});
   if(deniedResponse.status!==404)throw new Error(`Non-image local files must be rejected, got ${deniedResponse.status}`);
-  const deniedThumbnail=await fetch(`${base}/api/images/local?path=${encodeURIComponent(new URL('../package.json',import.meta.url).pathname)}&thumbnail=1`);
+  const deniedThumbnail=await fetch(`${base}/api/images/local?path=${encodeURIComponent(new URL('../package.json',import.meta.url).pathname)}&thumbnail=1`,{headers:runtime.headers});
   if(deniedThumbnail.status!==404)throw new Error('Thumbnails must retain the local file boundary');
   const crossSite=await fetch(`${base}/api/images/local?path=${encodeURIComponent(imageA)}&thumbnail=1`,{headers:{'sec-fetch-site':'cross-site'}});
   if(crossSite.status!==401)throw new Error('Thumbnails must retain request authentication');
 
-  browser=await chromium.launch(launchOptions());
+  browser=await runtime.launchBrowser(launchOptions());
   page=await browser.newPage({viewport:{width:1280,height:800}});
   const errors=[];
   page.on('pageerror',error=>errors.push(error.message));
@@ -58,9 +53,9 @@ try{
   await page.waitForFunction(()=>globalThis.__pandaForceDebug);
   await page.evaluate(({imageA,imageB})=>{
     const api=globalThis.__pandaForceDebug;
-    for(const animation of api.state.motion.values())animation?.destroy?.();
-    for(const map of [api.state.items,api.state.turns,api.state.activities,api.state.activityItems,api.state.dividers,api.state.motion])map.clear();
-    api.state.active={id:'image-thread',cwd:api.state.config.defaultCwd,source:'local'};
+
+    for(const map of [api.state.items,api.state.turns,api.state.activities,api.state.activityItems,api.state.dividers])map.clear();
+    (api.state.active={id:'image-thread',cwd:api.state.config.defaultCwd,source:'local'}, api.workbench.threadOpened(api.state.active.id));
     document.querySelector('#conversation').replaceChildren();
     api.notify('item/completed',{turnId:'image-turn',item:{id:'image-view',type:'imageView',status:'completed',imagePaths:[imageA,imageB]}});
   },{imageA,imageB});
@@ -75,8 +70,8 @@ try{
   await page.locator('#closeImageViewer').click();
   await page.evaluate(({imageA,imageB})=>{
     const api=globalThis.__pandaForceDebug;
-    for(const animation of api.state.motion.values())animation?.destroy?.();
-    for(const map of [api.state.items,api.state.turns,api.state.activities,api.state.activityItems,api.state.dividers,api.state.motion])map.clear();
+
+    for(const map of [api.state.items,api.state.turns,api.state.activities,api.state.activityItems,api.state.dividers])map.clear();
     document.querySelector('#conversation').replaceChildren();
     api.notify('item/completed',{turnId:'image-turn',item:{id:'image-commentary',type:'agentMessage',phase:'commentary',text:`Here is the captured result.\n\n![Agent screenshot](${imageA})\n\n[Open the screenshot](${imageA})`}});
     api.notify('item/completed',{turnId:'image-turn',item:{id:'image-command-before',type:'commandExecution',status:'completed',command:'ls /tmp'}});
@@ -157,6 +152,6 @@ try{
   throw error;
 }finally{
   await browser?.close();
-  if(server){server.kill();await server.exited}
+  await runtime.dispose();
   rmSync(directory,{recursive:true,force:true});
 }

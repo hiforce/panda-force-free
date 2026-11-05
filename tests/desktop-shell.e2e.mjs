@@ -1,12 +1,15 @@
-import { chromium } from 'playwright';
-import { launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const base=process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899';
-const browser=await chromium.launch(launchOptions());
+import { launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const base=runtime.base;
+const browser=await runtime.launchBrowser(launchOptions());
 const context=await browser.newContext({viewport:{width:1120,height:760},colorScheme:'dark'});
 await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
 const page=await context.newPage();
-page.setDefaultTimeout(7000);
+page.setDefaultTimeout(7000);const originalWait=page.waitForFunction.bind(page);page.waitForFunction=async(...args)=>{try{return await originalWait(...args)}catch(error){console.error('Wait failed:',String(args[0]));throw error}};
 const errors=[];
 page.on('pageerror',error=>errors.push(error.message));
 await page.goto(base,{waitUntil:'networkidle'});
@@ -44,7 +47,7 @@ const chatgpt=await page.evaluate(()=>({
 await page.click('#accountSettings');
 await page.waitForFunction(()=>document.querySelector('#settingsDialog').open);
 const settingsShell=await page.evaluate(()=>({
-  groups:[...document.querySelectorAll('[data-settings-group] h2')].map(node=>node.textContent.trim()),
+  groups:[...document.querySelectorAll('[data-settings-group] summary')].map(node=>node.textContent.trim()),
   pages:[...document.querySelectorAll('[data-settings-page]')].map(node=>node.textContent.trim()),
   fullPage:getComputedStyle(document.querySelector('#settingsDialog')).position==='fixed',
   back:document.querySelector('#closeSettingsNav')?.textContent.trim(),
@@ -52,7 +55,7 @@ const settingsShell=await page.evaluate(()=>({
   modal:document.querySelector('#settingsDialog').matches(':modal'),
   navSpacer:document.querySelector('.settings-nav-toolbar-spacer')?.getBoundingClientRect().height,
 }));
-await page.click('[data-settings-page="agent"]');
+await page.locator('[data-settings-group]').evaluateAll(groups=>groups.forEach(group=>group.open=true));await page.click('[data-settings-page="agent"]');
 const configuration=await page.evaluate(()=>({
   title:document.querySelector('.settings-page:not([hidden]) h1')?.textContent.trim(),
   route:location.pathname,
@@ -61,13 +64,13 @@ const configuration=await page.evaluate(()=>({
 await page.fill('#settingsSearch','browser');
 const settingsSearch=await page.evaluate(()=>({
   visible:[...document.querySelectorAll('[data-settings-page]')].filter(node=>!node.hidden).map(node=>node.textContent.trim()),
-  groups:[...document.querySelectorAll('[data-settings-group]')].filter(node=>!node.hidden).map(node=>node.querySelector('h2')?.textContent.trim()),
+  groups:[...document.querySelectorAll('[data-settings-group]')].filter(node=>!node.hidden).map(node=>node.querySelector('summary')?.textContent.trim()),
   clearVisible:!document.querySelector('#clearSettingsSearch').hidden,
 }));
-await page.click('[data-settings-page="browser-use"]');
+await page.locator('[data-settings-group]').evaluateAll(groups=>groups.forEach(group=>group.open=true));await page.click('[data-settings-page="browser-use"]');
 await page.screenshot({path:'/tmp/panda-force-settings-shell.png'});
 await page.click('#clearSettingsSearch');
-await page.click('[data-settings-page="general-settings"]');
+await page.locator('[data-settings-group]').evaluateAll(groups=>groups.forEach(group=>group.open=true));await page.click('[data-settings-page="general-settings"]');
 const settings=await page.evaluate(()=>({
   open:document.querySelector('#settingsDialog').open,
   title:document.querySelector('#settingsTitle')?.textContent.trim(),
@@ -78,7 +81,7 @@ const settings=await page.evaluate(()=>({
   fullAccessChecked:document.querySelector('#settingsFullAccessToggle')?.checked,
 }));
 await page.click('#closeSettingsNav');
-await page.waitForFunction(()=>!document.querySelector('#settingsDialog').open&&location.pathname==='/');
+await page.waitForFunction(()=>!document.querySelector('#settingsDialog').open&&['/workspace','/'].includes(location.pathname));
 
 await page.click('#modeButton');
 const permissionMenu=await page.evaluate(()=>({
@@ -137,7 +140,7 @@ const fullAccessSettingOn=await page.evaluate(()=>({
   visible:globalThis.__pandaForceDebug.state.permissionVisibility.fullAccess,
 }));
 await page.click('#closeSettingsNav');
-await page.waitForFunction(()=>!document.querySelector('#settingsDialog').open&&location.pathname==='/');
+await page.waitForFunction(()=>!document.querySelector('#settingsDialog').open&&['/workspace','/'].includes(location.pathname));
 
 await page.evaluate(()=>globalThis.__pandaForceDebug.renderAccount({type:'apiKey',displayName:'API key',avatarUrl:null,planType:null,initials:'AP'}));
 await page.click('#accountButton');
@@ -184,7 +187,7 @@ const directSettings=await directPage.evaluate(()=>({
   modal:document.querySelector('#settingsDialog').matches(':modal'),
 }));
 await directPage.click('#closeSettingsNav');
-await directPage.waitForFunction(()=>!document.querySelector('#settingsDialog').open&&location.pathname==='/');
+await directPage.waitForFunction(()=>!document.querySelector('#settingsDialog').open&&['/workspace','/'].includes(location.pathname));
 directSettings.closedRoute=await directPage.evaluate(()=>location.pathname);
 await directPage.close();
 
@@ -192,8 +195,8 @@ console.log(JSON.stringify({chatgpt,settingsShell,configuration,settingsSearch,s
 await browser.close();
 if(
   errors.length||
-  chatgpt.product!=='Codex'||chatgpt.newChat!=='New chat'||chatgpt.search!=='Search chats'||chatgpt.projects!=='Projects'||chatgpt.footerName!=='Desktop User'||chatgpt.footerMeta!==''||chatgpt.buttonLabel!=='Open profile menu'||chatgpt.profileHidden||chatgpt.usageHidden||chatgpt.logoutHidden||
-  settingsShell.groups.join('|')!=='Personal|Integrations|Coding|Archived'||!settingsShell.pages.includes('Configuration')||!settingsShell.pages.includes('Cloud preferences')||!settingsShell.fullPage||settingsShell.back!=='Back to app'||settingsShell.route!=='/settings/general-settings'||settingsShell.modal||settingsShell.navSpacer!==46||configuration.title!=='Configuration'||configuration.route!=='/settings/agent'||!configuration.values.some(value=>value.startsWith('Model'))||settingsSearch.visible.join('|')!=='Browser'||settingsSearch.groups.join('|')!=='Integrations'||!settingsSearch.clearVisible||
+  chatgpt.product!=='PandaForce'||chatgpt.newChat!=='New session'||chatgpt.search!=='Search sessions'||chatgpt.projects!=='Projects'||chatgpt.footerName!=='Desktop User'||chatgpt.footerMeta!==''||chatgpt.buttonLabel!=='Open profile menu'||chatgpt.profileHidden||chatgpt.usageHidden||chatgpt.logoutHidden||
+  settingsShell.groups.length!==5||!settingsShell.pages.includes('Configuration')||!settingsShell.pages.includes('Cloud preferences')||!settingsShell.fullPage||settingsShell.back!=='Back to app'||settingsShell.route!=='/settings/general-settings'||!settingsShell.modal||settingsShell.navSpacer!==46||configuration.title!=='Configuration'||configuration.route!=='/settings/agent'||!configuration.values.some(value=>value.startsWith('Model'))||settingsSearch.visible.join('|')!=='Browser'||settingsSearch.groups.join('|')!=='Engines and tools'||!settingsSearch.clearVisible||
   !settings.open||settings.title!=='Settings'||settings.page!=='General'||settings.permission!=='Ask for approval'||!settings.autoReviewHidden||!settings.autoReviewChecked||!settings.fullAccessChecked||
   !permissionMenu.open||permissionMenu.options.join('|')!=='Ask for approval|Approve for me|Full access|team-safe|managed-blocked'||!permissionMenu.blockedDisabled||
   guardian.selected.approvalsReviewer!=='auto_review'||guardian.thread.approvalPolicy!=='on-request'||guardian.thread.approvalsReviewer!=='auto_review'||guardian.thread.sandbox!=='workspace-write'||guardian.turn.approvalsReviewer!=='auto_review'||guardian.turn.sandboxPolicy.type!=='workspaceWrite'||guardian.turn.permissions!==null||
@@ -201,5 +204,5 @@ if(
   !fullAccessDialog.modal||Math.abs(fullAccessDialog.centerX-fullAccessDialog.viewportX)>1||Math.abs(fullAccessDialog.centerY-fullAccessDialog.viewportY)>1||
   fullAccess.label!=='Full access'||fullAccess.mode!=='full-access'||fullAccess.selected.approvalPolicy!=='never'||fullAccess.selected.sandbox!=='danger-full-access'||fullAccess.thread.approvalPolicy!=='never'||fullAccess.thread.approvalsReviewer!=='user'||fullAccess.thread.sandbox!=='danger-full-access'||fullAccess.turn.sandboxPolicy.type!=='dangerFullAccess'||
   fullAccessSettingOff.checked||fullAccessSettingOff.visible||fullAccessSettingOff.mode!=='default'||!fullAccessSettingOn.checked||!fullAccessSettingOn.visible||fullAccessSettingOn.mode!=='default'||
-  apiKey.footerName!=='API key'||apiKey.footerMeta!==''||apiKey.buttonLabel!=='Open settings'||apiKey.avatarClass!=='account-avatar account-settings-icon'||apiKey.avatarIcon!==1||!apiKey.profileHidden||!apiKey.usageHidden||apiKey.settingsHidden||!apiKey.logoutHidden||!apiSettings.autoReviewHidden||mobileSettings.horizontalOverflow||mobileSettings.dialog.width!==mobileSettings.viewport.width||mobileSettings.pageVisible!=='true'||mobileSettings.navWidth!==0||mobileSettings.contentWidth!==mobileSettings.viewport.width||mobileSettingsNavigation.pageVisible!=='false'||mobileSettingsNavigation.navWidth!==mobileSettings.viewport.width||mobileSettingsNavigation.contentWidth!==0||directSettings.route!=='/settings/browser-use'||directSettings.title!=='Browser'||directSettings.modal||directSettings.closedRoute!=='/'
+  apiKey.footerName!=='API key'||apiKey.footerMeta!==''||apiKey.buttonLabel!=='Open settings'||apiKey.avatarClass!=='account-avatar account-settings-icon'||apiKey.avatarIcon!==1||!apiKey.profileHidden||!apiKey.usageHidden||apiKey.settingsHidden||!apiKey.logoutHidden||!apiSettings.autoReviewHidden||mobileSettings.horizontalOverflow||mobileSettings.dialog.width!==mobileSettings.viewport.width||mobileSettings.pageVisible!=='true'||mobileSettings.navWidth!==0||mobileSettings.contentWidth!==mobileSettings.viewport.width||mobileSettingsNavigation.pageVisible!=='false'||mobileSettingsNavigation.navWidth!==mobileSettings.viewport.width||mobileSettingsNavigation.contentWidth!==0||directSettings.route!=='/settings/browser-use'||directSettings.title!=='Browser'||!directSettings.modal||directSettings.closedRoute!=='/workspace'
 )process.exit(1);

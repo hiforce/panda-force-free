@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:net';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { chromium } from 'playwright';
-import { launchOptions } from './browser-runtime.mjs';
+
+import { createBrowserFixture, launchOptions } from './browser-runtime.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const freePort = () => new Promise((resolvePort, reject) => {
@@ -16,19 +16,7 @@ const freePort = () => new Promise((resolvePort, reject) => {
     probe.close(error => error ? reject(error) : resolvePort(address.port));
   });
 });
-const port = await freePort();
-const base = `http://127.0.0.1:${port}`;
 const fixtureRoot = mkdtempSync(join(tmpdir(), 'panda-force-preview-'));
-mkdirSync(join(fixtureRoot, 'codex-home'));
-writeFileSync(join(fixtureRoot, 'codex'), `#!${process.execPath}
-import { createInterface } from 'node:readline';
-createInterface({input:process.stdin}).on('line', line => {
-  const message = JSON.parse(line);
-  if (message.id === undefined || !message.method) return;
-  const result = message.method === 'initialize' ? {codexHome:${JSON.stringify(join(fixtureRoot, 'codex-home'))}} : {data:[],account:null,config:{},active:false,turn:null};
-  process.stdout.write(JSON.stringify({id:message.id,result})+'\\n');
-});
-`, { mode: 0o700 });
 const fixture = join(fixtureRoot, "agent's result.txt");
 const body = 'previewed from the Codex conversation\n<script>window.__fileXss=1</script>\n';
 writeFileSync(fixture, body);
@@ -52,27 +40,20 @@ for (const [index, object] of objects.entries()) {
 const xref = Buffer.byteLength(pdf);
 pdf += `xref\n0 5\n0000000000 65535 f \n${offsets.slice(1).map(offset => `${String(offset).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
 writeFileSync(join(fixtureRoot, 'report.pdf'), pdf);
-const server = Bun.spawn(['bun', 'run', 'src/server/main.ts'], {
-  cwd: root, env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), CODEX_HOME: join(fixtureRoot, 'codex-home'), PANDA_FORCE_APP_SERVER_MODE: 'isolated', PATH: `${fixtureRoot}:${process.env.PATH}`, PANDA_FORCE_AUTH_STORE: join(fixtureRoot, 'auth.json'), PANDA_FORCE_PASSWORD: '', PANDA_FORCE_ACCESS_TOKEN: '' },
-  stdout: 'ignore', stderr: 'pipe',
-});
+const runtime=await createBrowserFixture({workspaceDirectory:fixtureRoot});
+const base=runtime.base;
 let browser;
 
 try {
-  for (let attempt = 0; attempt < 80; attempt++) {
-    try { if ((await fetch(`${base}/api/health`)).ok) break; } catch {}
-    if (attempt === 79) { server.kill(); await server.exited; throw new Error(`File preview test server did not become ready: ${await new Response(server.stderr).text()}`); }
-    await Bun.sleep(100);
-  }
-  const direct = await fetch(`${base}/api/files/download?path=${encodeURIComponent(fixture)}&cwd=${encodeURIComponent(fixtureRoot)}`);
+  const direct = await fetch(`${base}/api/files/download?path=${encodeURIComponent(fixture)}&cwd=${encodeURIComponent(fixtureRoot)}`,{headers:runtime.headers});
   assert.ok(direct.ok);
   assert.equal(await direct.text(), body);
   assert.ok(direct.headers.get('content-disposition')?.includes("filename*=UTF-8''agent%27s%20result.txt"));
   assert.equal(direct.headers.get('cache-control'), 'no-store');
   assert.equal(direct.headers.get('x-content-type-options'), 'nosniff');
-  assert.equal((await fetch(`${base}/api/files/download?path=${encodeURIComponent('/etc/hosts')}`)).status, 404);
+  assert.equal((await fetch(`${base}/api/files/download?path=${encodeURIComponent('/etc/hosts')}`,{headers:runtime.headers})).status, 404);
 
-  browser = await chromium.launch({ ...launchOptions(), channel: 'chromium' });
+  browser = await runtime.launchBrowser({ ...launchOptions(), channel: 'chromium' });
   const page = await browser.newPage({ acceptDownloads: true, viewport: { width: 1000, height: 720 } });
   await page.addInitScript(() => { if (window === window.top) localStorage.setItem('panda-force-locale', 'en'); });
   const errors = [], downloads = [];
@@ -82,7 +63,7 @@ try {
   await page.waitForFunction(() => globalThis.__pandaForceDebug);
   await page.evaluate(({ fixture, fixtureRoot }) => {
     const api = globalThis.__pandaForceDebug;
-    api.state.active = { id: 'preview-thread', cwd: fixtureRoot, source: 'local' };
+    (api.state.active = { id: 'preview-thread', cwd: fixtureRoot, source: 'local' }, api.workbench.threadOpened(api.state.active.id));
     document.querySelector('#conversation').replaceChildren();
     api.notify('item/completed', { turnId: 'preview-turn', item: {
       id: 'preview-answer', type: 'agentMessage', phase: 'final_answer',
@@ -198,7 +179,6 @@ try {
   console.log(JSON.stringify({ preview: 'ok', lineSelection: 'ok', markdown: 'ok', pdf: 'ok', errorsAndLimits: 'ok', staleRequests: 'ok', explicitDownload: 'ok', mobile }, null, 2));
 } finally {
   await browser?.close();
-  server.kill();
-  await server.exited;
+  await runtime.dispose();
   rmSync(fixtureRoot, { recursive: true, force: true });
 }

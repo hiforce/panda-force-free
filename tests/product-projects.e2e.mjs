@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
-import { createProjectVisibilityFixture, waitFor } from "./project-visibility-fixture.mjs";
+import { createAppFixture, waitFor } from "./app-fixture.mjs";
 
-const fixture = await createProjectVisibilityFixture();
+const fixture = await createAppFixture();
 const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
 const artifacts = ".artifacts/product-projects";
 await mkdir(artifacts, { recursive: true });

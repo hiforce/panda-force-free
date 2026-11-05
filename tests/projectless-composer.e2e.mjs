@@ -1,10 +1,13 @@
-import { chromium } from 'playwright';
-import { artifact, launchOptions } from './browser-runtime.mjs';
+import { createBrowserFixture } from "./browser-runtime.mjs";
 
-const browser=await chromium.launch(launchOptions());
+import { artifact, launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
+
+const browser=await runtime.launchBrowser(launchOptions());
 const page=await browser.newPage({viewport:{width:1018,height:980},colorScheme:'dark'});
 const errors=[];page.on('pageerror',error=>errors.push(error.message));
-await page.goto(process.env.PANDA_FORCE_TEST_URL||'http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.goto(runtime.base,{waitUntil:'networkidle'});
 
 const selectedProject=await page.evaluate(()=>({
   trigger:document.querySelector('#composerProjectButton')?.textContent?.trim(),
@@ -39,21 +42,21 @@ const projectless=await page.evaluate(()=>({
   dialogOpen:document.querySelector('#folderDialog')?.open,
   mentionMessage:document.querySelector('#composerAutocomplete')?.textContent?.trim(),
 }));
-await page.evaluate(()=>{const api=globalThis.__pandaForceDebug;api.state.active={id:'existing',name:'Existing task',cwd:`${api.state.config.home}/projects/panda-force`,source:'local'};api.renderHeader()});
+await page.evaluate(()=>{const api=globalThis.__pandaForceDebug;(api.state.active={id:'existing',name:'Existing task',cwd:`${api.state.config.home}/projects/panda-force`,source:'local'}, api.workbench.threadOpened(api.state.active.id));api.renderHeader()});
 const existing=await page.evaluate(()=>({triggerHidden:document.querySelector('#composerProjectButton')?.hidden,placeholder:document.querySelector('#prompt')?.placeholder}));
 console.log(JSON.stringify({selectedProject,picker,chooseProjectAction,projectPickerReopened,projectless,existing,errors},null,2));
 await browser.close();
 
 if(selectedProject.triggerHidden
   ||!selectedProject.trigger?.includes(selectedProject.sidebar)
-  ||!selectedProject.heading?.includes(selectedProject.sidebar)
-  ||picker.title!=='Project'
-  ||!picker.projectless?.includes('None')||!picker.projectless?.includes("Don't work in a project")
+  ||selectedProject.heading!=='What can I help?'
+  ||picker.title!=='Working folder'
+  ||!picker.projectless?.includes('None')||!picker.projectless?.includes('No working folder')
   ||projectless.heading!=='What can I help?'
   ||projectless.sidebar!=='Tasks'
   ||projectless.path!=='~'
   ||projectless.threadPath!==''
-  ||!projectless.trigger?.includes('Tasks')
+  ||projectless.trigger!=='No working folder'
   ||projectless.dialogOpen
   ||!chooseProjectAction.exists||!chooseProjectAction.text?.includes('Choose project')
   ||!projectPickerReopened

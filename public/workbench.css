@@ -68,7 +68,7 @@
   --pf-line: #3b3b3b;
   --pf-soft: #2c2c2c;
   --pf-message-bg: #303030;
-  --pf-danger: #d17770;
+  --pf-danger: #ed928b;
 }
 :root[data-theme="light"] {
   --pf-accent: #425ee8;
@@ -365,6 +365,14 @@
   background: var(--pf-primary);
   color: white;
   border-radius: 9px;
+}
+.send-button:hover {
+  background: var(--pf-primary);
+  color: white;
+}
+/* Decorative icon replacement must not change the pointer's activation target. */
+.send-button * {
+  pointer-events: none;
 }
 .send-button:disabled {
   opacity: 0.35;
@@ -1536,3 +1544,10 @@
 @media(max-width:720px){#workbenchComposerSlot{grid-template-columns:minmax(0,1fr);gap:8px}#workbenchComposerSlot .business-project-context{padding:0}#workbenchComposerSlot .composer-project-control{max-width:100%;min-width:0}}
 
 .async-question-card{margin:12px 0;border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow:hidden}.async-question-card>summary{padding:14px 16px;cursor:pointer;font-weight:600;min-height:44px}.async-question-hint{margin:0;padding:0 16px 12px;color:var(--muted);font-size:13px}.async-question-card .user-input-card{margin:0;border:0;box-shadow:none}.async-question-card[data-status=earlier]{opacity:.8}
+
+@media (max-height: 480px) {
+  .mobile-device.visual-viewport-active .composer-dock {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}

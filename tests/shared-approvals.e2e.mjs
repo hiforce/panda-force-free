@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
-import {createProjectVisibilityFixture,waitFor} from './project-visibility-fixture.mjs';
-const fixture=await createProjectVisibilityFixture({sharedApprovals:true});
+import {createAppFixture,waitFor} from './app-fixture.mjs';
+const fixture=await createAppFixture({sharedApprovals:true});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 try{
  const context=await browser.newContext({viewport:{width:390,height:844},locale:'en'});

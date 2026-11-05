@@ -1,26 +1,26 @@
+import { createBrowserFixture } from "./browser-runtime.mjs";
 import assert from 'node:assert/strict';
-import { createServer } from 'node:net';
-import { chromium } from 'playwright';
+
+
 import { launchOptions } from './browser-runtime.mjs';
 
 const root=new URL('..',import.meta.url).pathname;
-async function freePort(){return await new Promise((resolve,reject)=>{const probe=createServer();probe.once('error',reject);probe.listen(0,'127.0.0.1',()=>{const address=probe.address();if(!address||typeof address==='string')return reject(new Error('Could not allocate composer test port'));probe.close(error=>error?reject(error):resolve(address.port))})})}
-async function waitFor(check,timeout=20_000){const started=Date.now();while(Date.now()-started<timeout){try{if(await check())return}catch{}await Bun.sleep(50)}throw new Error('Timed out waiting for composer test server')}
 
-const port=await freePort(),base=`http://127.0.0.1:${port}`;
-const server=Bun.spawn(['bun','run','src/server/main.ts'],{cwd:root,env:{...process.env,HOST:'127.0.0.1',PORT:String(port)},stdout:'ignore',stderr:'ignore'});
+
+
+const runtime=await createBrowserFixture();
+const port=Number(new URL(runtime.base).port),base=runtime.base;
 let browser;
 try{
-  await waitFor(async()=>(await fetch(`${base}/api/health`)).ok);
-  const historyResponse=await fetch(`${base}/api/composer/history`);
+  const historyResponse=await fetch(`${base}/api/composer/history`,{headers:runtime.headers});
   assert.equal(historyResponse.status,200);
   assert.equal(historyResponse.headers.get('cache-control'),'no-store');
   assert.ok(Array.isArray((await historyResponse.json()).entries));
-  assert.equal((await fetch(`${base}/api/composer/history`,{method:'POST'})).status,405);
-  browser=await chromium.launch(launchOptions());
+  assert.equal((await fetch(`${base}/api/composer/history`,{method:'POST',headers:runtime.headers})).status,405);
+  browser=await runtime.launchBrowser(launchOptions());
   const context=await browser.newContext({viewport:{width:1018,height:760},colorScheme:'dark'});
   await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
-  const page=await context.newPage(),errors=[];
+  const page=await context.newPage(),errors=[];const originalWait=page.waitForFunction.bind(page);page.waitForFunction=async(...args)=>{try{return await originalWait(...args)}catch(error){console.error('Wait failed:',String(args[0]));throw error}};
   page.on('pageerror',error=>errors.push(error.message));
   await page.route('**/api/composer/history',route=>route.fulfill({json:{entries:[{text:'older CLI message'},{text:'first line\nsecond line'}]}}));
   await page.goto(base,{waitUntil:'networkidle'});
@@ -61,7 +61,7 @@ try{
   await page.keyboard.press('Escape');
   await page.evaluate(()=>{
     const api=globalThis.__pandaForceDebug;
-    api.state.active={id:'history-thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:true};
+    (api.state.active={id:'history-thread',cwd:api.state.config.defaultCwd,turns:[],canAcceptDirectInput:true}, api.workbench.threadOpened(api.state.active.id));
     api.state.composerMentions=[{id:'file:package.json',title:'package.json',path:'package.json',source:'file'}];
     api.state.transport='sse';
     const original=window.fetch;
@@ -87,7 +87,7 @@ try{
   await prompt.fill('queued message');await page.keyboard.press('Tab');
   await page.waitForFunction(()=>document.querySelector('#prompt').value==='');
   await page.keyboard.press('ArrowUp');assert.equal(await prompt.inputValue(),'queued message');
-  await page.click('#newTask');await page.keyboard.press('ArrowUp');
+  await page.click('#newTask');await prompt.fill('');await page.keyboard.press('ArrowUp');
   assert.equal(await prompt.inputValue(),'queued message');
   await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('resumed-thread'));
   await prompt.focus();await page.keyboard.press('ArrowUp');
@@ -95,7 +95,7 @@ try{
   await page.keyboard.press('ArrowUp');assert.equal(await prompt.inputValue(),'use selected file');
   await page.keyboard.press('ArrowUp');assert.equal(await prompt.inputValue(),'resumed prompt');
   await prompt.fill('resumed draft');
-  await page.click('#newTask');await page.keyboard.press('ArrowDown');
+  await page.click('#newTask');assert.equal(await prompt.inputValue(),'queued message');await prompt.fill('');await page.keyboard.press('ArrowDown');
   assert.equal(await prompt.inputValue(),'');
   await page.evaluate(()=>globalThis.__pandaForceDebug.openThread('resumed-thread'));
   await prompt.focus();await page.keyboard.press('ArrowUp');
@@ -103,5 +103,5 @@ try{
   assert.deepEqual(errors,[]);
   console.log('Composer history browser checks passed');
 }finally{
-  await browser?.close();server.kill();await server.exited;
+  await browser?.close();await runtime.dispose();
 }

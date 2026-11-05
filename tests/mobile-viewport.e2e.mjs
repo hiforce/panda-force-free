@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { chromium, devices } from 'playwright';
 import { artifact, launchOptions } from './browser-runtime.mjs';
-import { createProjectVisibilityFixture } from './project-visibility-fixture.mjs';
+import { createAppFixture } from './app-fixture.mjs';
 
-const fixture = await createProjectVisibilityFixture();
+const fixture = await createAppFixture();
 let browser;
 const results = [];
 try {
@@ -11,7 +11,7 @@ try {
   for (const [device, width, height] of [['iPhone 13', 320, 844], ['iPhone 13', 390, 844], ['Pixel 7', 430, 915], ['iPhone 13', 844, 390], [null, 1280, 800]]) {
     const context = await browser.newContext({ ...(device ? devices[device] : {}), viewport: { width, height }, screen: { width, height } });
     context.setDefaultTimeout(10_000);
-    await context.request.post(`${fixture.base}/api/auth/login`, { data: { password: 'visibility-test' } });
+    await fixture.signIn(context);
     await context.addInitScript(() => {
       if (window !== window.top) return;
       localStorage.setItem('panda-force-locale', 'en');
@@ -22,7 +22,7 @@ try {
     });
     const page = await context.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(fixture.base, { waitUntil: 'networkidle' });
+    await page.addInitScript(()=>{globalThis.__pandaForceTest=true});await page.goto(fixture.base+'/new', { waitUntil: 'networkidle' });
     await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === 'ready');
     await page.evaluate(() => {
       document.querySelector('#threadTitle').textContent = '这是很长的项目会话标题，用于检查手机屏幕上的顶部布局';
@@ -58,7 +58,7 @@ try {
       }, { keyboardHeight, keyboardTop });
       const keyboard = await measure();
       assert.ok(keyboard.header.top >= keyboardTop && keyboard.header.bottom <= keyboardTop + keyboardHeight);
-      assert.ok(keyboard.send.top >= keyboardTop && keyboard.send.bottom <= keyboardTop + keyboardHeight && keyboard.send.right <= width);
+      assert.ok(keyboard.send.top >= keyboardTop && keyboard.send.bottom <= keyboardTop + keyboardHeight && keyboard.send.right <= width, JSON.stringify({device,width,height,keyboardHeight,keyboardTop,keyboard}));
       assert.equal(keyboard.scale, 1);
       if (width === 390) await page.screenshot({ path: artifact('mobile-keyboard-layout.png') });
       // Manual zoom remains native; the app must not override the user's scale.

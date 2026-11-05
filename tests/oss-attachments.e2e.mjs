@@ -58,7 +58,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1018, height: 760 } });
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  await page.goto(base, { waitUntil: "networkidle" });
+  await page.addInitScript(()=>{globalThis.__pandaForceTest=true});await page.goto(base, { waitUntil: "networkidle" });
   await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.config.attachmentUrlPrefix);
   await page.evaluate(() => {
     const api = globalThis.__pandaForceDebug;

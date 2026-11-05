@@ -1,0 +1,397 @@
+{
+  "fields": {
+    "ws": "transport",
+    "events": "transport",
+    "transport": "transport",
+    "wsFallbackTimer": "transport",
+    "rpcId": "transport",
+    "pending": "transport",
+    "connected": "transport",
+    "threads": "sessions",
+    "active": "sessions",
+    "config": "configuration",
+    "workspaceContext": "workspace",
+    "newSessionProjectId": "workspace",
+    "projectless": "workspace",
+    "composerMode": "composer",
+    "planMode": "composer",
+    "composerMentions": "composer",
+    "composerAttachments": "composer",
+    "models": "models",
+    "modelLoadStatus": "models",
+    "selectedModel": "models",
+    "permissionMode": "models",
+    "permissionProfiles": "models",
+    "permissionVisibility": "models",
+    "sessionSettings": "models",
+    "goalMode": "goals",
+    "goals": "goals",
+    "tokenUsage": "usage",
+    "turnWindow": "timeline",
+    "items": "timeline",
+    "turns": "timeline",
+    "turnTimings": "timeline",
+    "activities": "timeline",
+    "activityItems": "timeline",
+    "sideTasks": "timeline",
+    "dividers": "timeline",
+    "changes": "review",
+    "turnDiffs": "review",
+    "activeReview": "review",
+    "requestCards": "approvals",
+    "account": "account",
+    "persistentErrors": "notices",
+    "backgroundAgentsVisible": "features",
+    "cloudStartingState": "features",
+    "placeholderText": "features"
+  },
+  "features": {
+    "bindings": {
+      "read": ["modelLoadStatus"],
+      "write": []
+    },
+    "clipboard": {
+      "read": [],
+      "write": []
+    },
+    "commands": {
+      "read": ["active", "planMode"],
+      "write": []
+    },
+    "composer": {
+      "read": [
+        "active",
+        "composerAttachments",
+        "composerMentions",
+        "config",
+        "newSessionProjectId",
+        "planMode",
+        "projectless",
+        "workspaceContext"
+      ],
+      "write": ["composerAttachments", "composerMentions", "planMode"]
+    },
+    "connection": {
+      "read": ["connected", "pending"],
+      "write": ["connected", "pending"]
+    },
+    "delivery": {
+      "read": ["active", "items"],
+      "write": ["items"]
+    },
+    "details": {
+      "read": ["active", "models", "projectless", "sessionSettings", "threads"],
+      "write": ["active"]
+    },
+    "diagnostics": {
+      "read": [
+        "account",
+        "active",
+        "activeReview",
+        "activities",
+        "activityItems",
+        "backgroundAgentsVisible",
+        "changes",
+        "cloudStartingState",
+        "composerAttachments",
+        "composerMentions",
+        "composerMode",
+        "config",
+        "connected",
+        "dividers",
+        "events",
+        "goalMode",
+        "goals",
+        "items",
+        "modelLoadStatus",
+        "models",
+        "newSessionProjectId",
+        "pending",
+        "permissionMode",
+        "permissionProfiles",
+        "permissionVisibility",
+        "persistentErrors",
+        "placeholderText",
+        "planMode",
+        "projectless",
+        "requestCards",
+        "rpcId",
+        "selectedModel",
+        "sessionSettings",
+        "sideTasks",
+        "threads",
+        "tokenUsage",
+        "transport",
+        "turnDiffs",
+        "turnTimings",
+        "turnWindow",
+        "turns",
+        "workspaceContext",
+        "ws",
+        "wsFallbackTimer"
+      ],
+      "write": []
+    },
+    "status": {
+      "read": ["active", "threads"],
+      "write": ["active", "threads"]
+    },
+    "goals": {
+      "read": ["active", "goals", "planMode"],
+      "write": ["goals"]
+    },
+    "approvals": {
+      "read": ["active", "requestCards", "threads"],
+      "write": ["requestCards"]
+    },
+    "models": {
+      "read": [
+        "account",
+        "active",
+        "config",
+        "connected",
+        "modelLoadStatus",
+        "models",
+        "permissionMode",
+        "permissionProfiles",
+        "permissionVisibility",
+        "planMode",
+        "projectless",
+        "rpcId",
+        "selectedModel",
+        "sessionSettings",
+        "threads",
+        "tokenUsage",
+        "workspaceContext"
+      ],
+      "write": [
+        "modelLoadStatus",
+        "models",
+        "permissionMode",
+        "permissionProfiles",
+        "permissionVisibility",
+        "rpcId",
+        "selectedModel",
+        "sessionSettings"
+      ]
+    },
+    "environment": {
+      "read": ["config"],
+      "write": []
+    },
+    "history": {
+      "read": ["active", "turnWindow"],
+      "write": ["turnWindow"]
+    },
+    "identity": {
+      "read": ["active", "config", "items"],
+      "write": ["items"]
+    },
+    "images": {
+      "read": [],
+      "write": []
+    },
+    "inputSessions": {
+      "read": ["active", "projectless"],
+      "write": []
+    },
+    "review": {
+      "read": ["active", "activeReview", "activityItems", "changes", "turnDiffs"],
+      "write": ["activeReview", "turnDiffs"]
+    },
+    "activity": {
+      "read": ["active", "activities", "activityItems"],
+      "write": ["activities", "activityItems"]
+    },
+    "uploads": {
+      "read": ["composerAttachments"],
+      "write": ["composerAttachments"]
+    },
+    "usage": {
+      "read": ["connected"],
+      "write": []
+    },
+    "settings": {
+      "read": ["active", "projectless"],
+      "write": []
+    },
+    "account": {
+      "read": ["account"],
+      "write": ["account"]
+    },
+    "localization": {
+      "read": ["account", "active"],
+      "write": []
+    },
+    "messages": {
+      "read": ["active", "activityItems", "changes", "items", "turnTimings", "turns"],
+      "write": ["changes", "items"]
+    },
+    "navigation": {
+      "read": [
+        "active",
+        "changes",
+        "composerAttachments",
+        "composerMentions",
+        "connected",
+        "newSessionProjectId",
+        "projectless",
+        "sessionSettings",
+        "threads",
+        "turnWindow"
+      ],
+      "write": ["changes", "composerAttachments", "composerMentions", "newSessionProjectId", "turnWindow"]
+    },
+    "notices": {
+      "read": ["persistentErrors"],
+      "write": ["persistentErrors"]
+    },
+    "notifications": {
+      "read": ["active", "activityItems", "items", "threads", "tokenUsage", "turns"],
+      "write": ["active", "tokenUsage"]
+    },
+    "panels": {
+      "read": ["active", "activeReview", "config", "turnDiffs"],
+      "write": ["activeReview"]
+    },
+    "queue": {
+      "read": [
+        "active",
+        "composerAttachments",
+        "composerMentions",
+        "config",
+        "newSessionProjectId",
+        "selectedModel",
+        "threads",
+        "turns"
+      ],
+      "write": ["composerAttachments", "composerMentions"]
+    },
+    "repositories": {
+      "read": ["config"],
+      "write": ["config"]
+    },
+    "sideTasks": {
+      "read": ["active", "config", "sideTasks"],
+      "write": ["sideTasks"]
+    },
+    "sidebarLayout": {
+      "read": [],
+      "write": []
+    },
+    "startup": {
+      "read": ["active", "config", "connected", "threads"],
+      "write": ["config"]
+    },
+    "submission": {
+      "read": [
+        "active",
+        "composerAttachments",
+        "composerMentions",
+        "config",
+        "items",
+        "newSessionProjectId",
+        "selectedModel",
+        "turns"
+      ],
+      "write": ["composerAttachments", "composerMentions"]
+    },
+    "suggestions": {
+      "read": ["active", "composerMentions", "config", "planMode", "projectless", "threads"],
+      "write": ["composerMentions", "planMode"]
+    },
+    "synchronization": {
+      "read": ["active", "config", "connected", "threads"],
+      "write": []
+    },
+    "timeline": {
+      "read": [
+        "active",
+        "activities",
+        "activityItems",
+        "dividers",
+        "items",
+        "requestCards",
+        "sideTasks",
+        "turnTimings",
+        "turnWindow",
+        "turns"
+      ],
+      "write": [
+        "activities",
+        "activityItems",
+        "dividers",
+        "items",
+        "requestCards",
+        "sideTasks",
+        "turnTimings",
+        "turnWindow",
+        "turns"
+      ]
+    },
+    "timing": {
+      "read": ["dividers", "turnTimings", "turns"],
+      "write": ["turnTimings"]
+    },
+    "viewport": {
+      "read": [],
+      "write": []
+    },
+    "projects": {
+      "read": ["threads"],
+      "write": []
+    },
+    "sidebar": {
+      "read": ["active", "config", "goals", "newSessionProjectId", "projectless", "threads", "workspaceContext"],
+      "write": ["goals"]
+    },
+    "workbench": {
+      "read": ["active", "config", "connected", "newSessionProjectId", "threads", "workspaceContext"],
+      "write": []
+    },
+    "workspace": {
+      "read": [
+        "active",
+        "backgroundAgentsVisible",
+        "cloudStartingState",
+        "composerMode",
+        "config",
+        "connected",
+        "goalMode",
+        "placeholderText",
+        "planMode",
+        "projectless",
+        "workspaceContext"
+      ],
+      "write": ["projectless", "workspaceContext"]
+    },
+    "sessionStore": {
+      "read": ["active", "threads"],
+      "write": ["active", "threads"]
+    },
+    "transport": {
+      "read": ["connected", "events", "pending", "rpcId", "transport", "ws", "wsFallbackTimer"],
+      "write": ["connected", "events", "pending", "rpcId", "transport", "ws", "wsFallbackTimer"]
+    },
+    "turnFrames": {
+      "read": ["dividers", "turnTimings", "turns"],
+      "write": ["turns", "dividers"]
+    },
+    "composerInteractions": {
+      "read": [
+        "active",
+        "composerAttachments",
+        "composerMentions",
+        "config",
+        "newSessionProjectId",
+        "projectless",
+        "workspaceContext"
+      ],
+      "write": ["composerAttachments", "composerMentions"]
+    },
+    "applicationProjections": {
+      "read": [],
+      "write": []
+    }
+  }
+}

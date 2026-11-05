@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 import WebSocket from 'ws';
-import { createProjectVisibilityFixture, waitFor } from './project-visibility-fixture.mjs';
+import { createAppFixture, waitFor } from './app-fixture.mjs';
 
 test('visibility persists across restart, synchronizes WS/SSE, and restores only after successful project session creation', async () => {
-  const fixture = await createProjectVisibilityFixture();
+  const fixture = await createAppFixture();
   let ws: WebSocket, reader;
   const messages: any[] = [];
   try {

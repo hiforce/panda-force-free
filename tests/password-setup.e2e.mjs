@@ -10,7 +10,7 @@ try{
  await context.addInitScript(()=>{if(window===window.top)localStorage.setItem('panda-force-locale','en')});
  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
  let setupRequests=0;page.on('request',request=>{if(request.method()==='POST'&&request.url().endsWith('/api/auth/setup'))setupRequests++});
- await page.goto(f.base);await page.getByRole('heading',{name:'Create your administrator',exact:true}).waitFor();
+ await page.addInitScript(()=>{globalThis.__pandaForceTest=true});await page.goto(f.base);await page.getByRole('heading',{name:'Create your administrator',exact:true}).waitFor();
  assert.equal(await page.title(),'PandaForce');
  assert.equal((await page.locator('.auth-brand').textContent()).trim(),'PandaForce');
  assert.equal(await page.locator('#passwordGate').getAttribute('aria-label'),'Administrator setup');

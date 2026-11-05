@@ -3,7 +3,7 @@ import { launchOptions } from './browser-runtime.mjs';
 
 const browser=await chromium.launch(launchOptions());
 const page=await browser.newPage({viewport:{width:1280,height:800}});
-await page.goto('http://127.0.0.1:8899',{waitUntil:'networkidle'});
+await page.addInitScript(()=>{globalThis.__pandaForceTest=true});await page.goto('http://127.0.0.1:8899',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>globalThis.__pandaForceDebug?.state?.config?.defaultCwd);
 await page.waitForFunction(()=>document.querySelector('#accountName')?.textContent?.trim());
 const box=async selector=>page.locator(selector).first().evaluate(element=>{

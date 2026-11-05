@@ -1,5 +1,8 @@
-import { chromium } from 'playwright';
+import { createBrowserFixture } from "./browser-runtime.mjs";
+
 import { artifact, launchOptions } from './browser-runtime.mjs';
+const runtime=await createBrowserFixture();
+
 
 function installFailingBridge(page, mode) {
   return page.addInitScript((failureMode) => {
@@ -34,8 +37,8 @@ function installFailingBridge(page, mode) {
   }, mode);
 }
 
-const browser = await chromium.launch(launchOptions());
-const base = process.env.PANDA_FORCE_TEST_URL || 'http://127.0.0.1:8899';
+const browser = await runtime.launchBrowser(launchOptions());
+const base = runtime.base;
 const results = [];
 try {
   for (const mode of ['error-close', 'first-event-timeout']) {
