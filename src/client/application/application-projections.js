@@ -1,5 +1,6 @@
 // This parent connects read-model projections. Feature modules never resolve
 // arbitrary commands through the update channel.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "renderBatch", "transport" | "connection" | "workbench" | "sidebar" | "workspace" | "details" | "review" | "goals" | "status" | "models" | "composer" | "timeline" | "sideTasks" | "delivery" | "approvals" | "account" | "messages" | "activity", "applicationProjections">} options */
 export function assembleApplicationProjections({
   viewUpdates,
   renderBatch,

@@ -1,6 +1,8 @@
 import { localizeAttribute, localizeText } from "../i18n.js";
+import { findElement } from "./../dom.js";
 
 // Owns message timestamps and worked-duration projections.
+/** @param {import("./ports.js").FeatureOptions<"renderBatch" | "mutations" | "i18n" | "state" | "t", never, "timing">} options */
 export function assembleTiming({ renderBatch, mutations, i18n, state, t }) {
   function timestampSeconds(value) {
     if (value instanceof Date) value = value.getTime();
@@ -21,7 +23,7 @@ export function assembleTiming({ renderBatch, mutations, i18n, state, t }) {
   }
   function recordTurnTiming(turnId, turn = {}) {
     if (!turnId) return;
-    const timing = state.turnTimings.get(turnId) || {};
+    const timing = { ...state.turnTimings.get(turnId) };
     const started = timestampSeconds(turn.startedAt ?? turn.startedAtMs),
       completed = timestampSeconds(turn.completedAt ?? turn.completedAtMs);
     if (started) timing.started = started;
@@ -57,11 +59,11 @@ export function assembleTiming({ renderBatch, mutations, i18n, state, t }) {
       divider = state.dividers.get(turnId);
     if (!turn || !divider) return;
     if (Number.isFinite(durationMs)) turn.dataset.durationMs = String(durationMs);
-    const hasActivity = Boolean(turn.querySelector("[data-agent-activity-group]")),
-      hasFinal = Boolean(turn.querySelector("[data-local-conversation-final-assistant]"));
+    const hasActivity = Boolean(findElement("[data-agent-activity-group]", turn)),
+      hasFinal = Boolean(findElement("[data-local-conversation-final-assistant]", turn));
     divider.hidden = !(hasActivity && hasFinal);
     const duration = formatWorkedDuration(Number(turn.dataset.durationMs));
-    localizeText(divider.querySelector("span"), duration ? "common.workedDuration" : "common.worked", { duration }, t);
+    localizeText(findElement("span", divider), duration ? "common.workedDuration" : "common.worked", { duration }, t);
   }
   return {
     timestampSeconds,

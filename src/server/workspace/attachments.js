@@ -1,5 +1,6 @@
-import { mkdir, writeFile, rm } from "node:fs/promises";
+import { readRequestBytes, RequestBodyError } from "../request-bytes.js";
 import { randomUUID } from "node:crypto";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
 
 export const ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
@@ -20,24 +21,25 @@ export function attachmentImageType(bytes) {
   return null;
 }
 
+/** @param {import("node:http").IncomingMessage} request @param {string} root @param {string | null} originalName @param {import("./attachment-types.js").AttachmentStorage | null} storage */
 export async function saveAttachment(request, root, originalName, storage = null) {
   const name = basename(String(originalName || "").replaceAll("\\", "/"))
+    // eslint-disable-next-line no-control-regex -- Reject control bytes at this security boundary.
     .replace(/[\x00-\x1f\x7f]/g, "")
     .trim();
   if (!name || name === "." || name === ".." || Buffer.byteLength(name) > 240)
     throw new Error("Invalid attachment filename");
-  const chunks = [];
-  let size = 0,
-    tooLarge = Number(request.headers?.["content-length"]) > ATTACHMENT_MAX_BYTES;
-  for await (const chunk of request) {
-    size += chunk.length;
-    if (size > ATTACHMENT_MAX_BYTES) tooLarge = true;
-    if (!tooLarge) chunks.push(Buffer.from(chunk));
+  let bytes;
+  try {
+    bytes = await readRequestBytes(request, ATTACHMENT_MAX_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyError && error.status === 413)
+      throw Object.assign(new Error("Each attachment must be 25 MiB or smaller"), { status: 413 });
+    throw error;
   }
-  if (tooLarge) throw Object.assign(new Error("Each attachment must be 25 MiB or smaller"), { status: 413 });
+  const size = bytes.length;
   if (!size) throw new Error("Cannot upload an empty file");
-  const bytes = Buffer.concat(chunks),
-    detected = attachmentImageType(bytes),
+  const detected = attachmentImageType(bytes),
     expected = imageTypes.get(extname(name).toLowerCase());
   if (expected && !detected) throw new Error("Image content does not match its file type");
   const id = randomUUID();

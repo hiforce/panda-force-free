@@ -1,6 +1,6 @@
 import { filterAppModels } from "../ui-core.js";
-
 // Preserves the browser regression interface without adding another state store.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "stateDomains" | "state", "status" | "workbench" | "repositories" | "notifications" | "approvals" | "panels" | "synchronization" | "review" | "account" | "workspace" | "images" | "navigation" | "startup" | "sidebarLayout" | "settings" | "models" | "viewport", "diagnostics">} options */
 export function assembleDiagnostics({
   viewUpdates,
   stateDomains,
@@ -39,43 +39,74 @@ export function assembleDiagnostics({
       sessionRuntime: statusPort.sessionRuntime,
       workbench: workbenchPort.workbench,
       persistentConversationCache: repositoriesPort.persistentConversationCache,
-      notify: (...args) => notificationsPort.onNotification(...args),
-      request: (...args) => approvalsPort.onServerRequest(...args),
-      state: stateDomains.scope("diagnostics", { testing: true }).legacyState,
+      notify: /** @param {Parameters<typeof notificationsPort.onNotification>} args */ (...args) =>
+        notificationsPort.onNotification(...args),
+      request: /** @param {Parameters<typeof approvalsPort.onServerRequest>} args */ (...args) =>
+        approvalsPort.onServerRequest(...args),
+      state: stateDomains.scope("diagnostics", { testing: true }).state,
+      mutations: stateDomains.scope("diagnostics", { testing: true }).mutations,
       browserState: panelsPort.browserState,
       renderThreads: (...args) => viewUpdates.request("sidebar", ...args),
-      applyThreadSummaries: (...args) => synchronizationPort.applyThreadSummaries(...args),
-      refreshThreadRowMetadata: (...args) => statusPort.refreshThreadRowMetadata(...args),
-      navigateBrowser: (...args) => panelsPort.navigateBrowser(...args),
+      applyThreadSummaries: /** @param {Parameters<typeof synchronizationPort.applyThreadSummaries>} args */ (
+        ...args
+      ) => synchronizationPort.applyThreadSummaries(...args),
+      refreshThreadRowMetadata: /** @param {Parameters<typeof statusPort.refreshThreadRowMetadata>} args */ (...args) =>
+        statusPort.refreshThreadRowMetadata(...args),
+      navigateBrowser: /** @param {Parameters<typeof panelsPort.navigateBrowser>} args */ (...args) =>
+        panelsPort.navigateBrowser(...args),
       renderChanges: (...args) => viewUpdates.request("review", ...args),
-      renderAccount: (...args) => accountPort.renderAccount(...args),
+      renderAccount: /** @param {Parameters<typeof accountPort.renderAccount>} args */ (...args) =>
+        accountPort.renderAccount(...args),
       renderHeader: (...args) => viewUpdates.request("header", ...args),
-      refreshComposerPlaceholder: (...args) => workspacePort.refreshComposerPlaceholder(...args),
-      setProjectless: (...args) => workspacePort.setProjectless(...args),
-      openImageViewer: (...args) => imagesPort.openImageViewer(...args),
-      openThread: (...args) => navigationPort.openThread(...args),
-      loadInitial: (...args) => startupPort.loadInitial(...args),
-      startNewTask: (...args) => navigationPort.startNewTask(...args),
-      setSidebarOpen: (...args) => sidebarLayoutPort.setSidebarOpen(...args),
-      openSettings: (...args) => settingsPort.openSettings(...args),
-      closeSettings: (...args) => settingsPort.closeSettings(...args),
-      settingsRoutePage: (...args) => settingsPort.settingsRoutePage(...args),
-      selectedPermission: (...args) => modelsPort.selectedPermission(...args),
-      permissionThreadPolicy: (...args) => modelsPort.permissionThreadPolicy(...args),
-      permissionTurnPolicy: (...args) => modelsPort.permissionTurnPolicy(...args),
-      setPermissionMode: (...args) => modelsPort.setPermissionMode(...args),
-      setPermissionProfiles: (...args) => modelsPort.setPermissionProfiles(...args),
-      setPermissionVisibility: (...args) => modelsPort.setPermissionVisibility(...args),
-      renderPermissionMenu: (...args) => modelsPort.renderPermissionMenu(...args),
+      refreshComposerPlaceholder: /** @param {Parameters<typeof workspacePort.refreshComposerPlaceholder>} args */ (
+        ...args
+      ) => workspacePort.refreshComposerPlaceholder(...args),
+      setProjectless: /** @param {Parameters<typeof workspacePort.setProjectless>} args */ (...args) =>
+        workspacePort.setProjectless(...args),
+      openImageViewer: /** @param {Parameters<typeof imagesPort.openImageViewer>} args */ (...args) =>
+        imagesPort.openImageViewer(...args),
+      openThread: /** @param {Parameters<typeof navigationPort.openThread>} args */ (...args) =>
+        navigationPort.openThread(...args),
+      loadInitial: /** @param {Parameters<typeof startupPort.loadInitial>} args */ (...args) =>
+        startupPort.loadInitial(...args),
+      startNewTask: /** @param {Parameters<typeof navigationPort.startNewTask>} args */ (...args) =>
+        navigationPort.startNewTask(...args),
+      setSidebarOpen: /** @param {Parameters<typeof sidebarLayoutPort.setSidebarOpen>} args */ (...args) =>
+        sidebarLayoutPort.setSidebarOpen(...args),
+      openSettings: /** @param {Parameters<typeof settingsPort.openSettings>} args */ (...args) =>
+        settingsPort.openSettings(...args),
+      closeSettings: /** @param {Parameters<typeof settingsPort.closeSettings>} args */ (...args) =>
+        settingsPort.closeSettings(...args),
+      settingsRoutePage: /** @param {Parameters<typeof settingsPort.settingsRoutePage>} args */ (...args) =>
+        settingsPort.settingsRoutePage(...args),
+      selectedPermission: /** @param {Parameters<typeof modelsPort.selectedPermission>} args */ (...args) =>
+        modelsPort.selectedPermission(...args),
+      permissionThreadPolicy: /** @param {Parameters<typeof modelsPort.permissionThreadPolicy>} args */ (...args) =>
+        modelsPort.permissionThreadPolicy(...args),
+      permissionTurnPolicy: /** @param {Parameters<typeof modelsPort.permissionTurnPolicy>} args */ (...args) =>
+        modelsPort.permissionTurnPolicy(...args),
+      setPermissionMode: /** @param {Parameters<typeof modelsPort.setPermissionMode>} args */ (...args) =>
+        modelsPort.setPermissionMode(...args),
+      setPermissionProfiles: /** @param {Parameters<typeof modelsPort.setPermissionProfiles>} args */ (...args) =>
+        modelsPort.setPermissionProfiles(...args),
+      setPermissionVisibility: /** @param {Parameters<typeof modelsPort.setPermissionVisibility>} args */ (...args) =>
+        modelsPort.setPermissionVisibility(...args),
+      renderPermissionMenu: /** @param {Parameters<typeof modelsPort.renderPermissionMenu>} args */ (...args) =>
+        modelsPort.renderPermissionMenu(...args),
       filterAppModels,
-      renderModels: (...args) => modelsPort.renderModels(...args),
-      loadModels: (...args) => modelsPort.loadModels(...args),
-      syncTurnSnapshot: (...args) => synchronizationPort.syncTurnSnapshot(...args),
-      recordTurnReview: (...args) => reviewPort.recordTurnReview(...args),
-      scrollOpenedThreadToBottom: (...args) => viewportPort.scrollOpenedThreadToBottom(...args),
+      renderModels: /** @param {Parameters<typeof modelsPort.renderModels>} args */ (...args) =>
+        modelsPort.renderModels(...args),
+      loadModels: /** @param {Parameters<typeof modelsPort.loadModels>} args */ (...args) =>
+        modelsPort.loadModels(...args),
+      syncTurnSnapshot: /** @param {Parameters<typeof synchronizationPort.syncTurnSnapshot>} args */ (...args) =>
+        synchronizationPort.syncTurnSnapshot(...args),
+      recordTurnReview: /** @param {Parameters<typeof reviewPort.recordTurnReview>} args */ (...args) =>
+        reviewPort.recordTurnReview(...args),
+      scrollOpenedThreadToBottom: /** @param {Parameters<typeof viewportPort.scrollOpenedThreadToBottom>} args */ (
+        ...args
+      ) => viewportPort.scrollOpenedThreadToBottom(...args),
     };
   }
-
   return {
     bind,
   };

@@ -1,3 +1,5 @@
+import { isTransportSwitch } from "../shared/errors.js";
+import { findElement, requireElement } from "./dom.js";
 import { getBrowserI18n, setOpaqueText } from "./i18n.js";
 
 const GLOBAL_KEY = "__pandaForceWorkspacePreparation";
@@ -19,8 +21,13 @@ export function createWorkspacePreparation({
   timeoutMs = 45000,
   onReload = () => globalThis.location.reload(),
 } = {}) {
-  const panel = root?.querySelector("#workspacePreparation");
+  const panel = findElement("#workspacePreparation", root);
   const steps = new Map(STEPS.map(([id, label]) => [id, { label, status: "waiting", version: 0 }]));
+  const interfaceStep = (() => {
+    const step = steps.get("interface");
+    if (!step) throw new Error("Workspace preparation requires the interface step");
+    return step;
+  })();
   let started = false,
     finished = false,
     dismissed = false,
@@ -36,8 +43,8 @@ export function createWorkspacePreparation({
     steps: [...steps].map(([id, step]) => ({ id, label: step.label, status: step.status })),
   });
   if (panel) {
-    const list = panel.querySelector(".workspace-preparation-steps");
-    for (const [id, step] of steps) {
+    const list = requireElement(".workspace-preparation-steps", panel);
+    for (const [id] of steps) {
       const row = root.createElement("li"),
         mark = root.createElement("span"),
         label = root.createElement("span");
@@ -49,11 +56,11 @@ export function createWorkspacePreparation({
       list.append(row);
       rows.set(id, { row, mark, label });
     }
-    panel.querySelector("#workspacePreparationReload").onclick = onReload;
-    const retry = panel.querySelector("#workspacePreparationRetry");
+    requireElement("#workspacePreparationReload", panel).onclick = onReload;
+    const retry = findElement("#workspacePreparationRetry", panel);
     if (retry) retry.onclick = () => api.retry();
-    panel.querySelector("#workspacePreparationContinue").onclick = () => {
-      if (steps.get("interface").status === "ready") {
+    requireElement("#workspacePreparationContinue", panel).onclick = () => {
+      if (interfaceStep.status === "ready") {
         dismissed = true;
         render();
       }
@@ -61,7 +68,7 @@ export function createWorkspacePreparation({
   }
   function syncShell(blocked) {
     root.body?.classList.toggle("workspace-booting", blocked);
-    const app = root.querySelector("#app");
+    const app = findElement("#app", root);
     if (app) {
       app.inert = blocked;
       if (blocked) app.setAttribute("aria-hidden", "true");
@@ -75,7 +82,7 @@ export function createWorkspacePreparation({
     if (dismissed) {
       const returnFocus = panel.contains(root.activeElement);
       panel.hidden = true;
-      if (returnFocus) root.querySelector("#prompt")?.focus({ preventScroll: true });
+      if (returnFocus) findElement("#prompt", root)?.focus({ preventScroll: true });
       return;
     }
     const ready = [...steps.values()].filter((step) => step.status === "ready").length;
@@ -85,7 +92,7 @@ export function createWorkspacePreparation({
     panel.dataset.status = finished ? "ready" : failed ? "error" : "loading";
     panel.setAttribute("aria-busy", String(!finished));
     setOpaqueText(
-      panel.querySelector("#workspacePreparationTitle"),
+      findElement("#workspacePreparationTitle", panel),
       translate(finished ? "common.yourWorkspaceIsReady" : "common.preparingYourWorkspace"),
     );
     const message = translate(
@@ -97,31 +104,31 @@ export function createWorkspacePreparation({
             ? "common.stillLoadingYourWorkspaceIsTakingALittleLongerTo"
             : "common.gettingYourProjectsSessionsAndToolsReady",
     );
-    const messageElement = panel.querySelector("#workspacePreparationMessage");
+    const messageElement = requireElement("#workspacePreparationMessage", panel);
     if (messageElement.textContent !== message) setOpaqueText(messageElement, message);
-    const progress = panel.querySelector("#workspacePreparationProgress");
+    const progress = requireElement("#workspacePreparationProgress", panel);
     progress.max = steps.size;
     progress.value = ready;
     const count = translate("common.completedOfTotalStepsReady", { completed: ready, total: steps.size });
     progress.setAttribute("aria-valuetext", count);
-    setOpaqueText(panel.querySelector("#workspacePreparationCount"), count);
+    setOpaqueText(findElement("#workspacePreparationCount", panel), count);
     setOpaqueText(
-      panel.querySelector("#workspacePreparationElapsed"),
+      findElement("#workspacePreparationElapsed", panel),
       translate("common.elapsedSecondss", {
         seconds: Math.floor((now() - startedAt) / 1000),
       }),
     );
-    panel.querySelector("#workspacePreparationElapsed").hidden = !slow;
-    const reload = panel.querySelector("#workspacePreparationReload");
+    requireElement("#workspacePreparationElapsed", panel).hidden = !slow;
+    const reload = requireElement("#workspacePreparationReload", panel);
     reload.hidden = !failed && !slow;
     setOpaqueText(reload, translate("common.reloadWorkspace"));
-    const retry = panel.querySelector("#workspacePreparationRetry");
+    const retry = findElement("#workspacePreparationRetry", panel);
     if (retry) {
       retry.hidden = !failed && !slow;
       setOpaqueText(retry, translate("common.retryRemainingSteps"));
     }
-    const proceed = panel.querySelector("#workspacePreparationContinue");
-    proceed.disabled = steps.get("interface").status !== "ready";
+    const proceed = requireElement("#workspacePreparationContinue", panel);
+    proceed.disabled = interfaceStep.status !== "ready";
     setOpaqueText(proceed, translate("common.continueToWorkspace"));
     for (const [id, step] of steps) {
       const { row, mark, label } = rows.get(id);
@@ -141,8 +148,9 @@ export function createWorkspacePreparation({
     }, 400);
   }
   function update(id, status) {
-    if (!started || finished || !steps.has(id)) return;
-    steps.get(id).status = status;
+    const step = steps.get(id);
+    if (!started || finished || !step) return;
+    step.status = status;
     render();
     settle();
   }
@@ -151,7 +159,7 @@ export function createWorkspacePreparation({
       if (started) return;
       started = true;
       startedAt = now();
-      steps.get("interface").status = "loading";
+      interfaceStep.status = "loading";
       render();
       panel?.setAttribute("tabindex", "-1");
       panel?.focus({ preventScroll: true });
@@ -173,16 +181,17 @@ export function createWorkspacePreparation({
       update(id, "error");
     },
     track(id, pending) {
-      if (!started || finished || !steps.has(id) || steps.get(id).status === "ready") return pending;
-      const version = ++steps.get(id).version;
+      const step = steps.get(id);
+      if (!started || finished || !step || step.status === "ready") return pending;
+      const version = ++step.version;
       update(id, "loading");
       return Promise.resolve(pending).then(
         (value) => {
-          if (steps.get(id).version === version) update(id, value === false ? "error" : "ready");
+          if (step.version === version) update(id, value === false ? "error" : "ready");
           return value;
         },
         (error) => {
-          if (steps.get(id).version === version) update(id, error?.silentTransportSwitch ? "loading" : "error");
+          if (step.version === version) update(id, isTransportSwitch(error) ? "loading" : "error");
           throw error;
         },
       );

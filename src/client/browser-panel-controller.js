@@ -1,5 +1,5 @@
-import { setOpaqueText } from "./i18n.js";
 import { browserSandboxFor, normalizeBrowserUrl } from "./browser-panel.js";
+import { localizeText } from "./i18n.js";
 
 const BROWSER_LOAD_TIMEOUT_MS = 10000;
 
@@ -9,12 +9,13 @@ const BROWSER_LOAD_TIMEOUT_MS = 10000;
  * app shell (it touches the side-panel layout).
  */
 export function createBrowserController({ $ }) {
+  /** @type {{history: string[]; index: number; loadTimer: ReturnType<typeof setTimeout> | null; loadRequest: number}} */
   const browserState = { history: [], index: -1, loadTimer: null, loadRequest: 0 };
 
   function setBrowserStatus(text, tone = "ready") {
     const status = $("#browserStatus");
     status.dataset.tone = tone;
-    setOpaqueText($("#browserStatusText"), text);
+    localizeText($("#browserStatusText"), text);
   }
   function updateBrowserControls() {
     const current = browserState.history[browserState.index] || "";
@@ -27,8 +28,8 @@ export function createBrowserController({ $ }) {
     }
   }
   function showBrowserNotice(title, description) {
-    setOpaqueText($("#browserNoticeTitle"), title);
-    setOpaqueText($("#browserNoticeDescription"), description);
+    localizeText($("#browserNoticeTitle"), title);
+    localizeText($("#browserNoticeDescription"), description);
     $("#browserNotice").hidden = false;
     $("#browserLoading").hidden = true;
     $("#browserFrameShell").setAttribute("aria-busy", "false");
@@ -36,16 +37,16 @@ export function createBrowserController({ $ }) {
   }
   function finishBrowserLoad(requestId) {
     if (requestId !== browserState.loadRequest) return;
-    clearTimeout(browserState.loadTimer);
+    clearTimeout(browserState.loadTimer ?? undefined);
     $("#browserLoading").hidden = true;
     $("#browserNotice").hidden = true;
     $("#browserFrameShell").setAttribute("aria-busy", "false");
-    setBrowserStatus("Loaded. If the page is blank, the site may block embedding.", "loaded");
+    setBrowserStatus("common.browserLoaded", "loaded");
   }
   function navigateBrowser(value, { push = true } = {}) {
     const result = normalizeBrowserUrl(value);
-    if (result.error) {
-      showBrowserNotice("Invalid address", result.error);
+    if (!result.url) {
+      showBrowserNotice("common.invalidBrowserAddress", result.messageId);
       $("#browserUrl").setAttribute("aria-invalid", "true");
       return false;
     }
@@ -59,29 +60,23 @@ export function createBrowserController({ $ }) {
     }
     const requestId = ++browserState.loadRequest,
       frame = $("#browserFrame");
-    clearTimeout(browserState.loadTimer);
+    clearTimeout(browserState.loadTimer ?? undefined);
     $("#browserEmpty").hidden = true;
     $("#browserNotice").hidden = true;
     $("#browserLoading").hidden = false;
     frame.hidden = false;
     frame.setAttribute("sandbox", browserSandboxFor(url, location.href));
     $("#browserFrameShell").setAttribute("aria-busy", "true");
-    setBrowserStatus("Loading page...", "loading");
+    setBrowserStatus("common.loadingPage", "loading");
     updateBrowserControls();
     frame.onload = () => finishBrowserLoad(requestId);
     frame.onerror = () =>
       requestId === browserState.loadRequest &&
-      showBrowserNotice(
-        "Page could not be loaded",
-        "The site did not complete the embedded request. Open it externally to continue.",
-      );
+      showBrowserNotice("common.browserLoadFailed", "common.browserLoadFailedDetail");
     frame.src = url;
     browserState.loadTimer = setTimeout(() => {
       if (requestId === browserState.loadRequest)
-        showBrowserNotice(
-          "Page may have blocked embedding",
-          "This site did not finish loading in the panel. It may block embedded browsers; you can open it externally instead.",
-        );
+        showBrowserNotice("common.browserEmbeddingBlocked", "common.browserEmbeddingBlockedDetail");
     }, BROWSER_LOAD_TIMEOUT_MS);
     return true;
   }

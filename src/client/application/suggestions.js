@@ -1,10 +1,15 @@
-import { localizeText, messageHtml, localizeAttribute, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { isMessageId } from "../../shared/i18n/message-id.js";
+import { localizeAttribute, localizeText, messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { errorMessage } from "./../../shared/errors.js";
+import { findElement, requireElement } from "./../dom.js";
+import { request as fetch } from "./../http-client.js";
 
-import { slashCommandCatalog } from "./command-catalog.js";
-import { applyComposerSuggestion, getComposerAutocomplete } from "../ui-core.js";
 import { codexIcon } from "../codex-icons.js";
+import { applyComposerSuggestion, getComposerAutocomplete } from "../ui-core.js";
+import { slashCommandCatalog } from "./command-catalog.js";
 
 // Owns autocomplete requests, selection and context chips using the shared command catalog.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "$" | "escapeHtml" | "state" | "titleOf" | "shortPath" | "t", "workspace" | "models" | "composer" | "notices" | "commands", "suggestions">} options */
 export function assembleSuggestions({
   viewUpdates,
   mutations,
@@ -20,6 +25,7 @@ export function assembleSuggestions({
   noticesPort,
   commandsPort,
 }) {
+  /** @type {import("../../shared/data-contracts.js").AutocompleteState} */
   const autocompleteState = {
     match: null,
     items: [],
@@ -55,7 +61,7 @@ export function assembleSuggestions({
       const empty = document.createElement("div");
       empty.className = "autocomplete-empty";
       const message = autocompleteState.message;
-      if (message?.messageId) localizeText(empty, message.messageId, undefined, t);
+      if (message && typeof message === "object") localizeText(empty, message.messageId, undefined, t);
       else if (message) setOpaqueText(empty, message);
       else
         localizeText(
@@ -108,7 +114,7 @@ export function assembleSuggestions({
           threadId: thread.id,
           title: titleOf(thread),
           description: shortPath(thread.cwd),
-          descriptionKey: "composer.taskPath",
+          descriptionKey: /** @type {const} */ ("composer.taskPath"),
           descriptionValues: { path: shortPath(thread.cwd) },
           icon: "messageSquare",
         })),
@@ -153,7 +159,12 @@ export function assembleSuggestions({
           path: item.path,
           title: parts.at(-1),
           description: parts.length > 1 ? parts.slice(0, -1).join("/") : "",
-          descriptionKey: parts.length > 1 ? null : item.kind === "folder" ? "common.folder" : "common.file",
+          descriptionKey:
+            parts.length > 1
+              ? null
+              : item.kind === "folder"
+                ? /** @type {const} */ ("common.folder")
+                : /** @type {const} */ ("common.file"),
           icon: item.kind === "folder" ? "folderOpen" : "file",
         };
       });
@@ -164,7 +175,7 @@ export function assembleSuggestions({
     } catch (error) {
       if (requestId !== autocompleteState.requestId) return;
       autocompleteState.items = tasks;
-      autocompleteState.message = tasks.length ? "" : error.message;
+      autocompleteState.message = tasks.length ? "" : errorMessage(error);
       renderComposerAutocomplete();
     }
   }
@@ -183,7 +194,8 @@ export function assembleSuggestions({
       autocompleteState.items = slashCommandCatalog.filter(
         (item) =>
           (!item.requiresThread || state.active) &&
-          (item.id.includes(query) || t(item.title).toLowerCase().includes(query)),
+          (item.id.includes(query) ||
+            (isMessageId(item.title) ? t(item.title) : item.title).toLowerCase().includes(query)),
       );
       autocompleteState.message = "";
       renderComposerAutocomplete();
@@ -217,13 +229,13 @@ export function assembleSuggestions({
         `${codexIcon(mention.icon || "file")}<span>${escapeHtml(mention.title)}</span><button type="button" aria-label="Remove ${escapeHtml(mention.title)}">${codexIcon("x")}</button>`,
       );
       localizeAttribute(
-        chip.querySelector("button"),
+        findElement("button", chip),
         "aria-label",
         "composer.removeSuggestion",
         { title: mention.title },
         t,
       );
-      chip.querySelector("button").onclick = () => {
+      requireElement("button", chip).onclick = () => {
         mutations.set(
           "composerMentions",
           state.composerMentions.filter((item) => item.id !== mention.id),

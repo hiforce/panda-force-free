@@ -1,6 +1,8 @@
 import { SUPPORTED_LOCALES, localizeText, setOpaqueText } from "../i18n.js";
+import { findElement } from "./../dom.js";
 
 // Refreshes localized UI surfaces while preserving conversation content.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "$" | "i18n" | "state" | "t", "workspace" | "account" | "models" | "usage" | "notices" | "settings", "localization">} options */
 export function assembleLocalization({
   viewUpdates,
   $,
@@ -16,7 +18,7 @@ export function assembleLocalization({
 }) {
   function refreshLocalizedRuntime() {
     $("#languageSelect").value = i18n.preference;
-    if (!state.active && ["new", "task"].includes(document.body.dataset.workbenchPage))
+    if (!state.active && ["new", "task"].includes(document.body.dataset.workbenchPage || ""))
       localizeText($("#threadTitle"), "common.newSession", undefined, t);
     if (!workspacePort.folderBrowse.selected)
       localizeText($("#folderSelection"), "common.noFolderSelected", undefined, t);
@@ -37,7 +39,7 @@ export function assembleLocalization({
     if (!$("#modelMenu").hidden) modelsPort.renderModelMenuMain();
     if ($("#settingsDialog").open) {
       const current =
-        document.querySelector("[data-settings-page].active")?.dataset.settingsPage ||
+        findElement("[data-settings-page].active")?.dataset.settingsPage ||
         settingsPort.settingsRoutePage() ||
         "general-settings";
       settingsPort.setSettingsPage(current, { updateRoute: false });
@@ -57,7 +59,7 @@ export function assembleLocalization({
       select.append(option);
     }
     select.value = i18n.preference;
-    $("#languageSelect").onchange = (event) => i18n.setPreference(event.currentTarget.value);
+    $("#languageSelect").onchange = (event) => i18n.setPreference($("#languageSelect").value);
   }
 
   return {

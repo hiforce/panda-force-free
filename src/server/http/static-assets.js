@@ -1,5 +1,5 @@
-import { readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { readFileSync, statSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 
 // Only resolved application assets enter this cache; API and session data do not.

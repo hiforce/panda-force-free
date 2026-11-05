@@ -1,3 +1,4 @@
+import { closestElement, findElement, findElements, requireElement } from "./dom.js";
 import { localizeText, setOpaqueText } from "./i18n.js";
 
 import { applyThemePreference } from "./theme.js";
@@ -105,13 +106,14 @@ export function createSettingsPanel({
       contentPage = ["general-settings", "profile", "keyboard-shortcuts", "appearance", "storage"].includes(selected)
         ? selected
         : "placeholder";
-    for (const button of document.querySelectorAll("[data-settings-page]"))
+    for (const button of findElements("[data-settings-page]"))
       button.classList.toggle("active", button.dataset.settingsPage === selected);
-    for (const content of document.querySelectorAll("[data-settings-content]"))
+    for (const content of findElements("[data-settings-content]"))
       content.hidden = content.dataset.settingsContent !== contentPage;
     if (contentPage === "placeholder") renderSettingsPlaceholder(selected);
-    const currentButton = document.querySelector(`[data-settings-page="${selected}"]`);
-    if (currentButton?.closest("details")) currentButton.closest("details").open = true;
+    const currentButton = requireElement(`[data-settings-page="${selected}"]`);
+    const currentGroup = closestElement("details", currentButton);
+    if (currentGroup) currentGroup.open = true;
     setOpaqueText(
       $("#settingsProductIdentity"),
       globalThis.__pandaForceIdentity?.username ||
@@ -131,9 +133,9 @@ export function createSettingsPanel({
       clear = $("#clearSettingsSearch");
     let visible = 0;
     if (clear) clear.hidden = !normalized;
-    for (const group of document.querySelectorAll("[data-settings-group]")) {
+    for (const group of findElements("details[data-settings-group]")) {
       let groupVisible = 0;
-      for (const button of group.querySelectorAll("[data-settings-page]")) {
+      for (const button of findElements("[data-settings-page]", group)) {
         const available = button.dataset.settingsAvailable !== "false",
           keywords =
             {
@@ -201,7 +203,7 @@ export function createSettingsPanel({
   }
   $("#closeSettingsNav").onclick = closeSettings;
   $("#settingsMobileBack").onclick = showSettingsMobileNavigation;
-  for (const button of document.querySelectorAll(".settings-page .settings-mobile-back"))
+  for (const button of findElements(".settings-page .settings-mobile-back"))
     button.onclick = showSettingsMobileNavigation;
   $("#themeSelect").onchange = (event) => applyThemePreference(event.target.value);
   $("#settingsSearch").oninput = (event) => filterSettingsNavigation(event.currentTarget.value);
@@ -243,7 +245,7 @@ export function createSettingsPanel({
     if (!dialog.open) dialog.showModal();
     document.body.classList.add("settings-open");
     requestAnimationFrame(() => {
-      const target = mobile ? $("#settingsSearch") : document.querySelector(".settings-nav-back");
+      const target = mobile ? $("#settingsSearch") : findElement(".settings-nav-back");
       target?.focus();
     });
   }

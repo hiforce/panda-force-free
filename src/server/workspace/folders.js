@@ -2,6 +2,7 @@ import { readdirSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { inside } from "../path-utils.js";
+import { errorMessage } from "./../../shared/errors.js";
 
 export function resolveBrowsePath(input = "~", allowedRoots = [homedir()], home = homedir()) {
   const expanded = input === "~" ? home : input.startsWith("~/") ? resolve(home, input.slice(2)) : resolve(input);
@@ -12,7 +13,7 @@ export function resolveBrowsePath(input = "~", allowedRoots = [homedir()], home 
     const canonicalRoots = roots.map((root) => realpathSync(root));
     if (!canonicalRoots.some((root) => inside(canonical, root))) throw new Error("outside allowed roots");
   } catch (error) {
-    if (error instanceof Error && error.message === "outside allowed roots") throw error;
+    if (error instanceof Error && errorMessage(error) === "outside allowed roots") throw error;
     // Non-existent paths are handled by the caller's directory check.
   }
   return expanded;
@@ -30,9 +31,7 @@ export function listFolders(input, allowedRoots = [resolve(input)]) {
   return { path, parent, folders };
 }
 
-export function defaultBrowseRoots(home = homedir()) {
-  return [resolve(home)];
-}
+export { defaultBrowseRoots } from "../path-utils.js";
 
 export function isDirectory(path) {
   try {

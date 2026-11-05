@@ -1,3 +1,5 @@
+import { errorMessage } from "./../shared/errors.js";
+import { closestElement, isInputElement } from "./dom.js";
 import { localizeAttribute, localizeText, setOpaqueText } from "./i18n.js";
 
 export const USER_INPUT_METHODS = ["item/tool/requestUserInput", "tool/requestUserInput"];
@@ -66,7 +68,7 @@ export function createUserInputCard(
     const customAllowed = !options.length || question.isOther === true;
     let custom;
     const update = () => {
-      for (const radio of radios) radio.closest("label").classList.toggle("selected", radio.checked);
+      for (const radio of radios) closestElement("label", radio)?.classList.toggle("selected", radio.checked);
       if (custom) {
         custom.hidden = options.length > 0 && saved.selected !== "custom";
         custom.required = !custom.hidden;
@@ -105,7 +107,7 @@ export function createUserInputCard(
     if (options.length && customAllowed) addOption(t("approvals.writeYourOwnAnswer"), "", "custom");
     if (customAllowed) {
       custom = document.createElement(question.isSecret ? "input" : "textarea");
-      if (question.isSecret) {
+      if (isInputElement(custom)) {
         custom.type = "password";
         custom.autocomplete = "off";
       } else custom.rows = 2;
@@ -163,7 +165,7 @@ export function createUserInputCard(
       onResolved(request.id);
     } catch (failure) {
       if (!card.isConnected) return;
-      setOpaqueText(error, failure.message || t("errors.couldNotSubmitAnswer"));
+      setOpaqueText(error, errorMessage(failure) || t("errors.couldNotSubmitAnswer"));
       error.hidden = false;
       onError(error.textContent);
       submit.disabled = false;

@@ -1,6 +1,7 @@
 import { lstatSync, realpathSync, statSync } from "node:fs";
-import { isAbsolute, relative, resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import { clampLimit, inside } from "../path-utils.js";
+import { errorMessage } from "./../../shared/errors.js";
 
 const MAX_OUTPUT = 4 * 1024 * 1024;
 const SENSITIVE = /^(?:\.git(?:\/|$)|\.env(?:\.|$)|node_modules(?:\/|$))/i;
@@ -14,7 +15,7 @@ function runGit(root, args, { allowFailure = false } = {}) {
   return stdout.toString("utf8");
 }
 
-function resolveRepo(cwd, allowedRoots = []) {
+function resolveRepo(cwd, allowedRoots = /** @type {string[]} */ ([])) {
   const workspace = realpathSync(resolve(cwd));
   const roots = allowedRoots.flatMap((root) => {
     try {
@@ -39,12 +40,12 @@ function safePath(repo, path, { allowMissing = false } = {}) {
   try {
     if (lstatSync(target).isSymbolicLink()) throw new Error("Invalid Git path");
   } catch (error) {
-    if (!allowMissing || error?.message === "Invalid Git path") throw error;
+    if (!allowMissing || errorMessage(error) === "Invalid Git path") throw error;
   }
   return normalized;
 }
 
-export function readGitStatus(cwd, allowedRoots = []) {
+export function readGitStatus(cwd, allowedRoots = /** @type {string[]} */ ([])) {
   const repo = resolveRepo(cwd, allowedRoots);
   const raw = runGit(repo.root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
   const records = raw.split("\0").filter(Boolean);
@@ -71,7 +72,11 @@ export function readGitStatus(cwd, allowedRoots = []) {
   return { root: repo.root, entries };
 }
 
-export function readGitDiff(cwd, path, { allowedRoots = [], scope = "head", commit = "" } = {}) {
+export function readGitDiff(
+  cwd,
+  path,
+  { allowedRoots = /** @type {string[]} */ ([]), scope = "head", commit = "" } = {},
+) {
   const repo = resolveRepo(cwd, allowedRoots);
   const safe = safePath(repo, path, { allowMissing: true });
   let diff;
@@ -97,7 +102,7 @@ export function readGitDiff(cwd, path, { allowedRoots = [], scope = "head", comm
   return { root: repo.root, path: safe, scope, commit: commit || undefined, diff: diff || "" };
 }
 
-export function readGitHistory(cwd, path, { allowedRoots = [], limit = 50 } = {}) {
+export function readGitHistory(cwd, path, { allowedRoots = /** @type {string[]} */ ([]), limit = 50 } = {}) {
   const repo = resolveRepo(cwd, allowedRoots);
   const safe = safePath(repo, path, { allowMissing: true });
   const max = clampLimit(limit, { fallback: 50, max: 100 });

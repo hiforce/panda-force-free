@@ -3,6 +3,7 @@ import { setMessageHtml, setOpaqueText } from "../i18n.js";
 import { codexIcon } from "../codex-icons.js";
 
 // Projects child-task activity and owns deferred side-task rendering.
+/** @param {import("./ports.js").FeatureOptions<"renderBatch" | "mutations" | "state" | "$" | "escapeHtml", "navigation", "sideTasks">} options */
 export function assembleSideTasks({ renderBatch, mutations, state, $, escapeHtml, navigationPort }) {
   let pendingSideTasksRender = false;
   function sideTaskStatus(item, threadId) {
@@ -14,23 +15,23 @@ export function assembleSideTasks({ renderBatch, mutations, state, $, escapeHtml
   function updateSideTasks(item) {
     if (item.type === "collabAgentToolCall") {
       for (const threadId of item.receiverThreadIds || []) {
-        const previous = state.sideTasks.get(threadId) || {};
+        const previous = state.sideTasks.get(threadId);
         mutations.collection("sideTasks").set(threadId, {
           ...previous,
           threadId,
-          prompt: item.prompt || previous.prompt || "",
-          model: item.model || previous.model || "",
-          reasoningEffort: item.reasoningEffort || previous.reasoningEffort || "",
+          prompt: item.prompt || previous?.prompt || "",
+          model: item.model || previous?.model || "",
+          reasoningEffort: item.reasoningEffort || previous?.reasoningEffort || "",
           status: sideTaskStatus(item, threadId),
-          message: item.agentsStates?.[threadId]?.message || previous.message || "",
+          message: item.agentsStates?.[threadId]?.message || previous?.message || "",
         });
       }
     } else if (item.type === "subAgentActivity") {
-      const previous = state.sideTasks.get(item.agentThreadId) || {};
+      const previous = state.sideTasks.get(item.agentThreadId);
       mutations.collection("sideTasks").set(item.agentThreadId, {
         ...previous,
         threadId: item.agentThreadId,
-        agentPath: item.agentPath || previous.agentPath || "",
+        agentPath: item.agentPath || previous?.agentPath || "",
         status: sideTaskStatus(item, item.agentThreadId),
       });
     }

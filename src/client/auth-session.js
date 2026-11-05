@@ -1,4 +1,8 @@
+import { findElement } from "./dom.js";
+import { observeAuthentication } from "./http-client.js";
 import { getBrowserI18n, localizeText } from "./i18n.js";
+import { createLifecycle } from "./lifecycle.js";
+const sessions = new WeakMap();
 
 import { sessionLoginUrl } from "../shared/auth-return-path.js";
 
@@ -6,7 +10,10 @@ const CHECK_INTERVAL_MS = 5 * 60_000;
 const CHECK_TIMEOUT_MS = 20_000;
 const NOTICE_DELAY_MS = 15_000;
 
-export function installPandaForceSession(status, { translate: t = getBrowserI18n().t, i18n } = {}) {
+/** @param {{authMode: string; identity?: {username?: string; account?: string}}} status @param {{translate?: import("../shared/i18n/messages.js").Translate; i18n?: ReturnType<typeof getBrowserI18n>}} options */
+export function installPandaForceSession(status, { translate: t = getBrowserI18n().t, i18n = undefined } = {}) {
+  if (sessions.has(document)) return sessions.get(document);
+  const lifecycle = createLifecycle();
   const originalFetch = globalThis.fetch.bind(globalThis);
   let checking = null,
     navigating = false,
@@ -73,14 +80,14 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
     notice.hidden = false;
     notice.dataset.status = condition;
     localizeText(
-      notice.querySelector("span"),
+      findElement("span", notice),
       expired
         ? "common.yourSignInHasExpiredYourPageAndDraftAre"
         : "common.signInVerificationIsTemporarilyUnavailableRetryingInTheBackground",
       undefined,
       t,
     );
-    localizeText(notice.querySelector("button"), expired ? "common.signInAgain" : "common.retry", undefined, t);
+    localizeText(findElement("button", notice), expired ? "common.signInAgain" : "common.retry", undefined, t);
   }
 
   function setCondition(value) {
@@ -131,38 +138,29 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
     return checking;
   }
 
-  globalThis.__pandaForceCheckAuth = check;
-  globalThis.fetch = async (...args) => {
-    const response = await originalFetch(...args);
-    if (response.status === 401) {
-      const input = args[0];
-      const url = new URL(response.url || input?.url || String(input), location.href);
-      if (url.origin === location.origin) void check({ force: true });
-    }
-    return response;
-  };
+  const unobserve = observeAuthentication(check);
   const resume = () => {
     schedule();
     if (Date.now() - lastVerifiedAt >= 60_000) void check({ force: true });
   };
   schedule();
-  addEventListener("pagehide", () => {
+  lifecycle.on(globalThis, "pagehide", () => {
     suspended = true;
     pause();
   });
-  addEventListener("pageshow", (event) => {
+  lifecycle.on(globalThis, "pageshow", (event) => {
     if (event.persisted) {
       suspended = false;
       resume();
     }
   });
-  addEventListener("online", resume);
-  addEventListener("offline", pause);
-  document.addEventListener("visibilitychange", () => {
+  lifecycle.on(globalThis, "online", resume);
+  lifecycle.on(globalThis, "offline", pause);
+  lifecycle.on(document, "visibilitychange", () => {
     if (document.visibilityState === "visible") resume();
     else pause();
   });
-  i18n?.subscribe(render);
+  const unsubscribeLocale = i18n?.subscribe(render);
 
   const button = document.createElement("button");
   button.type = "button";
@@ -179,12 +177,34 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
     try {
       const response = await originalFetch("/api/auth/logout", { method: "POST" });
       if (!response.ok) throw new Error("Unable to sign out");
-      dispatchEvent(new Event("panda-force:logged-out"));
+      const pendingCleanup = [];
+      dispatchEvent(
+        new CustomEvent("panda-force:logged-out", {
+          detail: { waitUntil: (promise) => pendingCleanup.push(promise) },
+        }),
+      );
+      await Promise.allSettled(pendingCleanup);
       navigating = true;
       location.assign(status.authMode === "idaas" ? "/auth/logged-out" : "/");
     } catch {
       button.disabled = false;
     }
   };
-  document.querySelector('[data-settings-content="general-settings"]')?.append(button);
+  findElement('[data-settings-content="general-settings"]')?.append(button);
+  const handle = {
+    check,
+    dispose() {
+      suspended = true;
+      pause();
+      lifecycle.dispose();
+      unobserve();
+      unsubscribeLocale?.();
+      notice?.remove();
+      button.remove();
+      sessions.delete(document);
+    },
+  };
+  sessions.set(document, handle);
+  if (globalThis.__pandaForceTest) globalThis.__pandaForceCheckAuth = check;
+  return handle;
 }

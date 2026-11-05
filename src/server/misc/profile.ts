@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { homedir } from "node:os";
+import { join } from "node:path";
+import { isRecord } from "../../shared/records.js";
+import { errorMessage } from "./../../shared/errors.js";
 
 export type CodexProfile = {
   displayName: string | null;
@@ -100,9 +102,10 @@ export async function fetchCodexProfile(options: FetchCodexProfileOptions = {}):
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error(`Codex profile request failed (${response.status})`);
-  const data = (await response.json()) as any;
+  const payload: unknown = await response.json();
+  const data = isRecord(payload) ? payload : {};
   const profile = data?.profile;
-  if (!profile || typeof profile !== "object") return null;
+  if (!isRecord(profile)) return null;
   return {
     displayName: cleanString(profile.display_name, 160),
     imageUrl: cleanString(profile.profile_picture_url, 2_048),
@@ -216,13 +219,26 @@ export function createAccountIdentityLoader<T>(load: (refresh: boolean) => Promi
   return { get, invalidate };
 }
 
-export async function resolveAccountIdentity(accountResponse: AccountResponse | null | undefined) {
+export async function resolveAccountIdentity(payload: unknown) {
+  const account = isRecord(payload) && isRecord(payload.account) ? payload.account : null;
+  const accountResponse: AccountResponse = {
+    account: account
+      ? {
+          type: cleanString(account.type) || undefined,
+          email: cleanString(account.email),
+          planType: cleanString(account.planType),
+        }
+      : null,
+  };
   let profile: CodexProfile | null = null;
   if (accountResponse?.account?.type === "chatgpt") {
     try {
       profile = await fetchCodexProfile();
     } catch (error) {
-      console.warn("[panda-force] profile request failed:", error instanceof Error ? error.message : String(error));
+      console.warn(
+        "[panda-force] profile request failed:",
+        error instanceof Error ? errorMessage(error) : String(error),
+      );
     }
   }
   return buildAccountIdentity(accountResponse, profile);

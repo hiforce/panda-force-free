@@ -48,6 +48,7 @@ export function approvalDecisionResponse(request, decision, kind) {
   return kind === "permission" ? decision : { decision };
 }
 
+/** @returns {import("./data-contracts.js").ApprovalModel} */
 export function buildApprovalModel(request) {
   request = normalizeApprovalRequest(request);
   const method = request.method;
@@ -65,6 +66,7 @@ export function buildApprovalModel(request) {
   };
 
   if (method === "item/commandExecution/requestApproval") {
+    /** @type {import("./data-contracts.js").ApprovalChoice | null} */
     let scoped = hasDecision(available, "acceptForSession")
       ? { label: "Allow this conversation", labelKey: "common.allowThisConversation", decision: "acceptForSession" }
       : null;
@@ -188,7 +190,9 @@ function cleanDiffPath(value = "") {
 
 export function parseUnifiedDiff(diff = "") {
   const files = [];
+  /** @type {import("./data-contracts.js").DiffFile | null} */
   let file = null;
+  /** @type {import("./data-contracts.js").DiffHunk | null} */
   let hunk = null;
   let linesAdded = 0;
   let linesDeleted = 0;
@@ -294,7 +298,7 @@ function hasShellControl(command = "") {
 function explorationCommand(command = "") {
   if (hasShellControl(command)) return null;
   const words = shellWords(command);
-  const name = words[0]?.split("/").at(-1);
+  const name = words[0]?.split("/").at(-1) || "";
   const hasOption = (options) =>
     words.some((word) => options.some((option) => word === option || word.startsWith(`${option}=`)));
   if (

@@ -1,11 +1,15 @@
 import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "../i18n.js";
+import { errorMessage } from "./../../shared/errors.js";
+import { findElements } from "./../dom.js";
+import { request as fetch } from "./../http-client.js";
 
-import { parseWorkbenchRoute } from "../workbench-route.js";
+import { codexIcon } from "../codex-icons.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { createLatestRequestGate, resolveComposerPlaceholder } from "../ui-core.js";
-import { codexIcon } from "../codex-icons.js";
+import { parseWorkbenchRoute } from "../workbench-route.js";
 
 // Owns workspace state and operations; peers are explicit application ports.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "$" | "escapeHtml" | "state" | "t" | "shortPath" | "titleOf", "timeline" | "models" | "composer" | "navigation" | "projects" | "goals" | "queue", "workspace">} options */
 export function assembleWorkspace({
   viewUpdates,
   mutations,
@@ -56,7 +60,7 @@ export function assembleWorkspace({
           folderBrowse.selected = folder.path;
           setOpaqueText($("#folderSelection"), folder.path);
           $("#folderConfirm").disabled = false;
-          list.querySelectorAll(".folder-item").forEach((x) => x.classList.remove("selected"));
+          findElements(".folder-item", list).forEach((x) => x.classList.remove("selected"));
           b.classList.add("selected");
         };
         list.append(b);
@@ -68,7 +72,7 @@ export function assembleWorkspace({
         );
     } catch (e) {
       if (!folderRequestGate.isCurrent(generation)) return;
-      setMessageHtml(list, `<div class="list-state">${escapeHtml(e.message)}</div>`);
+      setMessageHtml(list, `<div class="list-state">${escapeHtml(errorMessage(e))}</div>`);
     }
   }
   function openFolderPicker() {
@@ -188,7 +192,7 @@ export function assembleWorkspace({
       await selectWorkbenchProject(folderBrowse.selected);
       $("#folderDialog").close();
     } catch (error) {
-      setMessageHtml($("#folderList"), `<div class="list-state" role="alert">${escapeHtml(error.message)}</div>`);
+      setMessageHtml($("#folderList"), `<div class="list-state" role="alert">${escapeHtml(errorMessage(error))}</div>`);
     } finally {
       button.disabled = false;
     }
@@ -227,8 +231,10 @@ export function assembleWorkspace({
     viewUpdates.request("status");
   }
   function bind() {
-    $("#projectButton").onclick = (...args) => openFolderPicker(...args);
-    $("#projectlessOption").onclick = (...args) => useProjectless(...args);
+    $("#projectButton").onclick = /** @param {Parameters<typeof openFolderPicker>} args */ (...args) =>
+      openFolderPicker(...args);
+    $("#projectlessOption").onclick = /** @param {Parameters<typeof useProjectless>} args */ (...args) =>
+      useProjectless(...args);
     $("#folderGo").onclick = () => loadFolders($("#folderPathInput").value);
     $("#folderPathInput").oninput = () => {
       folderRequestGate.next();
@@ -238,11 +244,12 @@ export function assembleWorkspace({
     $("#folderPathInput").onkeydown = (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        loadFolders(e.currentTarget.value);
+        loadFolders($("#folderPathInput").value);
       }
     };
     $("#folderUp").onclick = () => folderBrowse.parent && loadFolders(folderBrowse.parent);
-    $("#folderConfirm").onclick = (...args) => useSelectedFolder(...args);
+    $("#folderConfirm").onclick = /** @param {Parameters<typeof useSelectedFolder>} args */ (...args) =>
+      useSelectedFolder(...args);
   }
   return {
     bind,

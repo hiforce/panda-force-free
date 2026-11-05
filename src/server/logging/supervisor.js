@@ -1,5 +1,6 @@
-import { StringDecoder } from "node:string_decoder";
 import { once } from "node:events";
+import { StringDecoder } from "node:string_decoder";
+import { errorCode, errorMessage } from "./../../shared/errors.js";
 import { createRotatingLog } from "./rotating-file.js";
 
 export async function runLoggedProcess({
@@ -20,7 +21,9 @@ export async function runLoggedProcess({
       fileFailed = false;
     } catch (error) {
       if (!fileFailed)
-        stderr.write(`[PandaForce] File logging failed (${error.code || error.message}); console output continues.\n`);
+        stderr.write(
+          `[PandaForce] File logging failed (${errorCode(error) || errorMessage(error)}); console output continues.\n`,
+        );
       fileFailed = true;
     }
   };

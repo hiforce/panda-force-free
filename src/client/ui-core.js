@@ -112,6 +112,7 @@ export function filterAppModels(models) {
   );
 }
 
+/** @param {{followUpType?: string; composerMode?: string; cloudStartingState?: string | null; isBackgroundSubagentsPanelVisible?: boolean; isGoalModeActive?: boolean; isPlanModeActive?: boolean; placeholderText?: string | null; isHome?: boolean}} options */
 export function resolveComposerPlaceholder({
   followUpType,
   composerMode = "local",
@@ -168,27 +169,23 @@ export function applyComposerSuggestion(text, match, replacement) {
   return { text: before + inserted + after, cursor: before.length + inserted.length };
 }
 
-export function threadLastActivityAt(thread = {}) {
-  const candidates = [thread.lastActivityAt, thread.updatedAt || thread.recencyAt];
-  return Math.max(
-    0,
-    ...candidates.map((value) => (Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 0)),
-  );
-}
+export { threadLastActivityAt } from "./conversation-policy.js";
 
 export function formatActivityAge(timestamp, { now = Date.now(), locale = "en" } = {}) {
   if (!Number.isFinite(Number(timestamp)) || Number(timestamp) <= 0) return "";
   const seconds = Math.max(0, now / 1000 - Number(timestamp));
   const format = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" });
   if (seconds < 60) return format.format(0, "second");
-  for (const [unit, size] of [
+  /** @type {Array<[Intl.RelativeTimeFormatUnit, number]>} */
+  const units = [
     ["year", 31536000],
     ["month", 2592000],
     ["week", 604800],
     ["day", 86400],
     ["hour", 3600],
     ["minute", 60],
-  ]) {
+  ];
+  for (const [unit, size] of units) {
     if (seconds >= size) return format.format(-Math.floor(seconds / size), unit);
   }
 }

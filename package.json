@@ -1,6 +1,6 @@
 {
   "name": "panda-force-free",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -8,7 +8,7 @@
     "start": "bun run scripts/start.ts",
     "dev": "bun run scripts/dev.ts",
     "build": "bun run build:client && bun run build:server",
-    "check": "bun build src/server/main.ts --target=bun --outfile=/tmp/panda-force-server-check.js && bun build scripts/dev.ts --target=bun --outfile=/tmp/panda-force-dev-check.js && bun build src/client/app.js --target=browser --outfile=/tmp/panda-force-app-check.js --external=/file-preview.bundle.js --external=/terminal-runtime.bundle.js && bun build scripts/start.ts --target=bun --outfile=/tmp/panda-force-start-check.js",
+    "check": "bun run check:dependencies && bun run check:contracts && bun run check:state && bun run typecheck && bun run check:dom && bun run check:build",
     "test": "bun scripts/testing/run.mjs unit",
     "test:unit": "bun scripts/testing/run.mjs unit",
     "test:integration": "bun scripts/testing/run.mjs integration",
@@ -16,9 +16,9 @@
     "test:e2e": "bun scripts/testing/run.mjs browser",
     "test:browser:failure-paths": "bun scripts/testing/run.mjs failure-paths",
     "build:client": "bun scripts/build-client.mjs",
-    "build:server": "bun build src/server/main.ts --target=bun --outfile=dist/server.js && bun -e \"await Bun.write('dist/worker.js', Bun.file('src/server/terminal/worker.js'))\" && bun build scripts/start.ts --target=bun --outfile=dist/start.js",
+    "build:server": "bun build src/server/main.ts --target=bun --outfile=dist/server.js && bun build src/server/terminal/worker.js --target=node --external=node-pty --outfile=dist/worker.js && bun build scripts/start.ts --target=bun --outfile=dist/start.js && bun build src/server/cluster/gateway.ts --target=bun --outfile=dist/gateway.js",
     "test:browser:runtime": "bun scripts/testing/run.mjs runtime",
-    "test:architecture": "bun test tests/client-architecture.test.ts",
+    "test:architecture": "bun test tests/unit/client-architecture.test.ts",
     "test:browser:i1": "bun scripts/testing/run.mjs workbench",
     "test:browser:projects": "bun scripts/testing/run.mjs projects",
     "release:comments": "bun scripts/release/comment-audit.mjs",
@@ -26,7 +26,17 @@
     "release:verify": "bun scripts/release/verify-free.mjs",
     "verify": "bun scripts/testing/run.mjs verify",
     "test:live": "bun scripts/testing/run.mjs live",
-    "check:i18n": "bun scripts/i18n/validate.mjs"
+    "check:i18n": "bun scripts/i18n/validate.mjs",
+    "check:build": "bun build src/server/main.ts --target=bun --outfile=/tmp/panda-force-server-check.js && bun build scripts/dev.ts --target=bun --outfile=/tmp/panda-force-dev-check.js && bun build src/client/app.js --target=browser --outfile=/tmp/panda-force-app-check.js --external=/file-preview.bundle.js --external=/terminal-runtime.bundle.js && bun build scripts/start.ts --target=bun --outfile=/tmp/panda-force-start-check.js && bun build src/server/cluster/gateway.ts --target=bun --outfile=/tmp/panda-force-gateway-check.js",
+    "typecheck": "bun node_modules/typescript/bin/tsc -p tsconfig.json && bun node_modules/typescript/bin/tsc -p tsconfig.strict.json && bun node_modules/typescript/bin/tsc -p tsconfig.contracts.json && bun node_modules/typescript/bin/tsc -p tsconfig.tooling.json",
+    "check:dom": "bun scripts/quality/dom-types.mjs",
+    "lint": "bun node_modules/eslint/bin/eslint.js src scripts tests *.mjs --max-warnings 0",
+    "format": "bun scripts/quality/format.mjs --write",
+    "format:check": "bun scripts/quality/format.mjs",
+    "check:dependencies": "bun scripts/quality/dependencies.mjs",
+    "check:state": "bun scripts/quality/state-contracts.ts",
+    "check:contracts": "bun scripts/quality/contracts.ts",
+    "release:proof": "bun scripts/verification/build-proof.ts"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
@@ -45,8 +55,8 @@
     "dompurify": "^3.4.17",
     "i18next": "26.7.1",
     "i18next-icu": "2.6.1",
+    "immer": "11.2.9",
     "intl-messageformat": "12.1.4",
-    "jsdom": "^26.1.0",
     "katex": "^0.18.2",
     "marked": "^16.4.2",
     "node-pty": "^1.1.0",
@@ -55,10 +65,20 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/bun": "1.4.2",
+    "@types/jsdom": "^21",
+    "@types/katex": "0.16.8",
+    "@types/node": "^22",
     "@types/ws": "^8.18.1",
     "acorn": "^8.15.0",
+    "eslint": "10.14.0",
+    "globals": "17.14.0",
+    "jsdom": "^26.1.0",
     "playwright": "^1.61.1",
-    "prettier": "^3.9.10"
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.0",
+    "typescript-eslint": "8.72.1"
   },
   "patchedDependencies": {
     "urllib@2.44.1": "patches/urllib@2.44.1.patch"

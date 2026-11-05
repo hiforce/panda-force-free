@@ -1,3 +1,8 @@
+import { createSidebarSessionBrowser } from "./sidebar-session-browser.js";
+import { errorMessage } from "./../shared/errors.js";
+import { createAnchoredMenu } from "./anchored-menu.js";
+import { closestElement, findElement } from "./dom.js";
+import { request as fetch } from "./http-client.js";
 import {
   getBrowserI18n,
   localizeAttribute,
@@ -8,12 +13,11 @@ import {
   setOpaqueText,
 } from "./i18n.js";
 
-import { createSessionState } from "./application/session-state.js";
 import { normalizeProjectPath } from "../shared/project-visibility.js";
-import { threadLastActivityAt } from "./ui-core.js";
 import { codexIcon } from "./codex-icons.js";
-import { storage, STORAGE_KEYS } from "./storage.js";
 import { confirmAction } from "./confirmation-dialog.js";
+import { threadLastActivityAt } from "./conversation-policy.js";
+import { storage, STORAGE_KEYS } from "./storage.js";
 
 /**
  * Session sidebar: project grouping with pin/expand/hide state, the project
@@ -25,11 +29,13 @@ export function createThreadSidebar({
   $,
   t,
   state,
-  projectCatalog = null,
-  onProjectNewSession = () => {},
-  onSessionProject = null,
-  initialVisibility = null,
-  onVisibility = () => {},
+  projectCatalog = /** @type {ReturnType<typeof import("./project-catalog.js").createProjectCatalog> | null} */ (null),
+  onProjectNewSession = (_projectId) => {},
+  onSessionProject = /** @type {((id: string) => unknown) | null} */ (null),
+  initialVisibility = /** @type {import("../shared/data-view.js").DataView<import("../shared/engine/types.js").ProjectVisibility> | null} */ (
+    null
+  ),
+  onVisibility = (_visibility) => {},
   onRender = () => {},
   readVisibility,
   rpc,
@@ -54,7 +60,7 @@ export function createThreadSidebar({
   cleanupDeletedThread,
   removeCachedConversation,
 }) {
-  sessions ??= createSessionState(state);
+  if (!sessions) throw new Error("Session sidebar requires the session mutation capability");
   const sidebarPinnedProjects = (() => {
     try {
       const keys = JSON.parse(storage.get(STORAGE_KEYS.sidebarPinnedProjects) || "[]");
@@ -93,8 +99,7 @@ export function createThreadSidebar({
     visibilityRead = null,
     visibilityUpdatedAt = 0;
   let sidebarProjectMenu = null,
-    sidebarProjectMenuTrigger = null,
-    sidebarProjectMenuBounds = null;
+    sidebarProjectMenuTrigger = null;
   const SIDEBAR_SESSION_PAGE_SIZE = 5;
   const sidebarSessionLimits = new Map();
   const savedProject = storage.get(STORAGE_KEYS.project);
@@ -109,7 +114,7 @@ export function createThreadSidebar({
   }
   function sidebarProjectName(key) {
     if (key === "__pinned__") return "Pinned";
-    if (key === "__tasks__") return projectCatalog ? t("sessions.unassignedSessions") : "Tasks";
+    if (key === "__tasks__") return projectCatalog ? t("sessions.unassignedSessions") : t("common.sessions");
     if (projectCatalog) return projectCatalog.get(key.slice(8))?.name || key;
     if (key === state.config.home) return "Home";
     return key.split("/").filter(Boolean).at(-1) || key;
@@ -208,12 +213,12 @@ export function createThreadSidebar({
               ),
             );
           } catch (error) {
-            addPersistentError(error.message);
+            addPersistentError(errorMessage(error));
           }
         },
       });
     } catch (error) {
-      addPersistentError(error.message);
+      addPersistentError(errorMessage(error));
     }
   }
   function startNewSessionInProject(project) {
@@ -238,15 +243,20 @@ export function createThreadSidebar({
     setWorkspace(project);
     startNewTask();
   }
+  const sidebarMenus = createAnchoredMenu({
+    onClose: () => {
+      sidebarProjectMenu?.remove();
+      sidebarProjectMenu = null;
+      sidebarProjectMenuTrigger = null;
+    },
+  });
   function closeSidebarProjectMenu(restoreFocus = false) {
-    sidebarProjectMenu?.remove();
-    sidebarProjectMenu = null;
-    if (sidebarProjectMenuTrigger) {
-      sidebarProjectMenuTrigger.setAttribute("aria-expanded", "false");
-      if (restoreFocus && sidebarProjectMenuTrigger.isConnected) sidebarProjectMenuTrigger.focus();
-    }
-    sidebarProjectMenuTrigger = null;
-    sidebarProjectMenuBounds = null;
+    sidebarMenus.close(restoreFocus);
+  }
+  function showSidebarMenu(menu, trigger) {
+    sidebarProjectMenu = menu;
+    sidebarProjectMenuTrigger = trigger;
+    sidebarMenus.toggle(trigger, menu);
   }
   function openSidebarProjectMenu(project, trigger) {
     const wasOpen = sidebarProjectMenuTrigger === trigger;
@@ -281,33 +291,7 @@ export function createThreadSidebar({
     localizeText(hide, "sessions.hideProject", undefined, t);
     hide.onclick = () => hideSidebarProject(project);
     if (!projectCatalog) menu.append(hide);
-    sidebarProjectMenu = menu;
-    sidebarProjectMenuTrigger = trigger;
-    trigger.setAttribute("aria-expanded", "true");
-    document.body.append(menu);
-    const bounds = trigger.getBoundingClientRect(),
-      width = menu.offsetWidth,
-      height = menu.offsetHeight;
-    sidebarProjectMenuBounds = bounds;
-    menu.style.left = `${Math.max(8, Math.min(bounds.right - width, innerWidth - width - 8))}px`;
-    menu.style.top = `${Math.max(8, bounds.bottom + 4 + height > innerHeight ? bounds.top - height - 4 : bounds.bottom + 4)}px`;
-    const menuItems = projectCatalog ? [create, pin] : [create, pin, hide];
-    menu.onkeydown = (event) => {
-      if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
-        event.preventDefault();
-        const index = menuItems.indexOf(document.activeElement),
-          next =
-            event.key === "Home"
-              ? 0
-              : event.key === "End"
-                ? menuItems.length - 1
-                : event.key === "ArrowUp"
-                  ? Math.max(0, index - 1)
-                  : Math.min(menuItems.length - 1, index + 1);
-        menuItems[next].focus();
-      }
-    };
-    create.focus({ preventScroll: true });
+    showSidebarMenu(menu, trigger);
   }
   function openSidebarThreadMenu(thread, trigger) {
     const wasOpen = sidebarProjectMenuTrigger === trigger;
@@ -358,59 +342,8 @@ export function createThreadSidebar({
       deleteThread(thread, trigger);
     };
     menu.append(remove);
-    sidebarProjectMenu = menu;
-    sidebarProjectMenuTrigger = trigger;
-    trigger.setAttribute("aria-expanded", "true");
-    document.body.append(menu);
-    const bounds = trigger.getBoundingClientRect(),
-      width = menu.offsetWidth,
-      height = menu.offsetHeight;
-    sidebarProjectMenuBounds = bounds;
-    menu.style.left = `${Math.max(8, Math.min(bounds.right - width, innerWidth - width - 8))}px`;
-    menu.style.top = `${Math.max(8, bounds.bottom + 4 + height > innerHeight ? bounds.top - height - 4 : bounds.bottom + 4)}px`;
-    const menuItems = [...menu.querySelectorAll('[role="menuitem"]')];
-    menu.onkeydown = (event) => {
-      if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
-        event.preventDefault();
-        const index = menuItems.indexOf(document.activeElement),
-          next =
-            event.key === "Home"
-              ? 0
-              : event.key === "End"
-                ? menuItems.length - 1
-                : event.key === "ArrowUp"
-                  ? Math.max(0, index - 1)
-                  : Math.min(menuItems.length - 1, index + 1);
-        menuItems[next].focus();
-      }
-    };
-    fork.focus({ preventScroll: true });
+    showSidebarMenu(menu, trigger);
   }
-  document.addEventListener("click", (event) => {
-    if (
-      sidebarProjectMenu &&
-      !event.composedPath().includes(sidebarProjectMenu) &&
-      !event.composedPath().includes(sidebarProjectMenuTrigger)
-    )
-      closeSidebarProjectMenu();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (!sidebarProjectMenu) return;
-    if (event.key === "Escape") {
-      event.preventDefault();
-      closeSidebarProjectMenu(true);
-    } else if (event.key === "Tab") closeSidebarProjectMenu(true);
-  });
-  document.addEventListener(
-    "scroll",
-    () => {
-      if (!sidebarProjectMenu || !sidebarProjectMenuTrigger || !sidebarProjectMenuBounds) return;
-      const current = sidebarProjectMenuTrigger.getBoundingClientRect();
-      if (["top", "left", "bottom", "right"].some((key) => Math.abs(current[key] - sidebarProjectMenuBounds[key]) > 1))
-        closeSidebarProjectMenu(true);
-    },
-    true,
-  );
   async function deleteThread(thread, returnFocus) {
     if (!thread?.id) return;
     const title = titleOf(thread);
@@ -424,9 +357,10 @@ export function createThreadSidebar({
         returnFocus: () =>
           returnFocus?.isConnected
             ? returnFocus
-            : [...$("#threadList").querySelectorAll(".thread-item")]
-                .find((row) => row.dataset.id === thread.id)
-                ?.querySelector(".thread-options"),
+            : findElement(
+                ".thread-options",
+                [...$("#threadList").querySelectorAll(".thread-item")].find((row) => row.dataset.id === thread.id),
+              ),
       }))
     )
       return;
@@ -444,9 +378,70 @@ export function createThreadSidebar({
       toast(t("sessions.threadDeleted"));
     } catch (error) {
       console.error("Could not delete thread", error);
-      addPersistentError(error?.message || t("errors.couldNotDeleteThread"));
+      addPersistentError(errorMessage(error) || t("errors.couldNotDeleteThread"));
     }
   }
+  function appendSessionRows(threads, visibleThreads) {
+    for (const thread of visibleThreads) {
+      const row = document.createElement("div");
+      row.className = "thread-item" + (state.active?.id === thread.id ? " active" : "");
+      row.dataset.id = thread.id;
+      setOpaqueAttribute(row, "title", [titleOf(thread), shortPath(thread.cwd)].filter(Boolean).join(" — "));
+      row.setAttribute("role", "button");
+      row.tabIndex = 0;
+      const name = document.createElement("span");
+      name.className = "thread-name";
+      setOpaqueText(name, titleOf(thread));
+      const meta = document.createElement("span");
+      meta.className = "thread-meta";
+      const spinner = document.createElement("span");
+      spinner.className = "thread-running";
+      spinner.dataset.i18nUi = "";
+      spinner.setAttribute("role", "img");
+      const time = document.createElement("time");
+      time.dataset.i18nUi = "";
+      meta.append(time);
+      row.append(spinner);
+      updateThreadRowMeta(row, thread, meta);
+      const options = document.createElement("button");
+      options.type = "button";
+      options.className = "thread-options";
+      localizeAttribute(options, "title", "sessions.sessionOptions", undefined, t);
+      localizeAttribute(options, "aria-label", "sessions.sessionOptionsForTitle", { title: titleOf(thread) }, t);
+      options.setAttribute("aria-haspopup", "menu");
+      options.setAttribute("aria-expanded", "false");
+      setMessageHtml(options, codexIcon("ellipsis"));
+      options.onclick = (event) => {
+        event.stopPropagation();
+        openSidebarThreadMenu(thread, options);
+      };
+      row.append(name, meta, options);
+      const open = () => {
+        if (mobileSidebarEnabled()) setSidebarOpen(false);
+        openThread(thread.id);
+      };
+      row.onclick = (event) => {
+        if (closestElement(".thread-options", event.target)) return;
+        open();
+      };
+      row.onkeydown = (event) => {
+        if (closestElement(".thread-options", event.target)) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open();
+        }
+      };
+      threads.append(row);
+    }
+  }
+  const unassignedBrowser = projectCatalog
+    ? createSidebarSessionBrowser({
+        catalog: projectCatalog,
+        t,
+        appendRows: appendSessionRows,
+        onError: (error) => addPersistentError(errorMessage(error)),
+      })
+    : null;
   function renderThreads() {
     onRender();
     closeSidebarProjectMenu();
@@ -485,6 +480,13 @@ export function createThreadSidebar({
         )
           groups.set(key, { key, threads: [] });
       }
+    // Older unassigned sessions remain discoverable when every recently loaded session is linked.
+    if (
+      projectCatalog &&
+      !groups.has("__tasks__") &&
+      !Object.hasOwn(sidebarProjectVisibility.hiddenProjects, "__tasks__")
+    )
+      groups.set("__tasks__", { key: "__tasks__", threads: [] });
     const pinnedThreads = state.threads.filter(
       (thread) =>
         sidebarPinnedThreads.has(thread.id) &&
@@ -502,9 +504,12 @@ export function createThreadSidebar({
       );
     for (const group of ordered) {
       group.threads.sort((a, b) => threadLastActivityAt(b) - threadLastActivityAt(a));
-      const limit = sidebarSessionLimits.get(group.key) || SIDEBAR_SESSION_PAGE_SIZE,
+      const limit =
+          group.key === "__tasks__" && projectCatalog
+            ? 10
+            : sidebarSessionLimits.get(group.key) || SIDEBAR_SESSION_PAGE_SIZE,
         visibleThreads = q ? group.threads : group.threads.slice(0, limit),
-        hasMore = visibleThreads.length < group.threads.length;
+        hasMore = !(projectCatalog && group.key === "__tasks__") && visibleThreads.length < group.threads.length;
       const containsActive = group.threads.some((thread) => thread.id === state.active?.id),
         expanded =
           group.pinnedGroup ||
@@ -562,6 +567,7 @@ export function createThreadSidebar({
       const threads = document.createElement("div");
       threads.className = "sidebar-project-threads" + (expanded ? " expanded" : "");
       threads.setAttribute("aria-hidden", String(!expanded));
+      threads.inert = !expanded;
       threads.style.setProperty("--sidebar-thread-count", String(visibleThreads.length + (hasMore ? 1 : 0)));
       heading.onclick = () => {
         const next = heading.getAttribute("aria-expanded") !== "true";
@@ -569,59 +575,13 @@ export function createThreadSidebar({
         saveSidebarProjectExpansion();
         heading.setAttribute("aria-expanded", String(next));
         threads.setAttribute("aria-hidden", String(!next));
+        threads.inert = !next;
         threads.classList.toggle("expanded", next);
       };
-      for (const thread of visibleThreads) {
-        const row = document.createElement("div");
-        row.className = "thread-item" + (state.active?.id === thread.id ? " active" : "");
-        row.dataset.id = thread.id;
-        setOpaqueAttribute(row, "title", [titleOf(thread), shortPath(thread.cwd)].filter(Boolean).join(" — "));
-        row.setAttribute("role", "button");
-        row.tabIndex = 0;
-        const name = document.createElement("span");
-        name.className = "thread-name";
-        setOpaqueText(name, titleOf(thread));
-        const meta = document.createElement("span");
-        meta.className = "thread-meta";
-        const spinner = document.createElement("span");
-        spinner.className = "thread-running";
-        spinner.dataset.i18nUi = "";
-        spinner.setAttribute("role", "img");
-        const time = document.createElement("time");
-        time.dataset.i18nUi = "";
-        meta.append(time);
-        row.append(spinner);
-        updateThreadRowMeta(row, thread, meta);
-        const options = document.createElement("button");
-        options.type = "button";
-        options.className = "thread-options";
-        localizeAttribute(options, "title", "sessions.sessionOptions", undefined, t);
-        localizeAttribute(options, "aria-label", "sessions.sessionOptionsForTitle", { title: titleOf(thread) }, t);
-        options.setAttribute("aria-haspopup", "menu");
-        options.setAttribute("aria-expanded", "false");
-        setMessageHtml(options, codexIcon("ellipsis"));
-        options.onclick = (event) => {
-          event.stopPropagation();
-          openSidebarThreadMenu(thread, options);
-        };
-        row.append(name, meta, options);
-        const open = () => {
-          if (mobileSidebarEnabled()) setSidebarOpen(false);
-          openThread(thread.id);
-        };
-        row.onclick = (event) => {
-          if (event.target.closest(".thread-options")) return;
-          open();
-        };
-        row.onkeydown = (event) => {
-          if (event.target.closest(".thread-options")) return;
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            open();
-          }
-        };
-        threads.append(row);
-      }
+      if (unassignedBrowser && group.key === "__tasks__") {
+        threads.classList.add("sidebar-unassigned-browser");
+        unassignedBrowser.render(threads, group.threads, q);
+      } else appendSessionRows(threads, visibleThreads);
       if (pinnedGroup && !visibleThreads.length) {
         const empty = document.createElement("div");
         empty.className = "sidebar-pinned-empty";
@@ -637,9 +597,7 @@ export function createThreadSidebar({
           sidebarSessionLimits.set(group.key, limit + SIDEBAR_SESSION_PAGE_SIZE);
           sidebarProjectExpansion[group.key] = true;
           renderThreads();
-          $("#threadList")
-            .querySelector(`[data-project="${CSS.escape(group.key)}"] .sidebar-sessions-more`)
-            ?.focus();
+          findElement(`[data-project="${CSS.escape(group.key)}"] .sidebar-sessions-more`, $("#threadList"))?.focus();
         };
         threads.append(more);
       }
@@ -688,6 +646,7 @@ export function createThreadSidebar({
     renderThreads();
   }
   return {
+    dispose: () => sidebarMenus.dispose(),
     renderThreads,
     applyProjectVisibility,
     loadProjectVisibility,

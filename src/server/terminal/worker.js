@@ -1,9 +1,12 @@
 import pty from "node-pty";
+import { normalizeTerminalResize } from "./protocol.js";
 
 const cwd = process.argv[2] || process.cwd();
 const cols = Number(process.argv[3]) || 100;
 const rows = Number(process.argv[4]) || 24;
-const shell = process.env.SHELL || (process.platform === "win32" ? "powershell.exe" : "/bin/zsh");
+const shell =
+  process.env.SHELL ||
+  (process.platform === "win32" ? "powershell.exe" : process.platform === "darwin" ? "/bin/zsh" : "/bin/bash");
 const args = process.platform === "win32" ? [] : ["-l"];
 const terminal = pty.spawn(shell, args, {
   name: "xterm-256color",
@@ -18,7 +21,8 @@ terminal.onExit(({ exitCode }) => process.exit(Number.isInteger(exitCode) ? exit
 process.stdin.on("data", (data) => terminal.write(data.toString("utf8")));
 process.stdin.on("end", () => terminal.kill());
 process.on("message", (message) => {
-  if (message?.type === "resize") terminal.resize(message.cols, message.rows);
+  const resize = normalizeTerminalResize(message);
+  if (resize) terminal.resize(resize.cols, resize.rows);
 });
 for (const signal of ["SIGTERM", "SIGINT"])
   process.on(signal, () => {

@@ -1,11 +1,12 @@
-import { createConversationRepository } from "../conversation-repository.js";
 import { createConversationCache } from "../conversation-cache.js";
-import { storage, STORAGE_KEYS } from "../storage.js";
+import { createConversationRepository } from "../conversation-repository.js";
 import { createSidebarCache } from "../sidebar-cache.js";
+import { storage, STORAGE_KEYS } from "../storage.js";
 
 // Constructs memory/persistent history and sidebar caches with one lifecycle.
-export function assembleRepositories({ mutations, sessions }) {
-  const persistentConversationCache = createConversationCache();
+/** @param {import("./ports.js").FeatureOptions<"mutations" | "sessions" | "identity", never, "repositories">} options */
+export function assembleRepositories({ mutations, sessions, identity }) {
+  const persistentConversationCache = createConversationCache({ identity });
   const conversations = createConversationRepository({
     persistent: persistentConversationCache,
   });

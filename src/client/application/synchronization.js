@@ -1,7 +1,10 @@
+import { reportDiagnostic } from "../../shared/diagnostics.js";
+import { threadLastActivityAt } from "../conversation-policy.js";
 import { createSerialPoller } from "../serial-poller.js";
-import { threadLastActivityAt } from "../ui-core.js";
+import { findElements } from "./../dom.js";
 
 // Owns summary and active-history polling, request generations and snapshot application.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "sessions" | "state" | "workspacePreparation" | "$", "transport" | "status" | "repositories" | "models" | "queue" | "history" | "timing" | "timeline" | "composer" | "viewport", "synchronization">} options */
 export function assembleSynchronization({
   transportPort,
   viewUpdates,
@@ -40,7 +43,8 @@ export function assembleSynchronization({
           sortDirection: "desc",
         });
         if (current()) applyThreadSummaries(result.data || []);
-      } catch {
+      } catch (error) {
+        reportDiagnostic("session-list", error);
       } finally {
         if (current()) statusPort.refreshThreadRowMetadata();
       }
@@ -75,9 +79,9 @@ export function assembleSynchronization({
   }
   function applyThreadSummaries(threads) {
     threadListHasFreshData = true;
+    threads = statusPort.rememberSummaryErrors(threads);
     repositoriesPort.sidebarCache.saveThreads(threads, state.config.home);
     for (const thread of threads) modelsPort.applySessionSettings(thread.id, thread);
-    statusPort.rememberSummaryErrors(threads);
     void repositoriesPort.conversations.saveSummaries(threads);
     const nextSignature = threadSummarySignature(threads),
       changed = nextSignature !== threadListSignature;
@@ -89,8 +93,8 @@ export function assembleSynchronization({
         lastActivityAt: Math.max(threadLastActivityAt(thread), previous.get(thread.id)?.lastActivityAt || 0),
       })),
     );
-    const summary = state.active && threads.find((thread) => thread.id === state.active.id);
-    if (summary) {
+    const summary = state.active && threads.find((thread) => thread.id === state.active?.id);
+    if (summary && state.active) {
       const turns = state.active.turns;
       sessions.replaceActive({ ...state.active, ...summary, turns });
       if (summary.status?.type === "active") scheduleActiveThreadSync(0);
@@ -124,7 +128,9 @@ export function assembleSynchronization({
     try {
       const live = await transportPort.rpc("host/thread/live", { threadId });
       if (live?.active && live.turn) return live.turn;
-    } catch {}
+    } catch (error) {
+      reportDiagnostic("live-sessions", error);
+    }
     const thread = await historyPort.readConversation(threadId, state.active);
     return thread?.turns?.at(-1) || null;
   }
@@ -137,7 +143,7 @@ export function assembleSynchronization({
     else turns[index] = turn;
     sessions.setTurns(turns);
     timingPort.recordTurnTiming(turn.id, turn);
-    root.querySelectorAll(".conversation-loading").forEach((node) => node.remove());
+    findElements(".conversation-loading", root).forEach((node) => node.remove());
     timelinePort.renderTurn(turn, root);
     composerPort.syncTurnRuntime(turn);
     statusPort.updateThreadListActivity(threadId, {
@@ -145,24 +151,26 @@ export function assembleSynchronization({
       turnId: turn.id,
       turnStatus: turn.status,
       completed: turn.status !== "inProgress",
-      timestamp: Number.isFinite(turn.completedAt)
-        ? turn.completedAt
-        : Number.isFinite(turn.startedAt)
-          ? turn.startedAt
-          : undefined,
+      timestamp:
+        typeof turn.completedAt === "number" && Number.isFinite(turn.completedAt)
+          ? turn.completedAt
+          : typeof turn.startedAt === "number" && Number.isFinite(turn.startedAt)
+            ? turn.startedAt
+            : undefined,
     });
     viewportPort.scrollBottom();
     return true;
   }
   async function syncActiveThreadRead(current) {
-    const threadId = state.active.id;
+    const previous = state.active;
+    if (!previous) return ACTIVE_THREAD_SYNC_IDLE_MS;
+    const threadId = previous.id;
     let nextDelay = ACTIVE_THREAD_SYNC_IDLE_MS;
     try {
-      if (state.active.history) {
-        const previous = state.active,
-          thread = await historyPort.readConversation(threadId, previous, {
-            getCurrent: () => state.active,
-          });
+      if (previous.history) {
+        const thread = await historyPort.readConversation(threadId, previous, {
+          getCurrent: () => state.active,
+        });
         if (!current() || threadId !== state.active?.id) return;
         sessions.replaceActive(thread);
         repositoriesPort.cacheConversation(thread);
@@ -173,9 +181,9 @@ export function assembleSynchronization({
           statusPort.syncThreadErrorSurface(threadId);
           composerPort.syncTurnRuntime(latest);
         } else viewUpdates.request("composerSubmit");
-        if (thread.history.reset || thread.history.removedItems) {
+        if (thread.history?.reset || thread.history?.removedItems) {
           viewUpdates.request("conversation", { thread: thread, loadMore: 0 });
-        } else if (!thread.history.unchanged) {
+        } else if (!thread.history?.unchanged) {
           for (const turn of thread.turns) {
             const old = previous.turns.find((item) => item.id === turn.id);
             if (JSON.stringify(old) !== JSON.stringify(turn)) syncTurnSnapshot(turn, threadId);

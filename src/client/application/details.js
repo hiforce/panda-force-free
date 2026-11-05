@@ -3,6 +3,7 @@ import { localizeAttribute, localizeText, setOpaqueAttribute, setOpaqueText } fr
 import { threadInputErrorMessage } from "../../shared/bridge-errors.js";
 
 // Owns the session details view and explicit rename/copy actions.
+/** @param {import("./ports.js").FeatureOptions<"sessions" | "viewUpdates" | "mutations" | "t" | "state" | "$", "transport" | "models" | "clipboard" | "notices", "details">} options */
 export function assembleDetails({
   sessions,
   transportPort,
@@ -20,7 +21,7 @@ export function assembleDetails({
   }
   function sessionModelDetails(thread = state.active) {
     const id = thread?.id,
-      session = id && state.sessionSettings.get(id),
+      session = id ? state.sessionSettings.get(id) : undefined,
       modelId = thread?.model || session?.model || "",
       catalog = state.models.find((item) => item.model === modelId),
       label = modelId ? (catalog ? modelsPort.modelDisplay(catalog) : modelId) : t("workbench.modelUnavailable"),
@@ -109,8 +110,11 @@ export function assembleDetails({
     }
   }
   function bind() {
-    $("#copySummarySessionMarker").onclick = (...args) => copySummarySessionMarker(...args);
-    $("#saveSummarySessionName").onclick = (...args) => renameActiveSession(...args);
+    $("#copySummarySessionMarker").onclick = /** @param {Parameters<typeof copySummarySessionMarker>} args */ (
+      ...args
+    ) => copySummarySessionMarker(...args);
+    $("#saveSummarySessionName").onclick = /** @param {Parameters<typeof renameActiveSession>} args */ (...args) =>
+      renameActiveSession(...args);
     $("#summarySessionName").onkeydown = (event) => {
       if (event.key === "Enter") {
         event.preventDefault();

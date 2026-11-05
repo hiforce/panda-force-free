@@ -1,4 +1,4 @@
-import { readLocaleCookie, parseLanguageHeader, resolveLocale } from "../../shared/i18n/locale-policy.js";
+import { parseLanguageHeader, readLocaleCookie, resolveLocale } from "../../shared/i18n/locale-policy.js";
 export function requestLocale(req) {
   return resolveLocale(
     readLocaleCookie(req.headers.cookie) || "system",

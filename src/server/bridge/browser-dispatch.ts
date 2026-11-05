@@ -1,14 +1,16 @@
-import { splitBrowserRpcParams } from "../../shared/browser-rpc-compat.js";
 import { rpcErrorPayload } from "../../shared/bridge-errors.js";
+import { splitBrowserRpcParams } from "../../shared/browser-rpc-compat.js";
+import { browserEnvelope, type BrowserParams } from "../protocol/browser.js";
+import type { EngineEnvelope as NativeEnvelope } from "../../shared/engine/contracts.js";
 
 export type DispatchContext = {
   method: string;
-  params: any;
+  params: BrowserParams;
   /** PandaForce-only hints stripped from the native RPC params. */
   flags: { pandaProjectless?: unknown; pandaPrepareInput?: unknown };
-  result?: any;
+  result?: unknown;
   /** Extra top-level fields merged into the rpc/result reply. */
-  replyExtras: Record<string, any>;
+  replyExtras: Record<string, unknown>;
 };
 
 /**
@@ -33,17 +35,18 @@ export function createBrowserDispatch({
   broadcast,
 }: {
   isAllowedMethod: (method: string) => boolean;
-  request: (method: string, params?: any) => Promise<any>;
-  pendingServerRequests: Map<number | string, any>;
-  sendRaw: (message: any) => void;
-  broadcast: (data: any) => void;
+  request: (method: string, params?: Record<string, unknown>) => Promise<unknown>;
+  pendingServerRequests: Map<number | string, NativeEnvelope>;
+  sendRaw: (message: object) => void;
+  broadcast: (data: object) => void;
 }) {
-  const terminals = new Map<string, (ctx: DispatchContext) => any>();
-  const resolvers = new Map<string, Array<(ctx: DispatchContext) => any>>();
+  const terminals = new Map<string, (ctx: DispatchContext) => unknown>();
+  const resolvers = new Map<string, Array<(ctx: DispatchContext) => unknown>>();
   const beforeHooks: Array<(ctx: DispatchContext) => void> = [];
   const afterHooks: Array<(ctx: DispatchContext) => void | Promise<void>> = [];
 
-  async function dispatch(message: any) {
+  async function dispatch(input: unknown) {
+    const message = browserEnvelope(input);
     const id = message?.id;
     if (message?.type === "rpc") {
       try {
@@ -72,22 +75,22 @@ export function createBrowserDispatch({
         return rpcErrorPayload(id, error);
       }
     }
-    if (message?.type === "codex/response" || message?.type === "codex/error") {
+    if (["engine/response", "engine/error", "codex/response", "codex/error"].includes(message?.type)) {
       if (!(
-        Number.isSafeInteger(message.requestId) ||
+        (typeof message.requestId === "number" && Number.isSafeInteger(message.requestId)) ||
         (typeof message.requestId === "string" && message.requestId.length > 0 && message.requestId.length <= 256)
       ))
         throw new Error("Invalid Codex request id");
       // Several browser clients can display one approval. Only forward the first answer.
       if (!pendingServerRequests.has(message.requestId)) return { type: "ack", id };
       sendRaw(
-        message.type === "codex/error"
+        message.type === "codex/error" || message.type === "engine/error"
           ? { id: message.requestId, error: message.error }
           : { id: message.requestId, result: message.result },
       );
       pendingServerRequests.delete(message.requestId);
       broadcast({
-        type: "codex/notification",
+        type: "engine/notification",
         payload: { method: "serverRequest/resolved", params: { requestId: message.requestId } },
       });
       return { type: "ack", id };
@@ -98,10 +101,10 @@ export function createBrowserDispatch({
 
   return {
     dispatch,
-    handle(method: string, fn: (ctx: DispatchContext) => any) {
+    handle(method: string, fn: (ctx: DispatchContext) => unknown) {
       terminals.set(method, fn);
     },
-    resolve(method: string, fn: (ctx: DispatchContext) => any) {
+    resolve(method: string, fn: (ctx: DispatchContext) => unknown) {
       const list = resolvers.get(method) || [];
       list.push(fn);
       resolvers.set(method, list);

@@ -3,7 +3,11 @@ import { createEvictionLogger } from "../misc/eviction-log.js";
 const logEviction = createEvictionLogger("conversation-history");
 
 // Keep full history on the host; the browser receives only its visible range and changes.
-export function createConversationHistory({ readThread, fingerprint = () => null, maxThreads = 8 }) {
+export function createConversationHistory({
+  readThread,
+  fingerprint = /** @type {(id: string) => string | null} */ (() => null),
+  maxThreads = 8,
+}) {
   const cache = new Map(),
     inFlight = new Map(),
     generations = new Map();
@@ -84,6 +88,7 @@ export function createConversationHistory({ readThread, fingerprint = () => null
       cache.clear();
       generations.clear();
     },
+    /** @param {import("../../shared/data-contracts.js").HistoryQuery} options */
     async read({ threadId, revision, oldestItemId, cursor, limit = 100 } = {}) {
       if (typeof threadId !== "string" || !threadId) throw new Error("Invalid thread id");
       if (!Number.isInteger(limit) || limit < 1 || limit > 100)

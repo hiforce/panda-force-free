@@ -1,5 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { WebSocket } from "ws";
+import { WebSocket, type RawData } from "ws";
+import { errorMessage } from "../../shared/errors.js";
+import { nativeEnvelope } from "../protocol/native.js";
+import { errorCode } from "./../../shared/errors.js";
 import { SharedWebSocket, sendSharedMessage } from "./shared-websocket.js";
 
 const REQUEST_TIMEOUT_MS = 30000;
@@ -27,7 +30,8 @@ function disconnectedError(closeCode: number | null) {
   return Object.assign(new Error("Codex app-server disconnected"), { code: "codex_disconnected" });
 }
 
-export type CodexConnection = { mode: "shared"; socketPath: string } | { mode: string; socketPath?: string };
+export type { CodexConnection } from "../engines/codex-transport.js";
+import type { CodexTransport, CodexTransportOptions } from "../engines/codex-transport.js";
 
 /**
  * Owns the Codex app-server transport: the spawned stdio child (isolated
@@ -43,16 +47,7 @@ export function createCodexBridge({
   onMessage,
   onConnected,
   onDisconnected,
-}: {
-  connection: CodexConnection;
-  defaultCwd: string;
-  clientInfo: { name: string; title: string; version: string };
-  isShuttingDown: () => boolean;
-  /** Called for every non-response message (server requests and notifications). */
-  onMessage: (message: any) => void;
-  onConnected: (info: any) => void;
-  onDisconnected: (code: number | null, signal: string | null) => void;
-}) {
+}: CodexTransportOptions): CodexTransport {
   let seq = 1;
   let codex: ChildProcessWithoutNullStreams | null = null;
   let codexSocket: WebSocket | null = null;
@@ -61,7 +56,7 @@ export function createCodexBridge({
   let restartTimer: ReturnType<typeof setTimeout> | null = null;
   let heartbeat: ReturnType<typeof setInterval> | null = null;
   const readyWaiters = new Set<{ resolve: () => void; reject: (error: Error) => void }>();
-  const pending = new Map<number, { resolve: (value: any) => void; reject: (error: Error) => void }>();
+  const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
 
   function start() {
     if (isShuttingDown()) return;
@@ -91,7 +86,7 @@ export function createCodexBridge({
           socket.terminate();
         });
       });
-      socket.on("message", (raw) => {
+      socket.on("message", (raw: RawData) => {
         lastResponse = Date.now();
         try {
           handleMessage(JSON.parse(String(raw)));
@@ -102,8 +97,8 @@ export function createCodexBridge({
       socket.on("pong", () => {
         lastResponse = Date.now();
       });
-      socket.on("error", (error) => console.error("[panda-force] shared app-server:", error.message));
-      socket.on("close", (code, reason) => {
+      socket.on("error", (error: Error) => console.error("[panda-force] shared app-server:", error.message));
+      socket.on("close", (code: number, reason: Buffer) => {
         if (codexSocket !== socket) return;
         codexSocket = null;
         if (heartbeat) clearInterval(heartbeat);
@@ -183,7 +178,7 @@ export function createCodexBridge({
     child.kill(signal);
   }
 
-  function sendRaw(message: any) {
+  function sendRaw(message: object) {
     if (isShuttingDown()) throw new Error("PandaForce is shutting down");
     start();
     if (codexSocket) {
@@ -194,9 +189,9 @@ export function createCodexBridge({
     codex!.stdin.write(JSON.stringify(message) + "\n");
   }
 
-  function requestOnce(method: string, params: any, timeoutMs: number) {
+  function requestOnce(method: string, params: Record<string, unknown>, timeoutMs: number) {
     const id = seq++;
-    return new Promise<any>((resolvePromise, reject) => {
+    return new Promise<unknown>((resolvePromise, reject) => {
       const timer = setTimeout(() => {
         pending.delete(id);
         reject(new Error(`Codex request timed out: ${method}`));
@@ -246,20 +241,20 @@ export function createCodexBridge({
     });
   }
 
-  async function request(method: string, params: any = {}) {
+  async function request(method: string, params: Record<string, unknown> = {}) {
     const deadline = Date.now() + REQUEST_TIMEOUT_MS;
     const remaining = () => Math.max(1, deadline - Date.now());
     for (let attempt = 0; ; attempt++) {
       await waitUntilReady(remaining());
       try {
         return await requestOnce(method, params, remaining());
-      } catch (error: any) {
+      } catch (error) {
         // Queries can recover once after a lost connection. An input may have
         // already reached Codex, so never replay a turn or another mutation.
         if (
           attempt ||
           connection.mode !== "shared" ||
-          error.code !== "codex_disconnected" ||
+          errorCode(error) !== "codex_disconnected" ||
           !READ_METHODS.has(method) ||
           (method === "account/read" && params.refreshToken) ||
           Date.now() >= deadline
@@ -284,12 +279,13 @@ export function createCodexBridge({
     onConnected(result);
   }
 
-  function handleMessage(message: any) {
+  function handleMessage(input: unknown) {
+    const message = nativeEnvelope(input);
     if (message.id !== undefined && ("result" in message || "error" in message)) {
       const item = pending.get(Number(message.id));
       if (item) {
         pending.delete(Number(message.id));
-        if (message.error) item.reject(new Error(message.error.message || JSON.stringify(message.error)));
+        if (message.error) item.reject(new Error(errorMessage(message.error, JSON.stringify(message.error))));
         else item.resolve(message.result);
         return;
       }

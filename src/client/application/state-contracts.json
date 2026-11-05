@@ -225,7 +225,7 @@
     },
     "messages": {
       "read": ["active", "activityItems", "changes", "items", "turnTimings", "turns"],
-      "write": ["changes", "items"]
+      "write": ["changes", "items", "activityItems"]
     },
     "navigation": {
       "read": [

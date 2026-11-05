@@ -1,3 +1,4 @@
+import { findElements } from "./../dom.js";
 const OWNER = Symbol.for("PandaForce.messageBindingOwner");
 const bindingAttribute = "data-pf-message";
 const attributeNames = ["title", "placeholder", "aria-label", "data-tooltip"];
@@ -34,7 +35,7 @@ export function createMessageBindings(i18n) {
     const selector = [bindingAttribute, ...attributeNames.map((name) => "data-pf-" + name)]
       .map((name) => `[${name}]`)
       .join(",");
-    const elements = [...(root.matches?.(selector) ? [root] : []), ...root.querySelectorAll(selector)];
+    const elements = [...(root.matches?.(selector) ? [root] : []), ...findElements(selector, root)];
     for (const element of elements) {
       let values = {};
       try {

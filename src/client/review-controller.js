@@ -1,15 +1,16 @@
+import { errorMessage } from "./../shared/errors.js";
+import { requireElement } from "./dom.js";
+import { request as fetch } from "./http-client.js";
 import { getBrowserI18n, localizeAttribute, localizeText, setMessageHtml, setOpaqueText } from "./i18n.js";
-
-import { renderDiffLine } from "./diff-rendering.js";
-import { codexIcon } from "./codex-icons.js";
 import {
   createReviewPreferences,
   parseUnifiedDiff,
   splitDiffHunk,
   unifiedDiffFromFileChanges,
 } from "../shared/codex-surfaces.js";
+import { codexIcon } from "./codex-icons.js";
+import { renderDiffLine } from "./diff-rendering.js";
 import { storage, STORAGE_KEYS } from "./storage.js";
-
 // Review preferences, patch actions and batched rendering have one owner.
 export function createReviewController({
   $,
@@ -21,6 +22,7 @@ export function createReviewController({
   addPersistentError,
   isRenderingTurn,
   openLauncher,
+  mutations,
 }) {
   const reviewPreferences = createReviewPreferences(JSON.parse(storage.get(STORAGE_KEYS.reviewPreferences) || "{}"));
   let reviewPatchState = "undo",
@@ -38,8 +40,8 @@ export function createReviewController({
     review.turnId = turnId;
     review.raw = raw;
     review.source = source;
-    state.turnDiffs.set(turnId, review);
-    state.activeReview = review;
+    mutations.collection("turnDiffs").set(turnId, review);
+    mutations.set("activeReview", review);
     $("#reviewTab").hidden = false;
     renderChanges();
     return review;
@@ -131,16 +133,17 @@ export function createReviewController({
           section,
           `<button class="review-file-head" aria-expanded="${reviewPreferences.expanded}">${codexIcon("chevronDown", "review-chevron")}<span class="review-file-name">${escapeHtml(shortPath(file.path))}</span><span class="review-file-stats"><span class="plus">+${file.linesAdded}</span><span class="minus">−${file.linesDeleted}</span></span></button><div class="review-hunks"${reviewPreferences.expanded ? "" : " hidden"}></div>`,
         );
-        const body = section.querySelector(".review-hunks");
+        const body = requireElement(".review-hunks", section);
         for (const hunk of file.hunks) {
           const h = document.createElement("div");
           h.className = "review-hunk";
           setMessageHtml(h, `<div class="review-hunk-head">${escapeHtml(hunk.header)}</div>${reviewHunkHtml(hunk)}`);
           body.append(h);
         }
-        section.querySelector(".review-file-head").onclick = (e) => {
-          const open = e.currentTarget.getAttribute("aria-expanded") === "true";
-          e.currentTarget.setAttribute("aria-expanded", String(!open));
+        const head = requireElement(".review-file-head", section);
+        head.onclick = () => {
+          const open = head.getAttribute("aria-expanded") === "true";
+          head.setAttribute("aria-expanded", String(!open));
           body.hidden = open;
         };
         list.append(section);
@@ -194,16 +197,16 @@ export function createReviewController({
       if (!response.ok) throw new Error(result.error || "Review patch failed");
       if (state.activeReview !== review) return;
       reviewPatchState = action === "undo" ? "reapply" : "undo";
-      toast(action === "undo" ? "Changes reverted" : "Changes reapplied");
+      toast(t(action === "undo" ? "common.changesReverted" : "common.changesReapplied"));
     } catch (error) {
-      addPersistentError(error.message);
+      addPersistentError(errorMessage(error));
     } finally {
       if (state.activeReview === review) syncReviewControls(review);
     }
   }
   function resetReviewState() {
-    state.turnDiffs.clear();
-    state.activeReview = null;
+    mutations.collection("turnDiffs").clear();
+    mutations.set("activeReview", null);
     reviewPatchState = "undo";
     $("#reviewTab").hidden = true;
     if (!$("#reviewPanelContent").hidden) openLauncher();
@@ -225,7 +228,6 @@ export function createReviewController({
     renderChanges();
   };
   $("#reviewPatch").onclick = applyActiveReviewPatch;
-
   return {
     diffForTurn,
     recordTurnReview,

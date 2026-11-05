@@ -1,3 +1,4 @@
+import { verificationPlan } from "./verification-plan.js";
 import { spawn } from "node:child_process";
 import { mkdirSync, openSync, closeSync, readFileSync, readdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -13,22 +14,31 @@ const directory = resolve(
   ".artifacts/verification",
   new Date().toISOString().replace(/[:.]/g, "-") + "-" + process.pid,
 );
-const unit = readdirSync(resolve(root, "tests"))
-  .filter((name) => name.endsWith(".test.ts") && !name.includes(".integration."))
-  .sort();
-const integration = readdirSync(resolve(root, "tests"))
-  .filter((name) => name.endsWith(".integration.test.ts"))
-  .sort();
+function discover(directory) {
+  return readdirSync(resolve(root, directory), { withFileTypes: true })
+    .flatMap((entry) => (entry.isDirectory() ? discover(directory + "/" + entry.name) : [directory + "/" + entry.name]))
+    .sort();
+}
+const unit = discover("tests/unit").filter((name) => name.endsWith(".test.ts"));
+const integration = discover("tests/integration").filter((name) => name.endsWith(".integration.test.ts"));
 const entries = {
   catalogs: [{ name: "i18n-contracts", command: ["run", "check:i18n"] }],
-  check: [{ name: "check", command: ["run", "check"] }],
-  build: [{ name: "build-client", command: ["run", "build:client"] }],
-  unit: [{ name: "unit", command: ["test", ...unit.map((name) => "tests/" + name)], timeout: 120000 }],
-  integration: [
-    { name: "integration", command: ["test", ...integration.map((name) => "tests/" + name)], timeout: 120000 },
+  check: [
+    { name: "check", command: ["run", "check"] },
+    { name: "lint", command: ["run", "lint"] },
+    { name: "format", command: ["run", "format:check"] },
+    { name: "comments", command: ["run", "release:comments"] },
   ],
+  build: [{ name: "build-client", command: ["run", "build:client"] }],
+  unit: [{ name: "unit", command: ["test", ...unit], timeout: 120000 }],
+  integration: [{ name: "integration", command: ["test", ...integration], timeout: 240000 }],
 };
-const browser = (names) => names.map((name) => ({ name, command: ["tests/" + name], timeout: 90000 }));
+const browser = (names) =>
+  names.map((name) => ({
+    name: name.split("/").at(-1),
+    command: name.endsWith(".live.test.ts") ? ["test", "tests/" + name] : ["tests/" + name],
+    timeout: name.endsWith(".live.test.ts") ? 180000 : 90000,
+  }));
 for (const [key, names] of Object.entries(manifest.groups)) entries[key] = browser(names);
 entries.browser = browser(manifest.browser);
 entries.live = browser(manifest.live.map((entry) => entry.file));
@@ -40,28 +50,27 @@ if (group === "live" && process.env.PANDA_FORCE_LIVE_TESTS !== "1")
 if (!["verify", ...Object.keys(entries)].includes(group)) throw Error("Unknown test group: " + group);
 if (requested.some((name) => !entries[group]?.some((entry) => entry.name === name)))
   throw Error("Unknown suite selection");
-const eligible = readdirSync(resolve(root, "tests")).filter(
-  (name) =>
-    name.endsWith(".e2e.mjs") ||
-    [
-      "browser-smoke.mjs",
-      "surfaces-browser.mjs",
-      "mobile-layout.test.mjs",
-      "approval-e2e.mjs",
-      "review-api-e2e.mjs",
-    ].includes(name),
-);
+const eligible = ["tests/browser", "tests/live", "tests/tooling"]
+  .flatMap(discover)
+  .filter((name) => name.endsWith(".e2e.mjs") || name.endsWith(".live.test.ts"))
+  .map((name) => name.slice(6));
 const classified = [
   ...manifest.browser,
   ...manifest.live.map((entry) => entry.file),
   ...manifest.tooling.map((entry) => entry.file),
 ];
 for (const name of eligible) if (!classified.includes(name)) throw Error("Unclassified browser suite: " + name);
+for (const name of classified)
+  if (!eligible.includes(name)) throw Error("Missing or misplaced classified suite: " + name);
+for (const [name, members] of Object.entries(manifest.groups)) {
+  if (new Set(members).size !== members.length || members.some((member) => !manifest.browser.includes(member)))
+    throw Error("Invalid browser group: " + name);
+}
 if (new Set(classified).size !== classified.length) throw Error("Duplicate suite classification");
 mkdirSync(directory, { recursive: true });
 const planned =
   group === "verify"
-    ? ["i18n-contracts", "check", "build-client", "unit", "integration", ...manifest.browser]
+    ? [...verificationPlan]
     : entries[group].filter((entry) => !requested.length || requested.includes(entry.name)).map((entry) => entry.name);
 const result = {
   group,
@@ -120,7 +129,13 @@ async function run(entry) {
   result.suites.push(record);
   writeFileSync(resolve(directory, "results.json"), JSON.stringify(result, null, 2) + "\n");
   console.log(`${status.code === 0 && !timedOut ? "PASS" : "FAIL"} ${entry.name} (${record.durationMs}ms)`);
-  if (status.code !== 0 || timedOut) console.error(readFileSync(log, "utf8").slice(-4000));
+  if (status.code !== 0 || timedOut) {
+    const output = readFileSync(log, "utf8"),
+      lines = output.split("\n");
+    const failure = lines.findIndex((line) => /^(?:error:|AssertionError:|TimeoutError:)|\(fail\)/.test(line));
+    if (failure >= 0) console.error(lines.slice(Math.max(0, failure - 12), failure + 40).join("\n"));
+    console.error(output.slice(-2500));
+  }
   return status.code === 0 && !timedOut;
 }
 for (const sig of ["SIGINT", "SIGTERM"])
@@ -150,6 +165,8 @@ result.finishedAt = new Date().toISOString();
 result.passed = passed;
 result.notRun = planned.filter((name) => !result.suites.some((suite) => suite.name === name));
 writeFileSync(resolve(directory, "results.json"), JSON.stringify(result, null, 2) + "\n");
+if (process.env.PANDA_FORCE_VERIFY_RESULT)
+  writeFileSync(resolve(process.env.PANDA_FORCE_VERIFY_RESULT), JSON.stringify(result, null, 2) + "\n");
 console.log(`Results: ${resolve(directory, "results.json")}`);
 if (result.excluded.length)
   console.log(

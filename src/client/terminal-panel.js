@@ -8,6 +8,7 @@ const TERMINAL_RECONNECT_MS = 1000;
  * re-check come from the app via callbacks.
  */
 export function createTerminalPanel({ $, getCwd, onAuthCheck, t = getBrowserI18n().t }) {
+  /** @returns {{hostId: string; panelId: string; term: import("@xterm/xterm").Terminal | null; fit: import("@xterm/addon-fit").FitAddon | null; ws: WebSocket | null; resizeObserver: ResizeObserver | null; reconnectTimer: ReturnType<typeof setTimeout> | null; loading: Promise<void> | null}} */
   const createTerminalState = (hostId, panelId) => ({
     hostId,
     panelId,
@@ -39,9 +40,11 @@ export function createTerminalPanel({ $, getCwd, onAuthCheck, t = getBrowserI18n
     if (ws?.readyState === WebSocket.OPEN && term)
       ws.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
   }
+  let disposed = false;
   function connectTerminal(terminalState) {
+    if (disposed) return;
     if (terminalState.ws && [WebSocket.OPEN, WebSocket.CONNECTING].includes(terminalState.ws.readyState)) return;
-    clearTimeout(terminalState.reconnectTimer);
+    clearTimeout(terminalState.reconnectTimer ?? undefined);
     const proto = location.protocol === "https:" ? "wss:" : "ws:",
       host = $(`#${terminalState.hostId}`),
       ws = new WebSocket(`${proto}//${location.host}/terminal?cwd=${encodeURIComponent(getCwd())}`);
@@ -75,6 +78,7 @@ export function createTerminalPanel({ $, getCwd, onAuthCheck, t = getBrowserI18n
     };
   }
   async function initializeTerminal(terminalState) {
+    if (disposed) return;
     if (terminalState.term) {
       connectTerminal(terminalState);
       requestAnimationFrame(() => fitTerminal(terminalState));
@@ -83,7 +87,7 @@ export function createTerminalPanel({ $, getCwd, onAuthCheck, t = getBrowserI18n
     if (terminalState.loading) return terminalState.loading;
     terminalState.loading = import("/terminal-runtime.bundle.js")
       .then(({ Terminal, FitAddon }) => {
-        if (!terminalIsVisible(terminalState)) return;
+        if (disposed || !terminalIsVisible(terminalState)) return;
         const dark = matchMedia("(prefers-color-scheme:dark)").matches,
           host = $(`#${terminalState.hostId}`),
           term = new Terminal({
@@ -113,7 +117,7 @@ export function createTerminalPanel({ $, getCwd, onAuthCheck, t = getBrowserI18n
         );
         terminalState.resizeObserver.observe(host);
         connectTerminal(terminalState);
-        globalThis.__codexTerminals = terminalStates;
+        if (globalThis.__pandaForceTest) globalThis.__codexTerminals = terminalStates;
       })
       .catch(() => {
         localizeText($(`#${terminalState.hostId}`), "errors.couldNotLoadTerminalCloseAndReopenToRetry", undefined, t);
@@ -125,5 +129,21 @@ export function createTerminalPanel({ $, getCwd, onAuthCheck, t = getBrowserI18n
     return terminalState.loading;
   }
 
-  return { terminalStates, fitTerminal, initializeTerminal };
+  function dispose() {
+    disposed = true;
+    for (const state of Object.values(terminalStates)) {
+      clearTimeout(state.reconnectTimer ?? undefined);
+      state.resizeObserver?.disconnect();
+      if (state.ws) {
+        state.ws.onclose = null;
+        state.ws.close();
+        state.ws = null;
+      }
+      state.fit?.dispose();
+      state.fit = null;
+      state.term?.dispose();
+      state.term = null;
+    }
+  }
+  return { dispose, terminalStates, fitTerminal, initializeTerminal };
 }

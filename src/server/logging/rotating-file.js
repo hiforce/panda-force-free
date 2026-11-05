@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   closeSync,
   constants,
@@ -13,7 +14,7 @@ import {
   writeSync,
 } from "node:fs";
 import { join } from "node:path";
-import { randomUUID } from "node:crypto";
+import { reportDiagnostic } from "../../shared/diagnostics.js";
 
 // Unique segments avoid concurrent renames when old and new Pods briefly overlap.
 // Retention applies to the entire app log directory, across restarts and Pods.
@@ -70,14 +71,12 @@ export function createRotatingLog({ directory, maxFileBytes, maxFiles, now = () 
     }
   }
 
-  function rotate() {
-    const stamp = now()
-      .toISOString()
-      .replace(/[-:TZ.]/g, "");
-    current = `panda-force-${stamp}-${randomUUID().replaceAll("-", "")}.log`;
-    const fd = openSync(join(directory, current), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
-    closeSync(fd);
-    size = 0;
+  function publishCurrent() {
+    try {
+      if (readlinkSync(alias) === current) return;
+    } catch (error) {
+      if (!missing(error)) throw error;
+    }
     const temporary = join(directory, `.panda-force-current-${randomUUID()}`);
     try {
       symlinkSync(current, temporary);
@@ -86,9 +85,20 @@ export function createRotatingLog({ directory, maxFileBytes, maxFiles, now = () 
       try {
         unlinkSync(temporary);
       } catch (error) {
-        if (!missing(error)) throw error;
+        if (!missing(error)) reportDiagnostic("logs.cleanup", error);
       }
     }
+  }
+
+  function rotate() {
+    const stamp = now()
+      .toISOString()
+      .replace(/[-:TZ.]/g, "");
+    current = `panda-force-${stamp}-${randomUUID().replaceAll("-", "")}.log`;
+    const fd = openSync(join(directory, current), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
+    closeSync(fd);
+    size = 0;
+    publishCurrent();
     prune();
   }
 
@@ -130,6 +140,8 @@ export function createRotatingLog({ directory, maxFileBytes, maxFiles, now = () 
       size += end - offset;
       offset = end;
     }
+    // A quiet overlapping writer can retain its segment after another writer moved the alias.
+    if (bytes.length) publishCurrent();
   }
 
   rotate();

@@ -3,6 +3,7 @@ import { localizeText } from "../i18n.js";
 import { createBridgeError } from "../../shared/bridge-errors.js";
 
 // Routes transport envelopes and connection transitions; native event interpretation is delegated.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "state" | "workspacePreparation" | "t" | "$", "transport" | "startup" | "synchronization" | "sidebar" | "notifications" | "approvals" | "projects" | "models" | "usage" | "history", "connection">} options */
 export function assembleConnection({
   transportPort,
   viewUpdates,
@@ -19,8 +20,15 @@ export function assembleConnection({
   projectsPort,
   modelsPort,
   usagePort,
+  historyPort,
 }) {
   function handle(message) {
+    if (message.type === "bridge/resync") {
+      approvalsPort.clearApprovals({ removeCards: true });
+      void approvalsPort.refreshPendingApprovals();
+      void historyPort.resyncActiveConversation();
+      return;
+    }
     if (message.type === "project-catalog/changed") {
       projectsPort.businessProjects.apply(message);
       return;
@@ -65,9 +73,9 @@ export function assembleConnection({
         : p.resolve(message.result);
       return;
     }
-    if (message.type === "codex/notification")
+    if (["engine/notification", "codex/notification"].includes(message.type))
       notificationsPort.onNotification(message.payload.method, message.payload.params || {});
-    if (message.type === "codex/request") approvalsPort.onServerRequest(message.payload);
+    if (["engine/request", "codex/request"].includes(message.type)) approvalsPort.onServerRequest(message.payload);
   }
   function setStatus(kind, text) {
     viewUpdates.request("workbench");

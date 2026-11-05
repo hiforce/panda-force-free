@@ -1,4 +1,5 @@
 // Owns sidebar layout, mobile visibility and help/search affordances.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "$" | "t", "notices" | "settings", "sidebarLayout">} options */
 export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settingsPort }) {
   let sidebarLayoutMobile = null;
   function setSidebarOpen(open) {

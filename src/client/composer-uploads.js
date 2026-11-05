@@ -1,13 +1,30 @@
+import { errorMessage } from "./../shared/errors.js";
+import { request as fetch } from "./http-client.js";
 import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "./i18n.js";
-
-import { codexIcon } from "./codex-icons.js";
-import { localImageUrl } from "./rendering.js";
 import { attachmentDisplayUrl } from "../shared/attachment-urls.js";
+import { codexIcon } from "./codex-icons.js";
 import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MAX_COUNT, filesFromClipboard } from "./composer-attachments.js";
-
+import { localImageUrl } from "./rendering.js";
 // Clipboard, drop and file-picker input share one upload and rendering path.
 // Upload identity belongs to its original draft, even if navigation happens first.
-export function createComposerUploads({ $, t, state, openImageViewer, addPersistentError, onChange }) {
+export function createComposerUploads({
+  $,
+  t,
+  state,
+  openImageViewer,
+  addPersistentError,
+  onChange,
+  mutations,
+  onAttachmentUpdated = (_id, _patch) => {},
+}) {
+  function completeAttachment(id, patch) {
+    onAttachmentUpdated(id, patch);
+    if (state.composerAttachments.some((entry) => entry.id === id))
+      mutations.edit("composerAttachments", (draft) => {
+        const entry = draft.find((attachment) => attachment.id === id);
+        if (entry) Object.assign(entry, patch, { id });
+      });
+  }
   function composerAttachmentsReady() {
     return state.composerAttachments.every((attachment) => attachment.status === "ready");
   }
@@ -60,7 +77,10 @@ export function createComposerUploads({ $, t, state, openImageViewer, addPersist
       localizeAttribute(remove, "aria-label", "composer.removeAttachmentName", { name: attachment.name }, t);
       setMessageHtml(remove, codexIcon("x"));
       remove.onclick = () => {
-        state.composerAttachments = state.composerAttachments.filter((value) => value !== attachment);
+        mutations.set(
+          "composerAttachments",
+          state.composerAttachments.filter((value) => value.id !== attachment.id),
+        );
         renderComposerAttachments();
         $("#prompt").focus();
       };
@@ -89,9 +109,9 @@ export function createComposerUploads({ $, t, state, openImageViewer, addPersist
         kind: "file",
         status: "uploading",
       };
-      state.composerAttachments.push(attachment);
+      mutations.edit("composerAttachments", (draft) => draft.push(attachment));
       renderComposerAttachments();
-      // Keep the same object in saved drafts; a late upload never enters another task.
+      // Stable attachment identity updates its saved draft without changing another task.
       void (async () => {
         try {
           const response = await fetch(`/api/attachments?name=${encodeURIComponent(file.name)}`, {
@@ -101,11 +121,11 @@ export function createComposerUploads({ $, t, state, openImageViewer, addPersist
           });
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || "Upload failed");
-          Object.assign(attachment, result.attachment);
+          completeAttachment(attachment.id, result.attachment);
         } catch (error) {
-          attachment.status = "failed";
-          attachment.error = error.message;
-          if (state.composerAttachments.includes(attachment)) addPersistentError(t(error.message));
+          completeAttachment(attachment.id, { status: "failed", error: errorMessage(error) });
+          if (state.composerAttachments.some((entry) => entry.id === attachment.id))
+            addPersistentError(t(errorMessage(error)));
         }
         renderComposerAttachments();
       })();

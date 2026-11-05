@@ -1,9 +1,12 @@
 import { messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { errorMessage } from "./../../shared/errors.js";
+import { closestElement } from "./../dom.js";
 
-import { DEFAULT_TURN_PAGE_SIZE, createTurnWindow } from "../ui-core.js";
 import { pandaInterfaceMark } from "../panda-brand.js";
+import { DEFAULT_TURN_PAGE_SIZE, createTurnWindow } from "../ui-core.js";
 
 // Owns timeline frames, render batches and pagination controls; item presentation is delegated.
+/** @param {import("./ports.js").FeatureOptions<"renderBatch" | "viewUpdates" | "mutations" | "state" | "$" | "t" | "escapeHtml", "status" | "viewport" | "history" | "notices" | "queue" | "timing" | "messages", "timeline">} options */
 export function assembleTimeline({
   renderBatch,
   viewUpdates,
@@ -32,38 +35,35 @@ export function assembleTimeline({
     // The request inbox is independent of the conversation. Keep its live
     // cards registered when history or transport recovery rebuilds the timeline.
     for (const [id, card] of state.requestCards)
-      if (!card.isConnected || !card.closest("#approvalInboxDialog")) mutations.collection("requestCards").delete(id);
+      if (!card.isConnected || !closestElement("#approvalInboxDialog", card))
+        mutations.collection("requestCards").delete(id);
     viewUpdates.request("sideTasks");
   }
   function renderThread(thread, loadMore = 0) {
     const root = $("#conversation"),
       turns = thread.turns || [];
     statusPort.syncThreadErrorsFromTurns(thread.id, turns);
-    mutations.set(
-      "turnWindow",
-      createTurnWindow(
-        turns,
-        DEFAULT_TURN_PAGE_SIZE,
-        state.turnWindow?.threadId === thread.id ? state.turnWindow.start : undefined,
-        loadMore,
-      ),
+    const window = createTurnWindow(
+      turns,
+      DEFAULT_TURN_PAGE_SIZE,
+      state.turnWindow?.threadId === thread.id ? state.turnWindow?.start : undefined,
+      loadMore,
     );
-    mutations.edit("turnWindow", (record) => (record.threadId = thread.id));
+    window.threadId = thread.id;
+    mutations.set("turnWindow", window);
     clearConversationRuntime();
     setMessageHtml(root, "");
     statusPort.syncThreadErrorSurface(thread.id);
-    if (state.turnWindow.hiddenCount || thread.history?.nextCursor) {
+    if (window.hiddenCount || thread.history?.nextCursor) {
       const more = document.createElement("button");
       more.className = "load-older";
       setOpaqueText(
         more,
-        state.turnWindow.hiddenCount
-          ? `Load earlier messages (${state.turnWindow.hiddenCount})`
-          : t("sessions.loadEarlierMessages"),
+        window.hiddenCount ? `Load earlier messages (${window.hiddenCount})` : t("sessions.loadEarlierMessages"),
       );
       more.onclick = async () => {
         const current = state.active?.id === thread.id ? state.active : thread;
-        if (state.turnWindow.hiddenCount) {
+        if (window.hiddenCount) {
           renderThread(current, DEFAULT_TURN_PAGE_SIZE);
           return;
         }
@@ -80,13 +80,13 @@ export function assembleTimeline({
           await historyPort.loadEarlierConversation(current);
         } catch (error) {
           if (await historyPort.resyncActiveConversation()) return;
-          noticesPort.addPersistentError(error.message);
+          noticesPort.addPersistentError(errorMessage(error));
           more.disabled = false;
         }
       };
       root.append(more);
     }
-    for (const turn of state.turnWindow.visible) renderTurn(turn, root);
+    for (const turn of window.visible) renderTurn(turn, root);
     viewUpdates.request("approvals");
     viewUpdates.request("pendingMessages");
     if (!root.children.length) showEmpty();

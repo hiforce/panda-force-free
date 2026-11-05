@@ -4,7 +4,17 @@ import { runLoggedProcess } from "../src/server/logging/supervisor.js";
 
 try {
   const root = resolve(import.meta.dir, "..");
-  const entry = resolve(root, basename(import.meta.dir) === "dist" ? "dist/server.js" : "src/server/main.ts");
+  const gateway = process.env.PANDA_FORCE_CLUSTER_ROLE === "gateway";
+  const entry = resolve(
+    root,
+    basename(import.meta.dir) === "dist"
+      ? gateway
+        ? "dist/gateway.js"
+        : "dist/server.js"
+      : gateway
+        ? "src/server/cluster/gateway.ts"
+        : "src/server/main.ts",
+  );
   process.exitCode = await runLoggedProcess({
     command: [process.execPath, entry, ...process.argv.slice(2)],
     cwd: root,

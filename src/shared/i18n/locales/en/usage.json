@@ -2,7 +2,7 @@
   "used": "used",
   "remaining": "remaining",
   "resetsAt": "Resets at",
-  "resetsInDaysdHourshMinutesm": "Resets in {days}d {hours}h {minutes}m",
+  "resetsInDaysdHourshMinutesm": "Resets in {days, number}d {hours, number}h {minutes, number}m",
   "updatedAt": "Updated at",
   "resetTimeUnavailable": "Reset time unavailable",
   "usageDataUnavailable": "Usage data unavailable",

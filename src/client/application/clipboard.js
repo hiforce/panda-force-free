@@ -1,8 +1,10 @@
 import { localizeAttribute, setMessageHtml } from "../i18n.js";
+import { closestElement, findElement, findElements } from "./../dom.js";
 
 import { codexIcon } from "../codex-icons.js";
 
 // Owns clipboard formatting and file-reference copy behavior.
+/** @param {import("./ports.js").FeatureOptions<"t", "notices", "clipboard">} options */
 export function assembleClipboard({ t, noticesPort }) {
   async function copyMessageText(text) {
     if (navigator.clipboard?.writeText) {
@@ -35,7 +37,7 @@ export function assembleClipboard({ t, noticesPort }) {
     }
   }
   async function copyUserMessage(button) {
-    const text = button.closest(".user-turn")?.querySelector(".user-message")?.textContent;
+    const text = findElement(".user-message", closestElement(".user-turn", button))?.textContent;
     if (!text || button.copyPending) return;
     button.copyPending = true;
     button.setAttribute("aria-busy", "true");
@@ -83,10 +85,10 @@ export function assembleClipboard({ t, noticesPort }) {
     const range = selection.getRangeAt(0),
       start = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement,
       end = range.endContainer instanceof Element ? range.endContainer : range.endContainer.parentElement;
-    const root = start?.closest(".message-text");
-    if (!root || root !== end?.closest(".message-text")) return;
+    const root = closestElement(".message-text", start);
+    if (!root || root !== closestElement(".message-text", end)) return;
     const fragment = range.cloneContents(),
-      citations = [...(fragment.querySelectorAll?.("a[data-file-reference]") || [])];
+      citations = [...(findElements("a[data-file-reference]", fragment) || [])];
     if (!citations.length) return;
     for (const citation of citations) {
       const text = document.createTextNode(fileReferenceCopyText(citation));
@@ -95,7 +97,7 @@ export function assembleClipboard({ t, noticesPort }) {
     const textHolder = document.createElement("div");
     textHolder.append(fragment);
     const htmlFragment = range.cloneContents(),
-      htmlCitations = [...(htmlFragment.querySelectorAll?.("a[data-file-reference]") || [])];
+      htmlCitations = [...(findElements("a[data-file-reference]", htmlFragment) || [])];
     for (const citation of htmlCitations) {
       citation.setAttribute("href", fileReferenceClipboardUrl(citation));
       citation.removeAttribute("data-file-reference");
@@ -108,7 +110,11 @@ export function assembleClipboard({ t, noticesPort }) {
     event.preventDefault();
   }
   function bind() {
-    document.addEventListener("copy", (...args) => copyConversationFileReferences(...args));
+    document.addEventListener(
+      "copy",
+      /** @param {Parameters<typeof copyConversationFileReferences>} args */ (...args) =>
+        copyConversationFileReferences(...args),
+    );
   }
   return {
     bind,

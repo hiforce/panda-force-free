@@ -1,0 +1,248 @@
+# Optional cluster example; requires a release containing cluster support.
+# Replace image and public origin; create the panda-cluster Secret separately.
+# One exclusive owner; gateways may scale. Never increase owner replicas.
+# Requires a CSI StorageClass supporting ReadWriteOncePod.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: panda-force
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: panda-owner
+  namespace: panda-force
+spec:
+  selector:
+    app.kubernetes.io/name: panda-owner
+  ports:
+  - name: http
+    port: 8899
+    targetPort: http
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: panda-owner
+  namespace: panda-force
+spec:
+  serviceName: panda-owner
+  replicas: 1
+  selector:
+    matchLabels: &id001
+      app.kubernetes.io/name: panda-owner
+  template:
+    metadata:
+      labels: *id001
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      terminationGracePeriodSeconds: 45
+      initContainers:
+      - name: prepare-state
+        image: REPLACE_WITH_VERIFIED_IMAGE
+        command:
+        - bun
+        - -e
+        - const {mkdir}=await import("node:fs/promises");for(const name of ["model-state","workspace","attachments"])await
+          mkdir("/var/lib/panda-force/"+name,{recursive:true,mode:0o700});
+        volumeMounts:
+        - name: state
+          mountPath: /var/lib/panda-force
+      containers:
+      - name: panda-force
+        image: REPLACE_WITH_VERIFIED_IMAGE
+        ports:
+        - name: http
+          containerPort: 8899
+        env:
+        - name: HOST
+          value: 0.0.0.0
+        - name: PORT
+          value: '8899'
+        - name: PANDA_FORCE_CLUSTER_WORKSPACE
+          value: example-workspace
+        - name: PANDA_FORCE_PUBLIC_URL
+          value: https://panda.example.com
+        - name: PANDA_FORCE_CLUSTER_NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: PANDA_FORCE_CLUSTER_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: panda-cluster
+              key: database-url
+        - name: PANDA_FORCE_CLUSTER_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: panda-cluster
+              key: signing-key
+        - name: PANDA_FORCE_CLUSTER_ROLE
+          value: worker
+        - name: PANDA_FORCE_CLUSTER_STORAGE
+          value: owner-volume
+        - name: PANDA_FORCE_CLUSTER_NODE_URL
+          value: http://panda-owner.panda-force.svc.cluster.local:8899
+        - name: PANDA_FORCE_APP_SERVER_MODE
+          value: isolated
+        - name: PANDA_FORCE_AUTH_MODE
+          value: password
+        - name: PANDA_FORCE_HOME
+          value: /var/lib/panda-force
+        - name: HOME
+          value: /var/lib/panda-force/workspace
+        - name: CODEX_HOME
+          value: /var/lib/panda-force/model-state
+        - name: PANDA_FORCE_CWD
+          value: /var/lib/panda-force/workspace
+        - name: PANDA_FORCE_REVIEW_ROOT
+          value: /var/lib/panda-force/workspace
+        - name: PANDA_FORCE_ATTACHMENT_ROOT
+          value: /var/lib/panda-force/attachments
+        volumeMounts:
+        - name: state
+          mountPath: /var/lib/panda-force
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: '2'
+            memory: 2Gi
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3
+  volumeClaimTemplates:
+  - metadata:
+      name: state
+    spec:
+      accessModes:
+      - ReadWriteOncePod
+      resources:
+        requests:
+          storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: panda-gateway
+  namespace: panda-force
+spec:
+  replicas: 2
+  selector:
+    matchLabels: &id001
+      app.kubernetes.io/name: panda-gateway
+  template:
+    metadata:
+      labels: *id001
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: panda-force
+        image: REPLACE_WITH_VERIFIED_IMAGE
+        ports:
+        - name: http
+          containerPort: 8899
+        env:
+        - name: HOST
+          value: 0.0.0.0
+        - name: PORT
+          value: '8899'
+        - name: PANDA_FORCE_CLUSTER_WORKSPACE
+          value: example-workspace
+        - name: PANDA_FORCE_PUBLIC_URL
+          value: https://panda.example.com
+        - name: PANDA_FORCE_CLUSTER_NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: PANDA_FORCE_CLUSTER_DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: panda-cluster
+              key: database-url
+        - name: PANDA_FORCE_CLUSTER_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: panda-cluster
+              key: signing-key
+        - name: PANDA_FORCE_CLUSTER_ROLE
+          value: gateway
+        - name: PANDA_FORCE_HOME
+          value: /var/lib/panda-force
+        volumeMounts:
+        - name: local-logs
+          mountPath: /var/lib/panda-force
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
+          limits:
+            cpu: '2'
+            memory: 2Gi
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: http
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: http
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3
+      volumes:
+      - name: local-logs
+        emptyDir:
+          sizeLimit: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: panda-force
+  namespace: panda-force
+spec:
+  selector:
+    app.kubernetes.io/name: panda-gateway
+  ports:
+  - name: http
+    port: 8899
+    targetPort: http

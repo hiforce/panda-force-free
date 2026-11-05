@@ -1,13 +1,16 @@
+import { checkAuthentication } from "../http-client.js";
 import { localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { findElements, requireElement } from "./../dom.js";
 
+import { createBrowserController } from "../browser-panel-controller.js";
+import { codexIcon } from "../codex-icons.js";
+import { createFilesPanel } from "../files-panel.js";
+import { createFilePreview } from "../lazy-file-preview.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { createTerminalPanel } from "../terminal-panel.js";
-import { createBrowserController } from "../browser-panel-controller.js";
-import { createFilePreview } from "../lazy-file-preview.js";
-import { createFilesPanel } from "../files-panel.js";
-import { codexIcon } from "../codex-icons.js";
 
 // Owns utility panels, browser and terminal views, overlay focus and keyboard dismissal.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "t" | "shortPath" | "$" | "state", "notices" | "workspace" | "settings" | "usage", "panels">} options */
 export function assemblePanels({
   viewUpdates,
   mutations,
@@ -25,11 +28,11 @@ export function assemblePanels({
     onBackToFiles: () => openFilesDialog(),
     getAttachmentUrlPrefix: () => state.config.attachmentUrlPrefix,
     onError: () => {
-      globalThis.__pandaForceCheckAuth?.();
+      checkAuthentication();
       noticesPort.addPersistentError(t("errors.couldNotLoadFilePreviewPleaseRetry"));
     },
   });
-  const filesDialog = document.querySelector("#filesDialog");
+  const filesDialog = requireElement("#filesDialog");
   const filesPanel = createFilesPanel({
     t,
     onOpenFile: (reference) => {
@@ -44,11 +47,16 @@ export function assemblePanels({
   });
   let sidePanelReturnFocus = null,
     summaryPanelReturnFocus = null;
-  const { terminalStates, fitTerminal, initializeTerminal } = createTerminalPanel({
+  const {
+    dispose: disposeTerminal,
+    terminalStates,
+    fitTerminal,
+    initializeTerminal,
+  } = createTerminalPanel({
     $,
     t,
     getCwd: () => currentTerminalCwd(),
-    onAuthCheck: () => globalThis.__pandaForceCheckAuth?.(),
+    onAuthCheck: () => checkAuthentication(),
   });
   const { browserState, navigateBrowser, moveBrowserHistory, updateBrowserControls } = createBrowserController({
     $,
@@ -94,7 +102,7 @@ export function assemblePanels({
     tab.dataset.sidePanelTab = "browser";
     tab.hidden = false;
     setSidePanelOpen(true, false);
-    setSidePanelView("browser", "Browser");
+    setSidePanelView("browser");
     updateBrowserControls();
     if (browserState.index < 0 && !overlayPanelsEnabled()) requestAnimationFrame(() => $("#browserUrl").focus());
   }
@@ -111,7 +119,7 @@ export function assemblePanels({
     $("#sideTerminalPanel").hidden = !terminal;
     $("#sideTaskPanel").hidden = !sideTask;
     $("#utilityPanelContent").hidden = !utility;
-    for (const tab of document.querySelectorAll(".side-panel-tab")) {
+    for (const tab of findElements(".side-panel-tab")) {
       const selected = tab.dataset.sidePanelTab === view;
       tab.classList.toggle("active", selected);
       tab.setAttribute("aria-selected", String(selected));
@@ -119,10 +127,15 @@ export function assemblePanels({
     $("#newTab").hidden = false;
     if (review) $("#reviewTab").hidden = false;
     if (utility || browser || terminal || sideTask) $("#utilityTab").hidden = false;
-    setOpaqueText(
-      $("#sidePanelTitle"),
-      title || (launcher ? "New tab" : review ? "Review" : $("#utilityTab").textContent),
-    );
+    const titleKey = {
+      launcher: "common.newTab",
+      review: "common.review",
+      browser: "common.browser",
+      terminal: "common.terminal",
+      "side-task": "common.sideTasks",
+    }[view];
+    if (titleKey) localizeText($("#sidePanelTitle"), titleKey);
+    else setOpaqueText($("#sidePanelTitle"), title || $("#utilityTab").textContent);
     if (view !== "utility") filesPanel?.close();
     viewUpdates.request("review");
     if (terminal)
@@ -135,10 +148,11 @@ export function assemblePanels({
     if (overlayPanelsEnabled() && document.body.classList.contains("side-panel-open"))
       requestAnimationFrame(() => $("#closeSidePanel").focus());
   }
+  /** @param {import("../../shared/data-view.js").DataView<import("../contracts/state.js").ReviewModel> | null} review */
   function openReviewPanel(review = null) {
     mutations.set("activeReview", review || [...state.turnDiffs.values()].at(-1) || state.activeReview);
     setSidePanelOpen(true, false);
-    setSidePanelView("review", "Review");
+    setSidePanelView("review");
   }
   function openFilesDialog() {
     if (!filesDialog) return;
@@ -181,14 +195,14 @@ export function assemblePanels({
       localizeText(tab, "common.terminal", undefined);
       tab.dataset.sidePanelTab = "terminal";
       setSidePanelOpen(true, false);
-      setSidePanelView("terminal", "Terminal");
+      setSidePanelView("terminal");
       return;
     }
     if (kind === "side-task") {
       localizeText(tab, "common.sideTasks", undefined);
       tab.dataset.sidePanelTab = "side-task";
       setSidePanelOpen(true, false);
-      setSidePanelView("side-task", "Side tasks");
+      setSidePanelView("side-task");
       return;
     }
     const labels = {},
@@ -203,7 +217,8 @@ export function assemblePanels({
     const action = $("#utilityPanelAction");
     action.hidden = false;
     localizeText(action, "common.chooseProjectFolder", undefined);
-    action.onclick = (...args) => workspacePort.openFolderPicker(...args);
+    action.onclick = /** @param {Parameters<typeof workspacePort.openFolderPicker>} args */ (...args) =>
+      workspacePort.openFolderPicker(...args);
     setSidePanelOpen(true, false);
     setSidePanelView("utility", title);
   }
@@ -284,7 +299,7 @@ export function assemblePanels({
     $("#utilityTab").onclick = () =>
       setSidePanelView($("#utilityTab").dataset.sidePanelTab, $("#utilityTab").textContent);
     $("#openSidePanelTab").onclick = () => setSidePanelView("launcher", "New tab");
-    for (const action of document.querySelectorAll("[data-side-panel-action]"))
+    for (const action of findElements("[data-side-panel-action]"))
       action.onclick = () =>
         action.dataset.sidePanelAction === "review"
           ? openReviewPanel()
@@ -298,8 +313,10 @@ export function assemblePanels({
     $("#browserRefresh").onclick = () =>
       browserState.index >= 0 && navigateBrowser(browserState.history[browserState.index], { push: false });
     $("#toggleSummaryPanel").onclick = () => setSummaryPanelOpen($("#summaryPanel").hidden);
-    $("#toggleFilesPanel").onclick = (...args) => toggleFilesPanel(...args);
-    $("#closeFilesDialog").onclick = (...args) => closeFilesDialog(...args);
+    $("#toggleFilesPanel").onclick = /** @param {Parameters<typeof toggleFilesPanel>} args */ (...args) =>
+      toggleFilesPanel(...args);
+    $("#closeFilesDialog").onclick = /** @param {Parameters<typeof closeFilesDialog>} args */ (...args) =>
+      closeFilesDialog(...args);
     filesDialog?.addEventListener("close", () => {
       filesPanel?.close();
       $("#filesPanel").hidden = true;
@@ -311,6 +328,7 @@ export function assemblePanels({
     $("#closeSummaryPanel").onclick = () => setSummaryPanelOpen(false);
   }
   return {
+    dispose: disposeTerminal,
     setSummaryPanelOpen,
     closeFilesDialog,
     setSidePanelOpen,

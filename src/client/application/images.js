@@ -1,5 +1,6 @@
 import { setOpaqueText } from "../i18n.js";
 // Owns image-dialog focus, source lifetime and dismissal.
+/** @param {import("./ports.js").FeatureOptions<"$", never, "images">} options */
 export function assembleImages({ $ }) {
   let imageViewerReturnFocus = null;
   function releaseImageViewer() {
@@ -26,7 +27,8 @@ export function assembleImages({ $ }) {
     requestAnimationFrame(() => $("#closeImageViewer").focus());
   }
   function bind() {
-    $("#closeImageViewer").onclick = (...args) => closeImageViewer(...args);
+    $("#closeImageViewer").onclick = /** @param {Parameters<typeof closeImageViewer>} args */ (...args) =>
+      closeImageViewer(...args);
     $("#imageViewerImage").onload = () => {
       $("#imageViewerImage").hidden = false;
       $("#imageViewerError").hidden = true;

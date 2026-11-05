@@ -1,7 +1,8 @@
 import { config } from "../config.js";
+import { errorMessage } from "./../../shared/errors.js";
 
 /** Push a turn-completed notification to the configured ntfy topic, if any. */
-export async function notifyNtfyTurnCompleted(params: any) {
+export async function notifyNtfyTurnCompleted(params: { threadId?: string; turn?: { id: string } }) {
   if (!config.ntfyTopic) return;
   const turnId = typeof params?.turn?.id === "string" ? params.turn.id : "";
   const threadId = typeof params?.threadId === "string" ? params.threadId : "";
@@ -9,11 +10,15 @@ export async function notifyNtfyTurnCompleted(params: any) {
   try {
     await fetch(`${config.ntfyUrl}/${encodeURIComponent(config.ntfyTopic)}`, {
       method: "POST",
-      headers: { Title: "PandaForce task completed", Tags: "white_check_mark", ...(turnId ? { "X-Turn-Id": turnId } : {}) },
+      headers: {
+        Title: "PandaForce task completed",
+        Tags: "white_check_mark",
+        ...(turnId ? { "X-Turn-Id": turnId } : {}),
+      },
       body,
       signal: AbortSignal.timeout(10000),
     });
   } catch (error) {
-    console.error("ntfy notification failed:", error instanceof Error ? error.message : error);
+    console.error("ntfy notification failed:", error instanceof Error ? errorMessage(error) : error);
   }
 }

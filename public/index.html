@@ -483,9 +483,11 @@
                     class="composer-text-button approval-control"
                     id="modeButton"
                     title="Change permissions"
+                    aria-label="Change permissions"
                     aria-haspopup="menu"
                     aria-expanded="false"
                     data-pf-title="common.changePermissions"
+                    data-pf-aria-label="common.changePermissions"
                   >
                     <span class="icon-slot" data-icon="shield"></span
                     ><span class="control-label" data-pf-message="common.askForApproval">Ask for approval</span
@@ -499,6 +501,12 @@
                     hidden=""
                     data-pf-aria-label="common.howShouldAgentActionsBeApproved"
                   >
+                    <div class="session-menu-heading">
+                      <span data-pf-message="common.permissions">Permissions</span>
+                      <button type="button" class="session-menu-close" aria-label="Close" data-pf-aria-label="common.close">
+                        <span class="icon-slot" data-icon="x"></span>
+                      </button>
+                    </div>
                     <div class="permission-options" id="permissionOptions"></div>
                   </div>
                 </div>
@@ -508,10 +516,13 @@
                     class="composer-text-button model-trigger"
                     id="modelButton"
                     data-codex-intelligence-trigger=""
+                    aria-label="Select model"
+                    data-pf-aria-label="common.selectModel"
                     aria-haspopup="menu"
                     aria-expanded="false"
                   >
-                    <span id="modelLabel" data-pf-message="common.loadingModels">Loading models…</span
+                    <span class="icon-slot composer-model-icon" data-icon="slidersHorizontal" aria-hidden="true"></span
+                    ><span id="modelLabel" data-pf-message="common.loadingModels">Loading models…</span
                     ><span id="effortLabel" data-pf-message="common.medium">Medium</span
                     ><span class="icon-slot chevron" data-icon="chevronDown"></span>
                   </button>

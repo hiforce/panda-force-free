@@ -6,6 +6,8 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 PandaForce can run in Kubernetes using either of the [two Codex arrangements](./installation.md#understand-what-runs-where). These downloadable templates are independently written public examples. They contain no private deployment settings, credentials, domains, node identities or account data.
 
+For a verified release containing the optional gateway architecture, see [Optional gateway cluster](./cluster.md). The single-instance templates below continue to use the currently published release.
+
 ## Download a template
 
 Choose **one** template. Both define the same application and storage names; do not apply both to the same namespace or switch an existing installation without a data migration plan.
@@ -22,7 +24,7 @@ In a source checkout, these files are under `panda-docs/static/downloads/kuberne
 
 ## Before deploying
 
-Use a Linux amd64 cluster, `kubectl`, and a working persistent-volume provisioner. The templates use the public `hiforceai/panda-force:0.0.7` image and a 10 GiB `ReadWriteOnce` PVC. If your cluster has no default StorageClass, add `storageClassName: YOUR_STORAGE_CLASS` under the PVC's `spec`. Confirm the class supports your node placement; a class using `WaitForFirstConsumer` can defer volume binding until scheduling.
+Use a Linux amd64 cluster, `kubectl`, and a working persistent-volume provisioner. The templates use the public `hiforceai/panda-force:0.0.8` image and a 10 GiB `ReadWriteOnce` PVC. If your cluster has no default StorageClass, add `storageClassName: YOUR_STORAGE_CLASS` under the PVC's `spec`. Confirm the class supports your node placement; a class using `WaitForFirstConsumer` can defer volume binding until scheduling.
 
 Both templates include a Namespace, PVC, Deployment and ClusterIP Service. They use one replica and `Recreate` updates for this single-instance application and its SQLite data. CPU/memory values are starting points; adjust them for your workload. Persistent-volume ownership must allow the configured Unix user to write; the example uses UID/GID 1000 and `fsGroup: 1000`. The init container creates only application directories on the PVC, and does not change node directories.
 

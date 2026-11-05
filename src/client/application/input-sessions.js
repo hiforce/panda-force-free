@@ -1,4 +1,5 @@
 // Prepares one native input destination and preserves a committed session across metadata failures.
+/** @param {import("./ports.js").FeatureOptions<"selection" | "viewUpdates" | "sessions" | "state", "transport" | "navigation" | "workspace" | "projects" | "delivery", "inputSessions">} options */
 export function assembleInputSessions({
   transportPort,
   selection,
@@ -10,6 +11,7 @@ export function assembleInputSessions({
   projectsPort,
   deliveryPort,
 }) {
+  /** @param {import("../../shared/data-view.js").DataView<import("../../shared/engine/types.js").SessionSummary> | null} thread */
   async function resumeActiveThread(thread = state.active) {
     if (!thread) return null;
     const generation = selection.current;
@@ -34,7 +36,8 @@ export function assembleInputSessions({
     generation,
     pending,
     token,
-    onCreated = () => {},
+    resumeExisting = true,
+    onCreated = (_created) => {},
   }) {
     if (!thread) {
       const projectless = state.projectless;
@@ -60,9 +63,9 @@ export function assembleInputSessions({
         viewUpdates.request("approvals");
       }
       viewUpdates.request("sidebar");
-    } else if (thread.canAcceptDirectInput !== true) await resumeActiveThread(thread);
+    } else if (resumeExisting && thread.canAcceptDirectInput !== true) await resumeActiveThread(thread);
     await projectsPort.businessProjects.finishAssignment(thread);
-    return thread;
+    return { ...thread, turns: thread.turns || [] };
   }
   return {
     prepareInputSession,

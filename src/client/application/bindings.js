@@ -1,7 +1,9 @@
-import { renderAssistantMarkdown } from "../rendering.js";
 import { bindMessages } from "../i18n.js";
+import { renderAssistantMarkdown } from "../rendering.js";
+import { closestElement, findElement } from "./../dom.js";
 
 // Delegates global shell events after every feature interface has been assembled.
+/** @param {import("./ports.js").FeatureOptions<"i18n" | "$" | "workspacePreparation" | "state" | "viewUpdates", "images" | "panels" | "localization" | "synchronization" | "sidebarLayout" | "usage" | "identity" | "models" | "settings" | "workbench" | "navigation", "bindings">} options */
 export function assembleBindings({
   i18n,
   $,
@@ -28,22 +30,25 @@ export function assembleBindings({
       once: true,
     });
 
-    i18n.subscribe((...args) => localizationPort.refreshLocalizedRuntime(...args));
+    i18n.subscribe(
+      /** @param {Parameters<typeof localizationPort.refreshLocalizedRuntime>} args */ (...args) =>
+        localizationPort.refreshLocalizedRuntime(...args),
+    );
     localizationPort.refreshLocalizedRuntime();
 
     document.addEventListener("click", (e) => {
       const target = e.target instanceof Element ? e.target : null,
-        image = target?.closest("[data-image-src]");
+        image = closestElement("[data-image-src]", target);
       if (image) {
         e.preventDefault();
         imagesPort.openImageViewer(
-          image.dataset.imageSrc,
-          image.dataset.imageTitle || image.querySelector("img")?.alt || "Image",
+          image.dataset.imageSrc || "",
+          image.dataset.imageTitle || findElement("img", image)?.alt || "Image",
           image.dataset.imagePath || "",
         );
         return;
       }
-      const citation = target?.closest("a[data-file-reference]");
+      const citation = closestElement("a[data-file-reference]", target);
       if (!citation) return;
       e.preventDefault();
       const reference = {
@@ -84,8 +89,16 @@ export function assembleBindings({
       if (state.modelLoadStatus === "error") modelsPort.loadModels();
       synchronizationPort.resumeSessionSync();
     });
-    addEventListener("pageshow", (...args) => synchronizationPort.resumeSessionSync(...args));
-    addEventListener("focus", (...args) => synchronizationPort.resumeSessionSync(...args));
+    addEventListener(
+      "pageshow",
+      /** @param {Parameters<typeof synchronizationPort.resumeSessionSync>} args */ (...args) =>
+        synchronizationPort.resumeSessionSync(...args),
+    );
+    addEventListener(
+      "focus",
+      /** @param {Parameters<typeof synchronizationPort.resumeSessionSync>} args */ (...args) =>
+        synchronizationPort.resumeSessionSync(...args),
+    );
 
     addEventListener("resize", () => {
       panelsPort.syncOverlayPanelMode();
@@ -93,8 +106,8 @@ export function assembleBindings({
       for (const terminalState of Object.values(panelsPort.terminalStates))
         requestAnimationFrame(() => panelsPort.fitTerminal(terminalState));
     });
-    addEventListener("keydown", (e) => {
-      if (e.target instanceof Element && e.target.closest(".terminal-host")) return;
+    window.addEventListener("keydown", (e) => {
+      if (e.target instanceof Element && closestElement(".terminal-host", e.target)) return;
       if (e.key === "Escape") {
         if (panelsPort.filePreview.isOpen && !$("#imageViewer").open) {
           e.preventDefault();

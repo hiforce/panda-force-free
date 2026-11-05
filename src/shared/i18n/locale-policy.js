@@ -13,10 +13,12 @@ export function canonicalLocale(value) {
   }
 }
 
+/** @param {unknown} value @param {readonly import("./contracts.js").LocaleDescriptor[]} registry */
 export function validPreference(value, registry = SUPPORTED_LOCALES) {
   return value === "system" || registry.some((entry) => entry.code === value);
 }
 
+/** @param {string} value @param {readonly import("./contracts.js").LocaleDescriptor[]} registry */
 export function matchLocale(value, registry = SUPPORTED_LOCALES) {
   const code = canonicalLocale(value);
   if (!code) return null;
@@ -35,6 +37,7 @@ export function matchLocale(value, registry = SUPPORTED_LOCALES) {
   );
 }
 
+/** @param {string} preference @param {readonly string[]} languages @param {readonly import("./contracts.js").LocaleDescriptor[]} registry */
 export function resolveLocale(preference = "system", languages = [], registry = SUPPORTED_LOCALES) {
   if (preference !== "system" && validPreference(preference, registry)) return preference;
   if (preference !== "system") return DEFAULT_LOCALE;
@@ -58,6 +61,7 @@ export function parseLanguageHeader(header = "") {
     .map((entry) => entry.language);
 }
 
+/** @param {string} cookie @param {readonly import("./contracts.js").LocaleDescriptor[]} registry */
 export function readLocaleCookie(cookie = "", registry = SUPPORTED_LOCALES) {
   const part = String(cookie)
     .split(";")

@@ -1,5 +1,6 @@
 import { open } from "node:fs/promises";
 import { join } from "node:path";
+import { errorCode } from "./../../shared/errors.js";
 
 // Read a bounded tail so a large CLI history cannot block the browser or server.
 export async function readComposerHistory(codexHome, { maxBytes = 4 * 1024 * 1024, limit = 1000 } = {}) {
@@ -28,7 +29,7 @@ export async function readComposerHistory(codexHome, { maxBytes = 4 * 1024 * 102
     }
     return entries.slice(-limit);
   } catch (error) {
-    if (error.code === "ENOENT") return [];
+    if (errorCode(error) === "ENOENT") return [];
     throw error;
   } finally {
     await file?.close();

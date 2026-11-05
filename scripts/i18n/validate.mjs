@@ -106,7 +106,7 @@ const declaration =
           .join("; ")} };`,
     )
     .join("\n") +
-  "\n}\nexport type MessageId = keyof MessageParameters;\nexport type Translate = <K extends MessageId>(id: K, ...values: keyof MessageParameters[K] extends never ? [values?: MessageParameters[K]] : [values: MessageParameters[K]]) => string;\n";
+  "\n}\nexport type MessageId = keyof MessageParameters;\nexport type PluginMessageId = `plugin.${string}.${string}`;\nexport interface Translate {\n  <K extends MessageId>(id: K, ...values: keyof MessageParameters[K] extends never ? [values?: MessageParameters[K]] : [values: MessageParameters[K]]): string;\n  (id: PluginMessageId, values?: Record<string, string | number | Date>): string;\n}\n";
 const typesPath = "src/shared/i18n/messages.d.ts";
 if (process.argv.includes("--write")) writeFileSync(typesPath, declaration);
 else {

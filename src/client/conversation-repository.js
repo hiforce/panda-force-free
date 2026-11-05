@@ -1,4 +1,4 @@
-import { isConversationCacheExpired } from "./conversation-cache.js";
+import { isConversationCacheExpired } from "./conversation-policy.js";
 
 // Memory, persistence revisions and invalidation share one lifecycle. An async
 // cache read must never resurrect a deleted conversation or survive logout.

@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { normalizeProjectVisibilityKey } from "../../shared/project-visibility.js";
+import { errorCode } from "./../../shared/errors.js";
 
 export class ProjectVisibilityStore {
   constructor(path, home) {
@@ -12,7 +13,7 @@ export class ProjectVisibilityStore {
     try {
       data = JSON.parse(readFileSync(path, "utf8"));
     } catch (error) {
-      if (error.code === "ENOENT") return;
+      if (errorCode(error) === "ENOENT") return;
       throw error;
     }
     if (

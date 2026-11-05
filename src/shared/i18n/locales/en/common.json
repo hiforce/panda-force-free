@@ -215,6 +215,8 @@
   "unpinSessionTitle": "Unpin session “{title}”",
   "stop": "Stop",
   "changePermissions": "Change permissions",
+  "permissionSetting": "Permissions: {mode}",
+  "modelAndReasoningSetting": "Model: {model}; reasoning: {level}",
   "askForApproval": "Ask for approval",
   "howShouldAgentActionsBeApproved": "How should agent actions be approved?",
   "contextUsage": "Context usage",
@@ -579,5 +581,14 @@
   "summaryWeb": "{position, select, first {Searched the web} other {searched the web}}",
   "summaryImages": "{position, select, first {Viewed images} other {viewed images}}",
   "folder": "Folder",
-  "logoutIdentity": "Log out (PandaForce · {account})"
+  "logoutIdentity": "Log out (PandaForce · {account})",
+  "browserLoaded": "Loaded. If the page is blank, the site may block embedding.",
+  "invalidBrowserAddress": "Invalid address",
+  "browserLoadFailed": "Page could not be loaded",
+  "browserLoadFailedDetail": "The site did not complete the embedded request. Open it externally to continue.",
+  "browserEmbeddingBlocked": "Page may have blocked embedding",
+  "browserEmbeddingBlockedDetail": "This site did not finish loading in the panel. It may block embedded browsers; you can open it externally instead.",
+  "enterValidUrl": "Enter a valid URL",
+  "httpUrlsOnly": "Only http:// and https:// URLs can be embedded",
+  "noUrlCredentials": "URLs with embedded credentials are not supported"
 }

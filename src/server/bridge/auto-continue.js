@@ -11,7 +11,7 @@ function isCapacityFailure(turn) {
 // nonterminal error notification. Recheck the latest turn before sending input.
 export function createAutoContinueRecovery(
   request,
-  onError = () => {},
+  onError = (_error) => {},
   { schedule = setTimeout, cancel = clearTimeout, maxAttempts = 3 } = {},
 ) {
   const threads = new Map();
@@ -36,7 +36,11 @@ export function createAutoContinueRecovery(
   };
   const recover = (threadId, state, turn) => {
     if (state.retry || state.attempts >= maxAttempts) return;
-    const retry = { turnId: turn.id, timer: null, sending: false };
+    const retry = {
+      turnId: turn.id,
+      timer: /** @type {ReturnType<typeof setTimeout> | null} */ (null),
+      sending: false,
+    };
     state.retry = retry;
     retry.timer = schedule(
       async () => {

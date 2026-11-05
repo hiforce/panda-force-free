@@ -1,7 +1,9 @@
-import { agentMessageText } from "../rendering.js";
 import { composerInputKey } from "../composer-attachments.js";
+import { agentMessageText } from "../rendering.js";
+import { closestElement, findElement, findElements, requireElement } from "./../dom.js";
 
 // Reconciles message aliases from native and rollout sources within a turn.
+/** @param {import("./ports.js").FeatureOptions<"mutations" | "state", "delivery", "identity">} options */
 export function assembleIdentity({ mutations, deliveryPort, state }) {
   function userMessageIdFamily(id) {
     return String(id).startsWith("local-") ? "local" : String(id).startsWith("host-user-") ? "rollout" : "app";
@@ -38,8 +40,9 @@ export function assembleIdentity({ mutations, deliveryPort, state }) {
     const text = agentMessageText(item, ""),
       commentary = item.phase === "commentary";
     for (const [id, node] of state.items) {
-      if (agentMessageIdFamily(id) === family || node.closest("[data-turn-id]")?.dataset.turnId !== turnId) continue;
-      const body = node.querySelector(".message-text"),
+      if (agentMessageIdFamily(id) === family || closestElement("[data-turn-id]", node)?.dataset.turnId !== turnId)
+        continue;
+      const body = findElement(".message-text", node),
         existingCommentary = node.dataset.localConversationCommentary !== undefined;
       if (existingCommentary === commentary && body?.dataset.raw === text) {
         mutations.collection("items").set(item.id, node);
@@ -50,7 +53,7 @@ export function assembleIdentity({ mutations, deliveryPort, state }) {
   }
   function placeAgentMessage(el, item, timeline) {
     const commentary = item.phase === "commentary",
-      slot = timeline.querySelector(commentary ? ".turn-event-stream" : ".turn-final-slot");
+      slot = requireElement(commentary ? ".turn-event-stream" : ".turn-final-slot", timeline);
     el.className = commentary ? "assistant-response assistant-commentary" : "assistant-response";
     if (commentary) {
       delete el.dataset.localConversationFinalAssistant;
@@ -75,7 +78,7 @@ export function assembleIdentity({ mutations, deliveryPort, state }) {
           (item.clientId
             ? item.clientId === message.id
             : composerInputKey(message.content) === composerInputKey(item.content)) &&
-          !message.excludedTurns.includes(turnId) &&
+          !message.excludedTurns?.includes(turnId) &&
           (message.turnId === "optimistic" || message.turnId === turnId),
       );
     let el = message && state.items.get(message.id);
@@ -84,7 +87,7 @@ export function assembleIdentity({ mutations, deliveryPort, state }) {
       // A rebuilt history may discard the optimistic node; the native item recreates it.
     }
     if (!el) {
-      const candidates = [...root.querySelectorAll('.user-turn[data-optimistic-user="true"]')];
+      const candidates = [...findElements('.user-turn[data-optimistic-user="true"]', root)];
       el = candidates.find((node) => {
         const pending = deliveryPort.pendingMessages().find((message) => state.items.get(message.id) === node);
         return (

@@ -1,7 +1,8 @@
-import { pandaEnvironment, existingApplicationPath } from "../environment.js";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { existingApplicationPath, pandaEnvironment } from "../environment.js";
+import { errorCode } from "./../../shared/errors.js";
 import { isStoredPassword } from "./security.js";
 
 export type StoredPassword = {
@@ -22,8 +23,8 @@ export function loadStoredPassword(path: string): StoredPassword | null {
   let raw: string;
   try {
     raw = readFileSync(path, "utf8");
-  } catch (error: any) {
-    if (error?.code === "ENOENT") return null;
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return null;
     throw error;
   }
   const credential = JSON.parse(raw);

@@ -28,5 +28,10 @@
   "threadDeleted": "Thread deleted",
   "taskCompleted": "Task completed",
   "browserNotificationsAreBlocked": "Browser notifications are blocked",
-  "count": "{count, plural, one {# session} other {# sessions}}"
+  "count": "{count, plural, one {# session} other {# sessions}}",
+  "browseSessions": "Browse sessions",
+  "byDirectory": "By directory",
+  "allDirectories": "All directories",
+  "loadingDirectories": "Loading directories…",
+  "directoryLoadFailed": "Could not load directories. You can still search for sessions."
 }

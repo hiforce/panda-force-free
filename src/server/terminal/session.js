@@ -1,20 +1,14 @@
-import { pandaEnvironment } from "../environment.js";
-import { chmodSync, realpathSync, statSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { chmodSync, realpathSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { errorMessage } from "../../shared/errors.js";
+import { pandaEnvironment } from "../environment.js";
 import { inside } from "../path-utils.js";
 
 const require = createRequire(import.meta.url);
-export function normalizeTerminalResize(message) {
-  if (!message || message.type !== "resize") return null;
-  const cols = Number(message.cols);
-  const rows = Number(message.rows);
-  if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols < 20 || cols > 500 || rows < 5 || rows > 200)
-    return null;
-  return { cols, rows };
-}
+export { normalizeTerminalResize } from "./protocol.js";
 
 export function resolveTerminalCwd(requested, allowedRoots, fallback) {
   let canonicalFallback;
@@ -46,15 +40,17 @@ function ensureNodePtySpawnHelper() {
   }
 }
 
+/** @param {{cwd: string; cols?: number; rows?: number; onData: (data: string) => void; onExit: (event: {exitCode: number; signal: string | null; error: unknown}) => void}} options */
 export function createTerminalSession({ cwd, cols = 100, rows = 24, onData, onExit }) {
   ensureNodePtySpawnHelper();
   const worker = fileURLToPath(new URL("./worker.js", import.meta.url));
   let session;
   let finished = false;
+  /** @param {number} exitCode @param {string | null} signal @param {unknown} error */
   const finish = (exitCode, signal = null, error = null) => {
     if (finished) return;
     finished = true;
-    if (error) onData(`\r\n[Terminal failed: ${error.message}]\r\n`);
+    if (error) onData(`\r\n[Terminal failed: ${errorMessage(error)}]\r\n`);
     onExit({ exitCode, signal, error });
   };
   try {
@@ -67,19 +63,19 @@ export function createTerminalSession({ cwd, cols = 100, rows = 24, onData, onEx
     queueMicrotask(() => finish(1, null, error));
     return { pid: undefined, write: () => false, resize: () => false, kill: () => {} };
   }
-  session.stdout.setEncoding("utf8");
-  session.stderr.setEncoding("utf8");
-  session.stdout.on("data", onData);
-  session.stderr.on("data", onData);
+  session.stdout?.setEncoding("utf8");
+  session.stderr?.setEncoding("utf8");
+  session.stdout?.on("data", onData);
+  session.stderr?.on("data", onData);
   session.on("error", (error) => finish(1, null, error));
   session.on("exit", (exitCode, signal) => finish(exitCode ?? 0, signal));
   return {
     pid: session.pid,
-    write: (data) => session.stdin.write(data),
+    write: (data) => session.stdin?.write(data),
     resize: (nextCols, nextRows) => session.send?.({ type: "resize", cols: nextCols, rows: nextRows }),
     kill: () => {
       try {
-        session.stdin.end();
+        session.stdin?.end();
       } catch {
         /* Session already exited. */
       }

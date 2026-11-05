@@ -28,5 +28,10 @@
   "threadDeleted": "任务已删除",
   "taskCompleted": "任务完成",
   "browserNotificationsAreBlocked": "浏览器通知已被阻止",
-  "count": "{count, number} 个会话"
+  "count": "{count, number} 个会话",
+  "browseSessions": "浏览会话",
+  "byDirectory": "按目录浏览",
+  "allDirectories": "所有目录",
+  "loadingDirectories": "正在加载目录…",
+  "directoryLoadFailed": "目录暂时无法加载，仍可搜索会话。"
 }

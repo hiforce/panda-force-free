@@ -37,6 +37,7 @@ export async function searchWorkspaceFiles(root, query, options = {}) {
   let visited = 0;
   while (queue.length && visited < 5000) {
     const directory = queue.shift();
+    if (!directory) continue;
     let entries;
     try {
       entries = await readdir(directory, { withFileTypes: true });

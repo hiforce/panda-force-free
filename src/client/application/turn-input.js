@@ -1,4 +1,4 @@
-import { THREAD_NOT_FOUND, NO_ACTIVE_TURN, bridgeErrorCode } from "../../shared/bridge-errors.js";
+import { NO_ACTIVE_TURN, THREAD_NOT_FOUND, bridgeErrorCode } from "../../shared/bridge-errors.js";
 
 // Only definitive native rejections permit retrying or starting a fresh turn.
 // A transport timeout may have committed the mutation and must propagate.
@@ -13,15 +13,12 @@ export async function steerOrStart({
   onDispatch,
   onNoActiveTurn,
 }) {
-  let prepared = false;
-  if (thread.canAcceptDirectInput !== true) {
-    await resume(thread);
-    prepared = true;
-  }
+  const prepared = thread.canAcceptDirectInput !== true;
   const steer = () => {
     onDispatch(true);
     return rpc("turn/steer", {
       threadId: thread.id,
+      ...(prepared ? { pandaPrepareInput: true } : {}),
       expectedTurnId: turnId,
       input,
       ...(clientUserMessageId ? { clientUserMessageId } : {}),
@@ -41,6 +38,7 @@ export async function steerOrStart({
     onNoActiveTurn();
     return rpc("turn/start", {
       threadId: thread.id,
+      ...(prepared ? { pandaPrepareInput: true } : {}),
       input,
       ...(clientUserMessageId ? { clientUserMessageId } : {}),
       ...startOptions,

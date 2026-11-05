@@ -20,9 +20,7 @@ export function bridgeErrorCode(value) {
 }
 
 export function createBridgeError(value, code = "") {
-  const error = new Error(bridgeErrorMessage(value));
-  error.code = code || bridgeErrorCode(value);
-  return error;
+  return Object.assign(new Error(bridgeErrorMessage(value)), { code: code || bridgeErrorCode(value) });
 }
 
 export function rpcErrorPayload(id, value) {

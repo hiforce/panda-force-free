@@ -1,8 +1,7 @@
+import { request as fetch } from "./http-client.js";
 import { setMessageHtml, setOpaqueText } from "./i18n.js";
-
-import { createLatestRequestGate } from "./ui-core.js";
 import { codexIcon } from "./codex-icons.js";
-
+import { createLatestRequestGate } from "./ui-core.js";
 /**
  * Account identity surfaces: /api/account loading with a latest-request gate,
  * the avatar/plan rendering across footer, menu and settings, and the
@@ -16,6 +15,7 @@ export function createAccountView({
   filterSettingsNavigation,
   syncPermissionSettings,
   syncPermissionControl,
+  mutations,
 }) {
   const accountRequestGate = createLatestRequestGate();
   async function loadAccount(refresh = false) {
@@ -25,7 +25,7 @@ export function createAccountView({
         account = await response.json();
       if (!response.ok) throw new Error(account.error || "Cannot load account");
       if (!accountRequestGate.isCurrent(requestId)) return;
-      state.account = account;
+      mutations.set("account", account);
       renderAccount(account);
     } catch {
       if (accountRequestGate.isCurrent(requestId))
@@ -33,7 +33,7 @@ export function createAccountView({
     }
   }
   function renderAccount(account) {
-    state.account = account;
+    mutations.set("account", account);
     const displayName = account?.displayName?.trim() || t("common.settings"),
       initials = account?.initials?.trim() || "?",
       type = account?.type || "unknown",
@@ -115,6 +115,5 @@ export function createAccountView({
     menu.hidden = !open;
     $("#accountButton").setAttribute("aria-expanded", String(open));
   }
-
   return { loadAccount, renderAccount, toggleAccountMenu };
 }

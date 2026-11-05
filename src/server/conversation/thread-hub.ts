@@ -1,10 +1,16 @@
 import { statSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { LiveSessionStore } from "../bridge/live-session.js";
-import { createConversationHistory } from "./history.js";
-import { createPagedConversationHistory, readNativeItemPage } from "./paged-history.js";
-import { resolveSafeRegularFile } from "../auth/security.js";
 import { unifiedDiffFromFileChanges } from "../../shared/codex-surfaces.js";
+import type { HistoryQuery } from "../../shared/data-contracts.js";
+import { reportDiagnostic } from "../../shared/diagnostics.js";
+import { isRecord } from "../../shared/records.js";
+import { resolveSafeRegularFile } from "../path-utils.js";
+import { nativeThread, nativeTurn, resultPage, threadFromResult, type NativeThread } from "../protocol/native.js";
+import type { ReviewRecorder } from "../engines/runtime-contract.js";
+import { errorCode } from "./../../shared/errors.js";
+import { createConversationHistory } from "./history.js";
+import { LiveSessionStore } from "./live-session.js";
+import { createPagedConversationHistory, readNativeItemPage } from "./paged-history.js";
 
 const LARGE_JOURNAL_BYTES = 8 * 1024 * 1024;
 const LARGE_ROLLOUT_BYTES = 2 * 1024 * 1024;
@@ -23,29 +29,48 @@ export function createThreadHub({
   sharedMode,
   defaultSessionsRoot,
 }: {
-  request: (method: string, params?: any) => Promise<any>;
-  reviewDiffs: { record: (entry: any) => void };
+  request: import("../../shared/rpc-types.js").RpcRequest;
+  reviewDiffs: ReviewRecorder;
   sharedMode: boolean;
   defaultSessionsRoot: string;
 }) {
   const threadPaths = new Map<string, string>();
-  const threadMetadata = new Map<string, any>();
+  const threadMetadata = new Map<
+    string,
+    Pick<NativeThread, "id" | "path" | "cwd" | "canAcceptDirectInput"> & Record<string, unknown>
+  >();
   const sharedThreadSubscriptions = new Map<string, Promise<void>>();
   let sessionsRoot = defaultSessionsRoot;
   const liveSessions = new LiveSessionStore();
 
-  function recordFileChangeDiff({ threadId, turnId, changes }: any) {
+  function recordFileChangeDiff({
+    threadId,
+    turnId,
+    changes,
+  }: {
+    threadId?: unknown;
+    turnId?: unknown;
+    changes?: unknown;
+  }) {
     const diff = unifiedDiffFromFileChanges(Array.isArray(changes) ? changes : []);
     if (diff) reviewDiffs.record({ threadId, turnId, diff });
   }
 
-  function recordReviewDiffsFromRpc(method: string, params: any, result: any) {
+  function recordReviewDiffsFromRpc(method: string, params: { threadId?: string }, result: unknown) {
     if (!["thread/read", "thread/resume", "thread/turns/list"].includes(method)) return;
-    const threadId = result?.thread?.id || params?.threadId;
-    const turns = result?.thread?.turns || result?.data || [];
+    const thread = threadFromResult(result);
+    const threadId = thread?.id || params?.threadId;
+    const turns =
+      thread?.turns ||
+      (isRecord(result) && Array.isArray(result.data)
+        ? result.data.flatMap((value) => {
+            const parsed = nativeTurn(value);
+            return parsed ? [parsed] : [];
+          })
+        : []);
     if (typeof threadId !== "string" || !Array.isArray(turns)) return;
     for (const turn of turns) {
-      const changes = (turn?.items || []).flatMap((item: any) =>
+      const changes = (turn?.items || []).flatMap((item) =>
         item?.type === "fileChange" && Array.isArray(item.changes) ? item.changes : [],
       );
       const diff = unifiedDiffFromFileChanges(changes);
@@ -53,8 +78,12 @@ export function createThreadHub({
     }
   }
 
-  function recordThreadPathsFromRpc(result: any) {
-    const threads = [result?.thread, ...(Array.isArray(result?.data) ? result.data : [])].filter(Boolean);
+  function recordThreadPathsFromRpc(result: unknown) {
+    if (!isRecord(result)) return;
+    const threads = [result.thread, ...(Array.isArray(result.data) ? result.data : [])].flatMap((value) => {
+      const thread = nativeThread(value);
+      return thread ? [thread] : [];
+    });
     for (const thread of threads) {
       if (typeof thread?.id === "string" && ("cwd" in thread || "path" in thread)) {
         if (typeof thread?.path === "string") threadPaths.set(thread.id, thread.path);
@@ -66,7 +95,8 @@ export function createThreadHub({
   }
 
   async function getThreadMetadata(threadId: string) {
-    if (threadMetadata.has(threadId)) return threadMetadata.get(threadId);
+    const cached = threadMetadata.get(threadId);
+    if (cached) return cached;
     let cursor: string | null = null;
     for (let page = 0; page < METADATA_SCAN_PAGES; page++) {
       const result = await request("thread/list", {
@@ -77,8 +107,9 @@ export function createThreadHub({
         ...(cursor ? { cursor } : {}),
       });
       recordThreadPathsFromRpc(result);
-      if (threadMetadata.has(threadId)) return threadMetadata.get(threadId);
-      cursor = result.nextCursor;
+      const cached = threadMetadata.get(threadId);
+      if (cached) return cached;
+      cursor = isRecord(result) && typeof result.nextCursor === "string" ? result.nextCursor : null;
       if (!cursor) break;
     }
     throw new Error("Thread not found; refresh the session list");
@@ -89,25 +120,31 @@ export function createThreadHub({
       const result = await request("thread/read", { threadId, includeTurns: true });
       recordThreadPathsFromRpc(result);
       recordReviewDiffsFromRpc("thread/read", { threadId }, result);
-      const thread = result.thread;
+      const thread = threadFromResult(result);
+      if (!thread) throw new Error("Invalid native thread response");
       try {
         const live = await readLiveThread(threadId);
         if (live?.active && live.turn) {
-          const index = thread.turns.findIndex((turn: any) => turn.id === live.turn.id);
+          const index = thread.turns.findIndex((turn) => turn.id === live.turn.id);
           const stored = index >= 0 ? thread.turns[index] : null;
-          const opening = stored?.items?.find((item: any) => item.type === "userMessage");
+          const opening = stored?.items?.find((item) => item.type === "userMessage");
           const turn = {
             ...stored,
             ...live.turn,
             items: [
-              ...(opening && !live.turn.items.some((item: any) => item.id === opening.id) ? [opening] : []),
+              ...(opening &&
+              !live.turn.items.some((item: import("../protocol/native.js").NativeItem) => item.id === opening.id)
+                ? [opening]
+                : []),
               ...live.turn.items,
             ],
           };
           if (index < 0) thread.turns.push(turn);
           else thread.turns[index] = turn;
         }
-      } catch {}
+      } catch (error) {
+        reportDiagnostic("history.live-merge", error);
+      }
       return thread;
     },
     fingerprint: (threadId: string) => {
@@ -123,7 +160,7 @@ export function createThreadHub({
   });
   const pagedConversationHistory = createPagedConversationHistory({ request, getThread: getThreadMetadata });
 
-  async function readNativeConversationHistory(params: any) {
+  async function readNativeConversationHistory(params: HistoryQuery) {
     if (typeof params?.threadId !== "string" || !params.threadId) throw new Error("Invalid thread id");
     if (sharedMode) {
       const thread = await getThreadMetadata(params.threadId);
@@ -132,26 +169,27 @@ export function createThreadHub({
       try {
         if (!thread.path || statSync(thread.path).size > LARGE_JOURNAL_BYTES)
           return pagedConversationHistory.read(params);
-      } catch (error: any) {
-        if (error.code !== "ENOENT") throw error;
+      } catch (error) {
+        if (errorCode(error) !== "ENOENT") throw error;
         return pagedConversationHistory.read(params);
       }
     }
     return conversationHistory.read(params);
   }
 
-  async function readConversationHistory(params: any) {
+  async function readConversationHistory(params: HistoryQuery) {
     const result = await readNativeConversationHistory(params);
     try {
       // Native item pagination omits host questionnaire calls, including completed turns.
       const live = await readLiveThread(params.threadId);
       return { ...result, history: { ...result.history, questionTurns: live.questionTurns || [] } };
-    } catch {
+    } catch (error) {
+      reportDiagnostic("history.questions", error);
       return result;
     }
   }
 
-  async function readBrowserThread(params: any) {
+  async function readBrowserThread(params: HistoryQuery & { includeTurns?: boolean }) {
     if (typeof params?.threadId !== "string" || !params.threadId) throw new Error("Invalid thread id");
     if (!params.includeTurns) return { thread: { ...(await getThreadMetadata(params.threadId)), turns: [] } };
     // Legacy clients and resync requests must use the same bounded reader as
@@ -174,23 +212,26 @@ export function createThreadHub({
     };
   }
 
-  async function readBrowserTurns(params: any) {
+  async function readBrowserTurns(params: HistoryQuery & { itemsView?: string; sortDirection?: string }) {
     if (typeof params?.threadId !== "string" || !params.threadId) throw new Error("Invalid thread id");
+    const threadId = params.threadId;
     const result = await request("thread/turns/list", {
       ...params,
       limit: Math.min(params.limit || 1, 20),
       itemsView: "notLoaded",
     });
+    const pageResult = resultPage(result, nativeTurn);
     const data = await Promise.all(
-      result.data.map(async (turn: any) => {
-        const page = await readNativeItemPage(request, { threadId: params.threadId, turnId: turn.id, limit: 20 });
+      pageResult.data.map(async (turn) => {
+        const page = await readNativeItemPage(request, { threadId, turnId: turn.id, limit: 20 });
         return { ...turn, itemsView: "summary", items: [...page.data].reverse().map((record) => record.item) };
       }),
     );
-    return { ...result, data };
+    return { ...pageResult, data };
   }
 
-  async function subscribeSharedThread(thread: any) {
+  async function subscribeSharedThread(value: unknown) {
+    const thread = nativeThread(value);
     if (!sharedMode || thread?.canAcceptDirectInput !== true) return;
     let subscription = sharedThreadSubscriptions.get(thread.id);
     if (!subscription) {
@@ -215,22 +256,25 @@ export function createThreadHub({
       recordThreadPathsFromRpc(result);
       path = threadPaths.get(threadId);
     }
-    if (!path) return { active: false, turn: null, lastEventAt: null };
+    if (!path) return { active: false, turn: null, lastEventAt: null, questionTurns: [] };
     const child = relative(sessionsRoot, resolve(path));
     const safePath = child && !child.startsWith("..") ? resolveSafeRegularFile(sessionsRoot, child) : null;
     if (!safePath) throw new Error("Thread rollout is outside the Codex sessions directory");
     const turn =
       statSync(safePath).size > LARGE_ROLLOUT_BYTES
-        ? (await request("thread/turns/list", { threadId, limit: 1, sortDirection: "desc", itemsView: "notLoaded" }))
-            .data?.[0]
+        ? resultPage(
+            await request("thread/turns/list", { threadId, limit: 1, sortDirection: "desc", itemsView: "notLoaded" }),
+            nativeTurn,
+          ).data[0]
         : undefined;
     return liveSessions.read(safePath, { turn });
   }
 
   return {
-    recordThreadStatus(threadId: string, status: any) {
+    recordThreadStatus(threadId: string, status: unknown) {
       const metadata = threadMetadata.get(threadId);
-      if (metadata && typeof status?.type === "string") threadMetadata.set(threadId, { ...metadata, status });
+      if (metadata && isRecord(status) && typeof status.type === "string")
+        threadMetadata.set(threadId, { ...metadata, status });
     },
     recordFileChangeDiff,
     recordReviewDiffsFromRpc,

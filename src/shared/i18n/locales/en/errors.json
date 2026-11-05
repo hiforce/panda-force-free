@@ -1,4 +1,7 @@
 {
+  "bridgeConnectionInterrupted": "The connection to PandaForce was interrupted. The request could not be confirmed.",
+  "bridgeInvalidResponse": "PandaForce returned an unreadable response. The request could not be confirmed.",
+  "messageNotSentConnectionInterrupted": "The connection was interrupted before your message was sent. Your message has been kept; please try again when the connection returns.",
   "couldNotEnableBrowserNotifications": "Could not enable browser notifications",
   "couldNotSubmitTheDecisionTheRequestIsStillWaiting": "Could not submit the decision. The request is still waiting; please retry.",
   "projectNotFound": "Project not found",
@@ -31,5 +34,7 @@
   "couldNotCompleteAction": "Could not complete action",
   "authenticationIsTemporarilyUnavailablePleaseRetry": "Authentication is temporarily unavailable. Please retry.",
   "methodNotAllowed": "Method not allowed",
-  "unexpectedError": "Unexpected error"
+  "unexpectedError": "Unexpected error",
+  "engineRequestTimedOut": "Engine request timed out: {operation}",
+  "bridgeRequestFailed": "Engine request failed"
 }

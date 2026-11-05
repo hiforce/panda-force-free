@@ -21,12 +21,15 @@ export function filesFromClipboard(clipboardData, { now = () => new Date() } = {
   });
 }
 
+/** @param {string} text @param {readonly import("../shared/data-contracts.js").ComposerAttachment[]} attachments @returns {import("../shared/data-contracts.js").NativeInput[]} */
 export function buildComposerInput(text, attachments = []) {
+  /** @type {import("../shared/data-contracts.js").NativeInput[]} */
   const input = text ? [{ type: "text", text }] : [];
   for (const attachment of attachments) {
+    if (!attachment.url && !attachment.path) throw new Error("Attachment has no readable location");
     if (attachment.kind === "image")
       input.push(
-        attachment.url ? { type: "image", url: attachment.url } : { type: "localImage", path: attachment.path },
+        attachment.url ? { type: "image", url: attachment.url } : { type: "localImage", path: attachment.path || "" },
       );
     else
       input.push({
@@ -37,15 +40,22 @@ export function buildComposerInput(text, attachments = []) {
   return input;
 }
 
+/** @param {readonly {type: string; text?: string; path?: string; url?: string}[]} input @returns {import("../shared/data-contracts.js").ComposerAttachment[]} */
 export function attachmentsFromInput(input = []) {
   return input.flatMap((part) => {
     if (part.type === "image" && /^https:\/\//i.test(part.url || "")) {
-      const url = canonicalAttachmentUrl(part.url) || part.url;
+      const url = canonicalAttachmentUrl(part.url) || part.url || "";
       return [{ id: url, url, name: attachmentUrlName(url), kind: "image", status: "ready" }];
     }
     if (part.type === "localImage" && part.path)
       return [
-        { id: part.path, path: part.path, name: part.path.split(/[\\/]/).at(-1), kind: "image", status: "ready" },
+        {
+          id: part.path,
+          path: part.path,
+          name: part.path.split(/[\\/]/).at(-1) || "image",
+          kind: "image",
+          status: "ready",
+        },
       ];
     if (part.type === "text") {
       const files = [];
@@ -67,6 +77,7 @@ export function attachmentsFromInput(input = []) {
   });
 }
 
+/** @param {readonly {type: string; text?: string}[]} input */
 export function composerTextFromInput(input = []) {
   return input
     .filter((part) => part.type === "text")
@@ -84,6 +95,7 @@ export function composerTextFromInput(input = []) {
     .trim();
 }
 
+/** @param {readonly {type: string; text?: string; path?: string; url?: string}[]} input */
 export function composerInputKey(input = []) {
   return JSON.stringify([
     input

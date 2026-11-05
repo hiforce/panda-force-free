@@ -1,17 +1,17 @@
 import { localizeAttribute, messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
-
-import {
-  readAsyncQuestions,
-  createAsyncQuestionCard,
-  closeEarlierAsyncQuestions,
-  closeAsyncQuestionCard,
-} from "../async-questions.js";
-import { agentMessageText, renderAssistantMarkdown, renderItemImages } from "../rendering.js";
-import { codexIcon } from "../codex-icons.js";
-import { attachmentsFromInput, composerTextFromInput, composerInputKey } from "../composer-attachments.js";
+import { closestElement, findElement, requireElement } from "./../dom.js";
 import { attachmentDisplayUrl } from "../../shared/attachment-urls.js";
-
+import {
+  closeAsyncQuestionCard,
+  closeEarlierAsyncQuestions,
+  createAsyncQuestionCard,
+  readAsyncQuestions,
+} from "../async-questions.js";
+import { codexIcon } from "../codex-icons.js";
+import { attachmentsFromInput, composerInputKey, composerTextFromInput } from "../composer-attachments.js";
+import { agentMessageText, renderAssistantMarkdown, renderItemImages } from "../rendering.js";
 // Projects native items into the timeline and delegates identity, activity and review details.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "$" | "state" | "t" | "escapeHtml", "turnFrames" | "identity" | "sideTasks" | "viewport" | "activity" | "submission" | "queue" | "timing" | "clipboard" | "review", "messages">} options */
 export function assembleMessages({
   turnFramesPort,
   viewUpdates,
@@ -31,40 +31,42 @@ export function assembleMessages({
   reviewPort,
 }) {
   function upsertItem(item, turnId, root = $("#conversation"), live = true) {
-    root.querySelector("#emptyState")?.remove();
-    let el = state.items.get(item.id);
+    findElement("#emptyState", root)?.remove();
+    let el = state.items.get(item.id) || null;
     if (el && !root.contains(el)) {
       mutations.collection("items").delete(item.id);
       el = null;
     }
-    if (!el && item.type === "userMessage") closeEarlierAsyncQuestions(root, t);
     if (!el && item.type === "userMessage")
       el =
         identityPort.claimOptimisticUser(item, root, turnId) ||
         identityPort.claimEquivalentUserMessage(item, root, turnId);
+    // History hydration and aliases of an existing prompt are not new answers.
+    if (!el && live && item.type === "userMessage") closeEarlierAsyncQuestions(root, t);
     if (!el && item.type === "agentMessage") el = identityPort.claimEquivalentAgentMessage(item, turnId);
     const questions = readAsyncQuestions(item);
     if (questions) {
       if (!el) {
         // Arguments can arrive after the generic tool row; replace that row once.
-        const oldRow = root.querySelector(
+        const oldRow = findElement(
           `[data-item-id="${CSS.escape(activityPort.activityItemId(item))}"].activity-item`,
+          root,
         );
         if (oldRow) {
-          const group = oldRow.closest("[data-agent-activity-group]");
+          const group = closestElement("[data-agent-activity-group]", oldRow);
           oldRow.nextElementSibling?.remove();
           oldRow.remove();
-          state.activityItems.get(turnId)?.delete(activityPort.activityItemId(item));
-          if (group?.querySelector(".activity-item")) activityPort.updateActivitySummary(group);
+          mutations.edit("activityItems", (draft) => draft.get(turnId)?.delete(activityPort.activityItemId(item)));
+          if (findElement(".activity-item", group)) activityPort.updateActivitySummary(group);
           else group?.remove();
         }
         const questionThreadId = state.active?.id;
         el = createAsyncQuestionCard(item, questions, {
           t,
           sendAnswer: (answer) =>
-            submissionPort.submitPrompt({ preventDefault() {} }, { text: answer, threadId: questionThreadId }),
+            submissionPort.submitPrompt({ preventDefault() {} }, { text: answer, threadId: questionThreadId || "" }),
         });
-        turnFramesPort.ensureTurnTimeline(turnId, root).querySelector(".turn-event-stream").append(el);
+        requireElement(".turn-event-stream", turnFramesPort.ensureTurnTimeline(turnId, root)).append(el);
         mutations.collection("items").set(item.id, el);
       }
       if (item.questionState === "earlier") closeAsyncQuestionCard(el, t);
@@ -78,10 +80,10 @@ export function assembleMessages({
         if (String(item.id).startsWith("local-")) el.dataset.optimisticUser = "true";
         setMessageHtml(el, '<div class="user-message"></div>');
         const steer =
-          item.steer ?? Boolean(root.querySelector(`.user-turn[data-user-turn-id="${CSS.escape(String(turnId))}"]`));
+          item.steer ?? Boolean(findElement(`.user-turn[data-user-turn-id="${CSS.escape(String(turnId))}"]`, root));
         if (steer) {
           el.dataset.steer = "true";
-          turnFramesPort.ensureTurnTimeline(turnId, root).querySelector(".turn-event-stream").append(el);
+          requireElement(".turn-event-stream", turnFramesPort.ensureTurnTimeline(turnId, root)).append(el);
         } else {
           const timeline = state.turns.get(turnId);
           timeline?.isConnected ? root.insertBefore(el, timeline) : root.append(el);
@@ -95,7 +97,7 @@ export function assembleMessages({
         const timeline = turnFramesPort.ensureTurnTimeline(turnId, root);
         el = document.createElement("div");
         el.className = "assistant-generated-image";
-        timeline.querySelector(".turn-event-stream").append(el);
+        requireElement(".turn-event-stream", timeline).append(el);
       } else if (
         [
           "commandExecution",
@@ -117,6 +119,7 @@ export function assembleMessages({
       if (item.type === "userMessage" || item.type === "agentMessage" || item.type === "imageGeneration")
         mutations.collection("items").set(item.id, el);
     }
+    if (!el) return;
     if (item.type === "userMessage") {
       queuePort.settleQueuedMessage(item, turnId);
       el.dataset.userTurnId = turnId;
@@ -134,8 +137,8 @@ export function assembleMessages({
           Date.now() / 1000;
       el.dataset.messageTimestamp = String(timingPort.timestampSeconds(userTimestamp) || Date.now() / 1000);
       timingPort.setMessageTime(el, el.dataset.messageTimestamp, "Sent at {time}");
-      setOpaqueText(el.querySelector(".user-message"), composerTextFromInput(item.content));
-      let copyButton = el.querySelector(".user-message-copy");
+      setOpaqueText(findElement(".user-message", el), composerTextFromInput(item.content));
+      let copyButton = findElement("button.user-message-copy", el);
       if (!copyButton) {
         copyButton = document.createElement("button");
         copyButton.type = "button";
@@ -143,18 +146,19 @@ export function assembleMessages({
         localizeAttribute(copyButton, "aria-label", "common.copyMessage", undefined);
         localizeAttribute(copyButton, "title", "common.copyMessage", undefined);
         setMessageHtml(copyButton, `${codexIcon("copy")}<span><span data-pf-message="files.copy">Copy</span></span>`);
-        copyButton.onclick = () => clipboardPort.copyUserMessage(copyButton);
+        const copyTarget = copyButton;
+        copyButton.onclick = () => clipboardPort.copyUserMessage(copyTarget);
         el.append(copyButton);
       }
-      copyButton.hidden = !el.querySelector(".user-message").textContent;
+      copyButton.hidden = !requireElement(".user-message", el).textContent;
       const files = attachmentsFromInput(item.content).filter((attachment) => attachment.kind === "file");
-      let fileList = el.querySelector(".user-message-files");
+      let fileList = findElement(".user-message-files", el);
       el.classList.toggle("has-files", Boolean(files.length));
       if (files.length) {
         if (!fileList) {
           fileList = document.createElement("div");
           fileList.className = "user-message-files";
-          el.querySelector(".user-message").after(fileList);
+          requireElement(".user-message", el).after(fileList);
         }
         fileList.replaceChildren();
         for (const file of files) {
@@ -172,14 +176,14 @@ export function assembleMessages({
           fileList.append(link);
         }
       } else fileList?.remove();
-      let images = el.querySelector(".user-message-images");
+      let images = findElement(".user-message-images", el);
       const imageHtml = renderItemImages(item, { cwd: identityPort.imageCwd(item), className: "message-image-grid" });
       el.classList.toggle("has-images", Boolean(imageHtml));
       if (imageHtml) {
         if (!images) {
           images = document.createElement("div");
           images.className = "user-message-images";
-          el.querySelector(".user-message").after(images);
+          requireElement(".user-message", el).after(images);
         }
         setMessageHtml(images, imageHtml);
       } else images?.remove();
@@ -187,7 +191,7 @@ export function assembleMessages({
         if (item.steer) el.dataset.steer = "true";
         el.dataset.delivery =
           item.delivery || (el.dataset.optimisticUser === "true" ? el.dataset.delivery || "sending" : "sent");
-        let status = el.querySelector(".steer-message-status");
+        let status = findElement(".steer-message-status", el);
         if (!status) {
           status = document.createElement("div");
           status.className = "steer-message-status";
@@ -212,7 +216,7 @@ export function assembleMessages({
     }
     if (item.type === "agentMessage") {
       const timeline = turnFramesPort.ensureTurnTimeline(turnId, root),
-        body = el.querySelector(".message-text"),
+        body = requireElement(".message-text", el),
         text = agentMessageText(item, body.dataset.raw ?? ""),
         cwd = identityPort.imageCwd(item),
         receivedTimestamp =

@@ -1,5 +1,5 @@
-import { setOpaqueText } from "./i18n.js";
 import { codexRateLimits, renderQuotaWindows } from "./account-usage.js";
+import { setOpaqueText } from "./i18n.js";
 import { createLatestRequestGate } from "./ui-core.js";
 
 const USAGE_REFRESH_MS = 60000;

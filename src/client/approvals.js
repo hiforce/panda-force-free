@@ -1,17 +1,19 @@
+import { isTransportSwitch } from "../shared/errors.js";
+import { errorMessage } from "./../shared/errors.js";
+import { findElement, findElements, requireElement } from "./dom.js";
+import { request as fetch } from "./http-client.js";
 import { localizeText, messageHtml, setMessageHtml } from "./i18n.js";
-
 import {
-  buildApprovalModel,
-  permissionRows,
-  normalizeApprovalRequest,
   approvalDecisionResponse,
+  buildApprovalModel,
+  normalizeApprovalRequest,
+  permissionRows,
 } from "../shared/codex-surfaces.js";
-import { createUserInputCard, USER_INPUT_METHODS } from "./user-input.js";
 import { codexIcon } from "./codex-icons.js";
-
+import { createUserInputCard, USER_INPUT_METHODS } from "./user-input.js";
 /**
  * Approval and user-input request cards: rendering, decision submission via
- * respondToCodex, pending-request replay when switching threads, and the
+ * respondToEngine, pending-request replay when switching threads, and the
  * disconnect cleanup. Conversation anchoring (timelines, activities,
  * scrolling) is injected from the conversation renderer.
  */
@@ -22,7 +24,7 @@ export function createApprovals({
   t,
   state,
   approvalMenuController,
-  respondToCodex,
+  respondToEngine,
   addPersistentError,
   escapeHtml,
   shortPath,
@@ -33,6 +35,7 @@ export function createApprovals({
   scrollBottom,
   diffForTurn,
   openReviewPanel,
+  mutations,
 }) {
   const pendingApprovals = new Map();
   const userInputDrafts = new Map();
@@ -51,7 +54,7 @@ export function createApprovals({
     `<header><h2>${messageHtml("approvals.requestsRequiringYourAttention", undefined, t)}</h2><button type="button" class="wb-button">${messageHtml("common.close", undefined, t)}</button></header><div class="approval-inbox-list"></div>`,
   );
   document.body.append(inbox);
-  inbox.querySelector("header button").onclick = () => inbox.close();
+  requireElement("header button", inbox).onclick = () => inbox.close();
   function pendingChanged() {
     notice.hidden = pendingApprovals.size === 0;
     localizeText(notice, "approvals.reviewRequestsCount", { count: pendingApprovals.size }, t);
@@ -60,19 +63,19 @@ export function createApprovals({
   }
   i18n?.subscribe(() => {
     pendingChanged();
-    localizeText(inbox.querySelector("header h2"), "approvals.requestsRequiringYourAttention", undefined, t);
-    localizeText(inbox.querySelector("header button"), "common.close", undefined, t);
+    localizeText(findElement("header h2", inbox), "approvals.requestsRequiringYourAttention", undefined, t);
+    localizeText(findElement("header button", inbox), "common.close", undefined, t);
   });
   notice.onclick = () => {
     inbox.showModal();
     for (const req of pendingApprovals.values())
-      void onServerRequest(req, { container: inbox.querySelector(".approval-inbox-list") });
+      void onServerRequest(req, { container: findElement(".approval-inbox-list", inbox) });
   };
   inbox.addEventListener("close", () => {
     for (const [id, card] of state.requestCards)
       if (inbox.contains(card)) {
         card.remove();
-        state.requestCards.delete(id);
+        mutations.collection("requestCards").delete(id);
       }
     restorePendingApprovals();
     if (!notice.hidden) notice.focus();
@@ -129,7 +132,7 @@ export function createApprovals({
     userInputDrafts.delete(requestId);
     approvalMenuController.closeFor(card);
     card?.remove();
-    state.requestCards.delete(requestId);
+    mutations.collection("requestCards").delete(requestId);
   }
   function restorePendingApprovals() {
     for (const req of pendingApprovals.values())
@@ -137,7 +140,7 @@ export function createApprovals({
   }
   async function onServerRequest(
     req,
-    { container = inbox.open ? inbox.querySelector(".approval-inbox-list") : null } = {},
+    { container = inbox.open ? findElement(".approval-inbox-list", inbox) : null } = {},
   ) {
     req = normalizeApprovalRequest(req);
     const p = req.params || {};
@@ -145,7 +148,8 @@ export function createApprovals({
     const visible =
       existing?.isConnected && (container ? container.contains(existing) : $("#conversation").contains(existing));
     const canShow = container || belongsToActiveThread(p);
-    if (USER_INPUT_METHODS.includes(req.method)) {
+    if (req.surface?.kind === "questions" || USER_INPUT_METHODS.includes(req.method)) {
+      if (req.surface?.kind === "questions") req = { ...req, params: { ...p, questions: req.surface.questions } };
       pendingApprovals.set(req.id, req);
       pendingChanged();
       if (!canShow || visible) return;
@@ -155,7 +159,7 @@ export function createApprovals({
       userInputDrafts.set(req.id, draft);
       const card = createUserInputCard(req, {
         t,
-        respond: respondToCodex,
+        respond: respondToEngine,
         onResolved: resolveServerRequest,
         onError: (message) => addPersistentError(message),
         draft,
@@ -176,20 +180,22 @@ export function createApprovals({
         );
         card.prepend(session);
       }
-      (container || ensureTurnTimeline(p.turnId || "questions").querySelector(".turn-event-stream")).append(card);
-      state.requestCards.set(req.id, card);
+      (container || requireElement(".turn-event-stream", ensureTurnTimeline(p.turnId || "questions"))).append(card);
+      mutations.collection("requestCards").set(req.id, card);
       scrollBottom();
       return;
     }
     if (
+      req.surface?.kind !== "approval" &&
       ![
         "item/commandExecution/requestApproval",
         "item/fileChange/requestApproval",
         "item/permissions/requestApproval",
       ].includes(req.method)
     ) {
-      void respondToCodex(req.id, null, { code: -32601, message: "Unsupported request" }).catch((error) => {
-        if (!error?.silentTransportSwitch) addPersistentError(error.message);
+      void respondToEngine(req.id, null, { code: -32601, message: "Unsupported request" }).catch((error) => {
+        if (!(error instanceof Error && "silentTransportSwitch" in error && error.silentTransportSwitch))
+          addPersistentError(error.message);
       });
       return;
     }
@@ -199,7 +205,7 @@ export function createApprovals({
     approvalMenuController.closeFor(existing);
     existing?.remove();
     const group = container ? null : ensureActivity(p.turnId || "approval", $("#conversation"), p.itemId),
-      model = buildApprovalModel(req),
+      model = req.surface?.kind === "approval" ? req.surface.model : buildApprovalModel(req),
       card = document.createElement("section");
     card.className = "approval-card";
     card.dataset.codexApprovalSurface = "";
@@ -224,22 +230,22 @@ export function createApprovals({
       card.prepend(session);
       container.append(card);
     } else group.after(card);
-    state.requestCards.set(req.id, card);
+    mutations.collection("requestCards").set(req.id, card);
     if (group) setApprovalWaiting(group, p.itemId, true);
     const answer = async (decision) => {
       approvalMenuController.closeFor(card);
       if (card.dataset.submitting === "true") return;
       card.dataset.submitting = "true";
-      card.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      findElements("button", card).forEach((b) => (b.disabled = true));
       try {
-        await respondToCodex(req.id, approvalDecisionResponse(req, decision, model.kind));
+        await respondToEngine(req.id, req.surface ? decision : approvalDecisionResponse(req, decision, model.kind));
         if (group) setApprovalWaiting(group, p.itemId, decision !== model.deny.decision);
         resolveServerRequest(req.id);
       } catch (error) {
         if (pendingApprovals.has(req.id)) {
           card.dataset.submitting = "false";
-          card.querySelectorAll("button").forEach((b) => (b.disabled = false));
-          let message = card.querySelector(".approval-submit-error");
+          findElements("button", card).forEach((b) => (b.disabled = false));
+          let message = findElement(".approval-submit-error", card);
           if (!message) {
             message = document.createElement("p");
             message.className = "approval-submit-error";
@@ -247,32 +253,34 @@ export function createApprovals({
             card.append(message);
           }
           localizeText(message, "errors.couldNotSubmitTheDecisionTheRequestIsStillWaiting", undefined, t);
-          if (!error?.silentTransportSwitch) addPersistentError(error.message);
+          if (!isTransportSwitch(error)) addPersistentError(errorMessage(error));
         }
       }
     };
-    card.querySelector("form").onsubmit = (e) => {
+    requireElement("form", card).onsubmit = (e) => {
       e.preventDefault();
       answer(model.primary.decision);
     };
-    card.querySelector(".approval-deny").onclick = () => answer(model.deny.decision);
-    card.querySelector(".approval-scoped")?.addEventListener("click", () => answer(model.scoped.decision));
-    card.querySelector(".approval-leading")?.addEventListener("click", () => answer(model.leading.decision));
-    card
-      .querySelector(".approval-review-link")
-      ?.addEventListener("click", () => openReviewPanel(diffForTurn(p.turnId)));
+    requireElement(".approval-deny", card).onclick = () => answer(model.deny.decision);
+    findElement(".approval-scoped", card)?.addEventListener(
+      "click",
+      () => model.scoped && answer(model.scoped.decision),
+    );
+    findElement(".approval-leading", card)?.addEventListener(
+      "click",
+      () => model.leading && answer(model.leading.decision),
+    );
+    findElement(".approval-review-link", card)?.addEventListener("click", () => openReviewPanel(diffForTurn(p.turnId)));
     scrollBottom();
   }
-
   function clearApprovals({ removeCards = false } = {}) {
     approvalMenuController.close();
     pendingApprovals.clear();
     pendingChanged();
     userInputDrafts.clear();
     if (removeCards) for (const card of state.requestCards.values()) card.remove();
-    state.requestCards.clear();
+    mutations.collection("requestCards").clear();
   }
-
   return {
     onServerRequest,
     resolveServerRequest,

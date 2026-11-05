@@ -1,7 +1,9 @@
+import { findElement, findElements, requireElement } from "./dom.js";
 import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "./i18n.js";
 
 import { codexIcon } from "./codex-icons.js";
-import { threadLastActivityAt, formatActivityAge } from "./ui-core.js";
+import { threadLastActivityAt } from "./conversation-policy.js";
+import { formatActivityAge } from "./ui-core.js";
 
 // Sidebar rows, banners and the header render the same runtime projection.
 export function createSessionStatus({
@@ -9,6 +11,7 @@ export function createSessionStatus({
   t,
   i18n,
   state,
+  mutations,
   runtime,
   refreshWorkbench,
   titleOf,
@@ -180,15 +183,15 @@ export function createSessionStatus({
   function clearThreadError(threadId) {
     if (!threadId) return;
     runtime.clearError(threadId);
-    for (const thread of [
-      state.threads.find((item) => item.id === threadId),
-      state.active?.id === threadId ? state.active : null,
-    ])
+    const clear = (thread) => {
       if (thread) {
         delete thread.error;
         delete thread.failure;
         delete thread.lastError;
       }
+    };
+    mutations.edit("threads", (threads) => clear(threads.find((item) => item.id === threadId)));
+    if (state.active?.id === threadId) mutations.edit("active", clear);
     refreshThreadRowMetadata();
     if (state.active?.id === threadId) {
       syncSessionStatusSurface();
@@ -206,6 +209,7 @@ export function createSessionStatus({
       rememberThreadError(threadId, turn.error || turn.failure, turn.id);
     else if (turn.status === "completed") clearThreadError(threadId);
   }
+  /** @param {string} threadId @param {readonly import("../shared/data-view.js").DataView<import("../shared/engine/types.js").EngineTurn>[]} turns */
   function syncThreadErrorsFromTurns(threadId, turns = []) {
     const turn = turns.at(-1);
     if (!turn || !runtime.acceptsTurn(threadId, turn.id)) return;
@@ -221,7 +225,7 @@ export function createSessionStatus({
     if (!threadId || threadId !== state.active?.id) return;
     const root = $("#conversation");
     if (!root) return;
-    root.querySelector("[data-thread-error]")?.remove();
+    findElement("[data-thread-error]", root)?.remove();
     const error = threadError(state.active);
     if (!error) return;
     const card = document.createElement("section");
@@ -236,13 +240,11 @@ export function createSessionStatus({
     root.prepend(card);
   }
   function rememberSummaryErrors(threads) {
-    for (const thread of threads) {
+    return threads.map((thread) => {
       if (sessionHasActiveLatestTurn(thread) || sessionHasSuccessfulLatestTurn(thread)) {
         runtime.clearError(thread.id);
-        delete thread.error;
-        delete thread.failure;
-        delete thread.lastError;
-        continue;
+        const { error, failure, lastError, ...clean } = thread;
+        return clean;
       }
       const status = thread.status;
       const value =
@@ -257,14 +259,15 @@ export function createSessionStatus({
           message: errorMessage(value) || t("sessions.taskFailed"),
           turnId: value?.turnId,
         });
-    }
+      return thread;
+    });
   }
-  function updateThreadRowMeta(row, thread, meta = row.querySelector(".thread-meta")) {
+  function updateThreadRowMeta(row, thread, meta = findElement(".thread-meta", row)) {
     if (!meta) return;
     const error = threadError(thread),
       running = !error && sessionHasActiveLatestTurn(thread),
-      spinner = row.querySelector(".thread-running"),
-      time = meta.querySelector("time"),
+      spinner = requireElement(".thread-running", row),
+      time = requireElement("time", meta),
       timestamp = threadLastActivityAt(thread);
     row.dataset.running = String(running);
     row.dataset.error = String(Boolean(error));
@@ -291,11 +294,12 @@ export function createSessionStatus({
   }
   function refreshThreadRowMetadata() {
     workbench?.refresh();
-    for (const row of $("#threadList").querySelectorAll(".thread-item")) {
+    for (const row of findElements(".thread-item", $("#threadList"))) {
       const thread = state.threads.find((thread) => thread.id === row.dataset.id);
       if (thread) updateThreadRowMeta(row, thread);
     }
   }
+  /** @param {string} threadId @param {import("../shared/data-contracts.js").SessionActivity} change */
   function updateThreadListActivity(threadId, { status, turnId, turnStatus, completed = false, timestamp } = {}) {
     if (!threadId) return;
     const thread = state.active?.id === threadId ? state.active : state.threads.find((item) => item.id === threadId);
@@ -309,14 +313,13 @@ export function createSessionStatus({
       })
     )
       return false;
-    for (const thread of [
-      state.threads.find((thread) => thread.id === threadId),
-      state.active?.id === threadId ? state.active : null,
-    ]) {
-      if (!thread) continue;
+    const update = (thread) => {
+      if (!thread) return;
       if (status) thread.status = status;
       if (timestamp) thread.lastActivityAt = Math.max(threadLastActivityAt(thread), timestamp);
-    }
+    };
+    mutations.edit("threads", (threads) => update(threads.find((item) => item.id === threadId)));
+    if (state.active?.id === threadId) mutations.edit("active", update);
     refreshThreadRowMetadata();
     if (state.active?.id === threadId) {
       syncSessionStatusSurface();

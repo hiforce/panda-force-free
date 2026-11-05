@@ -4,6 +4,7 @@ export function safeAuthReturnPath(value) {
     typeof value !== "string" ||
     value.length > 4096 ||
     !value.startsWith("/") ||
+    // eslint-disable-next-line no-control-regex -- Reject control bytes at this security boundary.
     /[\\\u0000-\u0020\u007f]/.test(value)
   )
     return "/";

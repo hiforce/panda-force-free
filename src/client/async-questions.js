@@ -1,3 +1,4 @@
+import { findElement, findElements, requireElement } from "./dom.js";
 import { localizeText } from "./i18n.js";
 import { createUserInputCard } from "./user-input.js";
 
@@ -49,11 +50,11 @@ export function closeAsyncQuestionCard(card, t) {
   if (["submitting", "unconfirmed", "submitted", "earlier"].includes(card.dataset.status)) return;
   card.open = false;
   card.dataset.status = "earlier";
-  localizeText(card.querySelector("summary"), "approvals.earlierQuestion", undefined, t);
-  for (const fieldset of card.querySelectorAll("fieldset")) fieldset.disabled = true;
-  card.querySelector("[type=submit]").hidden = true;
+  localizeText(findElement("summary", card), "approvals.earlierQuestion", undefined, t);
+  for (const fieldset of findElements("fieldset", card)) fieldset.disabled = true;
+  requireElement("[type=submit]", card).hidden = true;
   localizeText(
-    card.querySelector(".async-question-hint"),
+    findElement(".async-question-hint", card),
     "approvals.youContinuedTheConversationThisQuestionIsKeptAsHistory",
     undefined,
     t,
@@ -61,7 +62,7 @@ export function closeAsyncQuestionCard(card, t) {
 }
 
 export function closeEarlierAsyncQuestions(root, t) {
-  for (const card of root.querySelectorAll("[data-async-question-card]")) closeAsyncQuestionCard(card, t);
+  for (const card of findElements("[data-async-question-card]", root)) closeAsyncQuestionCard(card, t);
 }
 
 export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
@@ -108,7 +109,7 @@ export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
           undefined,
           t,
         );
-        form.querySelector("[type=submit]").hidden = true;
+        requireElement("[type=submit]", form).hidden = true;
       },
       onError: () => {},
     },

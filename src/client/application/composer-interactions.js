@@ -1,3 +1,4 @@
+/** @param {import("./ports.js").FeatureOptions<"mutations" | "state" | "$", "composer" | "suggestions" | "uploads" | "queue" | "submission" | "workspace", "composerInteractions">} options */
 export function assembleComposerInteractions({
   mutations,
   state,
@@ -54,7 +55,7 @@ export function assembleComposerInteractions({
         event.preventDefault();
         input.value = entry.text;
         input.setSelectionRange(entry.text.length, entry.text.length);
-        mutations.set("composerMentions", entry.mentions);
+        mutations.set("composerMentions", entry.mentions || []);
         mutations.set("composerAttachments", entry.attachments || []);
         uploadsPort.renderComposerAttachments();
         suggestionsPort.closeComposerAutocomplete();
@@ -74,9 +75,19 @@ export function assembleComposerInteractions({
     }
   }
   function bind() {
-    $("#composer").addEventListener("submit", (...args) => submissionPort.submitPrompt(...args));
-    $("#prompt").addEventListener("input", (...args) => handlePromptInput(...args));
-    $("#prompt").addEventListener("keydown", (...args) => handlePromptKeydown(...args));
+    $("#composer").addEventListener(
+      "submit",
+      /** @param {Parameters<typeof submissionPort.submitPrompt>} args */ (...args) =>
+        submissionPort.submitPrompt(...args),
+    );
+    $("#prompt").addEventListener(
+      "input",
+      /** @param {Parameters<typeof handlePromptInput>} args */ (...args) => handlePromptInput(...args),
+    );
+    $("#prompt").addEventListener(
+      "keydown",
+      /** @param {Parameters<typeof handlePromptKeydown>} args */ (...args) => handlePromptKeydown(...args),
+    );
     $("#prompt").addEventListener("compositionstart", () => {
       composerPort.setComposing(true);
       composerPort.syncQueueButton();
@@ -89,7 +100,9 @@ export function assembleComposerInteractions({
       composerPort.setComposing(false);
       composerPort.syncQueueButton();
     });
-    $("#composerProjectButton").onclick = (...args) => workspacePort.openFolderPicker(...args);
+    $("#composerProjectButton").onclick = /** @param {Parameters<typeof workspacePort.openFolderPicker>} args */ (
+      ...args
+    ) => workspacePort.openFolderPicker(...args);
   }
   return { bind };
 }

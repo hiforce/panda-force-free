@@ -29,7 +29,11 @@ function resolveWorkspaceDirectory(cwd, path, allowedRoots) {
   return { workspace, directory: canonical, relativePath: relative(workspace, canonical).split(sep).join("/") };
 }
 
-export function listWorkspaceEntries(cwd, path = "", { allowedRoots = [], limit = 200 } = {}) {
+export function listWorkspaceEntries(
+  cwd,
+  path = "",
+  { allowedRoots = /** @type {string[]} */ ([]), limit = 200 } = {},
+) {
   const resolved = resolveWorkspaceDirectory(cwd, path, allowedRoots);
   const entries = [];
   for (const entry of readdirSync(resolved.directory, { withFileTypes: true })) {

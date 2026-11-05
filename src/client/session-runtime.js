@@ -38,6 +38,7 @@ export function createSessionRuntime() {
     }
     return entry?.turn?.status === "inProgress" ? entry.turn.id : "";
   }
+  /** @param {string} id @param {import("../shared/data-contracts.js").SessionActivity} change */
   function update(id, { status, turnId, turnStatus, completed = false, historyTailId } = {}) {
     if (!id || (turnId && sessions.get(id)?.retired?.includes(turnId)) || (completed && !acceptsTurn(id, turnId)))
       return false;

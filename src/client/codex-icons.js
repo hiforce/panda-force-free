@@ -1,5 +1,6 @@
+import { findElements } from "./dom.js";
 import { setMessageHtml } from "./i18n.js";
-// Exact Lucide 0.456.0 icon nodes extracted from Codex.app's app.asar.
+// Lucide 0.456.0 icon nodes extracted from Codex.app's app.asar, plus local control icons.
 // Lucide is ISC licensed; see THIRD_PARTY_NOTICES.md in this project.
 export const codexIconNodes = {
   arrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
@@ -27,6 +28,8 @@ export const codexIconNodes = {
     '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
   shield:
     '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+  // Local control icon using the same 24-pixel stroke grid.
+  slidersHorizontal: '<path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 3v6M16 9v6M10 15v6"/>',
   ellipsis: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
   loaderCircle: '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
   messageSquare: '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>',
@@ -72,5 +75,5 @@ export function codexIcon(name, className = "") {
 }
 
 export function hydrateCodexIcons(root = document) {
-  for (const node of root.querySelectorAll("[data-icon]")) setMessageHtml(node, codexIconSvg(node.dataset.icon));
+  for (const node of findElements("[data-icon]", root)) setMessageHtml(node, codexIconSvg(node.dataset.icon));
 }

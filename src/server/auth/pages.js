@@ -1,7 +1,7 @@
-import { resolveLocale, SUPPORTED_LOCALES } from "../../shared/i18n/locale-policy.js";
-import { requestLocale } from "../i18n/request-locale.js";
-import { serverTranslator } from "../i18n/messages.js";
 import { PANDA_ICON_DATA_URL, pandaForceMark } from "../../shared/brand.js";
+import { resolveLocale, SUPPORTED_LOCALES } from "../../shared/i18n/locale-policy.js";
+import { serverTranslator } from "../i18n/messages.js";
+import { requestLocale } from "../i18n/request-locale.js";
 
 const PAGE_MESSAGES = {
   denied: {

@@ -1,3 +1,4 @@
+import { findElement, requireElement } from "./dom.js";
 import { storage } from "./storage.js";
 export const THEME_KEY = "panda-force-theme";
 export function applyThemePreference(value = storage.get(THEME_KEY) || "system") {
@@ -7,8 +8,8 @@ export function applyThemePreference(value = storage.get(THEME_KEY) || "system")
   document.documentElement.dataset.theme = theme;
   document.documentElement.style.colorScheme = theme;
   storage.set(THEME_KEY, preference);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#181818" : "#ffffff");
-  const select = document.querySelector("#themeSelect");
+  findElement('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#181818" : "#ffffff");
+  const select = requireElement("#themeSelect");
   if (select) select.value = preference;
   return preference;
 }

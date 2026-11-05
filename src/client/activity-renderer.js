@@ -1,12 +1,11 @@
+import { closestElement, findElement, findElements, requireElement } from "./dom.js";
 import { getBrowserI18n, localizeText, messageHtml, setMessageHtml, setOpaqueText } from "./i18n.js";
-
-import { codexIcon } from "./codex-icons.js";
-import { storage } from "./storage.js";
 import { activityText, mergeReasoningItem } from "../shared/activity-text.js";
-import { summarizeActivity, parseUnifiedDiff, unifiedDiffFromFileChanges } from "../shared/codex-surfaces.js";
-import { renderAssistantMarkdown, renderItemImages } from "./rendering.js";
+import { parseUnifiedDiff, summarizeActivity, unifiedDiffFromFileChanges } from "../shared/codex-surfaces.js";
+import { codexIcon } from "./codex-icons.js";
 import { renderDiffLine } from "./diff-rendering.js";
-
+import { renderAssistantMarkdown, renderItemImages } from "./rendering.js";
+import { storage } from "./storage.js";
 // Activity items and their expansion preferences are rendered independently of
 // transport delivery. Batching prevents rebuilding a summary for every item.
 export function createActivityRenderer({
@@ -17,12 +16,13 @@ export function createActivityRenderer({
   imageCwd,
   syncWorkedForDivider,
   isRenderingTurn,
+  mutations,
 }) {
   const i18n = getBrowserI18n(),
     t = i18n.t;
   const pendingActivitySummaries = new Set();
   i18n.subscribe(() => {
-    for (const activity of document.querySelectorAll("[data-agent-activity-group]")) updateActivitySummary(activity);
+    for (const activity of findElements("[data-agent-activity-group]")) updateActivitySummary(activity);
   });
   const reviewLineHtml = (line) => renderDiffLine(line, escapeHtml);
   const icons = {
@@ -32,7 +32,7 @@ export function createActivityRenderer({
   };
   function activityGroupExpansionKey(activity) {
     const threadId = state.active?.id,
-      turnId = activity.closest("[data-turn-id]")?.dataset.turnId,
+      turnId = closestElement("[data-turn-id]", activity)?.dataset.turnId,
       anchor = activity.dataset.activityGroupAnchor;
     return threadId && turnId && anchor ? `panda-force-activity-group:${threadId}:${turnId}:${anchor}` : null;
   }
@@ -42,8 +42,8 @@ export function createActivityRenderer({
     return saved === "open" ? true : saved === "closed" ? false : null;
   }
   function setActivityGroupOpen(activity, open, persist = false) {
-    const button = activity.querySelector(".activity-summary"),
-      items = activity.querySelector(".activity-items");
+    const button = requireElement(".activity-summary", activity),
+      items = requireElement(".activity-items", activity);
     button.classList.toggle("open", open);
     items.classList.toggle("open", open);
     if (persist && !activity.classList.contains("single")) {
@@ -53,9 +53,12 @@ export function createActivityRenderer({
   }
   function ensureActivity(turnId, root, itemId, standalone = false) {
     const turn = ensureTurnTimeline(turnId, root),
-      stream = turn.querySelector(".turn-event-stream"),
+      stream = requireElement(".turn-event-stream", turn),
       existing = itemId
-        ? turn.querySelector(`[data-item-id="${CSS.escape(String(itemId))}"]`)?.closest("[data-agent-activity-group]")
+        ? closestElement(
+            "[data-agent-activity-group]",
+            findElement(`[data-item-id="${CSS.escape(String(itemId))}"]`, turn),
+          )
         : null;
     if (existing) return existing;
     let activity = standalone ? null : state.activities.get(turnId);
@@ -74,12 +77,12 @@ export function createActivityRenderer({
         activity,
         `<button class="activity-summary open"><span class="activity-summary-icon" aria-hidden="true"></span><span class="activity-summary-copy loading-shimmer"><span data-pf-message="common.working">Working</span></span>${icons.chevron}</button><div class="activity-items open"></div>`,
       );
-      activity.querySelector(".activity-summary").onclick = () =>
-        setActivityGroupOpen(activity, !activity.querySelector(".activity-summary").classList.contains("open"), true);
+      requireElement(".activity-summary", activity).onclick = () =>
+        setActivityGroupOpen(activity, !requireElement(".activity-summary", activity).classList.contains("open"), true);
       stream.append(activity);
-      state.activities.set(turnId, activity);
+      mutations.collection("activities").set(turnId, activity);
     }
-    if (!state.activityItems.has(turnId)) state.activityItems.set(turnId, new Map());
+    if (!state.activityItems.has(turnId)) mutations.collection("activityItems").set(turnId, new Map());
     return activity;
   }
   function joinActivityText(value) {
@@ -128,14 +131,14 @@ export function createActivityRenderer({
       );
     }
     const output = activityOutput(item),
-      pre = out.querySelector(".command-shell-output pre"),
+      pre = requireElement(".command-shell-output pre", out),
       footer = commandFooter(item, data);
-    setOpaqueText(out.querySelector(".command-shell-command code"), commandText(item));
+    setOpaqueText(findElement(".command-shell-command code", out), commandText(item));
     if (output || data.active) setOpaqueText(pre, output);
     else localizeText(pre, "common.noOutput");
     pre.classList.toggle("empty", !output);
     setMessageHtml(
-      out.querySelector(".command-shell-footer"),
+      findElement(".command-shell-footer", out),
       `${footer.icon}${footer.label ? messageHtml(footer.label, footer.values) : ""}`,
     );
   }
@@ -172,7 +175,7 @@ export function createActivityRenderer({
     );
   }
   function isExplorationActivity(item, data = summarizeActivity(item)) {
-    return item.type === "commandExecution" && ["read", "search", "list"].includes(data.category);
+    return item.type === "commandExecution" && ["read", "search", "list"].includes(data.category || "");
   }
   function renderActivityOutput(out, item, data) {
     if (item.type === "imageView") {
@@ -210,7 +213,7 @@ export function createActivityRenderer({
   }
   function activityItemExpansionKey(row) {
     const threadId = state.active?.id,
-      turnId = row.closest("[data-turn-id]")?.dataset.turnId,
+      turnId = closestElement("[data-turn-id]", row)?.dataset.turnId,
       itemId = row.dataset.itemId;
     return threadId && turnId && itemId ? `panda-force-activity-item:${threadId}:${turnId}:${itemId}` : null;
   }
@@ -232,10 +235,10 @@ export function createActivityRenderer({
   }
   function mountMotion(row) {
     // Use an inspectable CSS animation rather than redistributed desktop assets.
-    const holder = row.querySelector(".activity-motion");
+    const holder = findElement(".activity-motion", row);
     if (holder) setMessageHtml(holder, codexIcon("loaderCircle", "motion-fallback"));
   }
-
+  /** @param {object} item @param {{tone?: string; category?: string}} data */
   function activityIconName(item, data = summarizeActivity(item)) {
     if (item.type === "reasoning") return null;
     if (data.tone === "error") return "triangleAlert";
@@ -248,8 +251,8 @@ export function createActivityRenderer({
     return "wrench";
   }
   function stopMotion(row, tone) {
-    const holder = row.querySelector(".activity-motion"),
-      turnId = row.closest("[data-turn-id]")?.dataset.turnId,
+    const holder = findElement(".activity-motion", row),
+      turnId = closestElement("[data-turn-id]", row)?.dataset.turnId,
       item = state.activityItems.get(turnId)?.get(row.dataset.itemId),
       data = item ? summarizeActivity(item) : { tone };
     if (!holder) return;
@@ -296,7 +299,7 @@ export function createActivityRenderer({
     );
   }
   function setActivitySummaryIcon(activity, item) {
-    const holder = activity.querySelector(".activity-summary-icon"),
+    const holder = findElement(".activity-summary-icon", activity),
       icon = item && activityIconName(item);
     if (holder) {
       holder.hidden = !icon;
@@ -312,7 +315,7 @@ export function createActivityRenderer({
       : [interrupted ? "common.stoppedCommandWithCommand" : "common.ranCommandWithCommand", { command }];
   }
   function updateCommandRowSummary(row, item, data, expanded = row.classList.contains("expanded")) {
-    const summary = row.querySelector(".activity-name");
+    const summary = findElement(".activity-name", row);
     if (summary) localizeText(summary, ...commandRowMessage(item, data, expanded));
   }
   function updateActivitySummary(activity) {
@@ -320,12 +323,12 @@ export function createActivityRenderer({
       pendingActivitySummaries.add(activity);
       return;
     }
-    const turn = activity.closest("[data-turn-id]"),
+    const turn = closestElement("[data-turn-id]", activity),
       turnId = turn?.dataset.turnId,
       allItems = state.activityItems.get(turnId),
-      rows = [...activity.querySelectorAll(".activity-item")].filter((row) => !row.hidden),
+      rows = [...findElements(".activity-item", activity)].filter((row) => !row.hidden),
       items = rows.map((row) => allItems?.get(row.dataset.itemId)).filter(Boolean),
-      summary = activity.querySelector(".activity-summary-copy");
+      summary = findElement(".activity-summary-copy", activity);
     if (!turn || !summary) return;
     activity.hidden = items.length === 0;
     activity.classList.toggle("single", items.length === 1);
@@ -350,15 +353,16 @@ export function createActivityRenderer({
     syncWorkedForDivider(turnId);
   }
   function addActivity(item, activity, id = activityItemId(item)) {
-    const turn = activity.closest("[data-turn-id]"),
-      turnId = turn.dataset.turnId,
-      items = state.activityItems.get(turnId) || new Map(),
-      box = activity.querySelector(".activity-items");
+    const turn = closestElement("[data-turn-id]", activity);
+    if (!turn) return;
+    const turnId = turn.dataset.turnId,
+      items = new Map(state.activityItems.get(turnId) || []),
+      box = requireElement(".activity-items", activity);
     item = mergeReasoningItem(items.get(id), item);
     const data = summarizeActivity(item);
     items.set(id, item);
-    state.activityItems.set(turnId, items);
-    let row = box.querySelector(`[data-item-id="${CSS.escape(id)}"]`);
+    mutations.collection("activityItems").set(turnId, items);
+    let row = findElement(`[data-item-id="${CSS.escape(id)}"]`, box);
     if (!row) {
       row = document.createElement("div");
       row.className = "activity-item entering";
@@ -404,7 +408,7 @@ export function createActivityRenderer({
     }
     const out = row.nextElementSibling;
     row.hidden = reasoning && !data.active && !activityOutput(item).trim();
-    out.hidden = row.hidden;
+    if (out instanceof HTMLElement) out.hidden = row.hidden;
     renderActivityOutput(out, item, data);
     const reasoningOutput = reasoning && !!activityOutput(item),
       expandable =
@@ -444,12 +448,11 @@ export function createActivityRenderer({
         }
       : null;
     if (!command && !reasoning) {
-      if (data.active) mountMotion(row, data.animation);
+      if (data.active) mountMotion(row);
       else stopMotion(row, data.tone);
     }
     updateActivitySummary(activity);
   }
-
   return {
     ensureActivity,
     activityItemId,

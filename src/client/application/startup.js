@@ -1,14 +1,18 @@
 import { messageHtml, setMessageHtml } from "../i18n.js";
+import { errorMessage } from "./../../shared/errors.js";
+import { request as fetch } from "./../http-client.js";
 
-import { normalizeProjectPath } from "../../shared/project-visibility.js";
-import { trackMobileViewport } from "../mobile-viewport.js";
-import { storage, STORAGE_KEYS } from "../storage.js";
-import { takeStartupRead } from "../startup-reads.js";
-import { createLatestRequestGate } from "../ui-core.js";
 import { configureAttachmentUrls } from "../../shared/attachment-urls.js";
+import { normalizeProjectPath } from "../../shared/project-visibility.js";
 import { confirmAction } from "../confirmation-dialog.js";
+import { createLifecycle } from "../lifecycle.js";
+import { trackMobileViewport } from "../mobile-viewport.js";
+import { takeStartupRead } from "../startup-reads.js";
+import { storage, STORAGE_KEYS } from "../storage.js";
+import { createLatestRequestGate } from "../ui-core.js";
 
 // Coordinates initial reads, preparation retries, login invalidation and cache cleanup.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "sessions" | "workspacePreparation" | "state" | "$" | "escapeHtml" | "t" | "configurationReadiness", "transport" | "account" | "approvals" | "composer" | "sidebar" | "panels" | "usage" | "models" | "navigation" | "synchronization" | "notices" | "repositories" | "suggestions" | "projects" | "sidebarLayout" | "workspace" | "settings" | "status", "startup">} options */
 export function assembleStartup({
   transportPort,
   viewUpdates,
@@ -23,6 +27,7 @@ export function assembleStartup({
   approvalsPort,
   composerPort,
   sidebarPort,
+  panelsPort,
   usagePort,
   modelsPort,
   navigationPort,
@@ -38,6 +43,15 @@ export function assembleStartup({
   configurationReadiness,
 }) {
   const initialLoadGate = createLatestRequestGate();
+  const lifecycle = createLifecycle();
+  function dispose() {
+    lifecycle.dispose();
+    sidebarPort.dispose();
+    panelsPort.dispose();
+    approvalsPort.approvalMenuController.dispose();
+    noticesPort.dismissToast();
+    repositoriesPort.persistentConversationCache.close();
+  }
   function invalidateInitialLoad() {
     initialLoadGate.next();
   }
@@ -176,8 +190,8 @@ export function assembleStartup({
     void sidebarPort.loadProjectVisibility().catch(() => {});
     // Expiration is also checked on every cache read. Cleanup can wait until the
     // first sidebar/history paint instead of locking IndexedDB during startup.
-    setTimeout((...args) => repositoriesPort.pruneConversationCaches(...args), 3000);
-    setInterval((...args) => repositoriesPort.pruneConversationCaches(...args), 60_000);
+    lifecycle.timeout(() => repositoriesPort.pruneConversationCaches(), 3000);
+    lifecycle.interval(() => repositoriesPort.pruneConversationCaches(), 60_000);
     void navigationPort.restoreCachedStartup(storage.get(STORAGE_KEYS.activeThread), () => true);
     transportPort.connect();
     modelsPort.loadModels();
@@ -227,18 +241,23 @@ export function assembleStartup({
         viewUpdates.request("accountMenu", false);
         await accountPort.loadAccount(true);
       } catch (error) {
-        noticesPort.addPersistentError(error.message);
+        noticesPort.addPersistentError(errorMessage(error));
       }
     };
-    addEventListener("panda-force:logged-out", () => {
+    lifecycle.on(globalThis, "pagehide", (event) => {
+      if (!event.persisted) dispose();
+    });
+    lifecycle.on(globalThis, "panda-force:logged-out", (event) => {
       initialLoadGate.next();
       synchronizationPort.stopSynchronization();
-      void clearSessionCaches();
+      const cleanup = clearSessionCaches().finally(dispose);
+      event.detail?.waitUntil(cleanup);
     });
-    addEventListener("panda-force:before-login", () => viewUpdates.request("composerDraft"));
+    lifecycle.on(globalThis, "panda-force:before-login", () => viewUpdates.request("composerDraft"));
   }
 
   return {
+    dispose,
     invalidateInitialLoad,
     loadInitial,
     boot,

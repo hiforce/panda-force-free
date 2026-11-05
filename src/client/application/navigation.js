@@ -1,9 +1,11 @@
 import { localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { errorMessage } from "./../../shared/errors.js";
 
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { parseWorkbenchRoute } from "../workbench-route.js";
 
 // Coordinates session selection, cache restoration and view transitions using one navigation generation.
+/** @param {import("./ports.js").FeatureOptions<"selection" | "viewUpdates" | "mutations" | "sessions" | "state" | "$" | "t" | "configurationReadiness", "projects" | "composer" | "goals" | "synchronization" | "timeline" | "review" | "suggestions" | "models" | "status" | "viewport" | "history" | "repositories" | "queue" | "notices", "navigation">} options */
 export function assembleNavigation({
   selection,
   viewUpdates,
@@ -137,6 +139,7 @@ export function assembleNavigation({
     showOpenedConversation(thread, true);
     if (state.connected) synchronizationPort.scheduleActiveThreadSync(0);
   }
+  /** @param {string} id @param {import("../../shared/data-view.js").DataView<import("../../shared/engine/types.js").SessionSummary> | null} fallbackSummary */
   async function openThread(id, fallbackSummary = null) {
     viewUpdates.request("sessionOpened", id);
     composerPort.saveComposerDraft();
@@ -200,7 +203,7 @@ export function assembleNavigation({
         return false;
       }
       if (deferTransition) {
-        noticesPort.addPersistentError(error?.message || "Could not load side task");
+        noticesPort.addPersistentError(errorMessage(error) || "Could not load side task");
         return false;
       }
       if (!summary || state.active?.id !== id) return false;
@@ -215,7 +218,7 @@ export function assembleNavigation({
     }
   }
   function bind() {
-    $("#newTask").onclick = (...args) => startNewTask(...args);
+    $("#newTask").onclick = () => startNewTask();
   }
   return {
     bind,

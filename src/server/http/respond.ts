@@ -1,5 +1,5 @@
-import { errorPayload } from "./error-payload.js";
 import type { ServerResponse } from "node:http";
+import { errorPayload } from "../i18n/error-payload.js";
 
 /** Standard headers for every JSON API response. */
 export function jsonHeaders(extra: Record<string, string> = {}): Record<string, string> {
@@ -14,7 +14,12 @@ export function jsonHeaders(extra: Record<string, string> = {}): Record<string, 
 /** Write a JSON body with the standard header set. */
 export function respondJson(res: ServerResponse, status: number, body: unknown, extra: Record<string, string> = {}) {
   res.writeHead(status, jsonHeaders(extra));
-  res.end(JSON.stringify(body));
+  const errorBody = body as { error?: unknown; messageId?: string; messageArgs?: Record<string, unknown> };
+  const value =
+    status >= 400 && typeof errorBody?.error === "string"
+      ? { ...(body as object), ...errorPayload(errorBody.messageId || errorBody.error, errorBody.messageArgs) }
+      : body;
+  res.end(JSON.stringify(value));
 }
 
 /** Reject a non-allowed HTTP method, advertising the allowed ones. */

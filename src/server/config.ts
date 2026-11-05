@@ -1,9 +1,9 @@
-import packageInfo from "../../package.json";
-import { pandaEnvironment, existingApplicationPath } from "./environment.js";
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { defaultBrowseRoots } from "./workspace/folders.js";
+import { join, resolve } from "node:path";
+import packageInfo from "../../package.json";
+import { existingApplicationPath, pandaEnvironment } from "./environment.js";
+import { defaultBrowseRoots } from "./path-utils.js";
 
 // Works both from source (src/server/config.ts) and from the bundled dist/server.js.
 function findProjectRoot(start: string) {
@@ -33,6 +33,7 @@ const stateRoot = resolve(env.PANDA_FORCE_HOME || join(homeDir, ".panda-force"))
 
 export const config = Object.freeze({
   version: packageInfo.version,
+  engineId: env.PANDA_FORCE_ENGINE || "codex",
   host,
   port: Number(env.PORT || 8899),
   localhostOnly: host === "127.0.0.1" || host === "::1" || host === "localhost",

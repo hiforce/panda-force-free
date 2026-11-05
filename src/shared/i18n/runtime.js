@@ -1,9 +1,9 @@
 import { createInstance } from "i18next";
 import ICU from "i18next-icu";
 import { englishMessages } from "./catalogs.js";
+import { createFormatters } from "./formatters.js";
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, resolveLocale, validPreference } from "./locale-policy.js";
 import { validateNamespace } from "./message-contract.js";
-import { createFormatters } from "./formatters.js";
 
 const messageParts = (resources, id) => {
   for (const [namespace, messages] of Object.entries(resources))
@@ -15,6 +15,7 @@ const hasMessage = (resources, id) => Boolean(messageParts(resources, id));
 // Resource stores are mutable inside the engine. Never share them across owners.
 const copyCatalog = (messages) =>
   Object.fromEntries(Object.entries(messages).map(([name, values]) => [name, { ...values }]));
+/** @param {import("./contracts.js").I18nOptions} options */
 export function createI18nRuntime({
   preference = "system",
   languages = [],
@@ -39,7 +40,7 @@ export function createI18nRuntime({
     ? resolveLocale(currentPreference, browserLanguages, registry)
     : "en";
   engine.init({
-    initImmediate: false,
+    initAsync: false,
     lng: locale,
     fallbackLng: "en",
     resources: Object.fromEntries(Object.entries(dictionaries).map(([code, messages]) => [code, messages])),
@@ -109,7 +110,7 @@ export function createI18nRuntime({
     }
   }
   const api = {
-    t,
+    t: /** @type {import("./messages.js").Translate} */ (t),
     format,
     get preference() {
       return currentPreference;

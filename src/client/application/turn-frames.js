@@ -1,4 +1,6 @@
 import { setMessageHtml } from "../i18n.js";
+import { requireElement } from "./../dom.js";
+/** @param {import("./ports.js").FeatureOptions<"state" | "mutations" | "$", never, "turnFrames">} options */
 export function assembleTurnFrames({ state, mutations, $ }) {
   function ensureTurnTimeline(turnId, root = $("#conversation")) {
     let turn = state.turns.get(turnId);
@@ -12,7 +14,7 @@ export function assembleTurnFrames({ state, mutations, $ }) {
     );
     root.append(turn);
     mutations.collection("turns").set(turnId, turn);
-    mutations.collection("dividers").set(turnId, turn.querySelector("[data-worked-for-divider]"));
+    mutations.collection("dividers").set(turnId, requireElement("[data-worked-for-divider]", turn));
     const timing = state.turnTimings.get(turnId);
     if (timing) {
       if (timing.started) turn.dataset.turnStartedAt = String(timing.started);

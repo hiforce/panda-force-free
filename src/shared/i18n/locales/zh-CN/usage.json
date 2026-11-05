@@ -2,7 +2,7 @@
   "used": "已用",
   "remaining": "剩余",
   "resetsAt": "重置时间",
-  "resetsInDaysdHourshMinutesm": "{days}天{hours}小时{minutes}分钟后",
+  "resetsInDaysdHourshMinutesm": "{days, number}天{hours, number}小时{minutes, number}分钟后",
   "updatedAt": "更新时间",
   "resetTimeUnavailable": "重置时间不可用",
   "usageDataUnavailable": "暂无用量数据",

@@ -1,6 +1,6 @@
 // Codex pauses its native queue after an interrupted turn. Recover it in the
 // bridge so queued messages keep progressing even with no browser connected.
-export function createQueueRecovery(request, onError = () => {}) {
+export function createQueueRecovery(request, onError = (_error) => {}) {
   const recovering = new Map();
   return function recoverQueue(threadId) {
     if (!threadId) return Promise.resolve();
@@ -9,7 +9,7 @@ export function createQueueRecovery(request, onError = () => {}) {
       current.again = true;
       return current.promise;
     }
-    const entry = { again: false, promise: null };
+    const entry = { again: false, promise: /** @type {Promise<void> | null} */ (null) };
     recovering.set(threadId, entry);
     const checkQueue = async () => {
       const { thread } = await request("thread/read", { threadId, includeTurns: true });

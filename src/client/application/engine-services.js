@@ -1,11 +1,11 @@
-import { createSessionRuntime } from "../session-runtime.js";
-import { createSessionStatus } from "../session-status.js";
-import { createGoalController } from "../goal-controller.js";
 import { createAnchoredMenu } from "../anchored-menu.js";
 import { createApprovals } from "../approvals.js";
+import { createGoalController } from "../goal-controller.js";
 import { createSessionControls } from "../session-controls.js";
-
-export function assembleStatus({ viewUpdates, legacyState, $, t, i18n, titleOf, shortPath, escapeHtml }) {
+import { createSessionRuntime } from "../session-runtime.js";
+import { createSessionStatus } from "../session-status.js";
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations" | "$" | "t" | "i18n" | "titleOf" | "shortPath" | "escapeHtml", never, "status">} options */
+export function assembleStatus({ viewUpdates, $, t, i18n, titleOf, shortPath, escapeHtml, state, mutations }) {
   const sessionRuntime = createSessionRuntime();
   const {
     errorStatus,
@@ -23,13 +23,14 @@ export function assembleStatus({ viewUpdates, legacyState, $, t, i18n, titleOf, 
     $,
     t,
     i18n,
-    state: legacyState,
     runtime: sessionRuntime,
     refreshWorkbench: () => viewUpdates.request("workbench"),
     titleOf,
     shortPath,
     escapeHtml,
     onRuntimeChange: () => viewUpdates.request("composerSubmit"),
+    state,
+    mutations,
   });
   return {
     deriveSessionStatus,
@@ -46,8 +47,18 @@ export function assembleStatus({ viewUpdates, legacyState, $, t, i18n, titleOf, 
     clearThreadError,
   };
 }
-
-export function assembleGoals({ viewUpdates, transportPort, legacyState, $, t, escapeHtml, timingPort, noticesPort }) {
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations" | "$" | "t" | "escapeHtml", "transport" | "timing" | "notices", "goals">} options */
+export function assembleGoals({
+  viewUpdates,
+  transportPort,
+  $,
+  t,
+  escapeHtml,
+  timingPort,
+  noticesPort,
+  state,
+  mutations,
+}) {
   const {
     closeGoalDialog,
     openGoalDialog,
@@ -58,13 +69,16 @@ export function assembleGoals({ viewUpdates, transportPort, legacyState, $, t, e
   } = createGoalController({
     $,
     t,
-    state: legacyState,
-    rpc: (...args) => transportPort.rpc(...args),
-    timestampSeconds: (...args) => timingPort.timestampSeconds(...args),
+    rpc: /** @param {Parameters<typeof transportPort.rpc>} args */ (...args) => transportPort.rpc(...args),
+    timestampSeconds: /** @param {Parameters<typeof timingPort.timestampSeconds>} args */ (...args) =>
+      timingPort.timestampSeconds(...args),
     escapeHtml,
     submitGoalCommand,
-    addPersistentError: (...args) => noticesPort.addPersistentError(...args),
-    toast: (...args) => noticesPort.toast(...args),
+    addPersistentError: /** @param {Parameters<typeof noticesPort.addPersistentError>} args */ (...args) =>
+      noticesPort.addPersistentError(...args),
+    toast: /** @param {Parameters<typeof noticesPort.toast>} args */ (...args) => noticesPort.toast(...args),
+    state,
+    mutations,
   });
   async function submitGoalCommand(thread, command) {
     if (!thread?.id) {
@@ -115,12 +129,11 @@ export function assembleGoals({ viewUpdates, transportPort, legacyState, $, t, e
     openGoalDialog,
   };
 }
-
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations" | "i18n" | "$" | "t" | "state" | "escapeHtml" | "shortPath", "transport" | "turnFrames" | "notices" | "activity" | "viewport" | "review" | "panels", "approvals">} options */
 export function assembleApprovals({
   transportPort,
   turnFramesPort,
   viewUpdates,
-  legacyState,
   i18n,
   $,
   t,
@@ -132,6 +145,7 @@ export function assembleApprovals({
   viewportPort,
   reviewPort,
   panelsPort,
+  mutations,
 }) {
   const approvalMenuController = createAnchoredMenu();
   const {
@@ -146,20 +160,21 @@ export function assembleApprovals({
     onPendingChange: () => viewUpdates.request("workbench"),
     $,
     t,
-    state: legacyState,
     approvalMenuController,
-    respondToCodex: (requestId, result, error) => transportPort.respondToCodex(requestId, result, error),
+    respondToEngine: (requestId, result, error) => transportPort.respondToEngine(requestId, result, error),
     addPersistentError: (message) => noticesPort.addPersistentError(message),
     escapeHtml: (value) => escapeHtml(value),
     shortPath: (path) => shortPath(path),
     belongsToActiveThread: (params) =>
-      Boolean(state.active) && (!params.threadId || params.threadId === state.active.id),
+      Boolean(state.active) && (!params.threadId || params.threadId === state.active?.id),
     ensureTurnTimeline: (turnId) => turnFramesPort.ensureTurnTimeline(turnId),
     ensureActivity: (turnId, root, itemId) => activityPort.ensureActivity(turnId, root, itemId),
     setApprovalWaiting: (group, itemId, waiting) => activityPort.setApprovalWaiting(group, itemId, waiting),
     scrollBottom: () => viewportPort.scrollBottom(),
     diffForTurn: (turnId) => reviewPort.diffForTurn(turnId),
     openReviewPanel: (review) => panelsPort.openReviewPanel(review),
+    state,
+    mutations,
   });
   return {
     hasPendingApproval,
@@ -171,8 +186,17 @@ export function assembleApprovals({
     resolveServerRequest,
   };
 }
-
-export function assembleModels({ transportPort, legacyState, $, t, escapeHtml, workspacePreparation, noticesPort }) {
+/** @param {import("./ports.js").FeatureOptions<"state" | "mutations" | "$" | "t" | "escapeHtml" | "workspacePreparation", "transport" | "notices", "models">} options */
+export function assembleModels({
+  transportPort,
+  $,
+  t,
+  escapeHtml,
+  workspacePreparation,
+  noticesPort,
+  state,
+  mutations,
+}) {
   const {
     applySessionSettings,
     closeModelMenu,
@@ -201,12 +225,13 @@ export function assembleModels({ transportPort, legacyState, $, t, escapeHtml, w
   } = createSessionControls({
     $,
     t,
-    state: legacyState,
     rpc: (method, params) => transportPort.rpc(method, params),
     postBridge: (path, payload, signal) => transportPort.postBridge(path, payload, signal),
     escapeHtml: (value) => escapeHtml(value),
-    toast: (...args) => noticesPort.toast(...args),
+    toast: /** @param {Parameters<typeof noticesPort.toast>} args */ (...args) => noticesPort.toast(...args),
     addPersistentError: (message) => noticesPort.addPersistentError(message),
+    state,
+    mutations,
   });
   function loadModels(options) {
     return workspacePreparation.track("models", loadModelsRaw(options));

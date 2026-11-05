@@ -1,8 +1,7 @@
-import { SUPPORTED_LOCALES } from "../../shared/i18n/locale-policy.js";
-import { lstatSync, realpathSync, statSync } from "node:fs";
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { resolve } from "node:path";
-import { inside } from "../path-utils.js";
+import { SUPPORTED_LOCALES } from "../../shared/i18n/locale-policy.js";
+import { resolveSafeRegularFile } from "../path-utils.js";
+import { matchesRequestOrigin } from "./origin.js";
 
 const BROWSER_RPC_METHODS = new Set([
   "model/list",
@@ -41,6 +40,7 @@ const PUBLIC_ASSETS = new Set([
   "/favicon.svg",
   "/auth-bootstrap.js",
   "/i18n.js",
+  "/http-client.js",
   "/panda-brand.js",
   "/app.bundle.js",
   "/file-preview.bundle.js",
@@ -77,6 +77,11 @@ export function parseCookieHeader(header) {
     }
   }
   return values;
+}
+
+/** @param {import("node:http").IncomingMessage} request @returns {string | null} */
+export function passwordSessionToken(request) {
+  return parseCookieHeader(request.headers.cookie)[PASSWORD_SESSION_COOKIE] || null;
 }
 
 export function createPasswordSession(password, { now = Date.now(), ttlMs = DEFAULT_SESSION_TTL_MS } = {}) {
@@ -154,12 +159,7 @@ function isLoopbackHost(hostHeader) {
 }
 
 function isSameOrigin(origin, hostHeader) {
-  if (!origin) return true;
-  try {
-    return new URL(origin).host.toLowerCase() === String(hostHeader || "").toLowerCase();
-  } catch {
-    return false;
-  }
+  return matchesRequestOrigin({ origin, hostHeader });
 }
 
 function suppliedToken(authorization) {
@@ -206,20 +206,7 @@ export function isRequestAuthorized({
   return false;
 }
 
-export function resolveSafeRegularFile(root, relativePath) {
-  try {
-    const canonicalRoot = realpathSync(root);
-    const candidate = resolve(root, relativePath);
-    if (!inside(candidate, resolve(root))) return null;
-    const metadata = lstatSync(candidate);
-    if (metadata.isSymbolicLink() || !metadata.isFile()) return null;
-    const canonicalFile = realpathSync(candidate);
-    if (!inside(canonicalFile, canonicalRoot) || !statSync(canonicalFile).isFile()) return null;
-    return canonicalFile;
-  } catch {
-    return null;
-  }
-}
+export { resolveSafeRegularFile } from "../path-utils.js";
 
 export function resolvePublicAsset(pathname, publicDir) {
   let decoded;

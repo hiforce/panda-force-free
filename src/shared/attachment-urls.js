@@ -23,7 +23,7 @@ export function attachmentDisplayUrl(value) {
 
 export function attachmentUrlName(value) {
   try {
-    return decodeURIComponent(new URL(value).pathname.split("/").at(-1)) || "Attachment";
+    return decodeURIComponent(new URL(value).pathname.split("/").at(-1) || "") || "Attachment";
   } catch {
     return "Attachment";
   }

@@ -1,7 +1,8 @@
-import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { dirname, join, resolve } from "node:path";
+import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { errorCode } from "./../../shared/errors.js";
 
 export const DEFAULT_LOGGING = Object.freeze({
   enabled: true,
@@ -17,7 +18,7 @@ export function readServiceLogConfig(env = process.env) {
   try {
     source = readFileSync(configFile, "utf8");
   } catch (error) {
-    if (error.code !== "ENOENT") throw error;
+    if (errorCode(error) !== "ENOENT") throw error;
     mkdirSync(dirname(configFile), { recursive: true, mode: 0o700 });
     const temporary = `${configFile}.${randomUUID()}.tmp`;
     writeFileSync(temporary, JSON.stringify({ version: 1, logging: DEFAULT_LOGGING }, null, 2) + "\n", {
@@ -27,7 +28,7 @@ export function readServiceLogConfig(env = process.env) {
     try {
       linkSync(temporary, configFile);
     } catch (error) {
-      if (error.code !== "EEXIST") throw error;
+      if (errorCode(error) !== "EEXIST") throw error;
     } finally {
       unlinkSync(temporary);
     }

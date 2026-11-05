@@ -1,3 +1,5 @@
+import { escapeHtml as escape } from "../shared/html.js";
+import { closestElement, findElement, findElements, requireElement } from "./dom.js";
 import {
   localizeAttribute,
   localizeText,
@@ -6,20 +8,17 @@ import {
   setMessageHtml,
   setOpaqueText,
 } from "./i18n.js";
+import { createWorkbenchSearch } from "./workbench-search.js";
+import { createWorkbenchViews } from "./workbench-views.js";
 
+import { codexIcon } from "./codex-icons.js";
+import { createProjectDialogs } from "./project-dialogs.js";
+import { storage } from "./storage.js";
+import { applyThemePreference } from "./theme.js";
 import { parseWorkbenchRoute } from "./workbench-route.js";
 export { parseWorkbenchRoute } from "./workbench-route.js";
-import { storage, STORAGE_KEYS } from "./storage.js";
-import { createProjectDialogs } from "./project-dialogs.js";
-import { codexIcon } from "./codex-icons.js";
-import { applyThemePreference } from "./theme.js";
 
 const INTRO_KEY = "panda-force-introduction-dismissed";
-const escape = (value) =>
-  String(value ?? "").replace(
-    /[&<>"']/g,
-    (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char],
-  );
 
 export function createWorkbench({
   state,
@@ -41,10 +40,10 @@ export function createWorkbench({
   closeSidebar,
   openFiles,
 }) {
-  const shell = document.querySelector(".conversation-shell"),
-    viewport = document.querySelector(".conversation-viewport"),
-    dock = document.querySelector(".composer-dock"),
-    picker = document.querySelector("#conversationProjectPicker");
+  const shell = requireElement(".conversation-shell"),
+    viewport = requireElement(".conversation-viewport"),
+    dock = requireElement(".composer-dock"),
+    picker = requireElement("#conversationProjectPicker");
   const view = document.createElement("section");
   view.id = "workbenchView";
   view.className = "workbench-view";
@@ -53,18 +52,18 @@ export function createWorkbench({
     '<div id="workbenchHero"></div><div id="workbenchComposerSlot"></div><div id="workbenchContent"></div>',
   );
   shell.prepend(view);
-  const content = view.querySelector("#workbenchContent"),
-    hero = view.querySelector("#workbenchHero"),
-    slot = view.querySelector("#workbenchComposerSlot");
+  const content = findElement("#workbenchContent", view),
+    hero = findElement("#workbenchHero", view),
+    slot = requireElement("#workbenchComposerSlot", view);
   const navigation = document.createElement("nav");
   navigation.className = "workbench-navigation";
   localizeAttribute(navigation, "aria-label", "workbench.workspaceNavigation", undefined, t);
-  document.querySelector(".sidebar-top").append(navigation);
+  requireElement(".sidebar-top").append(navigation);
   const connection = document.createElement("button");
   connection.type = "button";
   connection.className = "workbench-connection";
   connection.id = "workbenchConnection";
-  document.querySelector(".sidebar-footer").prepend(connection);
+  requireElement(".sidebar-footer").prepend(connection);
   const top = document.createElement("div");
   top.className = "workbench-top-tools";
   setMessageHtml(
@@ -75,11 +74,11 @@ export function createWorkbench({
       codexIcon("monitor") +
       "</button>",
   );
-  document.querySelector(".top-actions").prepend(top);
+  requireElement(".top-actions").prepend(top);
   const bottom = document.createElement("nav");
   bottom.className = "workbench-mobile-nav";
   localizeAttribute(bottom, "aria-label", "workbench.workspaceNavigation", undefined, t);
-  document.querySelector("#app").append(bottom);
+  requireElement("#app").append(bottom);
   const dialog = document.createElement("dialog");
   dialog.id = "workbenchDialog";
   dialog.className = "workbench-dialog";
@@ -89,7 +88,7 @@ export function createWorkbench({
   progress.className = "workbench-preparation";
   progress.id = "workbenchPreparation";
   progress.hidden = true;
-  document.querySelector(".sidebar-footer").prepend(progress);
+  requireElement(".sidebar-footer").prepend(progress);
   let route = parseWorkbenchRoute(),
     routing = false,
     opening = "",
@@ -138,9 +137,9 @@ export function createWorkbench({
                 .join("")}</select>`
         }`,
       );
-      projectContext
-        .querySelector("select")
-        ?.addEventListener("change", (event) => newTask({ projectId: event.target.value || null }));
+      findElement("select", projectContext)?.addEventListener("change", (event) =>
+        newTask({ projectId: requireElement("select", projectContext).value || null }),
+      );
     }
     projectContext.hidden = !["workspace", "new", "task", "settings"].includes(route.page);
   }
@@ -163,171 +162,52 @@ export function createWorkbench({
     connections: "wrench",
     settings: "wrench",
   };
-  function button(label, action, attrs = "", primary = false) {
-    return `<button type="button" class="wb-button${primary ? " primary" : ""}" data-wb="${action}" ${attrs}>${messageHtml(label, undefined, t)}</button>`;
-  }
-  function name(path) {
-    return path.split("/").filter(Boolean).at(-1) || path;
-  }
-  function allProjects() {
-    return catalog
-      .projects()
-      .sort(
-        (a, b) =>
-          Number(isProjectPinned("project:" + b.id)) - Number(isProjectPinned("project:" + a.id)) ||
-          a.name.localeCompare(b.name),
-      );
-  }
-  function visibleThreads() {
-    return catalog.sessions();
-  }
-  function status(thread) {
-    const actual = taskStatus(thread);
-    if (
-      hasPendingApproval(thread.id) ||
-      actual?.state === "needs-approval" ||
-      (Array.isArray(thread.status?.activeFlags) ? thread.status.activeFlags : []).some((flag) =>
-        /approval|input/i.test(flag),
-      )
-    )
-      return "workbench.needsReview";
-    if (actual?.state === "running" || thread.status?.type === "active") return "common.inProgress";
-    if (actual?.state === "error" || thread.status?.type === "systemError") return "common.failed";
-    return actual?.state === "completed" ? "sessions.completed" : "common.ready";
-  }
-  function taskRows(list) {
-    if (!list.length)
-      return `<div class="wb-empty"><strong>${messageHtml("workbench.noSessionsFound", undefined, t)}</strong><p>${messageHtml("workbench.createASessionOrChangeYourFiltersToGetStarted", undefined, t)}</p>${button("common.newSession", "new", "", true)}</div>`;
-    return `<div class="wb-task-list">${list
-      .slice(0, 100)
-      .map((thread) => {
-        const project = catalog.projectForSession(thread.id);
-        return `<div class="wb-session-entry"><button type="button" class="wb-task-row" data-wb="task" data-id="${escape(thread.id)}"><span class="wb-task-icon">${codexIcon("messageSquare")}</span><span class="wb-task-copy" data-i18n-ignore><strong>${escape((thread.name || thread.preview || t("workbench.untitledSession")).replace(/\s+/g, " ").slice(0, 110))}</strong><small>${escape(project?.name || t("common.unassigned"))} · ${escape(thread.cwd || t("common.noWorkingFolder"))}</small></span><span class="wb-status ${status(thread) === "common.inProgress" ? "running" : status(thread) === "workbench.needsReview" ? "review" : ""}">${messageHtml(status(thread), undefined, t)}</span></button><button type="button" class="icon-button wb-session-association" data-wb="session-project" data-id="${escape(thread.id)}" ${messageAttributes("aria-label", "common.changeProject", undefined, t)} ${messageAttributes("title", "common.changeProject", undefined, t)}>${codexIcon("ellipsis")}</button></div>`;
-      })
-      .join(
-        "",
-      )}</div>${list.length > 100 ? `<p class="wb-list-limit">${messageHtml("workbench.showingTheFirst100MatchesRefineYourSearchToFind", undefined, t)}</p>` : ""}`;
-  }
-  function heading(title, description, action = "", userTitle = false) {
-    return `<header class="wb-page-heading"><div><h1${userTitle ? " data-i18n-ignore" : ""}>${userTitle ? escape(title) : messageHtml(title, undefined, t)}</h1><p>${messageHtml(description, undefined, t)}</p></div>${action}</header>`;
-  }
-  function renderHome() {
-    setMessageHtml(
-      hero,
-      `<div class="wb-hero"><p class="wb-eyebrow">${messageHtml("workbench.yourNextMove", undefined, t)}</p><h1>${messageHtml("workbench.whatWouldYouLikeToGetDone", undefined, t)}</h1><p>${messageHtml("workbench.startWithAGoalStayInControlAndReviewThe", undefined, t)}</p></div>`,
-    );
-    const threads = visibleThreads();
-    setMessageHtml(
-      content,
-      `<div class="wb-quick-actions">${[
-        ["workbench.reviewAProject", "Review a project"],
-        ["workbench.prepareAPlan", "Prepare a plan"],
-        ["workbench.explainThisProject", "Explain this project"],
-      ]
-        .map(([label, prompt]) => button(label, "template", `data-template="${escape(prompt)}"`))
-        .join(
-          "",
-        )}</div><div class="wb-metrics"><button data-wb="running"><strong>${threads.filter((x) => status(x) === "common.inProgress").length}</strong><span>${messageHtml("common.inProgress", undefined, t)}</span></button><button data-wb="review"><strong>${threads.filter((x) => status(x) === "workbench.needsReview").length}</strong><span>${messageHtml("workbench.needsReview", undefined, t)}</span></button><button data-wb="route" data-route="projects"><strong>${allProjects().length}</strong><span>${messageHtml("common.projects", undefined, t)}</span></button></div>${!storage.get(INTRO_KEY) ? `<aside class="wb-introduction"><div><strong>${messageHtml("workbench.fromAGoalToAResult", undefined, t)}</strong><p>${messageHtml("workbench.chooseAProjectToOrganizeSessionsSelectAWorkingFolder", undefined, t)}</p></div>${button("common.gotIt", "dismiss-intro")}</aside>` : ""}<div class="wb-section-heading"><h2>${messageHtml("workbench.recentSessions", undefined, t)}</h2>${button("common.viewAllSessions", "route", 'data-route="tasks"')}</div>${taskRows(threads.slice(0, 8))}`,
-    );
-  }
-  function renderTasks() {
-    setMessageHtml(
-      content,
-      heading(
-        "common.sessions",
-        "common.browseSessionsAndTheirProjectAssociations",
-        button("common.newSession", "new", "", true),
-      ) +
-        `<div class="wb-filter-row"><input id="wbTaskSearch" type="search" ${messageAttributes("placeholder", "workbench.searchSessions", undefined, t)} ${messageAttributes("aria-label", "common.searchSessions", undefined, t)} value="${escape(query)}"><select id="wbTaskFilter" ${messageAttributes("aria-label", "common.sessionStatus", undefined, t)}>${["all", "common.inProgress", "workbench.needsReview", "common.failed", "common.ready", "sessions.completed"].map((value) => `<option value="${value}" data-pf-message="${value === "all" ? "common.allSessions" : value}" ${value === filter ? "selected" : ""}>${escape(t(value === "all" ? "common.allSessions" : value))}</option>`).join("")}</select></div><div id="wbTaskResults"></div>`,
-    );
-    renderTaskResults();
-  }
-  function renderTaskResults() {
-    const q = query.trim().toLocaleLowerCase();
-    setMessageHtml(
-      document.querySelector("#wbTaskResults"),
-      taskRows(
-        visibleThreads().filter(
-          (x) =>
-            (filter === "all" || status(x) === filter) &&
-            [x.name, x.preview, x.cwd, catalog.projectForSession(x.id)?.name, catalog.projectForSession(x.id)?.code]
-              .join(" ")
-              .toLocaleLowerCase()
-              .includes(q),
-        ),
-      ),
-    );
-  }
-  function projectCard(p) {
-    return `<article class="wb-project"><button class="wb-project-main" data-i18n-ignore data-wb="project" data-project-id="${escape(p.id)}"><span>${codexIcon("folderOpen")}</span><strong>${escape(p.name)}</strong><small class="project-code">${escape(p.code)}</small><p class="project-description">${escape(p.description || "")}</p><small>${messageHtml("sessions.count", { count: p.threads.length }, t)}</small></button><div class="wb-project-actions">${button("common.newSession", "project-new", `data-project-id="${escape(p.id)}"`)}${button(isProjectPinned("project:" + p.id) ? "common.unpin" : "common.pin", "pin", `data-project-id="${escape(p.id)}"`)}</div></article>`;
-  }
-  function renderProjects() {
-    setMessageHtml(
-      content,
-      heading(
-        "common.projects",
-        "common.createProjectsAndOrganizeTheirSessions",
-        button("common.createProject", "create-project", "", true),
-      ) +
-        `<div class="wb-filter-row"><input id="wbProjectSearch" type="search" ${messageAttributes("aria-label", "workbench.searchProjects", undefined, t)} ${messageAttributes("placeholder", "workbench.searchProjects2", undefined, t)} value="${escape(projectQuery)}"></div><div class="wb-project-grid" id="wbProjectResults"></div>`,
-    );
-    renderProjectResults();
-  }
-  function renderProjectResults() {
-    const list = allProjects().filter((p) =>
-      [p.name, p.code, p.description].join(" ").toLocaleLowerCase().includes(projectQuery.trim().toLocaleLowerCase()),
-    );
-    setMessageHtml(
-      document.querySelector("#wbProjectResults"),
-      !catalog.ready
-        ? `<p>${messageHtml("common.loadingProjects2", undefined, t)}</p>`
-        : list.length
-          ? list.map(projectCard).join("")
-          : `<div class="wb-empty"><h2>${messageHtml("workbench.noMatchingProjects", undefined, t)}</h2><p>${messageHtml("workbench.createYourFirstProjectExistingSessionsAreAvailableUnderSessions", undefined, t)}</p>${button("common.createProject", "create-project")}</div>`,
-    );
-  }
-  function renderProject() {
-    const p = allProjects().find((p) => p.id === route.id);
-    if (!p) {
-      setMessageHtml(
-        content,
-        heading(
-          catalog.ready ? "workbench.projectUnavailable" : "common.loadingProjects2",
-          "common.chooseAProjectToContinue",
-          button("common.projects", "route", 'data-route="projects"'),
-        ),
-      );
-      return;
-    }
-    setMessageHtml(
-      content,
-      heading(
-        p.name,
-        "common.projectDetails",
-        button("common.newSession", "project-new", `data-project-id="${escape(p.id)}"`, true),
-        true,
-      ) +
-        `<div class="wb-project-detail"><span class="project-code" data-i18n-ignore>${escape(p.code)}</span><p data-i18n-ignore>${escape(p.description || t("workbench.noDescription"))}</p><div class="wb-project-actions">${button("common.linkExistingSessions", "project-link", `data-project-id="${escape(p.id)}"`)}${button("common.editProject", "project-edit", `data-project-id="${escape(p.id)}"`)}</div></div><div class="wb-section-heading"><h2>${messageHtml("workbench.projectSessions", undefined, t)}</h2><span>${messageHtml("sessions.count", { count: p.threads.length }, t)}</span></div>${taskRows(p.threads)}`,
-    );
-  }
-  function renderConnections() {
-    setMessageHtml(
-      content,
-      heading("common.connections", "common.yourToolsWithClearCapabilitiesAndConnectionStatus") +
-        `<div class="wb-project-grid"><article class="wb-card"><div class="wb-section-heading"><h2>Codex</h2><span class="wb-status">${messageHtml(state.connected ? "common.connected" : "common.disconnected", undefined, t)}</span></div><p>${messageHtml("workbench.yourCurrentExecutionEngineModelAuthenticationIsSeparateFromYour", undefined, t)}</p>${button("common.modelAndPermissions", "settings", 'data-page="agent"')}${button("common.usage", "settings", 'data-page="usage"')}</article></div>`,
-    );
-  }
-  function renderDeliverables() {
-    setMessageHtml(
-      content,
-      heading("common.deliverables", "common.inspectFilesInTheirTaskContext") +
-        `<div class="wb-card"><h2>${messageHtml("workbench.filesFromYourSessions", undefined, t)}</h2><p>${messageHtml("workbench.openASessionToBrowseAndPreviewFilesFromIts", undefined, t)}</p>${button("common.browseSessionFiles", "files")}${button("common.sessions", "route", 'data-route="tasks"')}</div>`,
-    );
-  }
+  const {
+    button,
+    allProjects,
+    visibleThreads,
+    status,
+    heading,
+    renderHome,
+    renderTasks,
+    renderTaskResults,
+    renderProjects,
+    renderProjectResults,
+    renderProject,
+    searchProjectSessions,
+    filterProjectDirectory,
+    renderConnections,
+    renderDeliverables,
+  } = createWorkbenchViews({
+    state,
+    t,
+    catalog,
+    isProjectPinned,
+    taskStatus,
+    hasPendingApproval,
+    content,
+    hero,
+    INTRO_KEY,
+    viewState: {
+      get route() {
+        return route;
+      },
+      get query() {
+        return query;
+      },
+      get filter() {
+        return filter;
+      },
+      get projectQuery() {
+        return projectQuery;
+      },
+    },
+  });
   function render() {
     const focused = view.contains(document.activeElement) ? document.activeElement : null,
       focusedId = focused?.id,
-      caret = focused?.selectionStart;
+      caret =
+        focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement ? focused.selectionStart : null;
     const conversation =
       !(unavailableId && unavailableId === route.id) &&
       (route.page === "new" || route.page === "task" || route.page === "settings");
@@ -385,7 +265,7 @@ export function createWorkbench({
         .filter(([key]) => ["workspace", "tasks", "projects", "settings"].includes(key))
         .map(
           ([key, label]) =>
-            `<button type="button" data-wb="route" data-route="${key}" class="${route.page === key ? "active" : ""}"><span>${codexIcon(iconNames[key])}</span>${messageHtml(label, undefined, t)}</button>`,
+            `<button type="button" data-wb="route" data-route="${key}" class="${route.page === key || (key === "projects" && route.page === "project") || (key === "tasks" && route.page === "task") ? "active" : ""}"><span class="icon-slot" aria-hidden="true">${codexIcon(iconNames[key])}</span>${messageHtml(label, undefined, t)}</button>`,
         )
         .join(""),
     );
@@ -393,17 +273,20 @@ export function createWorkbench({
       connection,
       `<span class="status-dot ${state.connected ? "connected" : "error"}"></span><span>${messageHtml(state.connected ? "common.codexConnected" : "auth.connectionUnavailable", undefined, t)}</span>`,
     );
-    localizeText(top.querySelector("button span"), "common.searchAnything", undefined, t);
-    localizeAttribute(top.querySelector('[data-wb="search"]'), "aria-label", "common.searchAnything", undefined, t);
+    localizeText(findElement("button span", top), "common.searchAnything", undefined, t);
+    localizeAttribute(findElement('[data-wb="search"]', top), "aria-label", "common.searchAnything", undefined, t);
     if (!conversation)
-      localizeText(document.querySelector("#threadTitle"), labels[route.page] || "common.workspace", undefined, t);
-    if (!conversation) setOpaqueText(document.querySelector("#threadPath"), "");
+      localizeText(requireElement("#threadTitle"), labels[route.page] || "common.workspace", undefined, t);
+    if (!conversation) setOpaqueText(requireElement("#threadPath"), "");
     renderProjectContext();
     renderPreparation();
     const nextFocus = focusedId && document.getElementById(focusedId);
     if (nextFocus && nextFocus !== focused) {
       nextFocus.focus({ preventScroll: true });
-      if (typeof caret === "number")
+      if (
+        typeof caret === "number" &&
+        (nextFocus instanceof HTMLInputElement || nextFocus instanceof HTMLTextAreaElement)
+      )
         try {
           nextFocus.setSelectionRange(caret, caret);
         } catch {}
@@ -470,13 +353,13 @@ export function createWorkbench({
   }
   function threadOpened(id) {
     if (routing && route.page !== "task") return;
-    route = { page: "task", id, cwd: "" };
+    route = { page: "task", id, cwd: "", projectId: "" };
     updateUrl("/task/" + encodeURIComponent(id));
     render();
   }
   function taskStarted() {
     if (routing) return;
-    route = { page: "new", id: "", cwd: "" };
+    route = { page: "new", id: "", cwd: "", projectId: "" };
     updateUrl("/new" + (state.newSessionProjectId ? "?project=" + encodeURIComponent(state.newSessionProjectId) : ""));
     render();
   }
@@ -514,147 +397,102 @@ export function createWorkbench({
     );
     if (!dialog.open) dialog.showModal();
   }
-  function commandResults(value = "") {
-    const q = value.toLocaleLowerCase();
-    const list = [
-      ...["workspace", "tasks", "projects", "deliverables", "connections", "settings"].map((page) => ({
-        label: t(labels[page]),
-        action: "route",
-        attrs: `data-route="${page}"`,
-      })),
-      ...visibleThreads()
-        .slice(0, 1000)
-        .map((x) => ({
-          label: x.name || x.preview || t("workbench.untitledSession"),
-          action: "task",
-          attrs: `data-id="${escape(x.id)}"`,
-        })),
-      ...allProjects().map((p) => ({
-        label: p.name + " · " + p.code,
-        action: "project",
-        attrs: `data-project-id="${escape(p.id)}"`,
-      })),
-    ]
-      .filter((x) => x.label.toLocaleLowerCase().includes(q))
-      .slice(0, 30);
-    setMessageHtml(
-      dialog.querySelector("#wbCommandResults"),
-      list.length
-        ? list
-            .map(
-              (x) =>
-                `<button type="button" data-i18n-ignore data-wb="${x.action}" ${x.attrs}>${escape(x.label)}</button>`,
-            )
-            .join("")
-        : `<p>${messageHtml("common.noResultsFound", undefined, t)}</p>`,
-    );
-  }
-  function openSearch() {
-    modal(
-      "common.searchAnything",
-      `<p class="wb-keyboard-tip">${messageHtml("workbench.ctrlCmdKSearchesCtrlCmdShiftKCreatesA", undefined, t)}</p><input id="wbCommandQuery" type="search" autocomplete="off" ${messageAttributes("aria-label", "common.searchAnything", undefined, t)}><div id="wbCommandResults"></div>`,
-    );
-    commandResults();
-    dialog.querySelector("input").oninput = (e) => commandResults(e.target.value);
-    dialog.querySelector("input").onkeydown = (e) => {
-      if (e.key === "ArrowDown" || e.key === "Enter") {
-        const first = dialog.querySelector("#wbCommandResults button");
-        if (first) {
-          e.preventDefault();
-          if (e.key === "Enter") first.click();
-          else first.focus();
-        }
-      }
-    };
-    dialog.querySelector("input").focus();
-  }
-  async function action(event) {
-    const el = event.target.closest("[data-wb]");
-    if (!el) return;
-    const what = el.dataset.wb;
-    if (dialog.open && what !== "close") dialog.close();
-    if (what === "close") {
+  const { openSearch } = createWorkbenchSearch({ t, dialog, labels, allProjects, visibleThreads, modal });
+  const actions = {
+    close: async (el, what) => {
       dialog.close();
       return;
-    }
-    if (what === "route") {
+    },
+    route: async (el, what) => {
       navigate(el.dataset.route);
       return;
-    }
-    if (what === "new") {
+    },
+    new: async (el, what) => {
       newTask();
       return;
-    }
-    if (what === "task") {
+    },
+    task: async (el, what) => {
       navigate("/task/" + encodeURIComponent(el.dataset.id));
       return;
-    }
-    if (what === "project") {
+    },
+    project: async (el, what) => {
       navigate("/project?id=" + encodeURIComponent(el.dataset.projectId));
       return;
-    }
-    if (what === "create-project") {
+    },
+    "create-project": async (el, what) => {
       await projectDialogs.edit();
       return;
-    }
-    if (what === "project-edit") {
+    },
+    "project-edit": async (el, what) => {
       await projectDialogs.edit(catalog.get(el.dataset.projectId));
       return;
-    }
-    if (what === "project-link") {
+    },
+    "project-link": async (el, what) => {
       await projectDialogs.associate(el.dataset.projectId);
       return;
-    }
-    if (what === "session-project") {
+    },
+    "session-project": async (el, what) => {
       await associateSession(el.dataset.id);
       return;
-    }
-    if (what === "project-new") {
+    },
+    "project-new": async (el, what) => {
       newTask({ projectId: el.dataset.projectId });
       return;
-    }
-    if (what === "folder") {
+    },
+    folder: async (el, what) => {
       chooseFolder();
       return;
-    }
-    if (what === "settings") {
+    },
+    settings: async (el, what) => {
       navigate("/settings/" + (el.dataset.page || "general-settings"));
       return;
-    }
-    if (what === "search") {
+    },
+    search: async (el, what) => {
       openSearch();
       return;
-    }
-    if (what === "theme") {
+    },
+    theme: async (el, what) => {
       applyThemePreference(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
       return;
-    }
-    if (what === "template") {
+    },
+    template: async (el, what) => {
       if (state.active) newTask();
-      document.querySelector("#prompt").value = t(el.dataset.template);
-      document.querySelector("#prompt").dispatchEvent(new Event("input", { bubbles: true }));
-      document.querySelector("#prompt").focus();
+      requireElement("#prompt").value = t(el.dataset.template);
+      requireElement("#prompt").dispatchEvent(new Event("input", { bubbles: true }));
+      requireElement("#prompt").focus();
       return;
-    }
-    if (what === "running" || what === "review") {
+    },
+    running: async (el, what) => {
       filter = what === "running" ? "common.inProgress" : "workbench.needsReview";
       navigate("tasks");
       return;
-    }
-    if (what === "dismiss-intro") {
+    },
+    review: async (el, what) => {
+      filter = what === "running" ? "common.inProgress" : "workbench.needsReview";
+      navigate("tasks");
+      return;
+    },
+    "dismiss-intro": async (el, what) => {
       storage.set(INTRO_KEY, "1");
       render();
       return;
-    }
-    if (what === "files") {
+    },
+    files: async (el, what) => {
       openFiles();
       return;
-    }
-    if (what === "pin") {
+    },
+    pin: async (el, what) => {
       toggleProjectPinned("project:" + el.dataset.projectId);
       refresh();
       return;
-    }
+    },
+  };
+  async function action(event) {
+    const el = event.target instanceof Element ? closestElement("[data-wb]", event.target) : null;
+    if (!el) return;
+    const what = el.dataset.wb;
+    if (dialog.open && what !== "close") dialog.close();
+    await actions[what]?.(el, what);
   }
   document.addEventListener("click", (event) => {
     void action(event).catch((error) =>
@@ -662,17 +500,21 @@ export function createWorkbench({
     );
   });
   document.addEventListener("input", (event) => {
-    if (event.target.id === "wbTaskSearch") {
+    if (event.target instanceof HTMLInputElement && event.target.id === "projectSessionSearch")
+      searchProjectSessions(event.target.value);
+    if (event.target instanceof HTMLInputElement && event.target.id === "wbTaskSearch") {
       query = event.target.value;
       renderTaskResults();
     }
-    if (event.target.id === "wbProjectSearch") {
+    if (event.target instanceof HTMLInputElement && event.target.id === "wbProjectSearch") {
       projectQuery = event.target.value;
       renderProjectResults();
     }
   });
   document.addEventListener("change", (event) => {
-    if (event.target.id === "wbTaskFilter") {
+    if (event.target instanceof HTMLSelectElement && event.target.id === "projectSessionDirectory")
+      filterProjectDirectory(event.target.value);
+    if (event.target instanceof HTMLSelectElement && event.target.id === "wbTaskFilter") {
       filter = event.target.value;
       renderTaskResults();
     }
@@ -684,14 +526,14 @@ export function createWorkbench({
     );
   dialog.addEventListener("close", () => {
     if (returnFocus?.isConnected) returnFocus.focus();
-    else document.querySelector("#newTask")?.focus();
+    else requireElement("#newTask")?.focus();
   });
   dialog.addEventListener("keydown", (e) => {
-    const buttons = [...dialog.querySelectorAll("#wbCommandResults button")],
-      index = buttons.indexOf(document.activeElement);
+    const buttons = [...findElements("#wbCommandResults button", dialog)],
+      index = buttons.findIndex((button) => button === document.activeElement);
     if (index >= 0 && ["ArrowDown", "ArrowUp"].includes(e.key)) {
       e.preventDefault();
-      if (e.key === "ArrowUp" && index === 0) dialog.querySelector("#wbCommandQuery").focus();
+      if (e.key === "ArrowUp" && index === 0) requireElement("#wbCommandQuery", dialog).focus();
       else buttons[(index + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length].focus();
     }
   });
@@ -703,7 +545,7 @@ export function createWorkbench({
     );
   };
   document.addEventListener("click", (event) => {
-    if (event.target.closest('[data-wb="retry"]')) preparation.retry();
+    if (closestElement('[data-wb="retry"]', event.target)) preparation.retry();
   });
   window.addEventListener("popstate", () => {
     route = parseWorkbenchRoute();

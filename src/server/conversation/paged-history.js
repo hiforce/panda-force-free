@@ -1,8 +1,12 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createEvictionLogger } from "../misc/eviction-log.js";
+import { nativeItemRecord, resultPage } from "../protocol/native.js";
 const logEviction = createEvictionLogger("paged-history");
 const MAX_NATIVE_PAGE_ITEMS = 20;
 
+/** @param {import("../../shared/rpc-types.js").RpcRequest} request
+ * @param {import("../../shared/data-contracts.js").NativeItemQuery} options
+ */
 export async function readNativeItemPage(
   request,
   { threadId, turnId, cursor, limit = 20, maxDurationMs = 2000, now = () => performance.now() },
@@ -17,13 +21,14 @@ export async function readNativeItemPage(
     if (i > 0 && now() - started >= maxDurationMs) break;
     // A user image item can contain tens of MiB of inline data. Normalize each
     // native item before fetching another instead of receiving a huge batch.
-    const page = await request("thread/items/list", {
+    const response = await request("thread/items/list", {
       threadId,
       ...(turnId ? { turnId } : {}),
       limit: 1,
       sortDirection: "desc",
       ...(nextCursor ? { cursor: nextCursor } : {}),
     });
+    const page = resultPage(response, nativeItemRecord);
     data.push(...page.data);
     nextCursor = page.nextCursor;
     if (!nextCursor || !page.data.length) break;
@@ -39,6 +44,7 @@ export function createPagedConversationHistory({ request, getThread }) {
   const epoch = randomBytes(8).toString("hex"),
     threads = new Map();
   return {
+    /** @param {import("../../shared/data-contracts.js").HistoryQuery} options */
     async read({ threadId, cursor, revision, oldestItemId, limit = 100 } = {}) {
       if (typeof threadId !== "string" || !threadId) throw new Error("Invalid thread id");
       if (!Number.isInteger(limit) || limit < 1 || limit > 100)

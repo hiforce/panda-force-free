@@ -1,8 +1,11 @@
 import { localizeText, setMessageHtml } from "../i18n.js";
+import { errorMessage } from "./../../shared/errors.js";
+import { findElement } from "./../dom.js";
 
 import { mergeConversationHistory } from "../ui-core.js";
 
 // Reads and merges paged history with navigation guards and explicit recovery.
+/** @param {import("./ports.js").FeatureOptions<"selection" | "viewUpdates" | "mutations" | "sessions" | "$" | "t" | "state", "transport" | "repositories" | "notices", "history">} options */
 export function assembleHistory({
   transportPort,
   selection,
@@ -20,7 +23,7 @@ export function assembleHistory({
   function syncConversationLoadingSurface(loading) {
     const root = $("#conversation");
     if (!root) return;
-    const existing = root.querySelector("[data-conversation-loading]");
+    const existing = findElement("[data-conversation-loading]", root);
     if (!loading) {
       existing?.remove();
       return;
@@ -44,7 +47,7 @@ export function assembleHistory({
     conversationResyncLastAt = Date.now();
     const generation = selection.current;
     syncConversationLoadingSurface(true);
-    const notice = $("#conversation").querySelector("[data-conversation-loading]");
+    const notice = findElement("[data-conversation-loading]", $("#conversation"));
     if (notice?.lastElementChild)
       localizeText(notice.lastElementChild, "workbench.refreshingConversation", undefined, t);
     try {
@@ -62,13 +65,14 @@ export function assembleHistory({
       return true;
     } catch (error) {
       console.warn("[panda-force] conversation resync failed:", error);
-      noticesPort.addPersistentError(error?.message || t("errors.couldNotRefreshConversation"));
+      noticesPort.addPersistentError(errorMessage(error) || t("errors.couldNotRefreshConversation"));
       return false;
     } finally {
       conversationResyncInFlight = false;
       if (state.active?.id === threadId) syncConversationLoadingSurface(false);
     }
   }
+  /** @param {string} id @param {import("../../shared/data-view.js").DataView<import("../../shared/engine/types.js").SessionSummary> | null} previous @param {{limit?: number; getCurrent?: () => import("../../shared/data-view.js").DataView<import("../../shared/engine/types.js").SessionSummary> | null}} options */
   async function readConversation(id, previous, { limit = BACKGROUND_CONVERSATION_HISTORY_LIMIT, getCurrent } = {}) {
     try {
       const response = await transportPort.rpc("host/thread/history", {
@@ -92,7 +96,7 @@ export function assembleHistory({
         return thread;
       }
     } catch (error) {
-      if (!/not available|unknown|unsupported|method not found/i.test(error?.message || "")) throw error;
+      if (!/not available|unknown|unsupported|method not found/i.test(errorMessage(error) || "")) throw error;
     }
     const result = await transportPort.rpc("thread/read", { threadId: id, includeTurns: true });
     return { ...previous, ...result.thread };
@@ -110,7 +114,7 @@ export function assembleHistory({
         cursor,
         limit: BACKGROUND_CONVERSATION_HISTORY_LIMIT,
       });
-      if (!selection.isCurrent(navigationId) || state.active?.id !== id || state.active.history?.nextCursor !== cursor)
+      if (!selection.isCurrent(navigationId) || state.active?.id !== id || state.active?.history?.nextCursor !== cursor)
         return;
       const merged = mergeConversationHistory(state.active, result, { page: true });
       sessions.replaceActive(merged);
@@ -118,7 +122,7 @@ export function assembleHistory({
     } catch (error) {
       // Background history is an enhancement. The latest page is already usable;
       // leave the existing load-older control to retry the request on demand.
-      console.warn("[panda-force] background conversation history failed:", error?.message || error);
+      console.warn("[panda-force] background conversation history failed:", errorMessage(error) || error);
     }
   }
   async function loadEarlierConversation(thread) {

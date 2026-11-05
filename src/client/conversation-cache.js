@@ -1,21 +1,22 @@
-import { canonicalData } from "./application/read-model.js";
-import { threadLastActivityAt } from "./ui-core.js";
+import { reportDiagnostic } from "../shared/diagnostics.js";
+import { canonicalData } from "../shared/read-model.js";
+import { isConversationCacheExpired, threadLastActivityAt } from "./conversation-policy.js";
 
 const DATABASE = "panda-force-conversations-v1",
   STORE = "entries",
   SIDEBAR = "__sidebar__";
-export const CONVERSATION_CACHE_TTL_MS = 48 * 60 * 60 * 1000;
-export function isConversationCacheExpired(thread, { now = Date.now(), cachedAt = now } = {}) {
-  return now - (threadLastActivityAt(thread) * 1000 || cachedAt) >= CONVERSATION_CACHE_TTL_MS;
-}
+export { CONVERSATION_CACHE_TTL_MS, isConversationCacheExpired } from "./conversation-policy.js";
 
 // IndexedDB keeps chat text off the synchronous localStorage/render path.
-export function createConversationCache({ indexedDB, maxThreads = 8, maxItems = 100 } = {}) {
+/** @param {{identity?: string | null; indexedDB?: IDBFactory; maxThreads?: number; maxItems?: number}} options */
+export function createConversationCache({ identity = null, indexedDB, maxThreads = 8, maxItems = 100 } = {}) {
+  const databaseName = typeof identity === "string" && identity ? DATABASE + ":" + identity : null;
   try {
     indexedDB ??= globalThis.indexedDB;
   } catch {}
   let databasePromise,
-    lastWrite = 0;
+    lastWrite = 0,
+    closed = false;
   const removed = new Set();
   let epoch = 0;
   function expired(entry, now) {
@@ -27,7 +28,7 @@ export function createConversationCache({ indexedDB, maxThreads = 8, maxItems = 
       })
     );
   }
-  function pruneEntries(store, now, set = () => {}) {
+  function pruneEntries(store, now, set = (_entries) => {}) {
     const request = store.getAll();
     request.onsuccess = () => {
       const entries = [],
@@ -48,43 +49,64 @@ export function createConversationCache({ indexedDB, maxThreads = 8, maxItems = 
     };
   }
   function database() {
-    if (!indexedDB) return Promise.resolve(null);
-    return (databasePromise ??= new Promise((resolve) => {
+    if (!indexedDB || !databaseName || closed) return Promise.resolve(null);
+    if (databasePromise) return databasePromise;
+    const pending = new Promise((resolve) => {
       let request;
+      let abandoned = false;
       try {
-        request = indexedDB.open(
-          globalThis.__pandaForceIdentityKey ? DATABASE + ":" + globalThis.__pandaForceIdentityKey : DATABASE,
-          1,
-        );
-      } catch {
+        request = indexedDB.open(databaseName, 1);
+      } catch (error) {
+        reportDiagnostic("conversation-cache.open", error);
         resolve(null);
         return;
       }
       request.onupgradeneeded = () => request.result.createObjectStore(STORE, { keyPath: "id" });
       request.onsuccess = () => {
+        if (closed || abandoned) {
+          request.result.close();
+          resolve(null);
+          return;
+        }
         request.result.onversionchange = () => {
           request.result.close();
           databasePromise = null;
         };
         resolve(request.result);
       };
-      request.onerror = () => resolve(null);
-      request.onblocked = () => resolve(null);
-    }));
+      request.onerror = () => {
+        reportDiagnostic("conversation-cache.open", request.error);
+        resolve(null);
+      };
+      request.onblocked = () => {
+        abandoned = true;
+        resolve(null);
+      };
+    });
+    databasePromise = pending;
+    void pending.then((db) => {
+      if (!db && databasePromise === pending) databasePromise = null;
+    });
+    return pending;
   }
   async function transaction(mode, action) {
+    const generation = epoch;
     try {
       const db = await database();
-      if (!db) return null;
+      if (!db || closed || generation !== epoch) return null;
       return await new Promise((resolve) => {
         const tx = db.transaction(STORE, mode),
           store = tx.objectStore(STORE);
         let result = null;
         action(store, (value) => (result = value));
-        tx.oncomplete = () => resolve(result);
-        tx.onerror = tx.onabort = () => resolve(null);
+        tx.oncomplete = () => resolve(!closed && generation === epoch ? result : null);
+        tx.onerror = tx.onabort = () => {
+          reportDiagnostic("conversation-cache.transaction", tx.error);
+          resolve(null);
+        };
       });
-    } catch {
+    } catch (error) {
+      reportDiagnostic("conversation-cache.transaction", error);
       return null;
     }
   }
@@ -118,6 +140,12 @@ export function createConversationCache({ indexedDB, maxThreads = 8, maxItems = 
     };
   }
   return {
+    close() {
+      closed = true;
+      epoch++;
+      void databasePromise?.then((database) => database?.close());
+      databasePromise = null;
+    },
     async get(id) {
       if (removed.has(id)) return null;
       return transaction("readwrite", (store, set) => {

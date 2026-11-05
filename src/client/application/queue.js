@@ -1,14 +1,16 @@
 import { localizeText, setOpaqueText } from "../i18n.js";
+import { errorMessage } from "./../../shared/errors.js";
 
-import { deliveryIsUncertain } from "./input-errors.js";
 import {
-  buildComposerInput,
   attachmentsFromInput,
-  composerTextFromInput,
+  buildComposerInput,
   composerInputKey,
+  composerTextFromInput,
 } from "../composer-attachments.js";
+import { deliveryIsUncertain } from "./input-errors.js";
 
 // Owns queued input, reconciliation versions, cancellation and uncertain acknowledgements.
+/** @param {import("./ports.js").FeatureOptions<"selection" | "viewUpdates" | "mutations" | "$" | "t" | "state", "transport" | "delivery" | "notices" | "uploads" | "composer" | "models" | "suggestions" | "inputSessions", "queue">} options */
 export function assembleQueue({
   transportPort,
   selection,
@@ -166,7 +168,7 @@ export function assembleQueue({
       queuedMessages.delete(message.clientId);
     } catch (error) {
       if (queuedMessages.has(message.clientId)) message.status = "queued";
-      noticesPort.addPersistentError(error.message);
+      noticesPort.addPersistentError(errorMessage(error));
     }
     renderMessageQueue();
     refreshMessageQueue(message.owner);
@@ -261,8 +263,8 @@ export function assembleQueue({
         viewUpdates.request("composerLayout");
       }
       if (current() && !message.queueId && !uncertain)
-        noticesPort.addPersistentError(error?.message || t("composer.queueFailed"));
-      if (dispatchStarted) refreshMessageQueue(thread.id);
+        noticesPort.addPersistentError(errorMessage(error) || t("composer.queueFailed"));
+      if (dispatchStarted && thread) refreshMessageQueue(thread.id);
     } finally {
       deliveryPort.releasePromptSubmission(token);
       if (
@@ -283,7 +285,7 @@ export function assembleQueue({
     }
   }
   function bind() {
-    $("#queueButton").onclick = (...args) => queuePrompt(...args);
+    $("#queueButton").onclick = /** @param {Parameters<typeof queuePrompt>} args */ (...args) => queuePrompt(...args);
   }
   return {
     bind,

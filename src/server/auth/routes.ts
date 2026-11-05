@@ -1,41 +1,40 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
+import { dirname, join } from "node:path";
+import { createSessionRevocations } from "./session-revocations.js";
+import type { PasswordAuth } from "./contracts.js";
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { validAdministratorPassword } from "../../shared/password-policy.js";
 import { config } from "../config.js";
 import { readJsonBody } from "../http/body.js";
-import { errorPayload } from "../http/error-payload.js";
 import { respondJson } from "../http/respond.js";
-import type { AuthState } from "./state.js";
+import { errorPayload } from "../i18n/error-payload.js";
+import { errorCode } from "./../../shared/errors.js";
 import {
   createStoredAdministrator,
   normalizeAdministratorUsername,
   saveStoredAdministrator,
   validAdministratorUsername,
 } from "./administrator-store.js";
+import { matchesRequestOrigin } from "./origin.js";
 import {
   createPasswordSession,
   isAuthorizedHttpRequest,
   passwordSessionCookie,
+  passwordSessionToken,
   verifyStoredPassword,
 } from "./security.js";
+import type { AuthState } from "./state.js";
 
 function sendAuthError(res: ServerResponse, status: number, error: string, headers: Record<string, string> = {}) {
   respondJson(res, status, errorPayload(error), headers);
 }
 
 function trustedRequest(req: IncomingMessage) {
-  if (!req.headers.host || req.headers["sec-fetch-site"] === "cross-site") return false;
-  if (!req.headers.origin) return true;
-  try {
-    const origin = new URL(req.headers.origin);
-    return (
-      ["http:", "https:"].includes(origin.protocol) &&
-      origin.origin === req.headers.origin &&
-      origin.host.toLowerCase() === req.headers.host.toLowerCase()
-    );
-  } catch {
-    return false;
-  }
+  return matchesRequestOrigin({
+    hostHeader: req.headers.host,
+    origin: req.headers.origin,
+    fetchSite: req.headers["sec-fetch-site"],
+  });
 }
 
 function equal(left: unknown, right: string) {
@@ -46,18 +45,24 @@ function equal(left: unknown, right: string) {
 }
 
 /** Local administrator installation, legacy migration and browser sessions. */
-export function createPasswordAuth({ authState }: { authState: AuthState }) {
+export function createPasswordAuth({ authState }: { authState: AuthState }): PasswordAuth {
+  const revocations = createSessionRevocations(
+    join(dirname(dirname(authState.administratorPath)), "data", "auth-sessions.sqlite"),
+  );
   const code = randomBytes(18).toString("base64url");
   const attempts = new Map<string, { count: number; expiresAt: number }>();
   const passwordSetupRequired = () => config.authMode !== "none" && !authState.secret;
   const migrationRequired = () => config.authMode !== "none" && Boolean(authState.secret) && !authState.administrator;
   const codeRequired = (req: IncomingMessage) => !isAuthorizedHttpRequest(req, null, true);
   const secureCookie = (req: IncomingMessage) =>
-    Boolean((req.socket as any).encrypted) || req.headers.origin?.startsWith("https://") === true;
+    Boolean((req.socket as import("node:tls").TLSSocket).encrypted) ||
+    req.headers.origin?.startsWith("https://") === true;
   const refresh = () => authState.refreshAdministrator();
 
   function isAuthorized(req: IncomingMessage) {
     refresh();
+    const token = passwordSessionToken(req);
+    if (!req.headers.authorization && token && revocations.has(token)) return false;
     if (isAuthorizedHttpRequest(req, authState.secret, config.authMode === "none")) return true;
     // Explicit service credentials remain valid for existing automation, but an
     // old browser cookie must not bypass the newly installed administrator.
@@ -133,6 +138,9 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
         sendAuthError(res, 401, "auth.authenticationRequired");
         return true;
       }
+      await readJsonBody(req, 4096);
+      const token = passwordSessionToken(req);
+      if (token) revocations.revoke(token);
       respondJson(
         res,
         200,
@@ -145,7 +153,7 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
       sendAuthError(res, 429, "auth.tooManyAttempts", { "retry-after": "300" });
       return true;
     }
-    let payload: any;
+    let payload: Record<string, unknown>;
     try {
       payload = await readJsonBody(req, 4096);
     } catch {
@@ -184,8 +192,8 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
         saveStoredAdministrator(authState.administratorPath, administrator);
         authState.adoptAdministrator(administrator);
         issueSession(req, res);
-      } catch (error: any) {
-        if (error?.code === "EEXIST") {
+      } catch (error) {
+        if (errorCode(error) === "EEXIST") {
           refresh();
           sendAuthError(res, 409, "auth.setupUnavailable");
         } else {
@@ -215,6 +223,11 @@ export function createPasswordAuth({ authState }: { authState: AuthState }) {
   }
 
   return {
+    watch(req, onRevoke) {
+      const token = passwordSessionToken(req);
+      return !req.headers.authorization && token ? revocations.watch(token, onRevoke) : () => {};
+    },
+    close: revocations.close,
     handle,
     isAuthorized,
     passwordSetupRequired,

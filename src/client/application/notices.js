@@ -1,16 +1,16 @@
-import { localizeAttribute, localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { errorText, localizeAttribute, localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { createLifecycle } from "../lifecycle.js";
 
 import { codexIcon } from "../codex-icons.js";
 
 // Owns persistent notices and transient toast actions.
+/** @param {import("./ports.js").FeatureOptions<"mutations" | "$" | "state" | "t", never, "notices">} options */
 export function assembleNotices({ mutations, $, state, t }) {
-  function persistentErrorText(value) {
-    if (value && typeof value === "object") {
-      const message = String(value.message || value.error?.message || value.error || "Unexpected error");
-      return value.additionalDetails ? `${message}\n${value.additionalDetails}` : message;
-    }
-    return String(value || "Unexpected error");
-  }
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let toastTimer;
+  /** @type {{label: string; project?: string; run: () => unknown} | null} */
+  let toastAction = null;
+  let toastEvents = createLifecycle();
   function renderPersistentErrors() {
     const root = $("#persistentErrors");
     if (!root) return;
@@ -49,13 +49,17 @@ export function assembleNotices({ mutations, $, state, t }) {
       root.append(card);
     }
   }
+  /** @param {unknown} value @param {{key?: string}} options */
   function addPersistentError(value, { key } = {}) {
-    const message = (value?.messageId ? t(value.messageId, value.messageArgs) : persistentErrorText(value)).trim();
+    const message = errorText(value, t).trim();
     if (!message || message === "Bridge transport changed") return;
     const identity = key || message;
     const existing = state.persistentErrors.find((error) => error.key === identity);
     if (existing) {
-      existing.message = message;
+      mutations.edit("persistentErrors", (errors) => {
+        const error = errors.find((entry) => entry.id === existing.id);
+        if (error) error.message = message;
+      });
       renderPersistentErrors();
       return;
     }
@@ -65,20 +69,24 @@ export function assembleNotices({ mutations, $, state, t }) {
     renderPersistentErrors();
   }
   function dismissToast() {
-    clearTimeout(toast.t);
-    toast.project = null;
+    clearTimeout(toastTimer);
+    toastAction = null;
+    toastEvents.dispose();
     const e = $("#toast");
     e.classList.remove("show", "has-action");
     e.replaceChildren();
   }
+  /** @param {string} text @param {number} duration @param {{label: string; project?: string; run: () => unknown} | null} action */
   function toast(text, duration = 2200, action = null) {
     const e = $("#toast");
     setOpaqueText(e, text);
     e.classList.toggle("has-action", Boolean(action));
-    toast.project = action?.project || null;
+    toastAction = action;
+    toastEvents.dispose();
+    toastEvents = createLifecycle();
     const expire = () => {
-      clearTimeout(toast.t);
-      toast.t = setTimeout(dismissToast, duration);
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(dismissToast, duration);
     };
     if (action) {
       const button = document.createElement("button");
@@ -91,14 +99,15 @@ export function assembleNotices({ mutations, $, state, t }) {
       };
       e.append(button);
     }
-    e.onfocusin = () => clearTimeout(toast.t);
-    e.onfocusout = expire;
-    e.onmouseenter = () => clearTimeout(toast.t);
+    toastEvents.on(e, "focusin", () => clearTimeout(toastTimer));
+    toastEvents.on(e, "focusout", expire);
+    e.onmouseenter = () => clearTimeout(toastTimer);
     e.onmouseleave = expire;
     e.classList.add("show");
     expire();
   }
   return {
+    getToastProject: () => toastAction?.project || null,
     addPersistentError,
     toast,
     dismissToast,

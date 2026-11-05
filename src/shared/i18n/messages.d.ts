@@ -113,6 +113,11 @@ export interface MessageParameters {
   "common.browseProjectFiles": {  };
   "common.browser": {  };
   "common.browserAccess": {  };
+  "common.browserEmbeddingBlocked": {  };
+  "common.browserEmbeddingBlockedDetail": {  };
+  "common.browserLoaded": {  };
+  "common.browserLoadFailed": {  };
+  "common.browserLoadFailedDetail": {  };
   "common.browserNavigation": {  };
   "common.browserUrl": {  };
   "common.browseSessionFiles": {  };
@@ -237,6 +242,7 @@ export interface MessageParameters {
   "common.enterAnAnswerForThisQuestion": {  };
   "common.enterAUrlToBrowse": {  };
   "common.enterUrl": {  };
+  "common.enterValidUrl": {  };
   "common.environment": {  };
   "common.environments": {  };
   "common.error": {  };
@@ -287,6 +293,7 @@ export interface MessageParameters {
   "common.history": {  };
   "common.hooks": {  };
   "common.howShouldAgentActionsBeApproved": {  };
+  "common.httpUrlsOnly": {  };
   "common.image": {  };
   "common.imageContentDoesNotMatchItsFileType": {  };
   "common.imageCouldNotBeLoaded": {  };
@@ -304,6 +311,7 @@ export interface MessageParameters {
   "common.interfaceScale": {  };
   "common.internetAccess": {  };
   "common.internetAndConnectedApps": {  };
+  "common.invalidBrowserAddress": {  };
   "common.jumpToLatestMessages": {  };
   "common.keepEveryPieceOfWorkInView": {  };
   "common.keyboardShortcuts": {  };
@@ -343,6 +351,7 @@ export interface MessageParameters {
   "common.minimal": {  };
   "common.model": {  };
   "common.modelAndPermissions": {  };
+  "common.modelAndReasoningSetting": { "level": string; "model": string };
   "common.modelChanged": { "model": string };
   "common.modelLoadFailedRetry": {  };
   "common.modified": {  };
@@ -371,6 +380,7 @@ export interface MessageParameters {
   "common.noTasksFound": {  };
   "common.notConfigured": {  };
   "common.notifications": {  };
+  "common.noUrlCredentials": {  };
   "common.noVisibleProjects": {  };
   "common.noWorkingFolder": {  };
   "common.objective": {  };
@@ -399,6 +409,7 @@ export interface MessageParameters {
   "common.pdfPreviewIsNotAvailableInThisBrowser": {  };
   "common.permissionModeUsedForNewTurns": {  };
   "common.permissions": {  };
+  "common.permissionSetting": { "mode": string };
   "common.persistentStorage": {  };
   "common.personal": {  };
   "common.pin": {  };
@@ -697,6 +708,9 @@ export interface MessageParameters {
   "composer.youCanAttachUpTo10Files": {  };
   "errors.authenticationIsTemporarilyUnavailablePleaseRetry": {  };
   "errors.authenticationRequestWasRejected": {  };
+  "errors.bridgeConnectionInterrupted": {  };
+  "errors.bridgeInvalidResponse": {  };
+  "errors.bridgeRequestFailed": {  };
   "errors.cannotUploadAnEmptyFile": {  };
   "errors.couldNotCompleteAction": {  };
   "errors.couldNotDeleteThread": {  };
@@ -715,11 +729,13 @@ export interface MessageParameters {
   "errors.couldNotSubmitAnswer": {  };
   "errors.couldNotSubmitTheDecisionTheRequestIsStillWaiting": {  };
   "errors.couldNotUpdateProject": {  };
+  "errors.engineRequestTimedOut": { "operation": string };
   "errors.incorrectUsernameOrPassword": {  };
   "errors.invalidAttachmentFilename": {  };
   "errors.invalidAuthenticationRequest": {  };
   "errors.invalidProjectDetails": {  };
   "errors.invalidSessionSelection": {  };
+  "errors.messageNotSentConnectionInterrupted": {  };
   "errors.methodNotAllowed": {  };
   "errors.projectNotFound": {  };
   "errors.tooManyAttemptsPleaseTryAgainInAFewMinutes": {  };
@@ -781,15 +797,20 @@ export interface MessageParameters {
   "projects.searchBySessionNameOrWorkingFolder": {  };
   "projects.uniqueCode264CharactersLettersNumbersHyphensOrUnderscores": {  };
   "sessions.activityTimeUnavailable": {  };
+  "sessions.allDirectories": {  };
   "sessions.browserNotificationsAreBlocked": {  };
+  "sessions.browseSessions": {  };
+  "sessions.byDirectory": {  };
   "sessions.completed": {  };
   "sessions.count": { "count": number };
   "sessions.deleteSession": {  };
   "sessions.deleteSession2": {  };
+  "sessions.directoryLoadFailed": {  };
   "sessions.forkSession": {  };
   "sessions.hideProject": {  };
   "sessions.lastActivityTime": { "time": string };
   "sessions.loadEarlierMessages": {  };
+  "sessions.loadingDirectories": {  };
   "sessions.noPinnedSessions": {  };
   "sessions.notStarted": {  };
   "sessions.pinned": {  };
@@ -815,7 +836,7 @@ export interface MessageParameters {
   "usage.loadingUsage": {  };
   "usage.remaining": {  };
   "usage.resetsAt": {  };
-  "usage.resetsInDaysdHourshMinutesm": { "days": string; "hours": string; "minutes": string };
+  "usage.resetsInDaysdHourshMinutesm": { "days": number; "hours": number; "minutes": number };
   "usage.resetTimeUnavailable": {  };
   "usage.updatedAt": {  };
   "usage.usageDataUnavailable": {  };
@@ -873,4 +894,8 @@ export interface MessageParameters {
   "workbench.yourNextMove": {  };
 }
 export type MessageId = keyof MessageParameters;
-export type Translate = <K extends MessageId>(id: K, ...values: keyof MessageParameters[K] extends never ? [values?: MessageParameters[K]] : [values: MessageParameters[K]]) => string;
+export type PluginMessageId = `plugin.${string}.${string}`;
+export interface Translate {
+  <K extends MessageId>(id: K, ...values: keyof MessageParameters[K] extends never ? [values?: MessageParameters[K]] : [values: MessageParameters[K]]): string;
+  (id: PluginMessageId, values?: Record<string, string | number | Date>): string;
+}

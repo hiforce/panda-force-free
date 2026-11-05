@@ -6,7 +6,7 @@ export type RouteContext = {
   res: ServerResponse;
   url: URL;
   /** Present when IDAAS authentication produced a session for this request. */
-  idaasSession?: { id: string; identity: any; expiresAt: number } | null;
+  idaasSession?: { id: string; identity: unknown; expiresAt: number } | null;
 };
 
 export type Route = {

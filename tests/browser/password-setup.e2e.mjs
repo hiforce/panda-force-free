@@ -1,0 +1,123 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { chromium } from "playwright";
+import { artifact, launchOptions } from "../support/browser-runtime.mjs";
+import { localAuthFixture } from "../support/local-auth-fixture.mjs";
+const password = "Abc123",
+  f = await localAuthFixture();
+let browser;
+try {
+  browser = await chromium.launch(launchOptions());
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+    colorScheme: "light",
+    locale: "en",
+  });
+  await context.addInitScript(() => {
+    if (window === window.top) localStorage.setItem("panda-force-locale", "en");
+  });
+  const page = await context.newPage(),
+    errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  let setupRequests = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().endsWith("/api/auth/setup")) setupRequests++;
+  });
+  await page.addInitScript(() => {
+    globalThis.__pandaForceTest = true;
+  });
+  await page.goto(f.base);
+  await page.getByRole("heading", { name: "Create your administrator", exact: true }).waitFor();
+  assert.equal(await page.title(), "PandaForce");
+  assert.equal((await page.locator(".auth-brand").textContent()).trim(), "PandaForce");
+  assert.equal(await page.locator("#passwordGate").getAttribute("aria-label"), "Administrator setup");
+  assert.equal(await page.locator("#passwordCodexMark [data-panda-force-mark]").count(), 1);
+  assert.equal(await page.locator("#usernameInput").inputValue(), "admin");
+  assert.equal(await page.locator("#installationCodeField").isVisible(), false);
+  assert.equal(await page.locator("#app").isVisible(), false);
+  assert.equal(await page.evaluate(() => Boolean(globalThis.__pandaForceDebug)), false);
+  assert.equal((await context.request.get(f.base + "/app.bundle.js")).status(), 401);
+  await page.screenshot({ path: artifact("administrator-setup-desktop.png") });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.screenshot({ path: artifact("administrator-setup-dark.png") });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+  assert.ok((await page.locator("#passwordLoginButton").boundingBox()).height >= 44);
+  await page.screenshot({ path: artifact("administrator-setup-mobile.png") });
+  await page.locator("#usernameInput").fill("Owner");
+  assert.equal(await page.locator("#passwordInput").getAttribute("minlength"), "6");
+  for (const invalid of ["abcdef", "ABC123", "abc123", "Abcdef"]) {
+    await page.locator("#passwordInput").fill(invalid);
+    await page.locator("#passwordConfirmInput").fill(invalid);
+    await page.locator("#passwordLoginButton").click();
+    await page
+      .getByRole("alert")
+      .filter({
+        hasText: "Password must be 6–256 characters and include uppercase and lowercase letters and a number.",
+      })
+      .waitFor();
+  }
+  assert.equal(setupRequests, 0);
+  await page.locator("#passwordInput").fill(password);
+  await page.getByRole("button", { name: "Show password", exact: true }).click();
+  assert.equal(await page.locator("#passwordInput").getAttribute("type"), "text");
+  await page.getByRole("button", { name: "Hide password", exact: true }).click();
+  await page.locator("#passwordConfirmInput").fill("incorrect confirmation");
+  await page.locator("#passwordLoginButton").click();
+  await page.getByRole("alert").filter({ hasText: "Passwords do not match" }).waitFor();
+  await page.locator("#passwordConfirmInput").fill(password);
+  await page.locator("#passwordLoginButton").click();
+  await page.locator("#pandaLogout").waitFor({ state: "attached" });
+  assert.ok((await page.locator("#pandaLogout").textContent()).includes("PandaForce"));
+  assert.equal(await page.locator(".window-brand strong").textContent(), "PandaForce");
+  await page.locator("#windowCodexMark [data-panda-force-mark]").waitFor({ state: "attached" });
+  assert.equal(await page.locator("#windowCodexMark [data-panda-force-mark]").count(), 1);
+  assert.equal(setupRequests, 1);
+  assert.deepEqual((await (await context.request.get(f.base + "/api/auth/status")).json()).identity, {
+    username: "owner",
+    role: "admin",
+  });
+  assert.equal(readFileSync(f.adminPath, "utf8").includes(password), false);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  if (await page.locator("#workspacePreparation").isVisible())
+    await page.locator("#workspacePreparationContinue").click();
+  await page.locator("#accountButton").click();
+  await page.locator("#pandaLogout").click();
+  await page.getByRole("heading", { name: "Welcome back", exact: true }).waitFor();
+  assert.equal(await page.locator("#passwordGate").getAttribute("aria-label"), "PandaForce login");
+  assert.equal((await context.request.get(f.base + "/api/config")).status(), 401);
+  assert.equal(await page.locator("#usernameField").isVisible(), true);
+  assert.equal(await page.locator("#passwordConfirmField").isVisible(), false);
+  await page.screenshot({ path: artifact("administrator-login-desktop.png") });
+  await page.locator("#usernameInput").fill("wrong-owner");
+  await page.locator("#passwordInput").fill(password);
+  await page.locator("#passwordLoginButton").click();
+  await page.getByRole("alert").filter({ hasText: "Incorrect username or password" }).waitFor();
+  await f.restart();
+  await page.reload();
+  await page.getByRole("heading", { name: "Welcome back", exact: true }).waitFor();
+  await page.locator("#usernameInput").fill("OWNER");
+  await page.locator("#passwordInput").fill(password);
+  await page.locator("#passwordLoginButton").click();
+  await page.locator("#pandaLogout").waitFor({ state: "attached" });
+  assert.equal((await context.request.get(f.base + "/api/config")).status(), 200);
+  assert.deepEqual(errors, []);
+  console.log(
+    JSON.stringify({
+      zeroOptionSetup: true,
+      preSetupAccessBlocked: true,
+      desktopAndMobile: true,
+      darkMode: true,
+      passwordVisibility: true,
+      mismatchValidation: true,
+      administratorLogin: true,
+      logout: true,
+      restartPersistence: true,
+      errors,
+    }),
+  );
+} finally {
+  await browser?.close();
+  await f.dispose();
+}

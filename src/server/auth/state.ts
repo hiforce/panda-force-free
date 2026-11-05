@@ -1,11 +1,26 @@
+import { administratorStorePath, loadStoredAdministrator, type StoredAdministrator } from "./administrator-store.js";
 import { loadStoredPassword, passwordStorePath, type StoredPassword } from "./password-store.js";
 import { createStoredPassword, storedPasswordSessionSecret } from "./security.js";
-import { administratorStorePath, loadStoredAdministrator, type StoredAdministrator } from "./administrator-store.js";
 
 /**
  * Holds administrator credentials and the legacy password used during migration.
  * A complete administrator record takes precedence over legacy browser secrets.
  */
+export interface AuthState {
+  readonly managedPasswordPath: string;
+  readonly administratorPath: string;
+  readonly administrator: StoredAdministrator | null;
+  readonly managedPassword: StoredPassword | null;
+  readonly secret: string | null;
+  setupInProgress: boolean;
+  refreshAdministrator(): void;
+  adoptAdministrator(record: StoredAdministrator): void;
+  legacyCredential(): StoredPassword | null;
+  browserPasswordConfigured(): boolean;
+  adoptManagedPassword(record: StoredPassword): void;
+  reloadManagedPassword(): void;
+}
+
 export function createAuthState({
   environmentPassword,
   accessToken,
@@ -14,7 +29,7 @@ export function createAuthState({
   environmentPassword: string | null;
   accessToken: string | null;
   managedPasswordDisabled: boolean;
-}) {
+}): AuthState {
   const managedPasswordPath = passwordStorePath();
   const administratorPath = administratorStorePath();
   let administrator = managedPasswordDisabled ? null : loadStoredAdministrator(administratorPath);
@@ -66,5 +81,3 @@ export function createAuthState({
     },
   };
 }
-
-export type AuthState = ReturnType<typeof createAuthState>;

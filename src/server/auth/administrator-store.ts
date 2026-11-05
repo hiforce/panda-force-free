@@ -1,10 +1,12 @@
-import { pandaEnvironment, existingApplicationPath } from "../environment.js";
-import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
-import { dirname, join, resolve } from "node:path";
+import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { createStoredPassword, isStoredPassword } from "./security.js";
+import { dirname, join, resolve } from "node:path";
+import { isRecord } from "../../shared/records.js";
+import { existingApplicationPath, pandaEnvironment } from "../environment.js";
+import { errorCode } from "./../../shared/errors.js";
 import type { StoredPassword } from "./password-store.js";
+import { createStoredPassword, isStoredPassword } from "./security.js";
 
 export type StoredAdministrator = {
   version: 1;
@@ -29,13 +31,15 @@ export function administratorStorePath(env: NodeJS.ProcessEnv = process.env) {
   return existingApplicationPath(join(env.CODEX_HOME || join(homedir(), ".codex"), "panda-force-admin.json"));
 }
 
-function validRecord(value: any): value is StoredAdministrator {
+function validRecord(value: unknown): value is StoredAdministrator {
   return (
-    value?.version === 1 &&
+    isRecord(value) &&
+    value.version === 1 &&
     value.role === "admin" &&
     validAdministratorUsername(value.username) &&
     value.username === normalizeAdministratorUsername(value.username) &&
     Number.isSafeInteger(value.createdAt) &&
+    typeof value.createdAt === "number" &&
     value.createdAt > 0 &&
     isStoredPassword(value.password)
   );
@@ -57,8 +61,8 @@ export function loadStoredAdministrator(path: string): StoredAdministrator | nul
   let raw: string;
   try {
     raw = readFileSync(path, "utf8");
-  } catch (error: any) {
-    if (error?.code === "ENOENT") return null;
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") return null;
     throw error;
   }
   const record = JSON.parse(raw);

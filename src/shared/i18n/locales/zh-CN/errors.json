@@ -1,4 +1,7 @@
 {
+  "bridgeConnectionInterrupted": "与 PandaForce 的连接中断，暂时无法确认请求结果。",
+  "bridgeInvalidResponse": "PandaForce 的响应无法读取，暂时无法确认请求结果。",
+  "messageNotSentConnectionInterrupted": "消息发送前连接中断，内容已保留，请在连接恢复后重试。",
   "couldNotEnableBrowserNotifications": "无法开启浏览器通知",
   "couldNotSubmitTheDecisionTheRequestIsStillWaiting": "决定提交失败，审批仍在等待，请重试。",
   "projectNotFound": "项目不存在",
@@ -31,5 +34,7 @@
   "couldNotCompleteAction": "操作未能完成",
   "authenticationIsTemporarilyUnavailablePleaseRetry": "认证服务暂不可用，请重试。",
   "methodNotAllowed": "不支持此请求方法",
-  "unexpectedError": "出现意外错误"
+  "unexpectedError": "出现意外错误",
+  "engineRequestTimedOut": "引擎请求超时：{operation}",
+  "bridgeRequestFailed": "引擎请求失败"
 }

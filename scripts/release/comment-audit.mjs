@@ -1,6 +1,7 @@
+import { verificationFiles } from "../verification/source.js";
 import { tokenizer } from "acorn";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { extname } from "node:path";
 
 // Tokenize comments instead of confusing translated UI strings with comments.
@@ -24,7 +25,9 @@ export function auditComments(files, root = process.cwd()) {
           allowHashBang: true,
           onComment: (_block, value, start) => inspect(file, value, source.slice(0, start).split("\n").length),
         });
-        while (stream.getToken().type.label !== "eof") {}
+        while (stream.getToken().type.label !== "eof") {
+          /* Consume tokens so the parser visits every comment. */
+        }
       } else if ([".css", ".html", ".svg"].includes(extension)) {
         const pattern = extension === ".css" ? /\/\*([\s\S]*?)\*\//g : /<!--([\s\S]*?)-->/g;
         for (const match of source.matchAll(pattern))
@@ -40,14 +43,24 @@ export function auditComments(files, root = process.cwd()) {
   return { files: files.length, comments, findings, errors };
 }
 if (import.meta.main) {
-  const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
-    encoding: "utf8",
-  })
-    .split("\0")
+  const manifestFiles =
+    !existsSync(".git") && existsSync("SNAPSHOT.json")
+      ? JSON.parse(readFileSync("SNAPSHOT.json", "utf8")).files.map((entry) => entry.path)
+      : null;
+  const files = (
+    manifestFiles ||
+    (!existsSync(".git")
+      ? verificationFiles()
+      : execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
+          encoding: "utf8",
+        }).split("\0"))
+  )
+    .filter((path) => existsSync(path))
     .filter(
       (file) =>
-        /^(src|public|scripts|deploy|tests|panda-docs)\//.test(file) &&
-        /\.(?:js|ts|mjs|cjs|css|html|svg|py|sh|yaml|yml)$/.test(file),
+        (/^(src|public|scripts|deploy|tests|panda-docs|release\/community)\//.test(file) ||
+          ["Dockerfile", "eslint.config.mjs", "prettier.config.mjs"].includes(file)) &&
+        (/\.(?:js|ts|mjs|cjs|css|html|svg|py|sh|yaml|yml)$/.test(file) || file.endsWith("Dockerfile")),
     );
   const result = auditComments([...new Set(files)]);
   console.log(JSON.stringify(result, null, 2));

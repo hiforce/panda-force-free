@@ -1,3 +1,7 @@
+import { isMessageId } from "../shared/i18n/message-id.js";
+import { errorMessage } from "./../shared/errors.js";
+import { closestElement, findElement, findElements, requireElement } from "./dom.js";
+import { request as fetch } from "./http-client.js";
 import {
   getBrowserI18n,
   localizeAttribute,
@@ -23,21 +27,21 @@ function formatBytes(size) {
 
 export function createFilesPanel({
   t = getBrowserI18n().t,
-  onOpenFile = () => {},
+  onOpenFile = (_file) => {},
   onChooseProject = () => {},
   shortPath = (value) => value,
 } = {}) {
-  const panel = document.querySelector("#filesPanel");
-  const title = document.querySelector("#filesPanelTitle");
-  const pathLabel = document.querySelector("#filesPanelPath");
-  const searchInput = document.querySelector("#filesSearch");
-  const searchClear = document.querySelector("#filesSearchClear");
-  const refresh = document.querySelector("#filesPanelRefresh");
-  const status = document.querySelector("#filesPanelStatus");
-  const tree = document.querySelector("#filesTree");
-  const viewButtons = [...document.querySelectorAll("[data-files-view]")];
-  const gitViewButton = document.querySelector('[data-files-view="git"]');
-  const gitCount = document.querySelector("#filesGitCount");
+  const panel = requireElement("#filesPanel");
+  const title = requireElement("#filesPanelTitle");
+  const pathLabel = requireElement("#filesPanelPath");
+  const searchInput = requireElement("#filesSearch");
+  const searchClear = requireElement("#filesSearchClear");
+  const refresh = requireElement("#filesPanelRefresh");
+  const status = requireElement("#filesPanelStatus");
+  const tree = requireElement("#filesTree");
+  const viewButtons = [...findElements("[data-files-view]")];
+  const gitViewButton = findElement('[data-files-view="git"]');
+  const gitCount = requireElement("#filesGitCount");
   if (!panel || !title || !pathLabel || !searchInput || !searchClear || !refresh || !status || !tree) return null;
 
   const state = {
@@ -48,20 +52,21 @@ export function createFilesPanel({
     gitExpanded: new Set(["changes", "unversioned"]),
     loaded: new Map(),
     gitStatus: new Map(),
-    gitEntries: [],
+    gitEntries: /** @type {Array<{path: string; status: string; [field: string]: unknown}>} */ ([]),
     gitAvailable: false,
     requestId: 0,
     gitRequestId: 0,
     searchRequestId: 0,
-    searchTimer: null,
+    searchTimer: /** @type {ReturnType<typeof setTimeout> | null} */ (null),
     searching: false,
   };
 
   function setStatus(message = "") {
-    setOpaqueText(status, message ? t(message) : "");
+    setOpaqueText(status, message && isMessageId(message) ? t(message) : message);
     status.hidden = !message;
   }
 
+  /** @param {string} message @param {{label: string; onClick: () => void} | null} action */
   function emptyState(message, action = null) {
     tree.replaceChildren();
     const wrapper = document.createElement("div");
@@ -95,6 +100,7 @@ export function createFilesPanel({
     return String(entry?.status || "") === "??" || (entry?.indexStatus === "?" && entry?.worktreeStatus === "?");
   }
 
+  /** @returns {"common.modified" | "common.added" | "common.deleted" | "common.renamed" | "common.conflict" | "common.unversioned" | "common.changed"} */
   function gitLabel(code) {
     return (
       {
@@ -121,7 +127,8 @@ export function createFilesPanel({
     state.view = "files";
     state.searchRequestId += 1;
     state.searching = false;
-    searchInput.closest(".files-search").hidden = false;
+    const search = closestElement(".files-search", searchInput);
+    if (search) search.hidden = false;
     viewButtons.forEach((button) => {
       const active = button.dataset.filesView === "files";
       button.classList.toggle("active", active);
@@ -406,7 +413,7 @@ export function createFilesPanel({
       return result;
     } catch (error) {
       if (requestId !== state.requestId) return null;
-      setStatus(error.message || "Could not load files");
+      setStatus(errorMessage(error) || "Could not load files");
       if (path === "" && state.view === "files") emptyState("errors.couldNotLoadFiles");
       return null;
     }
@@ -495,13 +502,13 @@ export function createFilesPanel({
         );
     } catch (error) {
       if (requestId !== state.searchRequestId) return;
-      setStatus(error.message || "File search unavailable");
+      setStatus(errorMessage(error) || "File search unavailable");
       tree.replaceChildren();
     }
   }
 
   searchInput.addEventListener("input", () => {
-    clearTimeout(state.searchTimer);
+    clearTimeout(state.searchTimer ?? undefined);
     state.searchTimer = setTimeout(() => runSearch(searchInput.value), 180);
   });
   searchClear.onclick = () => {
@@ -524,7 +531,8 @@ export function createFilesPanel({
       const gitView = view === "git";
       searchInput.value = "";
       searchClear.hidden = true;
-      searchInput.closest(".files-search").hidden = gitView;
+      const search = closestElement(".files-search", searchInput);
+      if (search) search.hidden = gitView;
       localizeText(title, gitView ? "common.gitChanges" : "common.files", undefined, t);
       if (gitView) renderGitTree();
       else renderTree(state.loaded.get("") || { entries: [] });
@@ -551,7 +559,8 @@ export function createFilesPanel({
     state.gitRequestId += 1;
     searchInput.value = "";
     searchClear.hidden = true;
-    searchInput.closest(".files-search").hidden = false;
+    const search = closestElement(".files-search", searchInput);
+    if (search) search.hidden = false;
     viewButtons.forEach((button, index) => {
       const active = index === 0;
       button.classList.toggle("active", active);
@@ -571,7 +580,7 @@ export function createFilesPanel({
   }
 
   function close() {
-    clearTimeout(state.searchTimer);
+    clearTimeout(state.searchTimer ?? undefined);
     state.requestId += 1;
     state.gitRequestId += 1;
     state.searchRequestId += 1;

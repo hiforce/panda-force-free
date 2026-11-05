@@ -1,4 +1,5 @@
 // Owns submission locks, pending message identity and optimistic reconciliation.
+/** @param {import("./ports.js").FeatureOptions<"selection" | "viewUpdates" | "state" | "$", never, "delivery">} options */
 export function assembleDelivery({ selection, viewUpdates, state, $ }) {
   const promptSubmissions = new Map();
   const pendingUserMessages = new Map();

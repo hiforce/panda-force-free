@@ -1,8 +1,8 @@
-import { errorPayload } from "../http/error-payload.js";
 import { Database } from "bun:sqlite";
 import { randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { errorPayload } from "../i18n/error-payload.js";
 
 export class ProjectError extends Error {
   constructor(status, messageId) {

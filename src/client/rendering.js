@@ -1,24 +1,12 @@
-import { marked } from "marked";
-import createDOMPurify from "dompurify";
 import katex from "katex";
+import { marked } from "marked";
 import { attachmentDisplayUrl, attachmentUrlName } from "../shared/attachment-urls.js";
-
-const escapeHtml = (value = "") =>
-  String(value).replace(
-    /[&<>"']/g,
-    (char) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      })[char],
-  );
+import { escapeHtml } from "../shared/html.js";
+import { sanitizeRichText } from "./html-safety.js";
 
 const stash = (store, html) => {
-  const token = `\u0000CODEX${store.length}\u0000`;
-  store.push(html);
+  const token = `${store.marker}${store.blocks.length}END`;
+  store.blocks.push(html);
   return token;
 };
 
@@ -217,7 +205,7 @@ export function renderItemImages(
   return `<div class="${escapeHtml(className)}">${images.map((image) => renderImagePreview(image.source, { cwd, title: image.title, thumbnail })).join("")}</div>`;
 }
 
-function renderMath(source, protectedBlocks = []) {
+function renderMath(source, protectedBlocks) {
   let text = source.replace(/```([\w+-]*)\n([\s\S]*?)```/g, (_, lang, code) =>
     stash(
       protectedBlocks,
@@ -244,36 +232,24 @@ function renderMath(source, protectedBlocks = []) {
   return { text, protectedBlocks };
 }
 
-let purifier;
-function sanitizeHtml(html) {
-  if (!purifier) purifier = createDOMPurify(globalThis.window);
-  if (!purifier.isSupported || typeof purifier.sanitize !== "function") {
-    throw new Error("Markdown rendering requires a supported DOMPurify environment");
-  }
-  return purifier.sanitize(html, {
-    ADD_ATTR: ["target", "rel"],
-    FORBID_TAGS: ["style", "script", "iframe", "object", "embed"],
-    FORBID_ATTR: [
-      "srcdoc",
-      "data-pf-message",
-      "data-pf-values",
-      "data-pf-title",
-      "data-pf-placeholder",
-      "data-pf-aria-label",
-      "data-pf-data-tooltip",
-    ],
-  });
-}
-
 export function renderAssistantMarkdown(source = "", { cwd = "" } = {}) {
-  const protectedBlocks = [];
+  const protectedBlocks = {
+    marker:
+      "PANDAPROTECTED" +
+      Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join(""),
+    blocks: [],
+  };
   const { text: protectedText } = renderMath(stripAgentInternalMarkup(source), protectedBlocks);
   const text = protectCodexFileCitations(protectedText, cwd, protectedBlocks);
   marked.setOptions({ gfm: true, breaks: true });
   let html = marked.parse(text, { async: false });
-  html = html.replace(/\u0000CODEX(\d+)\u0000/g, (_, index) => protectedBlocks[Number(index)] || "");
-  // Sanitize the final HTML, including generated blocks and transformed links/images.
-  return sanitizeHtml(renderLinks(renderImages(html, cwd), cwd));
+  // Remove untrusted CSS before restoring only locally generated code, citations and KaTeX.
+  html = renderLinks(renderImages(sanitizeRichText(html), cwd), cwd);
+  html = html.replace(
+    new RegExp(protectedBlocks.marker + "(\\d+)END", "g"),
+    (_, index) => protectedBlocks.blocks[Number(index)] || "",
+  );
+  return sanitizeRichText(html, { allowStyles: true, allowImageButtons: true });
 }
 
 export { escapeHtml };

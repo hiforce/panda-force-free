@@ -1,9 +1,11 @@
 import { localizeText } from "./i18n.js";
 
+/** @type {(() => void) | null} */
 let cancelActiveConfirmation = null;
 let confirmationSequence = 0;
 
 // Confirmation state belongs to this dialog, separate from application data.
+/** @param {{title: string; message: string; values?: Record<string, unknown>; confirmText?: string; cancelText?: string; returnFocus?: Element | (() => Element | null) | null}} options */
 export function confirmAction({
   title,
   message,
@@ -52,7 +54,7 @@ export function confirmAction({
       dialog.remove();
       // Background rendering may replace the original trigger before dismissal.
       const focusTarget = typeof returnFocus === "function" ? returnFocus() : returnFocus;
-      if (focusTarget?.isConnected) focusTarget.focus({ preventScroll: true });
+      if (focusTarget instanceof HTMLElement && focusTarget.isConnected) focusTarget.focus({ preventScroll: true });
       resolve(accepted);
     }
     const dismiss = () => finish(false);

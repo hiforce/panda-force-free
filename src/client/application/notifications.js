@@ -1,8 +1,10 @@
 import { setMessageHtml, setOpaqueText } from "../i18n.js";
+import { findElement, requireElement } from "./../dom.js";
 
 import { renderAssistantMarkdown } from "../rendering.js";
 
 // Interprets native lifecycle events and routes them to their owning features.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "sessions" | "state" | "$", "messages" | "models" | "status" | "notices" | "queue" | "timing" | "goals" | "approvals" | "synchronization" | "usage" | "account" | "composer" | "identity" | "viewport" | "review", "notifications">} options */
 export function assembleNotifications({
   viewUpdates,
   mutations,
@@ -55,7 +57,7 @@ export function assembleNotifications({
     );
   }
   function belongsToActiveThread(p) {
-    return Boolean(state.active) && (!p.threadId || p.threadId === state.active.id);
+    return Boolean(state.active) && (!p.threadId || p.threadId === state.active?.id);
   }
   function onNotification(method, p) {
     if (method === "thread/queue/changed") {
@@ -190,7 +192,7 @@ export function assembleNotifications({
         );
         el = state.items.get(p.itemId);
       }
-      const body = el.querySelector(".message-text");
+      const body = requireElement(".message-text", el);
       body.dataset.raw = (body.dataset.raw || "") + p.delta;
       setMessageHtml(
         body,
@@ -204,11 +206,16 @@ export function assembleNotifications({
     else if (method === "item/reasoning/textDelta") upsertReasoningDelta(p, "content");
     else if (method === "item/commandExecution/outputDelta") {
       const turn = state.turns.get(p.turnId),
-        row = turn?.querySelector(`[data-item-id="${CSS.escape(p.itemId)}"]`),
+        row = findElement(`[data-item-id="${CSS.escape(p.itemId)}"]`, turn),
         item = state.activityItems.get(p.turnId)?.get(String(p.itemId));
-      if (item) item.aggregatedOutput = (item.aggregatedOutput || "") + (p.delta || "");
-      if (row) {
-        const target = row.nextElementSibling.querySelector(".command-shell-output pre") || row.nextElementSibling;
+      if (item)
+        messagesPort.upsertItem(
+          { ...item, aggregatedOutput: (item.aggregatedOutput || "") + (p.delta || "") },
+          p.turnId,
+        );
+      else if (row) {
+        const target = findElement(".command-shell-output pre", row.nextElementSibling) || row.nextElementSibling;
+        if (!target) return;
         setOpaqueText(target, (target.classList.contains("empty") ? "" : target.textContent || "") + (p.delta || ""));
         target.classList.remove("empty");
       }

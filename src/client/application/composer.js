@@ -1,11 +1,12 @@
 import { localizeAttribute, setMessageHtml } from "../i18n.js";
 
-import { createComposerDrafts } from "../composer-drafts.js";
 import { codexIcon } from "../codex-icons.js";
 import { attachmentsFromInput, composerTextFromInput } from "../composer-attachments.js";
 
 // Owns drafts, IME input and submit-control projections; native delivery is delegated.
+/** @param {import("./ports.js").FeatureOptions<"drafts" | "mutations" | "state" | "$" | "t" | "viewUpdates", "uploads" | "status" | "delivery" | "models", "composer">} options */
 export function assembleComposer({
+  drafts,
   mutations,
   state,
   $,
@@ -23,25 +24,7 @@ export function assembleComposer({
     clearComposerDraft,
     getComposerDraft,
     setComposerDraft,
-  } = createComposerDrafts({
-    getActiveThreadId: () => state.active?.id,
-    getNewDraftKey: () =>
-      "__new__:project:" +
-      (state.newSessionProjectId || "unassigned") +
-      ":" +
-      (state.projectless ? "projectless" : state.workspaceContext?.cwd || state.config.defaultCwd || "default"),
-    getLegacyNewDraftKey: () =>
-      state.newSessionProjectId
-        ? null
-        : "__new__:" +
-          (state.projectless ? "projectless" : state.workspaceContext?.cwd || state.config.defaultCwd || "default"),
-    migrateLegacyGlobalDraft: () => !state.newSessionProjectId,
-    getDraftSnapshot: () => ({
-      text: $("#prompt").value,
-      mentions: [...state.composerMentions],
-      attachments: [...state.composerAttachments],
-    }),
-  });
+  } = drafts;
   function saveComposerDraft() {
     persistComposerDraft();
   }
@@ -101,6 +84,7 @@ export function assembleComposer({
   function setActiveTurnId(turnId = "") {
     const threadId = state.active?.id,
       previous = statusPort.sessionRuntime.get(threadId)?.turn;
+    if (!threadId) return;
     if (turnId)
       statusPort.updateThreadListActivity(threadId, { status: { type: "active" }, turnId, turnStatus: "inProgress" });
     else if (previous?.status === "inProgress")
@@ -113,7 +97,7 @@ export function assembleComposer({
     syncComposerSubmitState();
   }
   function syncTurnRuntime(turn) {
-    statusPort.sessionRuntime.observeTurn(state.active?.id, turn, state.active?.turns?.at(-1)?.id);
+    if (state.active) statusPort.sessionRuntime.observeTurn(state.active.id, turn, state.active.turns.at(-1)?.id);
     syncComposerSubmitState();
   }
   function resizePrompt() {

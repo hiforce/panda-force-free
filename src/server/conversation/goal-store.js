@@ -1,6 +1,6 @@
+import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { Database } from "bun:sqlite";
 
 function normalizeRow(row) {
   if (!row) return null;
@@ -34,11 +34,18 @@ export class GoalStore {
   #path;
   #onChange;
   #intervalMs;
+  /** @type {Database | null} */
   #db = null;
+  /** @type {ReturnType<typeof setInterval> | null} */
   #timer = null;
   #goals = new Map();
 
-  constructor({ path, home = process.env.HOME || process.cwd(), onChange = () => {}, intervalMs = 1000 } = {}) {
+  constructor({
+    path = undefined,
+    home = process.env.HOME || process.cwd(),
+    onChange = (_current, _previous) => {},
+    intervalMs = 1000,
+  } = {}) {
     this.#path = resolve(path || join(process.env.CODEX_HOME || join(home, ".codex"), "goals_1.sqlite"));
     this.#onChange = onChange;
     this.#intervalMs = intervalMs;
@@ -71,6 +78,7 @@ export class GoalStore {
     const next = new Map(
       rows.map((row) => {
         const goal = normalizeRow(row);
+        if (!goal) throw new Error("Invalid goal row");
         return [goal.threadId, goal];
       }),
     );

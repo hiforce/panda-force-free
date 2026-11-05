@@ -1,11 +1,14 @@
-import { createI18nRuntime } from "../../shared/i18n/runtime.js";
+import { escapeHtml as escapeMessage } from "../../shared/html.js";
 import {
   LOCALE_PREFERENCE_KEY,
+  readLocaleCookie,
   SUPPORTED_LOCALES,
   validPreference,
-  readLocaleCookie,
 } from "../../shared/i18n/locale-policy.js";
-import { createMessageBindings, clearMessageBinding } from "./bindings.js";
+import { createI18nRuntime } from "../../shared/i18n/runtime.js";
+import { sanitizeInterfaceHtml } from "../html-safety.js";
+import { request as fetch } from "./../http-client.js";
+import { clearMessageBinding, createMessageBindings } from "./bindings.js";
 
 function defaultStorage() {
   try {
@@ -23,6 +26,8 @@ function cookieOf(doc) {
 }
 
 const SLOT = Symbol.for("PandaForce.browserI18n");
+const messageOwners = new WeakMap();
+/** @param {import("../../shared/i18n/contracts.js").BrowserI18nOptions} options */
 export function createI18n({
   storage = defaultStorage(),
   languages = globalThis.navigator?.languages || [],
@@ -35,7 +40,8 @@ export function createI18n({
     stored = storage?.getItem?.(LOCALE_PREFERENCE_KEY);
   } catch {}
   const preference =
-    readLocaleCookie(cookieOf(doc), registry) || (validPreference(stored, registry) ? stored : "system");
+    readLocaleCookie(cookieOf(doc), registry) ||
+    (typeof stored === "string" && validPreference(stored, registry) ? stored : "system");
   const persist = (value) => {
     try {
       storage?.setItem?.(LOCALE_PREFERENCE_KEY, value);
@@ -63,11 +69,7 @@ export function createI18n({
   );
   const runtime = createI18nRuntime({ preference, languages, persist, loaders, ...options });
   runtime.bindings = createMessageBindings(runtime);
-  Object.assign(runtime.t, {
-    text: runtime.bindings.text,
-    attribute: runtime.bindings.attribute,
-    bind: runtime.bindings.bind,
-  });
+  messageOwners.set(runtime.t, runtime.bindings);
   runtime.subscribe(() => {
     if (doc?.documentElement) {
       doc.documentElement.lang = runtime.locale;
@@ -98,6 +100,7 @@ export function createI18n({
   });
   return runtime;
 }
+/** @returns {ReturnType<typeof createI18n>} */
 export function getBrowserI18n() {
   const runtime = (globalThis[SLOT] ||= createI18n());
   // One owner shared by separately loaded entry bundles and the regression API.
@@ -105,11 +108,13 @@ export function getBrowserI18n() {
   return runtime;
 }
 export function localizeText(element, id, values, t = getBrowserI18n().t) {
-  if (t.text) t.text(element, id, values);
+  const bindings = messageOwners.get(t);
+  if (bindings) bindings.text(element, id, values);
   else if (element) element.textContent = t(id, values);
 }
 export function localizeAttribute(element, name, id, values, t = getBrowserI18n().t) {
-  if (t.attribute) t.attribute(element, name, id, values);
+  const bindings = messageOwners.get(t);
+  if (bindings) bindings.attribute(element, name, id, values);
   else element?.setAttribute(name, t(id, values));
 }
 export function bindMessages(root) {
@@ -119,18 +124,14 @@ export { LOCALE_PREFERENCE_KEY as LOCALE_STORAGE_KEY, SUPPORTED_LOCALES };
 
 export function setMessageHtml(element, html) {
   clearMessageBinding(element, "text");
-  element.innerHTML = html;
-  if (String(html).includes("data-pf-")) bindMessages(element);
-  return html;
+  const clean = sanitizeInterfaceHtml(html, element.ownerDocument?.defaultView);
+  element.innerHTML = clean;
+  if (clean.includes("data-pf-")) bindMessages(element);
+  return clean;
 }
 
-export { setOpaqueText, setOpaqueAttribute } from "./bindings.js";
+export { setOpaqueAttribute, setOpaqueText } from "./bindings.js";
 
-const escapeMessage = (value) =>
-  String(value ?? "").replace(
-    /[&<>"']/g,
-    (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character],
-  );
 // Only application-owned IDs become bindings. Provider text stays opaque.
 export function messageHtml(id, values = {}, t = getBrowserI18n().t) {
   return `<span data-pf-message="${escapeMessage(id)}" data-pf-values="${escapeMessage(JSON.stringify(values))}">${escapeMessage(t(id, values))}</span>`;

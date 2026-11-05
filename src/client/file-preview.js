@@ -1,3 +1,6 @@
+import { errorMessage } from "./../shared/errors.js";
+import { findElement, findElements, requireElement } from "./dom.js";
+import { request as fetch } from "./http-client.js";
 import {
   getBrowserI18n,
   localizeAttribute,
@@ -7,9 +10,9 @@ import {
   setOpaqueText,
 } from "./i18n.js";
 
-import { localDownloadUrl, renderAssistantMarkdown } from "./rendering.js";
-import { createCodeViewer, languageName } from "./code-viewer.js";
 import { configureAttachmentUrls } from "../shared/attachment-urls.js";
+import { createCodeViewer, languageName } from "./code-viewer.js";
+import { localDownloadUrl, renderAssistantMarkdown } from "./rendering.js";
 
 // Keep source previews bounded before syntax parsing and layout work begin.
 const TEXT_MAX_BYTES = 512 * 1024;
@@ -49,7 +52,7 @@ export function createFilePreview({
   getAttachmentUrlPrefix = () => "",
 } = {}) {
   configureAttachmentUrls(getAttachmentUrlPrefix());
-  if (!document.querySelector("#filePreviewStyles")) {
+  if (!findElement("#filePreviewStyles")) {
     const stylesheet = document.createElement("link");
     stylesheet.id = "filePreviewStyles";
     stylesheet.rel = "stylesheet";
@@ -78,21 +81,21 @@ export function createFilePreview({
   </div>`,
   );
   document.body.append(dialog);
-  const title = dialog.querySelector("#filePreviewTitle");
-  const pathLabel = dialog.querySelector("#filePreviewPath");
-  const download = dialog.querySelector("#filePreviewDownload");
-  const closeButton = dialog.querySelector("#closeFilePreview");
-  const backButton = dialog.querySelector("#backToFiles");
-  const tabsHost = dialog.querySelector(".file-preview-tabs");
-  const closeAllButton = dialog.querySelector("#closeAllFileTabs");
-  const toolbar = dialog.querySelector(".file-preview-toolbar");
-  const content = dialog.querySelector("#filePreviewContent");
-  const viewButtons = [...toolbar.querySelectorAll("[data-file-view]")];
-  const findButton = toolbar.querySelector('[data-file-action="find"]');
-  const wrapButton = toolbar.querySelector('[data-file-action="wrap"]');
-  const copyButton = toolbar.querySelector('[data-file-action="copy"]');
-  const languageLabel = toolbar.querySelector(".file-preview-language");
-  const readonlyLabel = toolbar.querySelector(".file-preview-readonly");
+  const title = findElement("#filePreviewTitle", dialog);
+  const pathLabel = findElement("#filePreviewPath", dialog);
+  const download = requireElement("#filePreviewDownload", dialog);
+  const closeButton = requireElement("#closeFilePreview", dialog);
+  const backButton = requireElement("#backToFiles", dialog);
+  const tabsHost = requireElement(".file-preview-tabs", dialog);
+  const closeAllButton = requireElement("#closeAllFileTabs", dialog);
+  const toolbar = requireElement(".file-preview-toolbar", dialog);
+  const content = requireElement("#filePreviewContent", dialog);
+  const viewButtons = [...findElements("[data-file-view]", toolbar)];
+  const findButton = requireElement('[data-file-action="find"]', toolbar);
+  const wrapButton = requireElement('[data-file-action="wrap"]', toolbar);
+  const copyButton = requireElement('[data-file-action="copy"]', toolbar);
+  const languageLabel = findElement(".file-preview-language", toolbar);
+  const readonlyLabel = findElement(".file-preview-readonly", toolbar);
   let request = null,
     gitRequest = null,
     objectUrl = "",
@@ -239,10 +242,10 @@ export function createFilePreview({
         button.className = "file-history-item";
         const date = new Date(item.date);
         setMessageHtml(button, `<strong></strong><small></small><time></time>`);
-        setOpaqueText(button.querySelector("strong"), `${item.shortHash} ${item.subject}`);
-        setOpaqueText(button.querySelector("small"), item.author);
+        setOpaqueText(findElement("strong", button), `${item.shortHash} ${item.subject}`);
+        setOpaqueText(findElement("small", button), item.author);
         setOpaqueText(
-          button.querySelector("time"),
+          findElement("time", button),
           Number.isNaN(date.valueOf()) ? item.date : getBrowserI18n().format.dateTime(date),
         );
         button.onclick = () =>
@@ -251,7 +254,7 @@ export function createFilePreview({
       }
       content.replaceChildren(list);
     } catch (error) {
-      if (!controller.signal.aborted) status(error.message || "Git data unavailable");
+      if (!controller.signal.aborted) status(errorMessage(error) || "Git data unavailable");
     }
   }
 
@@ -385,7 +388,6 @@ export function createFilePreview({
   async function open({ path, cwd = "", lineStart = null, lineEnd = null, gitStatus = null }) {
     if (!path) return;
     if (!dialog.open) returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const tab = arguments[0];
     let existing = tabs.find((item) => item.path === path && item.cwd === cwd);
     if (!existing && tabs.length >= MAX_OPEN_TABS) {
       status("common.youCanOpenUpTo9FilesAtOnceClose");
@@ -446,11 +448,12 @@ export function createFilePreview({
         } catch {
           throw new Error("Preview is not available for this file type.");
         }
+        // eslint-disable-next-line no-control-regex -- Reject control bytes at this security boundary.
         if (/[\u0000-\u0008\u000e-\u001f]/.test(text)) throw new Error("Preview is not available for this file type.");
         showText(text, { path, cwd, lineStart, lineEnd, gitStatus }, controller);
       }
     } catch (error) {
-      if (request === controller && !controller.signal.aborted) status(error.message || "File unavailable");
+      if (request === controller && !controller.signal.aborted) status(errorMessage(error) || "File unavailable");
     } finally {
       if (request === controller) content.setAttribute("aria-busy", "false");
     }

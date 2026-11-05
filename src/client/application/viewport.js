@@ -1,4 +1,5 @@
 // Owns scroll-follow intent and scroll controls independently of history loading.
+/** @param {import("./ports.js").FeatureOptions<"$", never, "viewport">} options */
 export function assembleViewport({ $ }) {
   let conversationAutoScroll = true;
   function conversationNearBottom(root = $("#conversation")) {
@@ -35,9 +36,13 @@ export function assembleViewport({ $ }) {
     conversationAutoScroll = true;
   }
   function bind() {
-    $("#conversation").addEventListener("scroll", (...args) => handleConversationScroll(...args), {
-      passive: true,
-    });
+    $("#conversation").addEventListener(
+      "scroll",
+      /** @param {Parameters<typeof handleConversationScroll>} args */ (...args) => handleConversationScroll(...args),
+      {
+        passive: true,
+      },
+    );
     $("#conversationScrollBottom").onclick = () => {
       resetAutoScroll();
       scrollBottom({ force: true });

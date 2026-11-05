@@ -14,6 +14,19 @@ export async function prepareSharedInput({ request, getThreadMetadata }, params)
   return request("thread/resume", { ...params, excludeTurns: true });
 }
 
+// Keep preparation and input on the same engine connection and browser request.
+export async function submitPreparedInput(
+  { request, getThreadMetadata, recordPrepared, markSubscribed },
+  method,
+  params,
+) {
+  if (!["turn/start", "turn/steer"].includes(method)) throw new Error("Unsupported prepared input operation");
+  const prepared = await prepareSharedInput({ request, getThreadMetadata }, { threadId: params.threadId });
+  recordPrepared(prepared);
+  if (!prepared.pandaAlreadyLoaded) markSubscribed(params.threadId);
+  return request(method, params);
+}
+
 // Queue/automatic recovery needs only the latest turn's status and error. A
 // thread/read here would reintroduce a full journal scan after every queue poll.
 export async function readSharedRecoveryState(request, threadId) {

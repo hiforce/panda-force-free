@@ -1,5 +1,6 @@
-import { createComposerHistory } from "./ui-core.js";
+import { request as fetch } from "./http-client.js";
 import { storage, STORAGE_KEYS } from "./storage.js";
+import { createComposerHistory } from "./ui-core.js";
 
 /**
  * Composer persistence: per-thread drafts (text/mentions/attachments) in
@@ -10,7 +11,7 @@ export function createComposerDrafts({
   getActiveThreadId,
   getDraftSnapshot,
   getNewDraftKey = () => "__new__",
-  getLegacyNewDraftKey = () => null,
+  getLegacyNewDraftKey = /** @type {() => string | null} */ (() => null),
   migrateLegacyGlobalDraft = () => true,
 }) {
   const composerDrafts = (() => {
@@ -80,6 +81,19 @@ export function createComposerDrafts({
     persistComposerDrafts();
   }
 
+  function updateAttachment(id, patch) {
+    for (const [key, draft] of composerDrafts) {
+      if (!draft.attachments?.some((attachment) => attachment.id === id)) continue;
+      composerDrafts.set(key, {
+        ...draft,
+        attachments: draft.attachments.map((attachment) =>
+          attachment.id === id ? { ...attachment, ...patch, id } : attachment,
+        ),
+      });
+    }
+    persistComposerDrafts();
+  }
+
   const composerHistory = createComposerHistory();
   let composerHistoryLoaded = false;
   async function loadComposerHistory() {
@@ -102,5 +116,6 @@ export function createComposerDrafts({
     clearComposerDraft,
     getComposerDraft,
     setComposerDraft,
+    updateAttachment,
   };
 }

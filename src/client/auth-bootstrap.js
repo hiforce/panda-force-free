@@ -1,3 +1,6 @@
+import { errorMessage } from "./../shared/errors.js";
+import { findElement, requireElement } from "./dom.js";
+import { request as fetch } from "./http-client.js";
 import {
   bindMessages,
   errorText,
@@ -8,19 +11,19 @@ import {
   setOpaqueText,
 } from "./i18n.js";
 
-import { applyThemePreference } from "./theme.js";
-import { installPandaForceSession } from "./auth-session.js";
 import { sessionLoginUrl } from "../shared/auth-return-path.js";
+import { installPandaForceSession } from "./auth-session.js";
 import { pandaInterfaceMark } from "./panda-brand.js";
+import { applyThemePreference } from "./theme.js";
 
+import { MIN_ADMINISTRATOR_PASSWORD_LENGTH, validAdministratorPassword } from "../shared/password-policy.js";
 import { startStartupReads } from "./startup-reads.js";
 import { getWorkspacePreparation } from "./workspace-preparation.js";
-import { MIN_ADMINISTRATOR_PASSWORD_LENGTH, validAdministratorPassword } from "../shared/password-policy.js";
 
 applyThemePreference();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applyThemePreference());
 
-const $ = (selector) => document.querySelector(selector);
+const $ = requireElement;
 const i18n = getBrowserI18n();
 
 const t = i18n.t;
@@ -42,7 +45,7 @@ async function loadApp() {
   preparation.begin();
   startStartupReads();
   for (const href of ["/vendor/katex/katex.min.css", "/vendor/xterm/xterm.css"]) {
-    if (document.querySelector(`link[href="${href}"]`)) continue;
+    if (findElement(`link[href="${href}"]`)) continue;
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = href;
@@ -73,7 +76,7 @@ async function start() {
   try {
     status = await readStatus();
   } catch (error) {
-    showAuthFailure(error.message);
+    showAuthFailure(errorMessage(error));
     return;
   }
   const finish = async () => {
@@ -93,9 +96,9 @@ async function start() {
     } catch {}
 
     $("#passwordGate").hidden = true;
-    if (!(await loadApp())) return;
     if (status.authMode === "idaas" || status.passwordRequired)
       installPandaForceSession(status, { translate: t, i18n });
+    if (!(await loadApp())) return;
   };
   if (status.authMode === "idaas") {
     if (!status.authenticated) {
@@ -121,7 +124,7 @@ async function start() {
   let mode;
   setMessageHtml($("#passwordCodexMark"), pandaInterfaceMark("password-panda-mark"));
   const action = () =>
-    mode === "setup" ? "Create administrator" : mode === "migrate" ? "Save and continue" : "Log in";
+    mode === "setup" ? "common.createAdministrator" : mode === "migrate" ? "common.saveAndContinue" : "common.logIn";
   const field = (id, element, visible) => {
     $(id).hidden = !visible;
     element.disabled = !visible;
@@ -247,7 +250,7 @@ async function start() {
     } catch (reason) {
       gate.hidden = false;
       $("#app").hidden = true;
-      setOpaqueText(error, reason instanceof Error ? reason.message : String(reason));
+      setOpaqueText(error, reason instanceof Error ? errorMessage(reason) : String(reason));
       error.hidden = false;
       if (submittingMode === "login" && !input.disabled) input.select();
     } finally {

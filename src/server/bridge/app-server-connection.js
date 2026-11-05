@@ -1,6 +1,7 @@
-import { pandaEnvironment } from "../environment.js";
 import { statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pandaEnvironment } from "../environment.js";
+import { errorCode } from "./../../shared/errors.js";
 
 export function resolveAppServerConnection(env, home) {
   env = pandaEnvironment(env);
@@ -17,7 +18,7 @@ export function resolveAppServerConnection(env, home) {
   try {
     available = statSync(socketPath).isSocket();
   } catch (error) {
-    if (!["ENOENT", "ENOTDIR"].includes(error.code)) throw error;
+    if (!["ENOENT", "ENOTDIR"].includes(errorCode(error))) throw error;
   }
   if (available) return { mode: "shared", socketPath };
   if (mode === "shared" || env.PANDA_FORCE_APP_SERVER_SOCKET) {

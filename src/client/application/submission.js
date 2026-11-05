@@ -1,9 +1,12 @@
-import { steerOrStart } from "./turn-input.js";
-import { deliveryIsUncertain } from "./input-errors.js";
 import { threadInputErrorMessage } from "../../shared/bridge-errors.js";
+import { isTransportSwitch } from "../../shared/errors.js";
 import { buildComposerInput } from "../composer-attachments.js";
+import { errorCode, errorMessage } from "./../../shared/errors.js";
+import { deliveryIsUncertain } from "./input-errors.js";
+import { steerOrStart } from "./turn-input.js";
 
 // Coordinates a single explicit input transaction while preserving draft and acknowledgement semantics.
+/** @param {import("./ports.js").FeatureOptions<"selection" | "viewUpdates" | "mutations" | "state" | "t" | "$", "transport" | "delivery" | "suggestions" | "models" | "composer" | "commands" | "uploads" | "notices" | "synchronization" | "inputSessions", "submission">} options */
 export function assembleSubmission({
   transportPort,
   selection,
@@ -22,6 +25,7 @@ export function assembleSubmission({
   synchronizationPort,
   inputSessionsPort,
 }) {
+  /** @param {{preventDefault(): void}} event @param {{text: string; threadId: string} | null} questionAnswer */
   async function submitPrompt(event, questionAnswer = null) {
     event.preventDefault();
     const submissionKey = deliveryPort.pendingMessageOwner();
@@ -47,7 +51,7 @@ export function assembleSubmission({
         if (thread?.id)
           composerPort.composerHistory.record({ text, mentions: state.composerMentions, attachments: [] });
       } catch (error) {
-        noticesPort.addPersistentError(error.message);
+        noticesPort.addPersistentError(errorMessage(error));
       }
       return;
     }
@@ -59,7 +63,7 @@ export function assembleSubmission({
         input.value = "";
         viewUpdates.request("composerLayout");
       } catch (error) {
-        noticesPort.addPersistentError(error.message);
+        noticesPort.addPersistentError(errorMessage(error));
       }
       return;
     }
@@ -117,10 +121,12 @@ export function assembleSubmission({
         suggestionsPort.renderContextTray();
         viewUpdates.request("composerLayout");
       }
-      if (turnId) {
+      if (turnId && thread) {
+        const currentThread = thread;
         const result = await steerOrStart({
-          rpc: (...args) => transportPort.rpc(...args),
-          resume: (...args) => inputSessionsPort.resumeActiveThread(...args),
+          rpc: /** @param {Parameters<typeof transportPort.rpc>} args */ (...args) => transportPort.rpc(...args),
+          resume: /** @param {Parameters<typeof inputSessionsPort.resumeActiveThread>} args */ (...args) =>
+            inputSessionsPort.resumeActiveThread(...args),
           thread,
           turnId,
           input: content,
@@ -130,12 +136,12 @@ export function assembleSubmission({
             dispatchStarted = value;
           },
           onNoActiveTurn: () => {
-            if (state.active?.id === thread.id && composerPort.activeTurnId() === turnId)
+            if (state.active?.id === currentThread.id && composerPort.activeTurnId() === turnId)
               composerPort.setActiveTurnId("");
             optimistic.turnId = "optimistic";
             optimistic.steer = false;
             optimistic.excludedTurns.push(turnId);
-            const node = state.active?.id === thread.id ? state.items.get(optimisticId) : null;
+            const node = state.active?.id === currentThread.id ? state.items.get(optimisticId) : null;
             if (node) {
               delete node.dataset.steer;
               node.dataset.userTurnId = "optimistic";
@@ -160,6 +166,7 @@ export function assembleSubmission({
         generation,
         pending: optimistic,
         token: submissionToken,
+        resumeExisting: false,
         onCreated: (created) => {
           thread = created;
         },
@@ -167,6 +174,7 @@ export function assembleSubmission({
       dispatchStarted = true;
       const result = await transportPort.rpc("turn/start", {
         threadId: thread.id,
+        ...(thread.canAcceptDirectInput !== true ? { pandaPrepareInput: true } : {}),
         input: content,
         ...(attachments.length ? { clientUserMessageId: optimisticId } : {}),
         model,
@@ -188,7 +196,7 @@ export function assembleSubmission({
       }
       const uncertain = deliveryIsUncertain(error, dispatchStarted);
       deliveryUncertain = uncertain;
-      deliveryPort.setPendingMessageDelivery(optimisticId, uncertain ? "unconfirmed" : "failed");
+      deliveryPort.setPendingMessageDelivery(optimisticId || "", uncertain ? "unconfirmed" : "failed");
       if (isCurrent()) {
         if (!questionAnswer && !uncertain && !input.value && !state.composerAttachments.length) {
           input.value = text;
@@ -198,9 +206,13 @@ export function assembleSubmission({
           suggestionsPort.renderContextTray();
           viewUpdates.request("composerLayout");
         }
-        if (!error?.silentTransportSwitch)
+        if (!isTransportSwitch(error))
           noticesPort.addPersistentError(
-            uncertain ? t("workbench.deliveryUnconfirmed") : threadInputErrorMessage(error),
+            uncertain
+              ? t("workbench.deliveryUnconfirmed")
+              : errorCode(error) === "bridge_network_error"
+                ? t("errors.messageNotSentConnectionInterrupted")
+                : threadInputErrorMessage(error),
           );
       }
       if (questionAnswer) {

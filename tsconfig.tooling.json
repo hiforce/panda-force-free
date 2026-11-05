@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.strict.json",
+  "include": [
+    "src/**/*",
+    "scripts/**/*.ts",
+    "tests/types/**/*.types.ts",
+    "tests/unit/state-mutations.test.ts",
+    "tests/unit/session-discovery.test.ts",
+    "tests/unit/engine-registry.test.ts",
+    "tests/unit/cluster-signing.test.ts",
+    "tests/unit/session-revocations.test.ts",
+    "tests/unit/command-tool.test.ts",
+    "tests/unit/build-proof.test.ts",
+    "tests/unit/browser-wire.test.ts",
+    "tests/unit/cluster-owner.test.ts",
+    "tests/support/postgres-fixture.ts",
+    "tests/integration/cluster-*.integration.test.ts"
+  ]
+}

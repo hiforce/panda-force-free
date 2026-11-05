@@ -1,5 +1,8 @@
+import { closestElement, findElements } from "./dom.js";
+import { createLifecycle } from "./lifecycle.js";
 // Put menus outside scrolling/clipped cards while retaining their original event handlers.
-export function createAnchoredMenu() {
+export function createAnchoredMenu({ onClose = () => {} } = {}) {
+  const lifecycle = createLifecycle();
   let active = null;
   const close = (restoreFocus = false) => {
     if (!active) return;
@@ -15,6 +18,7 @@ export function createAnchoredMenu() {
     else menu.remove();
     trigger.setAttribute("aria-expanded", "false");
     if (restoreFocus && trigger.isConnected) trigger.focus();
+    onClose();
   };
   const position = () => {
     if (!active) return;
@@ -48,11 +52,11 @@ export function createAnchoredMenu() {
     menu.before(placeholder);
     // A modal makes the rest of the document inert. Keep its menu in the
     // same top layer so its choices remain visible and clickable.
-    (trigger.closest("dialog[open]") || document.body).append(menu);
+    (closestElement("dialog[open]", trigger) || document.body).append(menu);
     menu.hidden = false;
     menu.classList.add("floating-menu");
     menu.setAttribute("role", "menu");
-    const items = [...menu.querySelectorAll("button")];
+    const items = [...findElements("button", menu)];
     for (const item of items) item.setAttribute("role", "menuitem");
     trigger.setAttribute("aria-haspopup", "menu");
     trigger.setAttribute("aria-expanded", "true");
@@ -60,11 +64,11 @@ export function createAnchoredMenu() {
     position();
     items[0]?.focus({ preventScroll: true });
   };
-  document.addEventListener("click", (event) => {
+  lifecycle.on(document, "click", (event) => {
     if (active && !event.composedPath().includes(active.menu) && !event.composedPath().includes(active.trigger))
       close();
   });
-  document.addEventListener("keydown", (event) => {
+  lifecycle.on(document, "keydown", (event) => {
     if (!active) return;
     if (event.key === "Escape") {
       event.preventDefault();
@@ -72,8 +76,8 @@ export function createAnchoredMenu() {
     } else if (event.key === "Tab") close(true);
     else if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key) && active.menu.contains(event.target)) {
       event.preventDefault();
-      const items = [...active.menu.querySelectorAll("button:not(:disabled)")];
-      const index = items.indexOf(document.activeElement);
+      const items = [...findElements("button:not(:disabled)", active.menu)];
+      const index = items.findIndex((item) => item === document.activeElement);
       const next =
         event.key === "Home"
           ? 0
@@ -83,17 +87,22 @@ export function createAnchoredMenu() {
       items[next]?.focus();
     }
   });
-  document.addEventListener(
+  lifecycle.on(
+    document,
     "scroll",
     (event) => {
       if (active && !active.menu.contains(event.target)) close();
     },
     true,
   );
-  window.addEventListener("resize", position);
-  window.visualViewport?.addEventListener("resize", position);
-  window.visualViewport?.addEventListener("scroll", position);
+  lifecycle.on(window, "resize", position);
+  if (window.visualViewport) lifecycle.on(window.visualViewport, "resize", position);
+  if (window.visualViewport) lifecycle.on(window.visualViewport, "scroll", position);
   return {
+    dispose() {
+      close();
+      lifecycle.dispose();
+    },
     toggle,
     close,
     closeFor: (container) => {

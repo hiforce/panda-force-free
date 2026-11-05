@@ -1,3 +1,5 @@
+import { createSessionDirectoryIndex } from "./session-directory-index.js";
+import { request as fetch } from "./http-client.js";
 import { errorText, getBrowserI18n } from "./i18n.js";
 export function createProjectCatalog({ state, onChange = () => {} }) {
   let snapshot = { revision: -1, projects: [], assignments: [] },
@@ -13,6 +15,7 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
       !Array.isArray(value.assignments)
     )
       return;
+    if (value.revision !== snapshot.revision) directoryIndex.invalidate();
     snapshot = value;
     projects = new Map(value.projects.map((p) => [p.id, p]));
     assignments = new Map(value.assignments.map((s) => [s.id, s]));
@@ -31,6 +34,7 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
     }
     return data;
   }
+  /** @returns {Promise<void>} */
   function load() {
     return (loading ||= read("/api/projects")
       .then(apply)
@@ -58,7 +62,11 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
     apply(data);
     return data;
   }
+  const directoryIndex = createSessionDirectoryIndex({
+    directories: (cursor = "") => read("/api/projects/directories?" + new URLSearchParams({ cursor })),
+  });
   return {
+    directoryIndex,
     apply,
     load,
     sessions,
@@ -80,8 +88,12 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
     },
     assign: (projectId, sessionIds, revision) =>
       mutate("/api/projects/assign", { projectId, sessionIds, ...(revision !== undefined ? { revision } : {}) }),
-    history: ({ search = "", cursor = "" } = {}) =>
-      read("/api/projects/history?" + new URLSearchParams({ search, cursor })),
+    history: ({ search = "", cursor = "", directory = /** @type {string | undefined} */ (undefined) } = {}) =>
+      read(
+        "/api/projects/history?" +
+          new URLSearchParams({ search, cursor, ...(directory === undefined ? {} : { directory }) }),
+      ),
+    directories: (cursor = "") => read("/api/projects/directories?" + new URLSearchParams({ cursor })),
     pendingAssignments,
     async finishAssignment(thread) {
       if (!pendingAssignments.has(thread.id)) return;

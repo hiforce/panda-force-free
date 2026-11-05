@@ -215,6 +215,8 @@
   "unpinSessionTitle": "取消置顶会话“{title}”",
   "stop": "停止",
   "changePermissions": "更改权限",
+  "permissionSetting": "安全权限：{mode}",
+  "modelAndReasoningSetting": "模型：{model}；思考强度：{level}",
   "askForApproval": "请求审批",
   "howShouldAgentActionsBeApproved": "智能体的操作应如何审批？",
   "contextUsage": "上下文用量",
@@ -579,5 +581,14 @@
   "summaryWeb": "{position, select, first {已搜索网页} other {已搜索网页}}",
   "summaryImages": "{position, select, first {已查看图片} other {已查看图片}}",
   "folder": "文件夹",
-  "logoutIdentity": "退出登录（PandaForce · {account}）"
+  "logoutIdentity": "退出登录（PandaForce · {account}）",
+  "browserLoaded": "页面已加载。若显示为空白，网站可能不允许嵌入。",
+  "invalidBrowserAddress": "地址无效",
+  "browserLoadFailed": "页面无法加载",
+  "browserLoadFailedDetail": "网站未完成嵌入请求。请在外部浏览器中打开。",
+  "browserEmbeddingBlocked": "网站可能阻止了嵌入",
+  "browserEmbeddingBlockedDetail": "网站未能在面板中加载完成，可能不允许嵌入。请在外部浏览器中打开。",
+  "enterValidUrl": "请输入有效的网址",
+  "httpUrlsOnly": "只能嵌入 http:// 和 https:// 网址",
+  "noUrlCredentials": "不支持带有凭据的网址"
 }

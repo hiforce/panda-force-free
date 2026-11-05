@@ -52,3 +52,7 @@ PandaForce uses i18next 26.7.1 (MIT), i18next-icu 2.6.1 (MIT), and
 intl-messageformat 12.1.4 (BSD-3-Clause) for namespaced translations and ICU
 messages. Their copyright and full license texts remain in the installed
 packages and must accompany redistributed bundles and containers.
+
+## Immer
+
+PandaForce uses Immer 11.2.9 for transactional state edits. Copyright (c) 2017 Michel Weststrate. The complete MIT grant is retained in [LICENSES/immer-MIT.txt](./LICENSES/immer-MIT.txt) and in the installed package.

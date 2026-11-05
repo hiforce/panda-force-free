@@ -16,7 +16,9 @@ export function exportFree({ source = process.cwd(), ref = "HEAD", destination, 
     const [mode, type] = meta.split(" ");
     const selected =
       /^(?:src|tests|patches|scripts|panda-docs|release\/community)\//.test(path) ||
-      /^(?:package\.json|bun\.lock|LICENSES\/upstream-MIT\.txt)$/.test(path) ||
+      /^(?:package\.json|bun\.lock|eslint\.config\.mjs|prettier\.config\.mjs|tsconfig(?:\.(?:strict|contracts|tooling))?\.json|LICENSES\/(?:upstream|immer)-MIT\.txt)$/.test(
+        path,
+      ) ||
       /^public\/(?:index\.html|style\.css|workbench\.css|file-preview\.css|favicon\.svg|assets\/panda-(?:mark\.svg|icon\.png))$/.test(
         path,
       );
@@ -58,6 +60,7 @@ export function exportFree({ source = process.cwd(), ref = "HEAD", destination, 
     let bytes = git(source, ["show", commit + ":" + item.source]);
     if (path === "package.json") {
       const pkg = JSON.parse(bytes);
+      if (pkg.scripts) delete pkg.scripts["test:ops"];
       pkg.name = "panda-force-free";
       pkg.private = true;
       pkg.license = "MIT";

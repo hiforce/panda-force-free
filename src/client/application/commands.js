@@ -1,5 +1,6 @@
 import { parseSlashCommand } from "./command-catalog.js";
 // Dispatches explicit local, native and Goal commands without owning composer drafts.
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "sessions" | "state" | "$" | "t", "transport" | "composer" | "models" | "workspace" | "notices" | "navigation" | "goals", "commands">} options */
 export function assembleCommands({
   transportPort,
   viewUpdates,
@@ -86,7 +87,8 @@ export function assembleCommands({
   }
 
   return {
-    submitGoalCommand: (...args) => goalsPort.submitGoalCommand(...args),
+    submitGoalCommand: /** @param {Parameters<typeof goalsPort.submitGoalCommand>} args */ (...args) =>
+      goalsPort.submitGoalCommand(...args),
     submitNativeSlashCommand,
     parseGoalCommand,
     parseNativeSlashCommand,

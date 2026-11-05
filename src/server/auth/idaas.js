@@ -1,8 +1,13 @@
+import { createHash, randomBytes } from "node:crypto";
 import { pandaEnvironment } from "../environment.js";
-import { randomBytes, createHash } from "node:crypto";
-import { parseCookieHeader } from "./security.js";
+import { respondJson } from "../http/respond.js";
+import { errorMessage, errorStatus } from "./../../shared/errors.js";
+import { AuthError } from "./idaas-error.js";
+import { createIdaasRoutes } from "./idaas-routes.js";
+import { matchesRequestOrigin } from "./origin.js";
 import { authPageLanguage, sendAuthPage } from "./pages.js";
-import { safeAuthReturnPath } from "../../shared/auth-return-path.js";
+import { parseCookieHeader } from "./security.js";
+export { AuthError } from "./idaas-error.js";
 
 const SESSION_COOKIE = "panda_force_idaas_session";
 const STATE_COOKIE = "panda_force_idaas_state";
@@ -17,13 +22,6 @@ const list = (value) =>
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-
-export class AuthError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
 
 export function readIdaasConfig(env = process.env) {
   env = pandaEnvironment(env);
@@ -67,7 +65,7 @@ export function readIdaasConfig(env = process.env) {
     browserEndpoint: endpoint(env.IDAAS_BROWSER_ENDPOINT, true),
     publicUrl: publicUrl.origin,
     callbackUrl: `${publicUrl.origin}/auth/callback`,
-    clientId: env.IDAAS_CLIENT_ID.trim(),
+    clientId: String(env.IDAAS_CLIENT_ID).trim(),
     clientSecret: env.IDAAS_CLIENT_SECRET,
     tenants: new Set(list(env.IDAAS_ALLOWED_TENANT_IDS)),
     accounts: new Set(list(env.IDAAS_ALLOWED_ACCOUNTS)),
@@ -113,16 +111,13 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
     prune();
     if (map.size >= MAX_ITEMS) throw new AuthError(503, "Authentication capacity reached; try again later");
   };
-  const sameOrigin = (req) => {
-    if (req.headers["sec-fetch-site"] === "cross-site") return false;
-    if (req.headers.host !== new URL(config.publicUrl).host) return false;
-    if (!req.headers.origin) return true;
-    try {
-      return new URL(req.headers.origin).origin === config.publicUrl;
-    } catch {
-      return false;
-    }
-  };
+  const sameOrigin = (req) =>
+    matchesRequestOrigin({
+      hostHeader: req.headers.host,
+      origin: req.headers.origin,
+      fetchSite: req.headers["sec-fetch-site"],
+      expectedOrigin: config.publicUrl,
+    });
   const rateLimit = (req) => {
     const key = req.socket.remoteAddress || "unknown";
     let rate = rates.get(key);
@@ -133,16 +128,8 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
     }
     if (++rate.count > 60) throw new AuthError(429, "Too many login attempts; try again later");
   };
-  const json = (res, status, body, headers = {}) => {
-    res.writeHead(status, {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
-      "referrer-policy": "no-referrer",
-      ...headers,
-    });
-    res.end(JSON.stringify(body));
-  };
+  const json = (res, status, body, headers = {}) =>
+    respondJson(res, status, body, { "referrer-policy": "no-referrer", ...headers });
   const redirect = (res, location, cookies = []) => {
     res.writeHead(303, {
       location,
@@ -171,6 +158,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
       httpStatus = response.status;
       if (!response.ok || !response.headers.get("content-type")?.includes("application/json"))
         throw new Error("Invalid response");
+      if (!response.body) throw new AuthError(503, "IDAAS returned an empty response");
       const reader = response.body.getReader();
       let bytes = 0;
       const chunks = [];
@@ -202,7 +190,10 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
     } finally {
       const durationMs = Math.round(performance.now() - started);
       if (durationMs >= 1000 || outcome !== "ok")
-        console.warn("[panda-force] auth/provider-request", JSON.stringify({ operation: path, durationMs, httpStatus, outcome }));
+        console.warn(
+          "[panda-force] auth/provider-request",
+          JSON.stringify({ operation: path, durationMs, httpStatus, outcome }),
+        );
     }
   }
   async function validateToken(token) {
@@ -248,7 +239,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
     try {
       await validateToken(session.accessToken);
     } catch (error) {
-      if (error.status === 401) drop(id);
+      if (errorStatus(error) === 401) drop(id);
       throw error;
     }
     // A concurrent logout or expiry must not revive an in-flight authorization.
@@ -273,178 +264,37 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
   }, 5000);
   timer.unref();
 
+  const routes = createIdaasRoutes({
+    now,
+    config,
+    sessions,
+    transactions,
+    cookie,
+    sessionId,
+    drop,
+    makeRoom,
+    sameOrigin,
+    rateLimit,
+    json,
+    redirect,
+    upstream,
+    validateToken,
+    authenticate,
+    SESSION_COOKIE,
+    STATE_COOKIE,
+    STATE_MS,
+    SESSION_MS,
+    randomId,
+    digest,
+  });
   async function handle(req, res, url) {
-    if (
-      ![
-        "/auth/login",
-        "/auth/relogin",
-        "/auth/callback",
-        "/auth/logged-out",
-        "/api/auth/status",
-        "/api/auth/logout",
-        "/api/auth/login",
-        "/api/auth/setup",
-      ].includes(url.pathname)
-    )
-      return false;
+    const route = routes[url.pathname];
+    if (!route) return false;
     const started = performance.now();
     try {
-      if (url.pathname === "/auth/relogin") {
-        if (req.method !== "POST") throw new AuthError(405, "Method not allowed");
-        if (!sameOrigin(req)) throw new AuthError(403, "Cross-origin request rejected");
-        rateLimit(req);
-        const id = sessionId(req);
-        if (id) drop(id);
-        const binding = parseCookieHeader(req.headers.cookie)[STATE_COOKIE];
-        if (binding) {
-          const hash = digest(binding);
-          for (const [state, transaction] of transactions) if (transaction.binding === hash) transactions.delete(state);
-        }
-        // IDAAS /logout clears its browser SSO cookies even when the denied
-        // identity never received a PandaForce session or a locally stored id_token.
-        // Its redirectUri parameter is camelCase; /oidc/auth uses redirect_uri.
-        const target = new URL(`${config.browserEndpoint}/logout`);
-        target.searchParams.set("redirectUri", `${config.publicUrl}/auth/login`);
-        redirect(res, target.href, [cookie(SESSION_COOKIE, "", 0), cookie(STATE_COOKIE, "", 0)]);
-        return true;
-      }
-      if (url.pathname === "/auth/logged-out") {
-        if (req.method !== "GET") throw new AuthError(405, "Method not allowed");
-        sendAuthPage(res, { kind: "signedOut", status: 200, language: authPageLanguage(req) });
-        return true;
-      }
-      if (["/api/auth/login", "/api/auth/setup"].includes(url.pathname))
-        throw new AuthError(404, "Password login is disabled");
-      if (url.pathname === "/auth/login") {
-        if (req.method !== "GET") throw new AuthError(405, "Method not allowed");
-        // Top-level links may start login cross-site; the callback is browser-bound by state.
-        if (
-          req.headers.host !== new URL(config.publicUrl).host ||
-          (req.headers.origin && req.headers.origin !== config.publicUrl)
-        )
-          throw new AuthError(403, "Cross-origin request rejected");
-        rateLimit(req);
-        makeRoom(transactions);
-        const state = randomId();
-        const binding = randomId();
-        const nonce = randomId();
-        transactions.set(state, {
-          binding: digest(binding),
-          expiresAt: now() + STATE_MS,
-          nonce,
-          returnTo: safeAuthReturnPath(url.searchParams.get("returnTo")),
-        });
-        const target = new URL(`${config.browserEndpoint}/oidc/auth`);
-        for (const [key, value] of Object.entries({
-          client_id: config.clientId,
-          redirect_uri: config.callbackUrl,
-          protocol: "oidc",
-          scope: "user",
-          response_type: "code",
-          response_mode: "query",
-          state,
-          nonce,
-        }))
-          target.searchParams.set(key, value);
-        redirect(res, target.href, [cookie(STATE_COOKIE, binding, 300)]);
-        return true;
-      }
-      if (url.pathname === "/auth/callback") {
-        if (req.method !== "GET" || req.headers.host !== new URL(config.publicUrl).host)
-          throw new AuthError(400, "Invalid login callback");
-        rateLimit(req);
-        const states = url.searchParams.getAll("state");
-        const codes = url.searchParams.getAll("code");
-        const transaction = states.length === 1 ? transactions.get(states[0]) : null;
-        const binding = parseCookieHeader(req.headers.cookie)[STATE_COOKIE];
-        if (!transaction || transaction.expiresAt <= now() || !binding || digest(binding) !== transaction.binding)
-          throw new AuthError(400, "Invalid or expired login state");
-        transactions.delete(states[0]);
-        if (url.searchParams.has("error") || codes.length !== 1 || !codes[0] || codes[0].length > 4096)
-          throw new AuthError(400, "Login was not completed");
-        const tokens = await upstream("/oidc/token", {
-          grant_type: "authorization_code",
-          code: codes[0],
-          client_id: config.clientId,
-          client_secret: config.clientSecret,
-          redirect_uri: config.callbackUrl,
-        });
-        if (
-          typeof tokens.access_token !== "string" ||
-          !tokens.access_token ||
-          tokens.access_token.length > 32768 ||
-          !Number.isFinite(tokens.expires_in) ||
-          tokens.expires_in <= 0
-        )
-          throw new AuthError(401, "Invalid IDAAS token response");
-        const claims = await validateToken(tokens.access_token);
-        const user = await upstream("/oidc/me", {}, tokens.access_token);
-        if (
-          typeof user.uuid !== "string" ||
-          !user.uuid ||
-          typeof user.account !== "string" ||
-          !user.account ||
-          user.tenantId == null
-        )
-          throw new AuthError(401, "Incomplete IDAAS identity");
-        if (!config.tenants.has(String(user.tenantId)) || !config.accounts.has(user.account))
-          throw new AuthError(403, "This account is not allowed to use PandaForce");
-        makeRoom(sessions);
-        const previous = sessionId(req);
-        if (previous) drop(previous);
-        const id = randomId();
-        const expiresAt = Math.min(now() + SESSION_MS, now() + tokens.expires_in * 1000, claims.exp * 1000);
-        if (expiresAt <= now()) throw new AuthError(401, "Your login has expired");
-        sessions.set(id, {
-          identity: { uuid: user.uuid, account: user.account, tenantId: String(user.tenantId) },
-          accessToken: tokens.access_token,
-          idToken: typeof tokens.id_token === "string" ? tokens.id_token : null,
-          expiresAt,
-          connections: new Set(),
-        });
-        console.info("[panda-force] auth/login", JSON.stringify(sessions.get(id).identity));
-        redirect(res, transaction.returnTo, [
-          cookie(SESSION_COOKIE, id, Math.max(1, Math.floor((expiresAt - now()) / 1000))),
-          cookie(STATE_COOKIE, "", 0),
-        ]);
-        return true;
-      }
-      if (url.pathname === "/api/auth/status") {
-        if (req.method !== "GET") throw new AuthError(405, "Method not allowed");
-        let session = null;
-        try {
-          session = await authenticate(req);
-        } catch (error) {
-          if (error.status !== 401) throw error;
-        }
-        json(res, 200, {
-          authMode: "idaas",
-          authenticated: Boolean(session),
-          passwordRequired: false,
-          setupRequired: false,
-          loginUrl: "/auth/login",
-          ...(session ? { identity: session.identity, expiresAt: session.expiresAt } : {}),
-        });
-        return true;
-      }
-      if (url.pathname === "/api/auth/logout") {
-        if (req.method !== "POST") throw new AuthError(405, "Method not allowed");
-        if (!sameOrigin(req)) throw new AuthError(403, "Cross-origin request rejected");
-        const id = sessionId(req);
-        const session = sessions.get(id);
-        if (id) drop(id);
-        let logoutUrl = "/auth/logged-out";
-        if (url.searchParams.get("global") === "true" && session?.idToken) {
-          const target = new URL(`${config.browserEndpoint}/oidc/logout`);
-          target.searchParams.set("id_token", session.idToken);
-          target.searchParams.set("redirect_uri", `${config.publicUrl}/auth/logged-out`);
-          logoutUrl = target.href;
-        }
-        json(res, 200, { ok: true, logoutUrl }, { "set-cookie": cookie(SESSION_COOKIE, "", 0) });
-        return true;
-      }
+      await route(req, res, url);
     } catch (error) {
-      const status = error instanceof AuthError ? error.status : 503;
+      const status = error instanceof AuthError ? errorStatus(error) : 503;
       // Browser navigation receives a readable page. API/fetch clients keep the
       // JSON contract, even when they explicitly request HTML.
       if (
@@ -453,7 +303,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
         (req.headers["sec-fetch-dest"] === "document" || String(req.headers.accept || "").includes("text/html"))
       ) {
         const kind =
-          error instanceof AuthError && error.message === "This account is not allowed to use PandaForce"
+          error instanceof AuthError && errorMessage(error) === "This account is not allowed to use PandaForce"
             ? "denied"
             : status === 400 || status === 401
               ? "incomplete"
@@ -471,7 +321,7 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
         return true;
       }
       json(res, status, {
-        error: error instanceof AuthError ? error.message : "Authentication unavailable",
+        error: error instanceof AuthError ? errorMessage(error) : "Authentication unavailable",
         loginUrl: "/auth/login",
       });
     } finally {
@@ -484,7 +334,6 @@ export function createIdaasAuth(config, { fetchImpl = fetch, now = Date.now } = 
   return {
     handle,
     authenticate,
-    sameOrigin,
     watch(id, close) {
       const session = sessions.get(id);
       if (!session || session.expiresAt <= now()) {

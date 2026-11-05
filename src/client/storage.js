@@ -9,6 +9,7 @@ migrateBrowserState();
 export const STORAGE_KEYS = {
   composerDrafts: "panda-force-composer-drafts",
   activeThread: "panda-force-active-thread",
+  sidebarUnassignedView: "panda-force-sidebar-unassigned-view",
   sidebarProjectExpansion: "panda-force-sidebar-project-expansion",
   sidebarPinnedProjects: "panda-force-sidebar-pinned-projects",
   sidebarPinnedThreads: "panda-force-sidebar-pinned-threads",

@@ -1,7 +1,7 @@
+import { errorMessage } from "./../shared/errors.js";
+import { closestElement, findElement, requireElement } from "./dom.js";
 import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "./i18n.js";
-
 import { codexIcon } from "./codex-icons.js";
-
 // Goal dialog identity, event ordering and focus restoration stay together.
 export function createGoalController({
   $,
@@ -13,6 +13,7 @@ export function createGoalController({
   submitGoalCommand,
   addPersistentError,
   toast,
+  mutations,
 }) {
   function normalizeGoalStatus(value) {
     const status = String(value || "active")
@@ -110,7 +111,7 @@ export function createGoalController({
       toast(t("goals.goalUpdated"));
     } catch (error) {
       if (goalDialogThreadId === threadId) {
-        setOpaqueText($("#goalDialogError"), error.message);
+        setOpaqueText($("#goalDialogError"), errorMessage(error));
         $("#goalDialogError").hidden = false;
       }
     } finally {
@@ -158,18 +159,18 @@ export function createGoalController({
       root,
       `<span class="goal-status-icon" aria-hidden="true">${codexIcon(icons[goal.status] || icons.active)}</span><span class="goal-status-copy">${escapeHtml(label)}</span>${progress ? `<span class="goal-status-progress">${escapeHtml(progress)}</span>` : ""}<button type="button" class="goal-status-toggle" aria-haspopup="dialog" aria-controls="goalDialog">${t("goals.showGoalDetails")}</button>`,
     );
-    root.querySelector(".goal-status-toggle").onclick = (event) => {
+    requireElement(".goal-status-toggle", root).onclick = (event) => {
       event.stopPropagation();
       openGoalDialog(threadId);
     };
     root.onclick = (event) => {
       if (
         goal.status !== "blocked" ||
-        event.target.closest(".goal-status-toggle") ||
-        event.target.closest(".goal-status-menu")
+        closestElement(".goal-status-toggle", event.target) ||
+        closestElement(".goal-status-menu", event.target)
       )
         return;
-      const existing = root.querySelector(".goal-status-menu");
+      const existing = findElement(".goal-status-menu", root);
       if (existing) {
         existing.remove();
         return;
@@ -195,7 +196,7 @@ export function createGoalController({
         menu.append(button);
       }
       root.append(menu);
-      menu.querySelector("button")?.focus();
+      findElement("button", menu)?.focus();
     };
   }
   function applyGoalStatusEvent(method, payload = {}) {
@@ -220,7 +221,7 @@ export function createGoalController({
     if (source.detail !== undefined) next.detail = String(source.detail || "").trim();
     if (source.message !== undefined) next.message = String(source.message || "").trim();
     if (source.progress && typeof source.progress === "object") next.progress = source.progress;
-    state.goals.set(threadId, next);
+    mutations.collection("goals").set(threadId, next);
     if (threadId === state.active?.id) syncGoalStatusSurface(threadId);
   }
   $("#closeGoalDialog").onclick = closeGoalDialog;
@@ -243,9 +244,8 @@ export function createGoalController({
     event.preventDefault();
     saveGoalDialog();
   };
-
   function clearGoal(threadId) {
-    state.goals.delete(threadId);
+    mutations.collection("goals").delete(threadId);
     if (threadId === goalDialogThreadId) closeGoalDialog();
     syncGoalStatusSurface();
   }

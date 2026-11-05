@@ -27,14 +27,20 @@ const options = {
 const sharedRuntime = {
   name: "shared-i18n-runtime",
   setup(build) {
-    build.onResolve({ filter: /(?:^|\/)i18n\.js$/ }, (args) => {
-      if (args.kind !== "entry-point" && resolve(args.resolveDir, args.path) === resolve("src/client/i18n.js"))
-        return { path: "/i18n.js", external: true };
+    build.onResolve({ filter: /(?:^|\/)(?:i18n|http-client)\.js$/ }, (args) => {
+      if (
+        args.kind !== "entry-point" &&
+        ["i18n.js", "http-client.js"].some(
+          (name) => resolve(args.resolveDir, args.path) === resolve("src/client/" + name),
+        )
+      )
+        return { path: "/" + args.path.split("/").at(-1), external: true };
     });
   },
 };
 for (const [entry, output] of Object.entries({
   "i18n.js": "i18n.js",
+  "http-client.js": "http-client.js",
   "auth-bootstrap.js": "auth-bootstrap.js",
   "panda-brand.js": "panda-brand.js",
   "app.js": "app.bundle.js",
@@ -46,7 +52,7 @@ for (const [entry, output] of Object.entries({
     entrypoints: ["src/client/" + entry],
     outdir: "public",
     naming: output,
-    plugins: entry === "i18n.js" ? [] : [sharedRuntime],
+    plugins: ["i18n.js", "http-client.js"].includes(entry) ? [] : [sharedRuntime],
     external: ["/app.bundle.js", "/file-preview.bundle.js", "/terminal-runtime.bundle.js"],
   });
   if (!result.success) throw new AggregateError(result.logs, "Client build failed: " + entry);

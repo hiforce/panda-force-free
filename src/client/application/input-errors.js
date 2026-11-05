@@ -3,7 +3,8 @@
 export function deliveryIsUncertain(error, dispatched) {
   return Boolean(
     dispatched &&
-    (error?.silentTransportSwitch ||
+    (error?.deliveryUncertain ||
+      error?.silentTransportSwitch ||
       error instanceof TypeError ||
       error?.name === "AbortError" ||
       /timed out|app-server exited/i.test(error?.message || "")),

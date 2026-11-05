@@ -1,102 +1,192 @@
+import { createFeaturePort, installFeature as install } from "./application/composition.js";
 // Composition root. Read/write grants are supplied per feature, never shared as a writable global.
-import { assembleEnvironment } from "./application/environment.js";
-import { assembleLocalization } from "./application/localization.js";
-import { assembleHistory } from "./application/history.js";
-import { assembleQueue } from "./application/queue.js";
-import { assembleStatus, assembleGoals, assembleApprovals, assembleModels } from "./application/engine-services.js";
-import { assembleComposer } from "./application/composer.js";
-import { assembleDetails } from "./application/details.js";
-import { assembleTiming } from "./application/timing.js";
-import { assembleStartup } from "./application/startup.js";
-import { assembleViewport } from "./application/viewport.js";
-import { assembleNotices } from "./application/notices.js";
-import { assembleNavigation } from "./application/navigation.js";
+import { assembleApplicationProjections } from "./application/application-projections.js";
+import { assembleBindings } from "./application/bindings.js";
+import { assembleClipboard } from "./application/clipboard.js";
 import { assembleCommands } from "./application/commands.js";
-import { assembleSideTasks } from "./application/side-tasks.js";
-import { assembleTurnFrames } from "./application/turn-frames.js";
+import { assembleComposerInteractions } from "./application/composer-interactions.js";
+import { assembleComposer } from "./application/composer.js";
 import { assembleConnection } from "./application/connection.js";
-import { assembleTimeline } from "./application/timeline.js";
-import { assembleTransport } from "./application/transport-service.js";
+import { assembleDelivery } from "./application/delivery.js";
+import { assembleDetails } from "./application/details.js";
+import { assembleDiagnostics } from "./application/diagnostics.js";
+import { assembleApprovals, assembleGoals, assembleModels, assembleStatus } from "./application/engine-services.js";
+import { assembleEnvironment } from "./application/environment.js";
+import { assembleHistory } from "./application/history.js";
+import { assembleIdentity } from "./application/identity.js";
+import { assembleImages } from "./application/images.js";
+import { assembleInputSessions } from "./application/input-sessions.js";
 import {
-  assembleReview,
+  assembleAccount,
   assembleActivity,
+  assembleReview,
+  assembleSettings,
   assembleUploads,
   assembleUsage,
-  assembleSettings,
-  assembleAccount,
 } from "./application/interface-services.js";
-import { assembleImages } from "./application/images.js";
-import { assembleClipboard } from "./application/clipboard.js";
-import { assemblePanels } from "./application/panels.js";
-import { assembleBindings } from "./application/bindings.js";
-import { assembleDiagnostics } from "./application/diagnostics.js";
-import { assembleNotifications } from "./application/notifications.js";
-import { assembleSuggestions } from "./application/suggestions.js";
-import { assembleSubmission } from "./application/submission.js";
+import { assembleLocalization } from "./application/localization.js";
 import { assembleMessages } from "./application/messages.js";
-import { assembleDelivery } from "./application/delivery.js";
-import { assembleSidebarLayout } from "./application/sidebar-layout.js";
-import { assembleSynchronization } from "./application/synchronization.js";
-import { assembleWorkspace } from "./application/workspace.js";
+import { assembleNavigation } from "./application/navigation.js";
+import { assembleNotices } from "./application/notices.js";
+import { assembleNotifications } from "./application/notifications.js";
+import { assemblePanels } from "./application/panels.js";
+import { assembleQueue } from "./application/queue.js";
 import { assembleRepositories } from "./application/repositories.js";
-import { assembleInputSessions } from "./application/input-sessions.js";
-import { assembleIdentity } from "./application/identity.js";
+import { assembleSideTasks } from "./application/side-tasks.js";
+import { assembleSidebarLayout } from "./application/sidebar-layout.js";
+import { assembleStartup } from "./application/startup.js";
+import { assembleSubmission } from "./application/submission.js";
+import { assembleSuggestions } from "./application/suggestions.js";
+import { assembleSynchronization } from "./application/synchronization.js";
+import { assembleTimeline } from "./application/timeline.js";
+import { assembleTiming } from "./application/timing.js";
+import { assembleTransport } from "./application/transport-service.js";
+import { assembleTurnFrames } from "./application/turn-frames.js";
+import { assembleViewport } from "./application/viewport.js";
 import { assembleProjects, assembleSidebar, assembleWorkbench } from "./application/workspace-services.js";
-import { assembleComposerInteractions } from "./application/composer-interactions.js";
-import { assembleApplicationProjections } from "./application/application-projections.js";
-
+import { assembleWorkspace } from "./application/workspace.js";
 export function startApplication() {
-  const environment = {};
-  const localization = {};
-  const history = {};
-  const queue = {};
-  const status = {};
-  const goals = {};
-  const approvals = {};
-  const models = {};
-  const composer = {};
-  const details = {};
-  const timing = {};
-  const startup = {};
-  const viewport = {};
-  const notices = {};
-  const navigation = {};
-  const commands = {};
-  const sideTasks = {};
-  const turnFrames = {};
-  const connection = {};
-  const timeline = {};
-  const transport = {};
-  const review = {};
-  const activity = {};
-  const uploads = {};
-  const usage = {};
-  const settings = {};
-  const account = {};
-  const images = {};
-  const clipboard = {};
-  const panels = {};
-  const bindings = {};
-  const diagnostics = {};
-  const notifications = {};
-  const suggestions = {};
-  const submission = {};
-  const messages = {};
-  const delivery = {};
-  const sidebarLayout = {};
-  const synchronization = {};
-  const workspace = {};
-  const repositories = {};
-  const inputSessions = {};
-  const identity = {};
-  const projects = {};
-  const sidebar = {};
-  const composerInteractions = {};
-  const workbench = {};
-  const applicationProjections = {};
-  const install = (port, implementation) =>
-    Object.defineProperties(port, Object.getOwnPropertyDescriptors(implementation));
-  install(environment, assembleEnvironment({}));
+  const environment = /** @type {import("./application/ports.js").ApplicationPorts["environment"]} */ (
+    createFeaturePort("environment")
+  );
+  const localization = /** @type {import("./application/ports.js").ApplicationPorts["localization"]} */ (
+    createFeaturePort("localization")
+  );
+  const history = /** @type {import("./application/ports.js").ApplicationPorts["history"]} */ (
+    createFeaturePort("history")
+  );
+  const queue = /** @type {import("./application/ports.js").ApplicationPorts["queue"]} */ (createFeaturePort("queue"));
+  const status = /** @type {import("./application/ports.js").ApplicationPorts["status"]} */ (
+    createFeaturePort("status")
+  );
+  const goals = /** @type {import("./application/ports.js").ApplicationPorts["goals"]} */ (createFeaturePort("goals"));
+  const approvals = /** @type {import("./application/ports.js").ApplicationPorts["approvals"]} */ (
+    createFeaturePort("approvals")
+  );
+  const models = /** @type {import("./application/ports.js").ApplicationPorts["models"]} */ (
+    createFeaturePort("models")
+  );
+  const composer = /** @type {import("./application/ports.js").ApplicationPorts["composer"]} */ (
+    createFeaturePort("composer")
+  );
+  const details = /** @type {import("./application/ports.js").ApplicationPorts["details"]} */ (
+    createFeaturePort("details")
+  );
+  const timing = /** @type {import("./application/ports.js").ApplicationPorts["timing"]} */ (
+    createFeaturePort("timing")
+  );
+  const startup = /** @type {import("./application/ports.js").ApplicationPorts["startup"]} */ (
+    createFeaturePort("startup")
+  );
+  const viewport = /** @type {import("./application/ports.js").ApplicationPorts["viewport"]} */ (
+    createFeaturePort("viewport")
+  );
+  const notices = /** @type {import("./application/ports.js").ApplicationPorts["notices"]} */ (
+    createFeaturePort("notices")
+  );
+  const navigation = /** @type {import("./application/ports.js").ApplicationPorts["navigation"]} */ (
+    createFeaturePort("navigation")
+  );
+  const commands = /** @type {import("./application/ports.js").ApplicationPorts["commands"]} */ (
+    createFeaturePort("commands")
+  );
+  const sideTasks = /** @type {import("./application/ports.js").ApplicationPorts["sideTasks"]} */ (
+    createFeaturePort("sideTasks")
+  );
+  const turnFrames = /** @type {import("./application/ports.js").ApplicationPorts["turnFrames"]} */ (
+    createFeaturePort("turnFrames")
+  );
+  const connection = /** @type {import("./application/ports.js").ApplicationPorts["connection"]} */ (
+    createFeaturePort("connection")
+  );
+  const timeline = /** @type {import("./application/ports.js").ApplicationPorts["timeline"]} */ (
+    createFeaturePort("timeline")
+  );
+  const transport = /** @type {import("./application/ports.js").ApplicationPorts["transport"]} */ (
+    createFeaturePort("transport")
+  );
+  const review = /** @type {import("./application/ports.js").ApplicationPorts["review"]} */ (
+    createFeaturePort("review")
+  );
+  const activity = /** @type {import("./application/ports.js").ApplicationPorts["activity"]} */ (
+    createFeaturePort("activity")
+  );
+  const uploads = /** @type {import("./application/ports.js").ApplicationPorts["uploads"]} */ (
+    createFeaturePort("uploads")
+  );
+  const usage = /** @type {import("./application/ports.js").ApplicationPorts["usage"]} */ (createFeaturePort("usage"));
+  const settings = /** @type {import("./application/ports.js").ApplicationPorts["settings"]} */ (
+    createFeaturePort("settings")
+  );
+  const account = /** @type {import("./application/ports.js").ApplicationPorts["account"]} */ (
+    createFeaturePort("account")
+  );
+  const images = /** @type {import("./application/ports.js").ApplicationPorts["images"]} */ (
+    createFeaturePort("images")
+  );
+  const clipboard = /** @type {import("./application/ports.js").ApplicationPorts["clipboard"]} */ (
+    createFeaturePort("clipboard")
+  );
+  const panels = /** @type {import("./application/ports.js").ApplicationPorts["panels"]} */ (
+    createFeaturePort("panels")
+  );
+  const bindings = /** @type {import("./application/ports.js").ApplicationPorts["bindings"]} */ (
+    createFeaturePort("bindings")
+  );
+  const diagnostics = /** @type {import("./application/ports.js").ApplicationPorts["diagnostics"]} */ (
+    createFeaturePort("diagnostics")
+  );
+  const notifications = /** @type {import("./application/ports.js").ApplicationPorts["notifications"]} */ (
+    createFeaturePort("notifications")
+  );
+  const suggestions = /** @type {import("./application/ports.js").ApplicationPorts["suggestions"]} */ (
+    createFeaturePort("suggestions")
+  );
+  const submission = /** @type {import("./application/ports.js").ApplicationPorts["submission"]} */ (
+    createFeaturePort("submission")
+  );
+  const messages = /** @type {import("./application/ports.js").ApplicationPorts["messages"]} */ (
+    createFeaturePort("messages")
+  );
+  const delivery = /** @type {import("./application/ports.js").ApplicationPorts["delivery"]} */ (
+    createFeaturePort("delivery")
+  );
+  const sidebarLayout = /** @type {import("./application/ports.js").ApplicationPorts["sidebarLayout"]} */ (
+    createFeaturePort("sidebarLayout")
+  );
+  const synchronization = /** @type {import("./application/ports.js").ApplicationPorts["synchronization"]} */ (
+    createFeaturePort("synchronization")
+  );
+  const workspace = /** @type {import("./application/ports.js").ApplicationPorts["workspace"]} */ (
+    createFeaturePort("workspace")
+  );
+  const repositories = /** @type {import("./application/ports.js").ApplicationPorts["repositories"]} */ (
+    createFeaturePort("repositories")
+  );
+  const inputSessions = /** @type {import("./application/ports.js").ApplicationPorts["inputSessions"]} */ (
+    createFeaturePort("inputSessions")
+  );
+  const identity = /** @type {import("./application/ports.js").ApplicationPorts["identity"]} */ (
+    createFeaturePort("identity")
+  );
+  const projects = /** @type {import("./application/ports.js").ApplicationPorts["projects"]} */ (
+    createFeaturePort("projects")
+  );
+  const sidebar = /** @type {import("./application/ports.js").ApplicationPorts["sidebar"]} */ (
+    createFeaturePort("sidebar")
+  );
+  const composerInteractions =
+    /** @type {import("./application/ports.js").ApplicationPorts["composerInteractions"]} */ (
+      createFeaturePort("composerInteractions")
+    );
+  const workbench = /** @type {import("./application/ports.js").ApplicationPorts["workbench"]} */ (
+    createFeaturePort("workbench")
+  );
+  const applicationProjections =
+    /** @type {import("./application/ports.js").ApplicationPorts["applicationProjections"]} */ (
+      createFeaturePort("applicationProjections")
+    );
+  install(environment, assembleEnvironment());
   install(
     localization,
     assembleLocalization({
@@ -151,13 +241,14 @@ export function startApplication() {
     status,
     assembleStatus({
       viewUpdates: environment.viewUpdates,
-      legacyState: environment.stateFor("status").legacyState,
       $: environment.$,
       t: environment.t,
       i18n: environment.i18n,
       titleOf: environment.titleOf,
       shortPath: environment.shortPath,
       escapeHtml: environment.escapeHtml,
+      state: environment.stateFor("status").state,
+      mutations: environment.stateFor("status").mutations,
     }),
   );
   install(
@@ -165,12 +256,13 @@ export function startApplication() {
     assembleGoals({
       viewUpdates: environment.viewUpdates,
       transportPort: transport,
-      legacyState: environment.stateFor("goals").legacyState,
       $: environment.$,
       t: environment.t,
       escapeHtml: environment.escapeHtml,
       timingPort: timing,
       noticesPort: notices,
+      state: environment.stateFor("goals").state,
+      mutations: environment.stateFor("goals").mutations,
     }),
   );
   install(
@@ -179,7 +271,6 @@ export function startApplication() {
       transportPort: transport,
       turnFramesPort: turnFrames,
       viewUpdates: environment.viewUpdates,
-      legacyState: environment.stateFor("approvals").legacyState,
       i18n: environment.i18n,
       $: environment.$,
       t: environment.t,
@@ -191,23 +282,26 @@ export function startApplication() {
       viewportPort: viewport,
       reviewPort: review,
       panelsPort: panels,
+      mutations: environment.stateFor("approvals").mutations,
     }),
   );
   install(
     models,
     assembleModels({
       transportPort: transport,
-      legacyState: environment.stateFor("models").legacyState,
       $: environment.$,
       t: environment.t,
       escapeHtml: environment.escapeHtml,
       workspacePreparation: environment.workspacePreparation,
       noticesPort: notices,
+      state: environment.stateFor("models").state,
+      mutations: environment.stateFor("models").mutations,
     }),
   );
   install(
     composer,
     assembleComposer({
+      drafts: environment.drafts,
       mutations: environment.stateFor("composer").mutations,
       state: environment.stateFor("composer").state,
       $: environment.$,
@@ -260,6 +354,7 @@ export function startApplication() {
       approvalsPort: approvals,
       composerPort: composer,
       sidebarPort: sidebar,
+      panelsPort: panels,
       usagePort: usage,
       modelsPort: models,
       navigationPort: navigation,
@@ -362,6 +457,7 @@ export function startApplication() {
       synchronizationPort: synchronization,
       sidebarPort: sidebar,
       notificationsPort: notifications,
+      historyPort: history,
       approvalsPort: approvals,
       projectsPort: projects,
       modelsPort: models,
@@ -389,18 +485,23 @@ export function startApplication() {
   );
   install(
     transport,
-    assembleTransport({ legacyState: environment.stateFor("transport").legacyState, t: environment.t }),
+    assembleTransport({
+      t: environment.t,
+      state: environment.stateFor("transport").state,
+      mutations: environment.stateFor("transport").mutations,
+    }),
   );
   install(
     review,
     assembleReview({
       renderBatch: environment.renderBatch,
-      legacyState: environment.stateFor("review").legacyState,
       $: environment.$,
       escapeHtml: environment.escapeHtml,
       shortPath: environment.shortPath,
       noticesPort: notices,
       panelsPort: panels,
+      state: environment.stateFor("review").state,
+      mutations: environment.stateFor("review").mutations,
     }),
   );
   install(
@@ -408,50 +509,54 @@ export function startApplication() {
     assembleActivity({
       turnFramesPort: turnFrames,
       renderBatch: environment.renderBatch,
-      legacyState: environment.stateFor("activity").legacyState,
       escapeHtml: environment.escapeHtml,
       shortPath: environment.shortPath,
       identityPort: identity,
       timingPort: timing,
+      state: environment.stateFor("activity").state,
+      mutations: environment.stateFor("activity").mutations,
     }),
   );
   install(
     uploads,
     assembleUploads({
+      drafts: environment.drafts,
       viewUpdates: environment.viewUpdates,
-      legacyState: environment.stateFor("uploads").legacyState,
       $: environment.$,
       t: environment.t,
       imagesPort: images,
       noticesPort: notices,
+      state: environment.stateFor("uploads").state,
+      mutations: environment.stateFor("uploads").mutations,
     }),
   );
   install(
     usage,
     assembleUsage({
       transportPort: transport,
-      legacyState: environment.stateFor("usage").legacyState,
       $: environment.$,
       t: environment.t,
       i18n: environment.i18n,
+      state: environment.stateFor("usage").state,
+      mutations: environment.stateFor("usage").mutations,
     }),
   );
   install(
     settings,
     assembleSettings({
-      legacyState: environment.stateFor("settings").legacyState,
       $: environment.$,
       t: environment.t,
       shortPath: environment.shortPath,
       modelsPort: models,
       panelsPort: panels,
       viewUpdates: environment.viewUpdates,
+      state: environment.stateFor("settings").state,
+      mutations: environment.stateFor("settings").mutations,
     }),
   );
   install(
     account,
     assembleAccount({
-      legacyState: environment.stateFor("account").legacyState,
       $: environment.$,
       t: environment.t,
       state: environment.stateFor("account").state,
@@ -459,6 +564,7 @@ export function startApplication() {
       modelsPort: models,
       panelsPort: panels,
       usagePort: usage,
+      mutations: environment.stateFor("account").mutations,
     }),
   );
   install(images, assembleImages({ $: environment.$ }));
@@ -670,7 +776,11 @@ export function startApplication() {
   );
   install(
     repositories,
-    assembleRepositories({ mutations: environment.stateFor("repositories").mutations, sessions: environment.sessions }),
+    assembleRepositories({
+      mutations: environment.stateFor("repositories").mutations,
+      sessions: environment.sessions,
+      identity: environment.identityKey,
+    }),
   );
   install(
     inputSessions,
@@ -698,7 +808,8 @@ export function startApplication() {
     projects,
     assembleProjects({
       viewUpdates: environment.viewUpdates,
-      legacyState: environment.stateFor("projects").legacyState,
+      state: environment.stateFor("projects").state,
+      mutations: environment.stateFor("projects").mutations,
     }),
   );
   install(
@@ -707,7 +818,6 @@ export function startApplication() {
       transportPort: transport,
       viewUpdates: environment.viewUpdates,
       mutations: environment.stateFor("sidebar").mutations,
-      legacyState: environment.stateFor("sidebar").legacyState,
       sessions: environment.sessions,
       $: environment.$,
       t: environment.t,
@@ -725,6 +835,7 @@ export function startApplication() {
       commandsPort: commands,
       noticesPort: notices,
       synchronizationPort: synchronization,
+      state: environment.stateFor("sidebar").state,
     }),
   );
   install(
@@ -744,7 +855,6 @@ export function startApplication() {
   install(
     workbench,
     assembleWorkbench({
-      legacyState: environment.stateFor("workbench").legacyState,
       t: environment.t,
       i18n: environment.i18n,
       workspacePreparation: environment.workspacePreparation,
@@ -757,6 +867,8 @@ export function startApplication() {
       approvalsPort: approvals,
       sidebarLayoutPort: sidebarLayout,
       panelsPort: panels,
+      state: environment.stateFor("workbench").state,
+      mutations: environment.stateFor("workbench").mutations,
     }),
   );
   install(
@@ -803,57 +915,6 @@ export function startApplication() {
   workspace.bind();
   sidebar.bind();
   composerInteractions.bind();
-  for (const port of [
-    environment,
-    localization,
-    history,
-    queue,
-    status,
-    goals,
-    approvals,
-    models,
-    composer,
-    details,
-    timing,
-    startup,
-    viewport,
-    notices,
-    navigation,
-    commands,
-    sideTasks,
-    turnFrames,
-    connection,
-    timeline,
-    transport,
-    review,
-    activity,
-    uploads,
-    usage,
-    settings,
-    account,
-    images,
-    clipboard,
-    panels,
-    bindings,
-    diagnostics,
-    notifications,
-    suggestions,
-    submission,
-    messages,
-    delivery,
-    sidebarLayout,
-    synchronization,
-    workspace,
-    repositories,
-    inputSessions,
-    identity,
-    projects,
-    sidebar,
-    composerInteractions,
-    workbench,
-    applicationProjections,
-  ])
-    Object.freeze(port);
   startup.boot().catch((error) => {
     environment.workspacePreparation.fail("configuration");
     console.error("[panda-force] workspace preparation failed", error);

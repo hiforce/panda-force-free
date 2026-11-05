@@ -2,26 +2,26 @@ import { createProjectCatalog } from "../project-catalog.js";
 import { takeStartupRead } from "../startup-reads.js";
 import { createThreadSidebar } from "../threads-sidebar.js";
 import { createWorkbench } from "../workbench.js";
-
-export function assembleProjects({ viewUpdates, legacyState }) {
+import { request as fetch } from "./../http-client.js";
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations", never, "projects">} options */
+export function assembleProjects({ viewUpdates, state, mutations }) {
   const businessProjects = createProjectCatalog({
-    state: legacyState,
     onChange: () =>
       queueMicrotask(() => {
         viewUpdates.request("sidebar");
         viewUpdates.request("workbench");
       }),
+    state,
   });
   return {
     businessProjects,
   };
 }
-
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "state" | "mutations" | "sessions" | "$" | "t" | "escapeHtml" | "shortPath" | "titleOf" | "workspacePreparation", "transport" | "projects" | "repositories" | "navigation" | "workbench" | "workspace" | "sidebarLayout" | "status" | "commands" | "notices" | "synchronization", "sidebar">} options */
 export function assembleSidebar({
   transportPort,
   viewUpdates,
   mutations,
-  legacyState,
   sessions,
   $,
   t,
@@ -39,8 +39,10 @@ export function assembleSidebar({
   commandsPort,
   noticesPort,
   synchronizationPort,
+  state,
 }) {
   const {
+    dispose,
     renderThreads,
     applyProjectVisibility,
     loadProjectVisibility: loadProjectVisibilityRaw,
@@ -51,7 +53,6 @@ export function assembleSidebar({
     sessions,
     $,
     t,
-    state: legacyState,
     projectCatalog: projectsPort.businessProjects,
     onProjectNewSession: (projectId) => navigationPort.startNewTask({ projectId }),
     onSessionProject: (id) => workbenchPort.workbench?.associateSession(id),
@@ -80,8 +81,8 @@ export function assembleSidebar({
     setSidebarOpen: (open) => sidebarLayoutPort.setSidebarOpen(open),
     updateThreadRowMeta: (row, thread, meta) => statusPort.updateThreadRowMeta(row, thread, meta),
     submitNativeSlashCommand: (thread, command) => commandsPort.submitNativeSlashCommand(thread, command),
-    toast: (...args) => noticesPort.toast(...args),
-    toastProject: () => noticesPort.toast.project,
+    toast: /** @param {Parameters<typeof noticesPort.toast>} args */ (...args) => noticesPort.toast(...args),
+    toastProject: () => noticesPort.getToastProject(),
     dismissToast: () => noticesPort.dismissToast(),
     addPersistentError: (message) => noticesPort.addPersistentError(message),
     refreshThreadList: () => synchronizationPort.refreshThreadList(),
@@ -94,6 +95,7 @@ export function assembleSidebar({
       repositoriesPort.sidebarCache.remove(threadId);
       return repositoriesPort.conversations.remove(threadId);
     },
+    state,
   });
   function loadProjectVisibility() {
     return workspacePreparation.track(
@@ -102,9 +104,13 @@ export function assembleSidebar({
     );
   }
   function bind() {
-    $("#threadSearch").addEventListener("input", (...args) => renderThreads(...args));
+    $("#threadSearch").addEventListener(
+      "input",
+      /** @param {Parameters<typeof renderThreads>} args */ (...args) => renderThreads(...args),
+    );
   }
   return {
+    dispose,
     bind,
     setProjectHidden,
     toggleProjectPinned,
@@ -115,9 +121,8 @@ export function assembleSidebar({
     applyProjectVisibility,
   };
 }
-
+/** @param {import("./ports.js").FeatureOptions<"state" | "mutations" | "t" | "i18n" | "workspacePreparation", "navigation" | "workspace" | "settings" | "projects" | "sidebar" | "status" | "approvals" | "sidebarLayout" | "panels", "workbench">} options */
 export function assembleWorkbench({
-  legacyState,
   t,
   i18n,
   workspacePreparation,
@@ -130,29 +135,42 @@ export function assembleWorkbench({
   approvalsPort,
   sidebarLayoutPort,
   panelsPort,
+  state,
+  mutations,
 }) {
   let workbench;
   workbench = createWorkbench({
-    state: legacyState,
     t,
     i18n,
     preparation: workspacePreparation,
-    openThread: (...args) => navigationPort.openThread(...args),
-    newTask: (...args) => navigationPort.startNewTask(...args),
-    chooseFolder: (...args) => workspacePort.openFolderPicker(...args),
-    chooseProject: (...args) => workspacePort.selectWorkbenchProject(...args),
-    setProjectless: (...args) => workspacePort.setProjectless(...args),
-    showSettings: (...args) => settingsPort.openSettings(...args),
+    openThread: /** @param {Parameters<typeof navigationPort.openThread>} args */ (...args) =>
+      navigationPort.openThread(...args),
+    newTask: /** @param {Parameters<typeof navigationPort.startNewTask>} args */ (...args) =>
+      navigationPort.startNewTask(...args),
+    chooseFolder: /** @param {Parameters<typeof workspacePort.openFolderPicker>} args */ (...args) =>
+      workspacePort.openFolderPicker(...args),
+    chooseProject: /** @param {Parameters<typeof workspacePort.selectWorkbenchProject>} args */ (...args) =>
+      workspacePort.selectWorkbenchProject(...args),
+    setProjectless: /** @param {Parameters<typeof workspacePort.setProjectless>} args */ (...args) =>
+      workspacePort.setProjectless(...args),
+    showSettings: /** @param {Parameters<typeof settingsPort.openSettings>} args */ (...args) =>
+      settingsPort.openSettings(...args),
     catalog: projectsPort.businessProjects,
-    setProjectHidden: (...args) => sidebarPort.setProjectHidden(...args),
-    toggleProjectPinned: (...args) => sidebarPort.toggleProjectPinned(...args),
-    isProjectPinned: (...args) => sidebarPort.isProjectPinned(...args),
-    taskStatus: (...args) => statusPort.deriveSessionStatus(...args),
-    hasPendingApproval: (...args) => approvalsPort.hasPendingApproval(...args),
+    setProjectHidden: /** @param {Parameters<typeof sidebarPort.setProjectHidden>} args */ (...args) =>
+      sidebarPort.setProjectHidden(...args),
+    toggleProjectPinned: /** @param {Parameters<typeof sidebarPort.toggleProjectPinned>} args */ (...args) =>
+      sidebarPort.toggleProjectPinned(...args),
+    isProjectPinned: /** @param {Parameters<typeof sidebarPort.isProjectPinned>} args */ (...args) =>
+      sidebarPort.isProjectPinned(...args),
+    taskStatus: /** @param {Parameters<typeof statusPort.deriveSessionStatus>} args */ (...args) =>
+      statusPort.deriveSessionStatus(...args),
+    hasPendingApproval: /** @param {Parameters<typeof approvalsPort.hasPendingApproval>} args */ (...args) =>
+      approvalsPort.hasPendingApproval(...args),
     closeSidebar: () => {
       if (sidebarLayoutPort.mobileSidebarEnabled()) sidebarLayoutPort.setSidebarOpen(false);
     },
     openFiles: () => panelsPort.openFilesDialog(),
+    state,
   });
   return {
     get workbench() {

@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.7`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.8`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -73,3 +73,34 @@ Maintainers can validate message IDs, required arguments, catalogs, generated
 indexes, and parameter types with `bun run check:i18n`. The release retains the
 shared verification entry point and adds coverage for language negotiation,
 plugin resource isolation, native-content preservation, and Git-status tooltips.
+
+## 0.0.8
+
+Mobile navigation keeps labels readable. Permissions and model settings use compact
+icon buttons with popovers beside the queue and send controls; desktop keeps the
+full dropdowns. The composer remains accessible with the software keyboard open.
+
+Pending asynchronous questionnaires remain interactive when older messages are
+loaded or reconciled. Touch selection and **Submit answer** work directly without
+sending the composer draft. Command approvals retain separate allow-once, scoped
+allow, and danger-styled deny actions; choosing an answer does not grant execution
+permission.
+
+Existing-session preparation and input share one browser request, removing an
+extra browser round trip. Loaded sessions avoid an unnecessary full resume.
+Conversation history continues to use native pagination and bounded questionnaire
+supplementation. An uncertain send acknowledgment is never automatically replayed.
+
+Unassigned conversations show the ten most recent sessions and support folder
+browsing. Project session association supports search and folder filtering.
+
+Maintainer checks now enforce TypeScript contracts, dependency boundaries, scoped
+state access, linting, formatting and sanitized message rendering. The image build
+runs the complete verification plan and records its source identity in
+`/app/verification.json`. Development tools remain outside the runtime image.
+
+The conversation-engine boundary separates native events, capabilities and approval
+decisions from application code. Codex remains the registered engine; this release
+does not add a Claude or Spark CLI adapter. An [optional gateway cluster](./cluster.md)
+adds authenticated owner routing, event replay and durable command identities.
+Default single-instance installations continue to use SQLite without PostgreSQL.

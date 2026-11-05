@@ -1,23 +1,23 @@
-import { basicSetup } from "codemirror";
-import { EditorState, Compartment } from "@codemirror/state";
-import {
-  Decoration,
-  EditorView,
-  keymap,
-  lineNumbers,
-  highlightActiveLine,
-  highlightActiveLineGutter,
-} from "@codemirror/view";
-import { search, searchKeymap, openSearchPanel } from "@codemirror/search";
+import { css } from "@codemirror/lang-css";
+import { html } from "@codemirror/lang-html";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
 import { python } from "@codemirror/lang-python";
-import { css } from "@codemirror/lang-css";
-import { html } from "@codemirror/lang-html";
 import { rust } from "@codemirror/lang-rust";
 import { sql } from "@codemirror/lang-sql";
 import { xml } from "@codemirror/lang-xml";
+import { openSearchPanel, search, searchKeymap } from "@codemirror/search";
+import { Compartment, EditorState } from "@codemirror/state";
+import {
+  Decoration,
+  EditorView,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  keymap,
+  lineNumbers,
+} from "@codemirror/view";
+import { basicSetup } from "codemirror";
 
 const languageByExtension = new Map([
   ["js", () => javascript({ jsx: false })],
@@ -132,6 +132,7 @@ function referenceDecorations(state, lineStart, lineEnd) {
   return ranges.length ? Decoration.set(ranges, true) : Decoration.none;
 }
 
+/** @param {HTMLElement} container @param {{text?: string; path?: string; lineStart?: number | null; lineEnd?: number | null; wrap?: boolean; syntaxHighlight?: boolean; onCopy?: ((value: string) => void) | null}} options */
 export function createCodeViewer(
   container,
   { text = "", path = "", lineStart = null, lineEnd = null, wrap = false, syntaxHighlight = true, onCopy = null } = {},
@@ -162,9 +163,8 @@ export function createCodeViewer(
   const view = new EditorView({ state, parent: container });
 
   function revealLines(start = lineStart, end = lineEnd) {
-    if (!Number.isFinite(start)) return;
+    if (start == null || !Number.isFinite(start)) return;
     const first = Math.max(1, Math.min(view.state.doc.lines, Math.floor(start)));
-    const last = Math.max(first, Math.min(view.state.doc.lines, Math.floor(end || start)));
     const from = view.state.doc.line(first).from;
     view.dispatch({ effects: EditorView.scrollIntoView(from, { y: "center" }) });
   }
