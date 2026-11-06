@@ -24,6 +24,8 @@
   "stopped": "已停止",
   "showMoreSessions": "更多",
   "loadEarlierMessages": "加载更早消息",
+  "loadEarlierMessagesCount": "加载更早消息（{count}）",
+  "loadingEarlierMessages": "正在加载更早消息…",
   "retryLoadingModels": "重新加载模型",
   "threadDeleted": "任务已删除",
   "taskCompleted": "任务完成",

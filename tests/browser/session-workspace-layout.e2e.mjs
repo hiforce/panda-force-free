@@ -74,7 +74,9 @@ try {
     const call = route.request().postDataJSON();
     if (call.method === "host/thread/history" && call.params?.threadId === "old-alpha") {
       historyReads++;
-      await route.fulfill({ json: { type: "rpc/result", id: call.id, result: await history.read(call.params) } });
+      // Seed a full page so the cached turn-window expansion is deterministic.
+      const params = !call.params.revision && !call.params.cursor ? { ...call.params, limit: 100 } : call.params;
+      await route.fulfill({ json: { type: "rpc/result", id: call.id, result: await history.read(params) } });
     } else await route.continue();
   });
   await page.goto(fixture.base + "/task/old-alpha");
@@ -85,6 +87,21 @@ try {
   await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-alpha"));
   await page.locator(".assistant-response").last().waitFor();
   assert.ok(historyReads > 0);
+  const hiddenTurns = Number(await page.locator(".load-older").getAttribute("data-earlier-count"));
+  assert.ok(hiddenTurns > 0, "The first window must contain cached turns to reveal");
+  await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("zh-CN"));
+  assert.equal(await page.locator(".load-older").innerText(), `加载更早消息（${hiddenTurns}）`);
+  await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("en"));
+  const visibleBefore = await page.locator(".native-turn-timeline").count();
+  const cachedFeedback = await page.locator(".load-older").evaluate((button) => {
+    button.click();
+    return { disabled: button.disabled, busy: button.getAttribute("aria-busy"), label: button.innerText };
+  });
+  assert.deepEqual(cachedFeedback, { disabled: true, busy: "true", label: "Loading earlier messages…" });
+  await page.waitForFunction(
+    (before) => document.querySelectorAll(".native-turn-timeline").length > before,
+    visibleBefore,
+  );
   const settle = async () => {
     await page.waitForFunction(
       () =>

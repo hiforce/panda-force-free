@@ -475,6 +475,7 @@ export function startApplication() {
     timeline,
     assembleTimeline({
       renderBatch: environment.renderBatch,
+      selection: environment.selection,
       viewUpdates: environment.viewUpdates,
       mutations: environment.stateFor("timeline").mutations,
       state: environment.stateFor("timeline").state,

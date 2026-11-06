@@ -1,5 +1,5 @@
 import { retireAnsweredAsyncQuestions } from "../../shared/engine/async-questions.js";
-import { messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { localizeText, messageHtml, setMessageHtml } from "../i18n.js";
 import { errorMessage } from "./../../shared/errors.js";
 import { closestElement } from "./../dom.js";
 
@@ -7,9 +7,10 @@ import { pandaInterfaceMark } from "../panda-brand.js";
 import { DEFAULT_TURN_PAGE_SIZE, createTurnWindow } from "../ui-core.js";
 
 // Owns timeline frames, render batches and pagination controls; item presentation is delegated.
-/** @param {import("./ports.js").FeatureOptions<"renderBatch" | "viewUpdates" | "mutations" | "state" | "$" | "t" | "escapeHtml", "status" | "viewport" | "history" | "notices" | "queue" | "timing" | "messages", "timeline">} options */
+/** @param {import("./ports.js").FeatureOptions<"renderBatch" | "selection" | "viewUpdates" | "mutations" | "state" | "$" | "t" | "escapeHtml", "status" | "viewport" | "history" | "notices" | "queue" | "timing" | "messages", "timeline">} options */
 export function assembleTimeline({
   renderBatch,
+  selection,
   viewUpdates,
   mutations,
   state,
@@ -24,6 +25,18 @@ export function assembleTimeline({
   timingPort,
   messagesPort,
 }) {
+  const earlierLoads = new Set();
+  /** @param {HTMLButtonElement} button @param {boolean} loading */
+  function syncEarlierButton(button, loading) {
+    button.disabled = loading;
+    button.setAttribute("aria-busy", String(loading));
+    const spinner = button.firstElementChild;
+    if (spinner instanceof HTMLElement) spinner.hidden = !loading;
+    const count = Number(button.dataset.earlierCount) || 0;
+    if (loading) localizeText(button.lastElementChild, "sessions.loadingEarlierMessages", undefined, t);
+    else if (count) localizeText(button.lastElementChild, "sessions.loadEarlierMessagesCount", { count }, t);
+    else localizeText(button.lastElementChild, "sessions.loadEarlierMessages", undefined, t);
+  }
   function clearConversationRuntime() {
     viewUpdates.request("approvalMenu");
     mutations.collection("items").clear();
@@ -41,6 +54,9 @@ export function assembleTimeline({
     viewUpdates.request("sideTasks");
   }
   function renderThread(thread, loadMore = 0) {
+    viewportPort.preserveReadingPosition(() => renderThreadContent(thread, loadMore));
+  }
+  function renderThreadContent(thread, loadMore) {
     const root = $("#conversation"),
       turns = thread.turns || [];
     statusPort.syncThreadErrorsFromTurns(thread.id, turns);
@@ -57,32 +73,51 @@ export function assembleTimeline({
     statusPort.syncThreadErrorSurface(thread.id);
     if (window.hiddenCount || thread.history?.nextCursor) {
       const more = document.createElement("button");
+      more.type = "button";
       more.className = "load-older";
-      setOpaqueText(
+      more.dataset.earlierCount = String(window.hiddenCount);
+      setMessageHtml(
         more,
-        window.hiddenCount ? `Load earlier messages (${window.hiddenCount})` : t("sessions.loadEarlierMessages"),
+        '<span class="conversation-loading-spinner" aria-hidden="true" hidden></span><span aria-live="polite"></span>',
       );
+      syncEarlierButton(more, earlierLoads.has(thread.id));
       more.onclick = async () => {
-        const current = state.active?.id === thread.id ? state.active : thread;
-        if (window.hiddenCount) {
-          renderThread(current, DEFAULT_TURN_PAGE_SIZE);
-          return;
-        }
-        if (historyPort.conversationItemCount(current) > historyPort.conversationItemCount(thread)) {
-          const height = root.scrollHeight,
-            top = root.scrollTop;
-          mutations.set("turnWindow", null);
-          renderThread(current, current.turns.length);
-          root.scrollTop = top + root.scrollHeight - height;
-          return;
-        }
-        more.disabled = true;
+        if (earlierLoads.has(thread.id) || state.active?.id !== thread.id) return;
+        const generation = selection.current;
+        earlierLoads.add(thread.id);
+        syncEarlierButton(more, true);
         try {
+          let current = state.active;
+          if (!current) return;
+          if (
+            window.hiddenCount ||
+            historyPort.conversationItemCount(current) > historyPort.conversationItemCount(thread)
+          ) {
+            // Paint feedback before a potentially expensive cached-history render.
+            await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const active = state.active;
+            if (!selection.isCurrent(generation) || !active || active.id !== thread.id) return;
+            current = active;
+          }
+          if (window.hiddenCount) {
+            renderThread(current, DEFAULT_TURN_PAGE_SIZE);
+            return;
+          }
+          if (historyPort.conversationItemCount(current) > historyPort.conversationItemCount(thread)) {
+            mutations.set("turnWindow", null);
+            renderThread(current, current.turns.length);
+            return;
+          }
           await historyPort.loadEarlierConversation(current);
         } catch (error) {
+          if (!selection.isCurrent(generation) || state.active?.id !== thread.id) return;
           if (await historyPort.resyncActiveConversation()) return;
-          noticesPort.addPersistentError(errorMessage(error));
-          more.disabled = false;
+          if (selection.isCurrent(generation) && state.active?.id === thread.id)
+            noticesPort.addPersistentError(errorMessage(error));
+        } finally {
+          earlierLoads.delete(thread.id);
+          const button = root.querySelector(".load-older");
+          if (state.active?.id === thread.id && button instanceof HTMLButtonElement) syncEarlierButton(button, false);
         }
       };
       root.append(more);

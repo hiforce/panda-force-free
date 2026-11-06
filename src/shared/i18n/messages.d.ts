@@ -812,7 +812,9 @@ export interface MessageParameters {
   "sessions.hideProject": {  };
   "sessions.lastActivityTime": { "time": string };
   "sessions.loadEarlierMessages": {  };
+  "sessions.loadEarlierMessagesCount": { "count": string };
   "sessions.loadingDirectories": {  };
+  "sessions.loadingEarlierMessages": {  };
   "sessions.noPinnedSessions": {  };
   "sessions.notStarted": {  };
   "sessions.pinned": {  };

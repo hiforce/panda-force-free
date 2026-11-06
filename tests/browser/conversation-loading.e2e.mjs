@@ -1,6 +1,7 @@
 import { createBrowserFixture } from "../support/browser-runtime.mjs";
 import assert from "node:assert/strict";
-import { launchOptions } from "../support/browser-runtime.mjs";
+import { chromium, webkit } from "playwright";
+import { artifact, launchOptions } from "../support/browser-runtime.mjs";
 import { createConversationHistory } from "../../src/server/conversation/history.js";
 const runtime = await createBrowserFixture();
 const port = Number(new URL(runtime.base).port);
@@ -27,7 +28,12 @@ try {
           i === 0
             ? { id: "user", type: "userMessage", content: [{ type: "text", text: "Original prompt" }] }
             : i === 249
-              ? { id: "final", type: "agentMessage", phase: "final_answer", text: "Latest answer" }
+              ? {
+                  id: "final",
+                  type: "agentMessage",
+                  phase: "final_answer",
+                  text: "Latest answer\n\n" + "Earlier answer details.\n\n".repeat(25),
+                }
               : {
                   id: `tool-${i}`,
                   type: "commandExecution",
@@ -48,8 +54,12 @@ try {
     revision: first.history.revision,
     oldestItemId: third.history.oldestItemId,
   });
-  browser = await runtime.launchBrowser(launchOptions());
-  const page = await browser.newPage();
+  browser = await (process.env.PANDA_FORCE_TEST_BROWSER === "webkit"
+    ? webkit.launch()
+    : chromium.launch(launchOptions()));
+  const context = await browser.newContext();
+  await runtime.signIn(context);
+  const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(base, { waitUntil: "networkidle" });
@@ -67,6 +77,10 @@ try {
       ]);
       window.__historyCalls = [];
       window.__holdHistory = false;
+      window.__holdEarlier = false;
+      window.__earlierResolvers = [];
+      window.__snapshotRefresh = false;
+      window.__failHistory = false;
       const original = window.fetch;
       window.fetch = async (resource, options = {}) => {
         if (new URL(typeof resource === "string" ? resource : resource.url, location.href).pathname !== "/api/rpc")
@@ -75,6 +89,8 @@ try {
         window.__historyCalls.push(call);
         let result = { data: [] };
         if (call.method === "host/thread/history") {
+          if (window.__failHistory)
+            return Response.json({ type: "rpc/error", id: call.id, error: "History fixture unavailable" });
           if (call.params.threadId === "other")
             result = {
               thread: { id: "other", turns: [] },
@@ -93,7 +109,15 @@ try {
                 nextCursor: range.history.nextCursor,
               },
             };
+            if (window.__snapshotRefresh) {
+              result = first;
+              window.__snapshotRefresh = false;
+            }
           } else result = first;
+          if (window.__holdEarlier && call.params.cursor)
+            return new Promise((resolve) =>
+              window.__earlierResolvers.push(() => resolve(Response.json({ type: "rpc/result", id: call.id, result }))),
+            );
           if (window.__holdHistory && call.params.threadId === "paged")
             return new Promise(
               (resolve) =>
@@ -107,21 +131,82 @@ try {
   );
   await page.evaluate(() => globalThis.__pandaForceDebug.openThread("paged"));
   assert.equal(await page.locator(".activity-item").count(), 99);
-  assert.equal((await page.locator("[data-local-conversation-final-assistant]").textContent()).trim(), "Latest answer");
+  assert.ok(
+    (await page.locator("[data-local-conversation-final-assistant]").textContent()).trim().startsWith("Latest answer"),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    window.__holdEarlier = true;
+  });
   await page.locator(".load-older").click();
+  await page.waitForFunction(() => window.__earlierResolvers.length === 1);
+  assert.equal(await page.locator(".load-older").isDisabled(), true);
+  assert.equal(await page.locator(".load-older").getAttribute("aria-busy"), "true");
+  assert.equal(await page.locator(".load-older").innerText(), "Loading earlier messages…");
+  assert.equal(await page.locator(".load-older .conversation-loading-spinner").isVisible(), true);
+  const buttonBounds = await page.locator(".load-older").boundingBox();
+  assert.ok(buttonBounds.x >= 0 && buttonBounds.x + buttonBounds.width <= 390);
+  await page.evaluate(() => {
+    window.__olderButton = document.querySelector(".load-older");
+    window.__snapshotRefresh = true;
+    window.dispatchEvent(new Event("focus"));
+  });
+  await page.waitForFunction(() => document.querySelector(".load-older") !== window.__olderButton);
+  assert.equal(await page.locator(".load-older").isDisabled(), true, "Background rendering must retain loading state");
+  await page.locator(".load-older").dispatchEvent("click");
+  assert.equal(
+    await page.evaluate(() => window.__earlierResolvers.length),
+    1,
+    "A loading page must not be requested twice",
+  );
+  await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("zh-CN"));
+  assert.equal(await page.locator(".load-older").innerText(), "正在加载更早消息…");
+  await page.screenshot({ path: artifact("earlier-history-feedback/loader-h5.png") });
+  await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("en"));
+  // Movement during the request must win over the position at click time.
+  const reading = page.locator('[data-item-id="final"]');
+  assert.equal(await reading.isVisible(), true);
+  await reading.evaluate((node) => {
+    const root = document.querySelector("#conversation");
+    root.scrollTop += node.getBoundingClientRect().top - root.getBoundingClientRect().top + 80;
+  });
+  const readingTop = await reading.evaluate((node) => node.getBoundingClientRect().top);
+  await page.evaluate(() => {
+    window.__holdEarlier = false;
+    window.__earlierResolvers.shift()();
+  });
   await page.waitForFunction(() => document.querySelectorAll(".activity-item").length === 199);
   assert.equal(await page.locator(".activity-item").count(), 199);
+  assert.ok(
+    Math.abs((await reading.evaluate((node) => node.getBoundingClientRect().top)) - readingTop) < 2,
+    "Loading earlier history must retain the latest reading position",
+  );
+  assert.equal(await page.locator(".load-older").isDisabled(), false);
+  assert.equal(await page.locator(".load-older").getAttribute("aria-busy"), "false");
+  assert.equal(await page.locator(".load-older .conversation-loading-spinner").isVisible(), false);
+  await page.evaluate(() => {
+    window.__failHistory = true;
+  });
+  await page.locator(".load-older").click();
+  await page.waitForFunction(() => document.querySelector(".load-older")?.disabled === false);
+  assert.equal(await page.locator(".activity-item").count(), 199, "A failed request keeps the existing history");
+  await page.evaluate(() => {
+    window.__failHistory = false;
+  });
   await page.locator(".load-older").click();
   await page.waitForFunction(() => document.querySelectorAll(".activity-item").length === 248);
   assert.equal(await page.locator(".activity-item").count(), 248);
   assert.equal(await page.locator(".user-message").textContent(), "Original prompt");
   assert.equal(await page.locator(".load-older").count(), 0);
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.evaluate(async () => {
     await globalThis.__pandaForceDebug.openThread("other");
     window.__holdHistory = true;
     window.__cachedOpen = globalThis.__pandaForceDebug.openThread("paged");
   });
-  assert.equal((await page.locator("[data-local-conversation-final-assistant]").textContent()).trim(), "Latest answer");
+  assert.ok(
+    (await page.locator("[data-local-conversation-final-assistant]").textContent()).trim().startsWith("Latest answer"),
+  );
   assert.equal(await page.locator(".conversation-loading").count(), 0);
   await page.waitForFunction(() => window.__resolveHistory);
   await page.evaluate(async () => {
@@ -174,7 +259,9 @@ try {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector("[data-local-conversation-final-assistant]", { state: "attached" });
   const cachedReloadMs = Math.round(performance.now() - reloadStarted);
-  assert.equal((await page.locator("[data-local-conversation-final-assistant]").textContent()).trim(), "Latest answer");
+  assert.ok(
+    (await page.locator("[data-local-conversation-final-assistant]").textContent()).trim().startsWith("Latest answer"),
+  );
   assert.equal(await page.locator(".conversation-loading").count(), 0);
   assert.equal(await page.locator(".activity-item").count(), 99);
   assert.equal(await page.locator(".load-older").count(), 1);
@@ -283,7 +370,9 @@ try {
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForSelector("[data-local-conversation-final-assistant]", { state: "attached" });
-  assert.equal((await page.locator("[data-local-conversation-final-assistant]").textContent()).trim(), "Latest answer");
+  assert.ok(
+    (await page.locator("[data-local-conversation-final-assistant]").textContent()).trim().startsWith("Latest answer"),
+  );
   assert.deepEqual(errors, []);
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
   page.on("dialog", (dialog) => dialog.accept());
@@ -324,6 +413,9 @@ try {
     JSON.stringify({
       boundedHistory: true,
       olderPages: true,
+      loadingFeedbackAndRetry: true,
+      duplicateLoadsPrevented: true,
+      pendingLoadReadingPosition: true,
       persistentReloadBeforeNetwork: true,
       cachedReloadMs,
       revisionRevalidation: true,

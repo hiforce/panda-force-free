@@ -24,6 +24,8 @@
   "stopped": "Stopped",
   "showMoreSessions": "Show more sessions",
   "loadEarlierMessages": "Load earlier messages",
+  "loadEarlierMessagesCount": "Load earlier messages ({count})",
+  "loadingEarlierMessages": "Loading earlier messages…",
   "retryLoadingModels": "Retry loading models",
   "threadDeleted": "Thread deleted",
   "taskCompleted": "Task completed",

@@ -5,8 +5,54 @@ export function assembleViewport({ $ }) {
   let lastScrollTop = 0,
     frame = 0,
     forced = false;
+  /** @type {{node: Element; selector: string; offset: number; top: number} | null} */
+  let readingPosition = null;
   function conversationNearBottom(root = $("#conversation")) {
-    return !root || root.scrollHeight - root.scrollTop - root.clientHeight < 80;
+    return !root || root.scrollHeight - root.scrollTop - root.clientHeight < 2;
+  }
+  function followLatest(root = $("#conversation")) {
+    root.scrollTop = root.scrollHeight;
+    lastScrollTop = root.scrollTop;
+    conversationAutoScroll = true;
+    readingPosition = null;
+  }
+  function captureReadingPosition(root = $("#conversation")) {
+    const bounds = root.getBoundingClientRect();
+    for (const attribute of ["data-item-id", "data-turn-id", "data-user-turn-id"]) {
+      for (const node of root.querySelectorAll(`[${attribute}]`)) {
+        const rect = node.getBoundingClientRect();
+        if (rect.height && rect.bottom > bounds.top && rect.top < bounds.bottom)
+          return {
+            node,
+            selector: `[${attribute}="${CSS.escape(node.getAttribute(attribute) || "")}"]`,
+            offset: rect.top - bounds.top,
+            top: root.scrollTop,
+          };
+      }
+    }
+    return null;
+  }
+  function restoreReadingPosition(root = $("#conversation")) {
+    if (!readingPosition) return;
+    const { node, selector, offset, top } = readingPosition;
+    const anchor = root.contains(node) ? node : root.querySelector(selector);
+    // WebKit does not preserve an anchor when a history snapshot replaces the DOM.
+    root.scrollTop = anchor
+      ? root.scrollTop + anchor.getBoundingClientRect().top - root.getBoundingClientRect().top - offset
+      : top;
+    lastScrollTop = root.scrollTop;
+    readingPosition = captureReadingPosition(root);
+  }
+  /** @param {() => void} render */
+  function preserveReadingPosition(render) {
+    if (!forced && Math.abs($("#conversation").scrollTop - lastScrollTop) > 1) handleConversationScroll();
+    if (!conversationAutoScroll && !forced) readingPosition = captureReadingPosition();
+    try {
+      render();
+    } finally {
+      if (!conversationAutoScroll && !forced) restoreReadingPosition();
+      else followLatest();
+    }
   }
   function syncConversationScrollSurface() {
     const root = $("#conversation"),
@@ -21,6 +67,7 @@ export function assembleViewport({ $ }) {
     if (conversationNearBottom(root)) conversationAutoScroll = true;
     else if (root.scrollTop < lastScrollTop - 1) conversationAutoScroll = false;
     lastScrollTop = root.scrollTop;
+    readingPosition = conversationAutoScroll ? null : captureReadingPosition(root);
     syncConversationScrollSurface();
   }
   function scrollBottom({ force = false } = {}) {
@@ -28,25 +75,25 @@ export function assembleViewport({ $ }) {
     if (frame) return;
     frame = requestAnimationFrame(() => {
       frame = 0;
-      const follow = forced || conversationAutoScroll;
-      forced = false;
       const root = $("#conversation");
       if (!root) return;
-      if (follow) {
-        root.scrollTop = root.scrollHeight;
-        lastScrollTop = root.scrollTop;
-        conversationAutoScroll = true;
-      }
+      // A touch/scrollbar move may arrive before its deferred scroll event.
+      if (!forced && Math.abs(root.scrollTop - lastScrollTop) > 1) handleConversationScroll();
+      const follow = forced || conversationAutoScroll;
+      forced = false;
+      if (follow) followLatest(root);
+      else restoreReadingPosition(root);
       syncConversationScrollSurface();
     });
   }
   function scrollOpenedThreadToBottom() {
-    conversationAutoScroll = true;
-    scrollBottom({ force: true });
-    requestAnimationFrame(() => scrollBottom({ force: true }));
+    forced = false;
+    followLatest();
+    scrollBottom();
   }
   function resetAutoScroll() {
     conversationAutoScroll = true;
+    readingPosition = null;
   }
   function bind() {
     const root = $("#conversation");
@@ -60,6 +107,7 @@ export function assembleViewport({ $ }) {
         for (const node of record.removedNodes) if (node instanceof Element) sizes.unobserve(node);
         for (const node of record.addedNodes) if (node instanceof Element) sizes.observe(node);
       }
+      scrollBottom();
     }).observe(root, { childList: true });
     $("#conversation").addEventListener(
       "scroll",
@@ -79,5 +127,6 @@ export function assembleViewport({ $ }) {
     resetAutoScroll,
     syncConversationScrollSurface,
     scrollOpenedThreadToBottom,
+    preserveReadingPosition,
   };
 }

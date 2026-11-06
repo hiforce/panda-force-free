@@ -274,6 +274,7 @@ export interface ViewportPort {
   resetAutoScroll: () => void;
   syncConversationScrollSurface: () => void;
   scrollOpenedThreadToBottom: () => void;
+  preserveReadingPosition: (render: () => void) => void;
 }
 
 export interface NoticesPort {

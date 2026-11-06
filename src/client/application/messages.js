@@ -142,6 +142,7 @@ export function assembleMessages({
         mutations.collection("items").set(item.id, el);
     }
     if (!el) return;
+    if (["userMessage", "agentMessage", "imageGeneration"].includes(item.type)) el.dataset.itemId = String(item.id);
     if (item.type === "userMessage") {
       queuePort.settleQueuedMessage(item, turnId);
       el.dataset.userTurnId = turnId;

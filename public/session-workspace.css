@@ -1058,8 +1058,25 @@
   max-width: none;
 }
 .session-layout .conversation > .load-older {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
   width: fit-content;
   max-width: var(--session-content-rail);
+}
+.session-layout .load-older:disabled {
+  cursor: progress;
+  opacity: 1;
+}
+.load-older .conversation-loading-spinner {
+  flex-shrink: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .load-older .conversation-loading-spinner {
+    animation: none;
+  }
 }
 .session-layout .composer-dock {
   max-width: none;

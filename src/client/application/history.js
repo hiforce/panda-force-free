@@ -128,10 +128,7 @@ export function assembleHistory({
   async function loadEarlierConversation(thread) {
     const current = state.active?.id === thread.id ? state.active : thread;
     const id = current.id,
-      generation = selection.current,
-      root = $("#conversation"),
-      height = root.scrollHeight,
-      top = root.scrollTop;
+      generation = selection.current;
     const result = await transportPort.rpc("host/thread/history", {
       threadId: id,
       cursor: current.history.nextCursor,
@@ -142,8 +139,8 @@ export function assembleHistory({
     sessions.replaceActive(merged);
     repositoriesPort.cacheConversation(merged);
     mutations.set("turnWindow", null);
+    // The timeline preserves the current reading anchor, including movement while this request was pending.
     viewUpdates.request("conversation", { thread: merged, loadMore: merged.turns.length });
-    root.scrollTop = top + root.scrollHeight - height;
   }
   return {
     syncConversationLoadingSurface,

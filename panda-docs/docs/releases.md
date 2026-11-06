@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.10`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.11`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -50,7 +50,6 @@ Folder browsing preserves the latest request and typed path. Session renames upd
 Maintainers can run `bun run verify` for build checks, unit and integration tests, and the isolated browser suite. Results include per-suite logs, timeouts, and explicit exclusions for live-service diagnostics.
 
 Sending remains reliable when background updates arrive during a pointer press, and hovered send controls keep readable colors. Answered asynchronous questions restore as collapsed history after a refresh or session switch.
-
 
 ## 0.0.7
 
@@ -127,7 +126,6 @@ banner above the real loading steps. The logo loads before sign-in and supports
 small screens, Light and Dark themes. The build verifies all 76 required steps,
 including 68 isolated browser suites.
 
-
 ## 0.0.10
 
 Global language, appearance, reading width, focus mode and browser full screen now
@@ -152,3 +150,23 @@ completed questions do not remain as pending requests.
 The image build runs all 80 required checks, including 72 isolated browser suites.
 Runtime containers exclude development dependencies. Images are published for Linux
 amd64 and retain the existing persistent-volume layout.
+
+## 0.0.11
+
+Loading earlier messages now immediately shows a spinner and translated status text.
+The feedback covers both network requests and expanding cached messages. Duplicate
+requests are blocked while loading; background refreshes retain the busy state, and
+a failed request can be retried. Reduced-motion preferences stop the animation while
+keeping the status text visible.
+
+Reading older messages keeps the same visible paragraph when conversation snapshots,
+older pages or delayed images arrive. If you scroll while a history request is pending,
+your current reading position is retained. At the bottom, new content continues to
+scroll into view.
+
+The Panda logo and wordmark are vertically aligned in desktop and mobile navigation.
+The release also retains the versioned English workspace screenshot in the README.
+
+The image build requires all 80 verification steps. Focused Chromium and WebKit
+regressions cover history feedback, retries, cached expansion and reading position.
+Images remain available for Linux amd64, with the same persistent-volume layout.
