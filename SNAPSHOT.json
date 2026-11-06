@@ -47,14 +47,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 3829,
-      "sha256": "1153ca2fb7ee02ba7db58a76fad3fa9eac80cd88239dc24fd5cd4bcf8401e2f7",
+      "bytes": 3827,
+      "sha256": "8e18ce47d7b4eadd104940e98dc7cc16131cb48b932d945bdbd8a9590d38ed78",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 4161,
-      "sha256": "c7ca106440cac2381beda74d78687fa7fd1fd4630c106deff7f50f48b8496848",
+      "bytes": 4159,
+      "sha256": "aa823a1e450fb13b02c5988aaa3990bb48667708a1e8f23e4cca376c863d74dd",
       "mode": "100644"
     },
     {
@@ -232,7 +232,7 @@
       "mode": "100644"
     },
     {
-      "path": "panda-docs/static/img/panda-force-workspace-en.png",
+      "path": "panda-docs/static/img/panda-force-workspace-en-0.0.10.png",
       "bytes": 148112,
       "sha256": "f4e4b1356719466cbb13dc3513be7d82c71684aa2c9a96ad13672736981fafad",
       "mode": "100644"
@@ -353,14 +353,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 3829,
-      "sha256": "1153ca2fb7ee02ba7db58a76fad3fa9eac80cd88239dc24fd5cd4bcf8401e2f7",
+      "bytes": 3827,
+      "sha256": "8e18ce47d7b4eadd104940e98dc7cc16131cb48b932d945bdbd8a9590d38ed78",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 4161,
-      "sha256": "c7ca106440cac2381beda74d78687fa7fd1fd4630c106deff7f50f48b8496848",
+      "bytes": 4159,
+      "sha256": "aa823a1e450fb13b02c5988aaa3990bb48667708a1e8f23e4cca376c863d74dd",
       "mode": "100644"
     },
     {
@@ -383,8 +383,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 23211,
-      "sha256": "224bb577a17d0202e8a9ea264917d10730b27d14e640d3ace5ff706d44bcf16d",
+      "bytes": 23218,
+      "sha256": "b6ace7fd406b86c7514cfe060032beffb46c4181c29d5cd1749a81884f1222d8",
       "mode": "100644"
     },
     {
@@ -3550,5 +3550,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "d53b1b59ac7bf92de88fa9fb0d13d1f2b32e00fafdc722ed9f6150c557ae3e94"
+  "contentSha256": "d5208f6a006f5676d95f6652103c0fb712ffceae523fb3a8730983e6a49c4d12"
 }

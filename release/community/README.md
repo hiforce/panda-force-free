@@ -13,7 +13,7 @@ Built on [Codex WebUI](https://github.com/lezi-fun/codex-webui) by [lezi-fun](ht
 
 [简体中文](./README-zh.md) · [Help](./panda-docs/docs/overview.md)
 
-![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en.png?v=0.0.10)
+![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en-0.0.10.png)
 
 ## Quick start
 
