@@ -68,7 +68,8 @@ export function assembleBindings({
         sidebarLayoutPort.mobileSidebarEnabled() &&
         $("#sidebar").classList.contains("mobile-open") &&
         !path.includes($("#sidebar")) &&
-        !path.includes($("#toggleSidebar"))
+        !path.includes($("#toggleSidebar")) &&
+        !path.includes($("#workspaceNavigationToggle"))
       )
         sidebarLayoutPort.setSidebarOpen(false);
       if (!path.includes($("#modelPicker"))) modelsPort.closeModelMenu();

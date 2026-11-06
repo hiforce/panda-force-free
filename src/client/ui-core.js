@@ -1,3 +1,4 @@
+import { readAsyncQuestions, retireAnsweredAsyncQuestions } from "../shared/engine/async-questions.js";
 import { canonicalAttachmentUrl } from "../shared/attachment-urls.js";
 
 export const DEFAULT_TURN_PAGE_SIZE = 20;
@@ -214,7 +215,10 @@ export function mergeConversationHistory(previous, response, { page = false } = 
   for (const turn of history.turns || []) {
     const old = turns.get(turn.id),
       items = new Map((old?.items || []).map((item) => [item.id, item]));
-    for (const item of turn.items || []) items.set(item.id, item);
+    for (const item of turn.items || []) {
+      const retired = items.get(item.id)?.questionState === "earlier" && readAsyncQuestions(item);
+      items.set(item.id, retired ? { ...item, questionState: "earlier" } : item);
+    }
     if (items.size || (turn.id && typeof turn.status === "string"))
       turns.set(turn.id, {
         ...old,
@@ -227,11 +231,23 @@ export function mergeConversationHistory(previous, response, { page = false } = 
     const turn = turns.get(supplement.id);
     if (!turn) continue;
     const items = new Map(turn.items.map((item) => [item.id, item]));
-    for (const item of supplement.items || []) items.set(item.id, { ...items.get(item.id), ...item });
+    for (const item of supplement.items || []) {
+      const alias = item.questionSourceId && items.get(item.questionSourceId);
+      if (alias && alias.id !== item.id && readAsyncQuestions(alias)) items.delete(alias.id);
+      const previous = items.get(item.id) || alias;
+      items.set(item.id, {
+        ...previous,
+        ...item,
+        ...(previous?.questionState === "earlier" ? { questionState: "earlier" } : {}),
+      });
+    }
     const ordered = [...items.values()];
     for (const item of supplement.items || []) {
       if (!Number.isSafeInteger(item.questionUserSequence) || item.questionUserSequence < 1) continue;
       const index = ordered.findIndex((entry) => entry.id === item.id);
+      // Native pagination supplies an authoritative order. A bounded journal
+      // user sequence cannot be used as an offset within a partial history page.
+      if (Number.isFinite(ordered[index]?.historyOrder)) continue;
       const [question] = ordered.splice(index, 1);
       let userSequence = 0;
       const nextUser = ordered.findIndex(
@@ -244,7 +260,9 @@ export function mergeConversationHistory(previous, response, { page = false } = 
   return {
     ...previous,
     ...response.thread,
-    turns: [...turns.values()].sort((a, b) => (a.historyOrder ?? Infinity) - (b.historyOrder ?? Infinity)),
+    turns: retireAnsweredAsyncQuestions(
+      [...turns.values()].sort((a, b) => (a.historyOrder ?? Infinity) - (b.historyOrder ?? Infinity)),
+    ),
     history: {
       revision: page ? previous?.history?.revision : history.revision,
       nextCursor:

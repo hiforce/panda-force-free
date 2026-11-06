@@ -847,21 +847,7 @@
 .session-dialog .summary-section-title {
   display: none;
 }
-.session-dialog [data-wb="theme"] {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid var(--pf-line);
-  border-radius: 8px;
-  margin-top: 20px;
-  font-size: 12px;
-}
-.workbench-top-tools [data-wb="theme"] > [data-pf-message] {
-  display: none;
-}
+
 .session-dialog :is(.summary-session-name-row, .summary-session-marker) {
   max-width: 100%;
 }
@@ -1014,13 +1000,6 @@
 .session-layout .top-actions > :is(#toggleFilesPanel, #toggleSummaryPanel, #toggleSidePanel) {
   display: none;
 }
-.session-layout .workbench-top-tools [data-wb="route"],
-.session-layout .workbench-top-tools [data-wb="search"] :is(span, kbd) {
-  display: none;
-}
-.session-layout .workbench-top-tools [data-wb="search"] .icon-slot {
-  display: inline-grid;
-}
 .session-layout .top-actions {
   gap: 4px;
 }
@@ -1133,7 +1112,7 @@
     grid-column: 3;
   }
   .session-layout.sidebar-hidden .window-brand {
-    visibility: hidden !important;
+    visibility: visible !important;
   }
   .session-layout .sidebar {
     position: static;
@@ -1169,7 +1148,7 @@
     --session-inspector-width: 336px;
   }
 }
-@media (min-width: 768px) and (max-width: 1049px) {
+@media (min-width: 768px) and (max-width: 1080px) {
   .session-inspector {
     position: fixed;
     inset: 88px 12px 12px auto;
@@ -1227,9 +1206,6 @@
   }
   .session-layout .top-actions > .session-info-button {
     order: 3;
-  }
-  .session-layout .workbench-top-tools {
-    display: none;
   }
   .session-layout .topbar .icon-button {
     width: 44px !important;

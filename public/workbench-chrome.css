@@ -1,0 +1,290 @@
+/* Global preferences share the application palette and keep session controls separate. */
+.workbench-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chrome-control,
+.chrome-menu-close,
+.chrome-menu-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  color: var(--pf-muted);
+  background: transparent;
+}
+.workbench-chrome .icon-slot,
+.workbench-preferences .icon-slot {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+.workbench-chrome svg,
+.workbench-preferences svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.65;
+}
+.chrome-control:hover,
+.chrome-menu-close:hover,
+.chrome-menu-back:hover {
+  background: var(--pf-soft);
+  color: var(--pf-ink);
+}
+.chrome-control[aria-expanded="true"] {
+  background: var(--pf-soft);
+  color: var(--pf-accent);
+}
+.chrome-control:focus-visible,
+.workbench-preferences button:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 2px;
+}
+.chrome-control-label,
+.chrome-mobile {
+  display: none;
+}
+.chrome-profile {
+  margin-inline-start: 6px;
+  border: 1px solid var(--pf-line);
+  border-radius: 50%;
+}
+.workbench-chrome [hidden] {
+  display: none !important;
+}
+.workbench-preferences {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  width: 318px;
+  height: auto;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 84px);
+  color: var(--pf-ink);
+  background: var(--pf-card);
+  border: 1px solid var(--pf-line);
+  border-radius: 14px;
+  box-shadow: var(--pf-shadow);
+  overflow: hidden;
+  z-index: 100;
+}
+.workbench-preferences:not([open]) {
+  display: none;
+}
+.workbench-preferences[open] {
+  display: flex;
+  flex-direction: column;
+}
+.workbench-preferences::backdrop {
+  background: #11182760;
+  backdrop-filter: blur(3px);
+}
+.chrome-menu-heading {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 10px 20px;
+  border-bottom: 1px solid var(--pf-line);
+}
+.chrome-menu-heading h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.chrome-menu-heading h2:focus {
+  outline: none;
+}
+.chrome-menu-body {
+  padding: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+.chrome-menu-hint {
+  margin: 4px 10px 10px;
+  color: var(--pf-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.chrome-menu-footnote {
+  margin: 12px 10px 4px;
+}
+.chrome-menu-label {
+  color: var(--pf-muted);
+  font-size: 11px;
+  font-weight: 500;
+  margin: 6px 10px 8px;
+}
+.chrome-menu-divider {
+  height: 1px;
+  background: var(--pf-line);
+  margin: 10px;
+}
+.chrome-option {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 9px;
+  border: 0;
+  background: transparent;
+  text-align: start;
+  color: var(--pf-ink);
+}
+.chrome-option:hover {
+  background: var(--pf-soft);
+}
+.chrome-option.selected {
+  background: color-mix(in srgb, var(--pf-accent) 7%, var(--pf-card));
+}
+.chrome-option.selected > .icon-slot:last-child {
+  color: var(--pf-accent);
+}
+.chrome-option-copy {
+  flex: 1;
+  min-width: 0;
+}
+.chrome-option strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.chrome-option small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--pf-muted);
+  margin-top: 3px;
+}
+.chrome-language-code {
+  flex: 0 0 26px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--pf-muted);
+}
+.chrome-theme-swatch {
+  flex: 0 0 30px;
+  height: 30px;
+  border: 1px solid #8884;
+  border-radius: 9px;
+  background: linear-gradient(90deg, #f7f7f8 35%, #fff 35%);
+}
+.chrome-swatch-dark {
+  background: linear-gradient(90deg, #16181b 35%, #292d32 35%);
+}
+.chrome-swatch-silk {
+  background: linear-gradient(90deg, #dcd0be 35%, #fcfaf7 35%);
+}
+.chrome-swatch-aurora {
+  background: linear-gradient(90deg, #123e52 35%, #071423 35%);
+}
+.chrome-width-preview {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex: 0 0 32px;
+  height: 23px;
+  border: 1px solid var(--pf-line);
+  border-radius: 4px;
+  background: var(--pf-soft);
+}
+.chrome-width-preview::after {
+  content: "";
+  height: 15px;
+  width: 12px;
+  background: var(--pf-muted);
+  opacity: 0.5;
+  border-radius: 2px;
+}
+.chrome-width-preview.wide::after {
+  width: 20px;
+}
+.chrome-width-preview.fill::after {
+  width: 26px;
+}
+.chrome-switch {
+  width: 28px;
+  height: 16px;
+  border-radius: 10px;
+  background: var(--pf-muted);
+  flex-shrink: 0;
+  padding: 2px;
+}
+.chrome-switch::after {
+  content: "";
+  display: block;
+  width: 12px;
+  height: 12px;
+  background: var(--pf-card);
+  border-radius: 50%;
+}
+.chrome-switch.on {
+  background: var(--pf-primary);
+}
+.chrome-switch.on::after {
+  transform: translateX(12px);
+  background: #fff;
+}
+@media (max-width: 767px) {
+  .chrome-desktop {
+    display: none;
+  }
+  .chrome-mobile {
+    display: inline-flex;
+  }
+  .workbench-chrome {
+    gap: 2px;
+  }
+  .chrome-control,
+  .chrome-menu-close,
+  .chrome-menu-back {
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
+  }
+  .workbench-preferences {
+    left: 0 !important;
+    top: calc(var(--app-viewport-top, 0px) + var(--app-viewport-height, 100dvh)) !important;
+    transform: translateY(-100%);
+    width: 100%;
+    max-width: none;
+    max-height: calc(var(--app-viewport-height, 100dvh) - 24px);
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .chrome-menu-heading {
+    padding: 12px 16px 10px;
+  }
+  .chrome-menu-heading h2 {
+    font-size: 16px;
+  }
+  .chrome-menu-body {
+    padding: 12px 16px 22px;
+  }
+  .chrome-option {
+    min-height: 52px;
+    padding: 12px;
+  }
+  .chrome-option strong {
+    font-size: 14px;
+  }
+  .chrome-option small {
+    font-size: 12px;
+  }
+}

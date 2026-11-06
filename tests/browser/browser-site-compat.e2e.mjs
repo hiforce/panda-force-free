@@ -44,7 +44,7 @@ const browser = await runtime.launchBrowser(launchOptions());
 const page = await browser.newPage({ viewport: { width: 1280, height: 760 }, colorScheme: "dark" });
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
-await page.goto(base, { waitUntil: "networkidle" });
+await page.goto(base + "/new", { waitUntil: "networkidle" });
 await page.click("#toggleSidePanel");
 await page.click('[data-side-panel-action="browser"]');
 await page.fill("#browserUrl", target);

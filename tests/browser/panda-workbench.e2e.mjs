@@ -174,7 +174,8 @@ try {
   await page.screenshot({ path: join(artifacts, "workspace-zh-light.png") });
   await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("en"));
   await page.screenshot({ path: join(artifacts, "workspace-en-light.png") });
-  await page.locator(".workbench-top-tools [data-wb=theme]").click();
+  await page.locator('[data-chrome-menu="appearance"]').click();
+  await page.locator('[data-chrome-action="theme"][data-value="dark"]').click();
   await page.screenshot({ path: join(artifacts, "workspace-en-dark.png") });
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -300,7 +301,7 @@ try {
   result.checks.push(
     "One row of accessible mobile icons fits both locales at three widths; permission, model and reasoning popovers work",
   );
-  await mp.locator("#toggleSidebar").click();
+  await mp.locator("#workspaceNavigationToggle").click();
   await mp.locator('.workbench-navigation [data-route="projects"]').click();
   await mp.getByRole("heading", { name: "项目", exact: true }).waitFor();
   await mp.locator("#workspacePreparation").waitFor({ state: "hidden" });

@@ -209,7 +209,10 @@ function applyUserRecord(state, event, payload) {
 /** @param {import("./rollout-types.js").RolloutPayload} payload */
 function applyQuestionRecord(state, payload) {
   const item = {
-    id: payload.id || payload.call_id,
+    // Native history uses the tool call ID for structured asynchronous messages.
+    id: payload.call_id || payload.id,
+    ...(payload.call_id ? { callId: payload.call_id } : {}),
+    ...(payload.id ? { questionSourceId: payload.id } : {}),
     type: "dynamicToolCall",
     tool: payload.name,
     arguments: payload.arguments,

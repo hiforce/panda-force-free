@@ -1,3 +1,4 @@
+import { retireAnsweredAsyncQuestions } from "../../shared/engine/async-questions.js";
 import { messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
 import { errorMessage } from "./../../shared/errors.js";
 import { closestElement } from "./../dom.js";
@@ -108,7 +109,7 @@ export function assembleTimeline({
     let userSeen = false;
     renderBatch.begin();
     try {
-      for (const item of turn.items || []) {
+      for (const item of retireAnsweredAsyncQuestions([turn])[0].items) {
         messagesPort.upsertItem(
           item.type === "userMessage" ? { ...item, steer: item.steer || userSeen } : item,
           turn.id,

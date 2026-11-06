@@ -197,7 +197,9 @@ try {
   await page.locator("#modelButton").click();
   await page.evaluate(async () => {
     await globalThis.__pandaForceI18n.setPreference("zh-CN");
-    document.documentElement.dataset.theme = "dark";
+    const theme = document.querySelector("#themeSelect");
+    theme.value = "dark";
+    theme.dispatchEvent(new Event("change", { bubbles: true }));
   });
   await inspect("#sessionSettingsDialog", "desktop-model-dark-zh");
   await dismiss("#sessionSettingsDialog");

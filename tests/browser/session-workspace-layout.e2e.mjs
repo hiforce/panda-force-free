@@ -165,7 +165,7 @@ try {
     [2560, 1440],
     [1920, 1080],
     [1440, 960],
-    [1050, 900],
+    [1081, 900],
   ]) {
     await page.setViewportSize({ width, height });
     await inspect(`desktop-${width}-both-panels`);
@@ -177,7 +177,7 @@ try {
   await inspect("desktop-no-panels");
   await page.locator("#sessionInfoButton").click();
   await inspect("desktop-right-panel");
-  await page.locator("#toggleSidebar").click();
+  await page.locator("#workspaceNavigationToggle").click();
   await inspect("desktop-both-panels-restored");
   await page.locator("#prompt").focus();
   await page.locator("#prompt").evaluate((input) => input.setSelectionRange(5, 10));
@@ -207,7 +207,18 @@ try {
     await settle();
   }
   assert.ok(historyReads > beforePagination, "Earlier messages must still load from paginated history");
-  await page.locator('#conversation [data-user-turn-id="layout-turn-0"]').waitFor({ state: "attached" });
+  // The visible window depends on available height; load additional pages until the oldest turn arrives.
+  for (
+    let attempt = 0;
+    attempt < 10 && !(await page.locator('#conversation [data-user-turn-id="layout-turn-0"]').count());
+    attempt++
+  ) {
+    const previousReads = historyReads;
+    await page.locator("#conversation .load-older").click();
+    await settle();
+    assert.ok(historyReads > previousReads, "Each page must use the history API");
+  }
+  assert.equal(await page.locator('#conversation [data-user-turn-id="layout-turn-0"]').count(), 1);
   await page.evaluate(() => {
     document.querySelector("#conversation").scrollTop = 0;
   });

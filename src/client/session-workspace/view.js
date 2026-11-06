@@ -41,11 +41,7 @@ export function createSessionWorkspaceView(t) {
   info.setAttribute("aria-controls", inspector.id);
   info.setAttribute("aria-expanded", "false");
   setMessageHtml(info, codexIcon("panelRight"));
-  requireElement(".top-actions").append(info);
-  const breadcrumb = document.createElement("span");
-  breadcrumb.className = "session-breadcrumb";
-  setMessageHtml(breadcrumb, label("common.sessions"));
-  requireElement("#threadTitle").before(breadcrumb);
+  requireElement(".workspace-context-actions").append(info);
   const actions = document.createElement("button");
   actions.id = "sessionActionsButton";
   actions.type = "button";

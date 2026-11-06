@@ -268,10 +268,12 @@ else createInterface({input:process.stdin}).on('line',handleLine);
       const response = await context.request.post(`${base}/api/auth/login`, {
         data: { username: "fixture-owner", password: "visibility-test" },
       });
-      if (!response.ok()) throw new Error(`Fixture login failed: ${response.status()}`);
+      if (!response.ok())
+        throw new Error(`Fixture login failed: ${response.status()} ${await response.text()}\n${serverLogs}`);
       if ((await response.json()).migrationRequired) {
         const setup = await context.request.post(`${base}/api/auth/setup`, { data: { username: "fixture-owner" } });
-        if (!setup.ok()) throw new Error(`Fixture migration failed: ${setup.status()}`);
+        if (!setup.ok())
+          throw new Error(`Fixture migration failed: ${setup.status()} ${await setup.text()}\n${serverLogs}`);
       }
     },
     async start() {

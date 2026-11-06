@@ -14,7 +14,7 @@ import { createWorkbenchViews } from "./workbench-views.js";
 import { codexIcon } from "./codex-icons.js";
 import { createProjectDialogs } from "./project-dialogs.js";
 import { storage } from "./storage.js";
-import { applyThemePreference } from "./theme.js";
+import { createWorkbenchFrame } from "./workbench-chrome/frame.js";
 import { parseWorkbenchRoute } from "./workbench-route.js";
 export { parseWorkbenchRoute } from "./workbench-route.js";
 
@@ -41,6 +41,7 @@ export function createWorkbench({
   openFiles,
   onViewChange = () => {},
 }) {
+  createWorkbenchFrame(t);
   const shell = requireElement(".conversation-shell"),
     viewport = requireElement(".conversation-viewport"),
     dock = requireElement(".composer-dock"),
@@ -65,17 +66,6 @@ export function createWorkbench({
   connection.className = "workbench-connection";
   connection.id = "workbenchConnection";
   requireElement(".sidebar-footer").prepend(connection);
-  const top = document.createElement("div");
-  top.className = "workbench-top-tools";
-  setMessageHtml(
-    top,
-    '<button type="button" data-wb="search" aria-label="Search anything" data-pf-aria-label="common.searchAnything">' +
-      codexIcon("search") +
-      '<span class="workbench-search-label"></span><kbd>⌘ K</kbd></button><button type="button" data-wb="theme" aria-label="Toggle theme" data-pf-aria-label="common.toggleTheme">' +
-      codexIcon("monitor") +
-      "</button>",
-  );
-  requireElement(".top-actions").prepend(top);
   const bottom = document.createElement("nav");
   bottom.className = "workbench-mobile-nav";
   localizeAttribute(bottom, "aria-label", "workbench.workspaceNavigation", undefined, t);
@@ -274,8 +264,12 @@ export function createWorkbench({
       connection,
       `<span class="status-dot ${state.connected ? "connected" : "error"}"></span><span>${messageHtml(state.connected ? "common.codexConnected" : "auth.connectionUnavailable", undefined, t)}</span>`,
     );
-    localizeText(findElement(".workbench-search-label", top), "common.searchAnything", undefined, t);
-    localizeAttribute(findElement('[data-wb="search"]', top), "aria-label", "common.searchAnything", undefined, t);
+    localizeText(
+      requireElement("#workbenchGlobalTitle"),
+      labels[route.page === "task" ? "tasks" : route.page] || "common.workspace",
+      undefined,
+      t,
+    );
     if (!conversation)
       localizeText(requireElement("#threadTitle"), labels[route.page] || "common.workspace", undefined, t);
     if (!conversation) setOpaqueText(requireElement("#threadPath"), "");
@@ -451,10 +445,6 @@ export function createWorkbench({
     },
     search: async (el, what) => {
       openSearch();
-      return;
-    },
-    theme: async (el, what) => {
-      applyThemePreference(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
       return;
     },
     template: async (el, what) => {

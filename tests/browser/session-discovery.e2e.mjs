@@ -57,7 +57,7 @@ try {
   await mkdir(".artifacts/sidebar-design", { recursive: true });
   await page.locator("#sidebar").screenshot({ path: ".artifacts/sidebar-design/folders-en.png" });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator("#toggleSidebar").click();
+  await page.locator("#workspaceNavigationToggle").click();
   await page.waitForFunction(() => {
     const box = document.querySelector("#sidebar").getBoundingClientRect();
     return box.x >= -1 && box.right <= innerWidth + 1;

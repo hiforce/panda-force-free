@@ -19,7 +19,7 @@ for (const viewport of [
   page.on("console", (message) => {
     if (message.type() === "error" && !message.text().includes("404")) errors.push(message.text());
   });
-  await page.goto(base, { waitUntil: "networkidle" });
+  await page.goto(base + "/new", { waitUntil: "networkidle" });
   await page.click("#toggleSidePanel");
   await page.click('[data-side-panel-action="browser"]');
   await page.waitForFunction(() => !document.querySelector("#browserPanel").hidden);

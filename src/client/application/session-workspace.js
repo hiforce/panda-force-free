@@ -184,6 +184,8 @@ export function assembleSessionWorkspace({
   return {
     bind: panel.bind,
     open: panel.open,
+    isOpen: panel.isOpen,
+    setOpen: panel.setOpen,
     close: panel.close,
     openUsage: panel.openUsage,
     openSettings: (kind) => settings.open(kind),

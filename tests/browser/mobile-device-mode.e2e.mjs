@@ -24,8 +24,18 @@ const before = await page.evaluate(() => ({
   sidebarPosition: getComputedStyle(document.querySelector("#sidebar")).position,
   sidebarShadow: getComputedStyle(document.querySelector("#sidebar")).boxShadow,
 }));
-await page.click("#toggleSidebar");
-await page.waitForFunction(() => Math.abs(document.querySelector("#sidebar").getBoundingClientRect().x) < 0.5);
+// A touch-capable tablet follows the desktop breakpoint, rather than the pointer type.
+await assertTabletDesktop();
+async function assertTabletDesktop() {
+  qualityAssert.equal(before.sidebarPosition, "static");
+  qualityAssert.ok(Math.abs(before.sidebarX) < 1);
+  await page.click("#toggleSidebar");
+  await page.waitForFunction(() => document.body.classList.contains("sidebar-hidden"));
+  await page.click("#workspaceNavigationToggle");
+}
+await page.waitForFunction(
+  () => Math.abs(document.querySelector("#sidebar").getBoundingClientRect().width - 232) < 0.01,
+);
 const after = await page.evaluate(() => {
   const sidebar = document.querySelector("#sidebar"),
     rect = sidebar.getBoundingClientRect();
@@ -49,16 +59,11 @@ await browser.close();
 {
   qualityAssert.ok(before.coarse, "Condition: !before.coarse");
   qualityAssert.ok(before.mobileClass, "Condition: !before.mobileClass");
-  qualityAssert.equal(before.sidebarPosition, "fixed", "Condition: before.sidebarPosition!=='fixed'");
-  qualityAssert.ok(!(before.sidebarX >= 0), "Condition: before.sidebarX>=0");
-  qualityAssert.ok(
-    !(!["none", after.shadow].includes(before.sidebarShadow) && before.sidebarX >= 0),
-    "Condition: !['none',after.shadow].includes(before.sidebarShadow)&&before.sidebarX>=0",
-  );
-  qualityAssert.ok(after.mobileOpen, "Condition: !after.mobileOpen");
-  qualityAssert.ok(!after.bodyHidden, "Condition: after.bodyHidden");
-  qualityAssert.ok(!(Math.abs(after.x) > 0.5), "Condition: Math.abs(after.x)>.5");
-  qualityAssert.ok(!(after.width > 948), "Condition: after.width>948");
-  qualityAssert.ok(!(after.shadow === "none"), "Condition: after.shadow==='none'");
+  qualityAssert.equal(after.position, "static");
+  qualityAssert.equal(after.mobileOpen, false);
+  qualityAssert.equal(after.bodyHidden, false);
+  qualityAssert.ok(Math.abs(after.x) < 0.5);
+  qualityAssert.ok(Math.abs(after.width - 232) < 0.01);
+  qualityAssert.equal(after.shadow, "none");
   qualityAssert.ok(after.topElement, "Condition: !after.topElement");
 }

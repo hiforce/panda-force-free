@@ -52,7 +52,7 @@ async function waitForTerminalOutput(kind, expected) {
     throw new Error(`${kind} terminal did not render ${expected}. Current output:\n${output}`, { cause: error });
   }
 }
-await page.goto(base, { waitUntil: "networkidle" });
+await page.goto(base + "/new", { waitUntil: "networkidle" });
 await page.waitForFunction(() => globalThis.__pandaForceDebug?.notify);
 await page.click("#toggleSidePanel");
 await page.click('[data-side-panel-action="terminal"]');

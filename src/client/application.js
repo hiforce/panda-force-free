@@ -45,6 +45,7 @@ import { assembleTurnFrames } from "./application/turn-frames.js";
 import { assembleViewport } from "./application/viewport.js";
 import { assembleProjects, assembleSidebar, assembleWorkbench } from "./application/workspace-services.js";
 import { assembleWorkspace } from "./application/workspace.js";
+import { assembleWorkbenchChrome } from "./application/workbench-chrome.js";
 import { assembleSessionWorkspace } from "./application/session-workspace.js";
 export function startApplication() {
   const sessionWorkspace = /** @type {import('./application/ports.js').ApplicationPorts['sessionWorkspace']} */ (
@@ -923,6 +924,15 @@ export function startApplication() {
       sessionWorkspacePort: sessionWorkspace,
     }),
   );
+  const workbenchChrome = assembleWorkbenchChrome({
+    t: environment.t,
+    i18n: environment.i18n,
+    workbenchPort: workbench,
+    settingsPort: settings,
+    sidebarLayoutPort: sidebarLayout,
+    sessionWorkspacePort: sessionWorkspace,
+    noticesPort: notices,
+  });
   applicationProjections.bind();
   bindings.bind();
   localization.bind();
@@ -940,6 +950,7 @@ export function startApplication() {
   sessionWorkspace.bind();
   diagnostics.bind();
   sidebarLayout.bind();
+  workbenchChrome.bind();
   workspace.bind();
   sidebar.bind();
   composerInteractions.bind();

@@ -7,6 +7,9 @@ migrateBrowserState();
  * failures degrade gracefully and every key is declared in one place.
  */
 export const STORAGE_KEYS = {
+  layout: "panda-force-layout",
+  sidebarOpen: "panda-force-sidebar-open",
+  sessionDetailsOpen: "panda-force-session-details-open",
   composerDrafts: "panda-force-composer-drafts",
   activeThread: "panda-force-active-thread",
   sidebarUnassignedView: "panda-force-sidebar-unassigned-view",

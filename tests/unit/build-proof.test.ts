@@ -56,6 +56,11 @@ test("source identity binds code, dependency patches and executable modes while 
     writeFileSync(join(root, "patches", "dependency.patch"), "changed");
     const changed = sourceIdentity(root).sha256;
     expect(changed).not.toBe(initial);
+    for (const stylesheet of ["workbench-chrome.css", "workbench-layout.css", "appearance.css"]) {
+      const beforeStylesheet = sourceIdentity(root).sha256;
+      writeFileSync(join(root, "public", stylesheet), "body { color: #222; }");
+      expect(sourceIdentity(root).sha256).not.toBe(beforeStylesheet);
+    }
     chmodSync(join(root, "src", "main.ts"), 0o755);
     expect(sourceIdentity(root).sha256).not.toBe(changed);
   } finally {

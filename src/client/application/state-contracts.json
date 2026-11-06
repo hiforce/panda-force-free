@@ -396,6 +396,10 @@
     "applicationProjections": {
       "read": [],
       "write": []
+    },
+    "workbenchChrome": {
+      "read": [],
+      "write": []
     }
   }
 }

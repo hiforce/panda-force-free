@@ -43,7 +43,11 @@ test("filtered exports exclude private state and internal history; three-way upd
       mkdirSync(join(source, path, ".."), { recursive: true });
       writeFileSync(join(source, path), "Private fixture");
     }
+    const stylesheets = ["workbench-chrome.css", "workbench-layout.css", "appearance.css"];
+    mkdirSync(join(source, "public"), { recursive: true });
+    for (const name of stylesheets) writeFileSync(join(source, "public", name), "body { color: #222; }");
     const approved = [
+      ...stylesheets.map((name) => "public/" + name),
       "package.json",
       "bun.lock",
       "src/example.js",
@@ -57,6 +61,7 @@ test("filtered exports exclude private state and internal history; three-way upd
     const before = join(root, "before");
     exportFree({ source, destination: before });
     const first = verifySnapshot(before);
+    for (const name of stylesheets) expect(readFileSync(join(before, "public", name), "utf8")).toContain("#222");
     expect(first.files.some((f) => /\.codex|\.claude|docs\/design|proprietary/.test(f.path))).toBe(false);
     expect(readFileSync(join(before, "package.json"), "utf8")).toContain("panda-force-free");
     repository(publicRepo);

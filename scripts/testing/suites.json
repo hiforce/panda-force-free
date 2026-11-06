@@ -67,7 +67,11 @@
     "browser/session-workspace.e2e.mjs",
     "browser/session-workspace-layout.e2e.mjs",
     "browser/session-dialogs.e2e.mjs",
-    "browser/session-usage.e2e.mjs"
+    "browser/session-usage.e2e.mjs",
+    "browser/workbench-chrome.e2e.mjs",
+    "browser/home-viewport.e2e.mjs",
+    "browser/i18n-upgrade.e2e.mjs",
+    "browser/conversation-follow.e2e.mjs"
   ],
   "groups": {
     "runtime": [

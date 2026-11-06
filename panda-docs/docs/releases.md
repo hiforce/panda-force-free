@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.9`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.10`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -126,3 +126,29 @@ Workspace preparation now displays the bundled Panda logo and a themed brand
 banner above the real loading steps. The logo loads before sign-in and supports
 small screens, Light and Dark themes. The build verifies all 76 required steps,
 including 68 isolated browser suites.
+
+
+## 0.0.10
+
+Global language, appearance, reading width, focus mode and browser full screen now
+live in the top navigation. Session titles stay with the conversation. Comfortable,
+Wide and Fill layouts align the title, messages and composer between the side panels;
+phones use compact preference buttons and bottom sheets.
+
+Light, Graphite, Silk and Aurora appearances share the same preference with Settings.
+Changing appearance, language or layout preserves drafts and focus. Language follows
+the browser until explicitly selected, with English as fallback; native engine output
+keeps its original wording.
+
+Mobile home height recovers after keyboard, page activation and orientation changes.
+Upgraded pages replace incomplete shared translation catalogs, use a versioned locale
+module and retain live translation bindings, preventing raw translation keys in menus.
+
+Submitting a new message returns to the latest conversation content. Delayed image,
+font and layout growth continues to follow the bottom; scrolling up to read history
+pauses that behavior. Answered questionnaires are reconciled with native history so
+completed questions do not remain as pending requests.
+
+The image build runs all 80 required checks, including 72 isolated browser suites.
+Runtime containers exclude development dependencies. Images are published for Linux
+amd64 and retain the existing persistent-volume layout.

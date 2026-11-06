@@ -163,11 +163,13 @@ try {
 
   await page.evaluate(async () => {
     await globalThis.__pandaForceI18n.setPreference("zh-CN");
-    document.documentElement.dataset.theme = "dark";
+    const theme = document.querySelector("#themeSelect");
+    theme.value = "dark";
+    theme.dispatchEvent(new Event("change", { bubbles: true }));
   });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForFunction(() => document.querySelector("#toggleSidebar").getAttribute("aria-expanded") === "false");
-  await page.locator("#toggleSidebar").click();
+  await page.locator("#workspaceNavigationToggle").click();
   await page.waitForFunction(() => Math.abs(document.querySelector("#sidebar").getBoundingClientRect().left) < 1);
   await page.locator('.thread-item[data-id="old-alpha"] .thread-options').click();
   await page.getByRole("menuitem", { name: "删除会话", exact: true }).click();

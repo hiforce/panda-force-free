@@ -2,49 +2,7 @@ import { findElement, findElements, requireElement } from "./dom.js";
 import { localizeText } from "./i18n.js";
 import { createUserInputCard } from "./user-input.js";
 
-// These tools receive answers through later chat messages, not native approval RPCs.
-export function readAsyncQuestions(item) {
-  if (!["mcpToolCall", "dynamicToolCall"].includes(item?.type)) return null;
-  const name = item.tool || item.name || item.function?.name || "";
-  if (!/(?:^|[./_])request_user_input(?:_async)?$/.test(name)) return null;
-  let input = item.arguments ?? item.input ?? item.function?.arguments;
-  if (typeof input === "string") {
-    if (input.length > 1024 * 1024) return null;
-    try {
-      input = JSON.parse(input);
-    } catch {
-      return null;
-    }
-  }
-  if (!Array.isArray(input?.questions) || !input.questions.length || input.questions.length > 30) return null;
-  if (
-    input.questions.some(
-      (question) =>
-        !question ||
-        typeof question !== "object" ||
-        (question.options !== undefined && !Array.isArray(question.options)),
-    )
-  )
-    return null;
-  const questions = input.questions.map((question, index) => ({
-    id: String(index),
-    header: question.header || "",
-    question: question.title || question.question || "",
-    isOther: true,
-    isSecret: question.isSecret === true,
-    options: (question.options || []).map((option) => (typeof option === "string" ? { label: option } : option)),
-  }));
-  if (
-    questions.some(
-      (question) =>
-        typeof question.question !== "string" ||
-        !question.question ||
-        question.options.some((option) => !option || typeof option.label !== "string"),
-    )
-  )
-    return null;
-  return questions;
-}
+export { readAsyncQuestions } from "../shared/engine/async-questions.js";
 
 export function closeAsyncQuestionCard(card, t) {
   if (["submitting", "unconfirmed", "submitted", "earlier"].includes(card.dataset.status)) return;

@@ -1,7 +1,8 @@
+import { storage, STORAGE_KEYS } from "../storage.js";
 import { codexIcon } from "../codex-icons.js";
 import { escapeHtml } from "../../shared/html.js";
 import { closestElement, requireElement } from "../dom.js";
-import { localizeAttribute, messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { localizeAttribute, setMessageHtml, setOpaqueText } from "../i18n.js";
 import { createSessionWorkspaceView } from "./view.js";
 import { renderSessionUsage } from "./usage-view.js";
 import { createSessionToolsView } from "./tools-view.js";
@@ -11,8 +12,8 @@ import { createSessionToolsView } from "./tools-view.js";
 export function createSessionWorkspace(options) {
   const { t, i18n, read } = options;
   const { inspector, info, actions: actionButton, summary } = createSessionWorkspaceView(t);
-  let desktop = matchMedia("(min-width:1050px)").matches;
-  let desktopOpen = true,
+  let desktop = matchMedia("(min-width:1081px)").matches;
+  let desktopOpen = storage.get(STORAGE_KEYS.sessionDetailsOpen) !== "false",
     mobileOpen = false,
     desiredOpen = false,
     selectedTab = "overview";
@@ -32,10 +33,6 @@ export function createSessionWorkspace(options) {
     requireElement("#sessionToolsDialog"),
     requireElement("#sessionActionsDialog"),
   ];
-  const themeButton = requireElement('.workbench-top-tools [data-wb="theme"]');
-  const themeHome = document.createComment("Theme action returns to the workspace header outside a session");
-  themeButton.before(themeHome);
-  setMessageHtml(themeButton, codexIcon("monitor") + messageHtml("common.toggleTheme", undefined, t));
   const tools = createSessionToolsView({
     registry: options.registry,
     store: options.store,
@@ -66,13 +63,10 @@ export function createSessionWorkspace(options) {
         requireElement("#sessionGoalSlot").append(requireElement("#goalStatus"));
       if (details && details.parentElement !== requireElement("#sessionActionsContent"))
         requireElement("#sessionActionsContent").append(details);
-      if (themeButton.parentElement !== requireElement("#sessionActionsContent"))
-        requireElement("#sessionActionsContent").append(themeButton);
     } else {
       if (requireElement("#goalStatus").parentNode !== goalHome.parentNode)
         goalHome.after(requireElement("#goalStatus"));
       if (details && details.parentNode !== detailsHome.parentNode) detailsHome.after(details);
-      if (themeButton.parentNode !== themeHome.parentNode) themeHome.after(themeButton);
     }
   }
   function setTab(tab, focus = false) {
@@ -116,15 +110,19 @@ export function createSessionWorkspace(options) {
     info.classList.toggle("active", inspector.open);
     info.setAttribute("aria-expanded", String(inspector.open));
   }
-  function close() {
-    if (desktop) desktopOpen = false;
-    else mobileOpen = false;
+  function close({ temporary = false } = {}) {
+    if (desktop) {
+      desktopOpen = false;
+      if (!temporary) storage.set(STORAGE_KEYS.sessionDetailsOpen, "false");
+    } else mobileOpen = false;
     updateOpenState();
   }
-  function open(tab = selectedTab) {
+  function open(tab = selectedTab, { temporary = false } = {}) {
     options.beforeOpen();
-    if (desktop) desktopOpen = true;
-    else mobileOpen = true;
+    if (desktop) {
+      desktopOpen = true;
+      if (!temporary) storage.set(STORAGE_KEYS.sessionDetailsOpen, "true");
+    } else mobileOpen = true;
     setTab(tab);
     refresh();
   }
@@ -167,6 +165,8 @@ export function createSessionWorkspace(options) {
     localizeAttribute(info, "title", "sessionview.open", undefined, t);
     localizeAttribute(actionButton, "aria-label", "sessionview.sessionActions", undefined, t);
     localizeAttribute(actionButton, "title", "sessionview.sessionActions", undefined, t);
+    setOpaqueText(requireElement("#sessionHeadingProject"), view.project?.name || t("common.unassigned"));
+    requireElement("#threadTitle").title = view.title;
     setOpaqueText(requireElement("#sessionProjectName"), view.project?.name || t("common.unassigned"));
     setOpaqueText(requireElement("#sessionProjectCode"), view.project?.code || "—");
     setOpaqueText(requireElement("#sessionWorkingFolder"), view.cwd || t("common.noWorkingFolder"));
@@ -265,6 +265,7 @@ export function createSessionWorkspace(options) {
   }
   function bind() {
     requireElement("#sessionWorkspaceSearch").onclick = options.search;
+    requireElement("#sessionHeadingProject").onclick = options.associateProject;
     info.onclick = () => (inspector.open ? close() : open());
     actionButton.onclick = () => {
       options.openSessionActions();
@@ -320,16 +321,23 @@ export function createSessionWorkspace(options) {
     inspector.addEventListener("close", () => {
       if (inspector.open) return;
       if (desiredOpen) {
-        if (desktop) desktopOpen = false;
-        else mobileOpen = false;
+        if (desktop) {
+          desktopOpen = false;
+          storage.set(STORAGE_KEYS.sessionDetailsOpen, "false");
+        } else mobileOpen = false;
       }
       desiredOpen = false;
       toggleClass("session-inspector-open", false);
       info.classList.remove("active");
       info.setAttribute("aria-expanded", "false");
     });
-    matchMedia("(min-width:1050px)").addEventListener("change", (event) => {
+    matchMedia("(min-width:1081px)").addEventListener("change", (event) => {
       desktop = event.matches;
+      mobileOpen = false;
+      if (desktop)
+        desktopOpen =
+          storage.get(STORAGE_KEYS.sessionDetailsOpen) !== "false" &&
+          !document.body.classList.contains("workbench-focus");
       refresh();
     });
     i18n.subscribe(() => {
@@ -344,5 +352,13 @@ export function createSessionWorkspace(options) {
     addEventListener("pageshow", refresh);
     refresh();
   }
-  return { bind, refresh, open, close, openUsage };
+  return {
+    bind,
+    refresh,
+    open,
+    close,
+    openUsage,
+    isOpen: () => inspector.open,
+    setOpen: (value, settings) => (value ? open(selectedTab, settings) : close(settings)),
+  };
 }

@@ -1,10 +1,16 @@
+import { storage, STORAGE_KEYS } from "../storage.js";
 import { codexIcon } from "../codex-icons.js";
 import { setMessageHtml } from "../i18n.js";
 // Owns sidebar layout, mobile visibility and help/search affordances.
 /** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "$" | "t", "notices" | "settings", "sidebarLayout">} options */
 export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settingsPort }) {
   let sidebarLayoutMobile = null;
-  function setSidebarOpen(open) {
+  function isSidebarOpen() {
+    return mobileSidebarEnabled()
+      ? $("#sidebar").classList.contains("mobile-open")
+      : !document.body.classList.contains("sidebar-hidden");
+  }
+  function setSidebarOpen(open, { temporary = false } = {}) {
     const sidebar = $("#sidebar"),
       mobile = mobileSidebarEnabled();
     document.body.classList.toggle("sidebar-hidden", !mobile && !open);
@@ -12,15 +18,19 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
     const visible = mobile
       ? sidebar.classList.contains("mobile-open")
       : !document.body.classList.contains("sidebar-hidden");
-    $("#toggleSidebar").setAttribute("aria-expanded", String(visible));
-    $("#toggleSidebar").setAttribute("aria-pressed", String(visible));
+    if (!mobile && !temporary) storage.set(STORAGE_KEYS.sidebarOpen, String(open));
+    for (const selector of ["#toggleSidebar", "#workspaceNavigationToggle"]) {
+      $(selector).setAttribute("aria-expanded", String(visible));
+      $(selector).setAttribute("aria-pressed", String(visible));
+    }
   }
   function syncSidebarLayout() {
     const mobile = mobileSidebarEnabled();
     if (mobile === sidebarLayoutMobile) return;
     sidebarLayoutMobile = mobile;
     setMessageHtml($("#toggleSidebar"), codexIcon(mobile ? "menu" : "panelLeft"));
-    setSidebarOpen(!mobile);
+    setMessageHtml($("#workspaceNavigationToggle"), codexIcon(mobile ? "menu" : "panelLeft"));
+    setSidebarOpen(!mobile && storage.get(STORAGE_KEYS.sidebarOpen) !== "false", { temporary: true });
   }
   function setSidebarSearchOpen(open) {
     const panel = $("#sidebarSearchPanel"),
@@ -41,8 +51,7 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
     $("#sidebarHelpButton").setAttribute("aria-expanded", String(open));
   }
   function mobileSidebarEnabled() {
-    if (document.body.classList.contains("session-layout")) return innerWidth < 768;
-    return document.documentElement.classList.contains("mobile-device") || innerWidth < 720;
+    return innerWidth < 768;
   }
   function bind() {
     $("#productModeButton").onclick = () => noticesPort.toast(t("common.currentEngineCodex"));
@@ -63,6 +72,7 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
       setSidebarHelpOpen(false);
       settingsPort.openSettings("keyboard-shortcuts");
     };
+    $("#workspaceNavigationToggle").onclick = () => $("#toggleSidebar").click();
     $("#toggleSidebar").onclick = () =>
       setSidebarOpen(
         mobileSidebarEnabled()
@@ -72,6 +82,7 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
   }
   return {
     bind,
+    isSidebarOpen,
     mobileSidebarEnabled,
     setSidebarOpen,
     syncSidebarLayout,

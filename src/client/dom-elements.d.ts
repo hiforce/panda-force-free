@@ -189,6 +189,7 @@ export interface InterfaceElements {
   "#sessionExecutionSlot": HTMLElementTagNameMap["div"];
   "#sessionGoalPlan": HTMLElementTagNameMap["details"];
   "#sessionGoalSlot": HTMLElementTagNameMap["div"];
+  "#sessionHeadingProject": HTMLElementTagNameMap["button"];
   "#sessionInfoButton": HTMLElementTagNameMap["button"];
   "#sessionInspector": HTMLElementTagNameMap["dialog"];
   "#sessionInspectorFooter": HTMLElementTagNameMap["footer"];
@@ -319,9 +320,15 @@ export interface InterfaceElements {
   "#workbenchConnection": HTMLElementTagNameMap["button"];
   "#workbenchContent": HTMLElementTagNameMap["div"];
   "#workbenchDialog": HTMLElementTagNameMap["dialog"];
+  "#workbenchExitFocus": HTMLElementTagNameMap["button"];
+  "#workbenchGlobalTitle": HTMLElementTagNameMap["span"];
   "#workbenchHero": HTMLElementTagNameMap["div"];
+  "#workbenchPreferences": HTMLElementTagNameMap["dialog"];
+  "#workbenchPreferencesTitle": HTMLElementTagNameMap["h2"];
   "#workbenchPreparation": HTMLElementTagNameMap["button"];
   "#workbenchView": HTMLElementTagNameMap["section"];
+  "#workspaceContextHeader": HTMLElementTagNameMap["header"];
+  "#workspaceNavigationToggle": HTMLElementTagNameMap["button"];
   "#workspacePreparation": HTMLElementTagNameMap["section"];
   "#workspacePreparationContinue": HTMLElementTagNameMap["button"];
   "#workspacePreparationCount": HTMLElementTagNameMap["span"];

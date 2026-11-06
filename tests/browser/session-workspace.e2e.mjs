@@ -246,8 +246,8 @@ try {
   await page.waitForFunction(() => document.querySelector(".conversation-shell").getBoundingClientRect().x < 2);
   const collapsed = await page.locator(".conversation-shell").boundingBox();
   assert.ok(collapsed.x < 2, JSON.stringify(collapsed));
-  await page.locator("#toggleSidebar").click();
-  await page.waitForFunction(() => document.querySelector(".conversation-shell").getBoundingClientRect().x >= 235);
+  await page.locator("#workspaceNavigationToggle").click();
+  await page.waitForFunction(() => document.querySelector(".conversation-shell").getBoundingClientRect().x >= 231);
   await page.locator("#sessionActionsButton").click();
   assert.equal(await page.locator("#summarySessionName").isVisible(), true);
   await closeDialog("#sessionActionsDialog");
@@ -262,11 +262,11 @@ try {
     [430, 932],
     [740, 390],
     [820, 900],
-    [1050, 900],
+    [1081, 900],
     [1440, 960],
   ]) {
     await page.setViewportSize({ width, height });
-    await page.waitForFunction((width) => document.querySelector("#sessionInspector").open === width >= 1050, width);
+    await page.waitForFunction((width) => document.querySelector("#sessionInspector").open === width >= 1081, width);
     await page.waitForFunction(
       (height) => Math.abs(document.querySelector("#app").getBoundingClientRect().height - height) < 2,
       height,
@@ -397,9 +397,8 @@ try {
   await page.setViewportSize({ width: 1440, height: 960 });
   await openInspector();
   await page.screenshot({ path: directory + "/desktop-zh.png" });
-  await page.locator("#sessionActionsButton").click();
-  await page.locator('#sessionActionsDialog [data-wb="theme"]').click();
-  await closeDialog("#sessionActionsDialog");
+  await page.locator('[data-chrome-menu="appearance"]').click();
+  await page.locator('[data-chrome-action="theme"][data-value="dark"]').click();
   await page.screenshot({ path: directory + "/desktop-dark-zh.png" });
   checks.push("Translated UI, unchanged native engine content, light/dark session surfaces");
   for (const [width, height] of [

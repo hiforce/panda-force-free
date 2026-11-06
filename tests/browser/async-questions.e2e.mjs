@@ -194,6 +194,87 @@ try {
   });
   assert.equal(await card.getAttribute("data-status"), "earlier");
   assert.equal(await card.getAttribute("open"), null);
+  // Current native history exposes host questions as asynchronous agent messages.
+  // Their phase can be final_answer, but their UI belongs in the event stream.
+  await page.evaluate(() => {
+    const api = globalThis.__pandaForceDebug;
+    api.notify("turn/started", {
+      threadId: "old-alpha",
+      turn: { id: "structured-question-turn", status: "inProgress", items: [] },
+    });
+    api.notify("item/completed", {
+      threadId: "old-alpha",
+      turnId: "structured-question-turn",
+      item: { id: "before-question-tool", type: "dynamicToolCall", tool: "inspect", status: "completed" },
+    });
+    api.notify("item/completed", {
+      threadId: "old-alpha",
+      turnId: "structured-question-turn",
+      item: { id: "call-native-question", type: "agentMessage", phase: "final_answer", text: "Preview or implement?" },
+    });
+  });
+  const nativeTurn = page.locator('[data-turn-id="structured-question-turn"]');
+  assert.equal(await nativeTurn.locator("[data-worked-for-divider]").isVisible(), true);
+  const nativeQuestion = {
+    id: "call-native-question",
+    type: "agentMessage",
+    phase: "final_answer",
+    delivery: "async",
+    text: "Preview or implement?",
+    questions: [{ title: "Preview or implement?", options: ["Preview", "Implement"] }],
+  };
+  await page.evaluate(
+    (item) =>
+      globalThis.__pandaForceDebug.notify("item/completed", {
+        threadId: "old-alpha",
+        turnId: "structured-question-turn",
+        item,
+      }),
+    nativeQuestion,
+  );
+  const nativeCard = nativeTurn.locator('[data-async-question-card][data-item-id="call-native-question"]');
+  assert.equal(await nativeCard.count(), 1);
+  assert.equal(await nativeCard.getAttribute("data-status"), "open");
+  assert.equal(await nativeCard.locator("fieldset").isEnabled(), true);
+  assert.equal(await nativeTurn.locator(".turn-final-slot").textContent(), "");
+  assert.equal(await nativeTurn.locator("[data-worked-for-divider]").isVisible(), false);
+  await page.evaluate(
+    (question) =>
+      globalThis.__pandaForceDebug.syncTurnSnapshot({
+        id: "structured-question-turn",
+        status: "inProgress",
+        items: [
+          question,
+          {
+            id: "ordinary-followup",
+            type: "userMessage",
+            content: [{ type: "text", text: "Let me review the preview first." }],
+          },
+          {
+            ...question,
+            id: "call-newer-question",
+            text: "Choose a theme",
+            questions: [{ title: "Choose a theme", options: ["Light", "Dark"] }],
+          },
+        ],
+      }),
+    nativeQuestion,
+  );
+  assert.equal(await nativeCard.getAttribute("data-status"), "earlier");
+  assert.equal(await nativeCard.getAttribute("open"), null);
+  assert.equal(await nativeCard.locator("[type=submit]").isVisible(), false);
+  assert.equal(await nativeTurn.locator('[data-item-id="call-newer-question"]').getAttribute("data-status"), "open");
+  await page.evaluate(
+    (item) =>
+      globalThis.__pandaForceDebug.notify("item/completed", {
+        threadId: "old-alpha",
+        turnId: "structured-question-turn",
+        item,
+      }),
+    nativeQuestion,
+  );
+  assert.equal(await nativeCard.count(), 1);
+  assert.equal(await nativeCard.getAttribute("data-status"), "earlier");
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
@@ -206,6 +287,9 @@ try {
       activeTurnAnswerSteers: true,
       replyCollapsesHistory: true,
       noReplayReopening: true,
+      structuredNativeQuestions: true,
+      ordinaryReplyRetiresQuestion: true,
+      noFalseFinalAnswerOrDuplicateDivider: true,
       mobile: true,
       errors,
     }),

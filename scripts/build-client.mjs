@@ -19,10 +19,11 @@ for (const locale of SUPPORTED_LOCALES) {
   revision.update(bytes);
   writeFileSync(`public/locales/${locale.code}.json`, bytes);
 }
+const localeVersion = revision.digest("hex").slice(0, 16);
 const options = {
   target: "browser",
   minify: true,
-  define: { PANDA_LOCALE_VERSION: JSON.stringify(revision.digest("hex").slice(0, 16)) },
+  define: { PANDA_LOCALE_VERSION: JSON.stringify(localeVersion) },
 };
 const sharedRuntime = {
   name: "shared-i18n-runtime",
@@ -34,7 +35,10 @@ const sharedRuntime = {
           (name) => resolve(args.resolveDir, args.path) === resolve("src/client/" + name),
         )
       )
-        return { path: "/" + args.path.split("/").at(-1), external: true };
+        return {
+          path: "/" + args.path.split("/").at(-1) + (args.path.endsWith("/i18n.js") ? "?v=" + localeVersion : ""),
+          external: true,
+        };
     });
   },
 };

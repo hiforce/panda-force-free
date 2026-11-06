@@ -21,7 +21,7 @@ try {
 
   terminalFixture = mkdtempSync(join(tmpdir(), "panda-force-terminal-"));
   const vimFile = join(terminalFixture, "vim-test.txt");
-  await page.goto(runtime.base, { waitUntil: "networkidle" });
+  await page.goto(runtime.base + "/new", { waitUntil: "networkidle" });
   await page.fill("#prompt", "检查输入框横线与终端键盘支持");
 
   const composer = await page.evaluate(() => ({

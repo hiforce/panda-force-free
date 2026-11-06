@@ -1,0 +1,347 @@
+/* One center-column rail aligns the contextual title, conversation and composer. */
+.panda-workspace {
+  --session-inspector-width: 300px;
+  --session-content-width: 800px;
+  --session-content-gutter: 28px;
+  --session-content-rail: min(var(--session-content-width), calc(100cqw - var(--session-content-gutter) * 2));
+}
+:root[data-workbench-width="wide"] .panda-workspace {
+  --session-content-width: 1040px;
+}
+:root[data-workbench-width="fill"] .panda-workspace {
+  --session-content-width: 100cqw;
+}
+.panda-workspace .conversation-shell {
+  container-type: inline-size;
+}
+.panda-workspace .topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 64px;
+  background: var(--pf-card);
+}
+.panda-workspace .window-brand {
+  display: flex !important;
+  visibility: visible !important;
+  flex: 0 0 232px;
+  height: 100%;
+  padding: 0 20px;
+}
+.panda-workspace .top-actions {
+  display: flex !important;
+  flex: none;
+  margin-inline-start: auto;
+  padding: 0 20px 0 0;
+  border: 0;
+}
+.workbench-global-context {
+  flex: 1;
+  min-width: 0;
+  color: var(--pf-muted);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#workbenchExitFocus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--pf-line);
+  border-radius: 8px;
+  color: var(--pf-ink);
+  font-size: 12px;
+}
+#workbenchExitFocus .icon-slot,
+#workbenchExitFocus svg {
+  width: 16px;
+  height: 16px;
+}
+#workbenchExitFocus[hidden] {
+  display: none;
+}
+.panda-workspace .workspace-navigation-toggle {
+  display: none;
+}
+.panda-workspace.sidebar-hidden .workspace-navigation-toggle {
+  display: inline-grid;
+  margin-inline-start: 4px;
+  flex-shrink: 0;
+}
+.workbench-sidebar-launch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.workbench-sidebar-launch #newTask {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.workbench-sidebar-launch #toggleSidebar {
+  flex: 0 0 32px;
+}
+.workbench-sidebar-launch #newTask kbd {
+  display: none;
+}
+.workspace-context-header {
+  display: none;
+  flex: none;
+  width: var(--session-content-rail);
+  margin: 0 auto;
+  padding: 21px 0 17px;
+  border-bottom: 1px solid var(--pf-line);
+}
+.session-layout .workspace-context-header,
+[data-workbench-page="new"] .workspace-context-header {
+  display: block;
+}
+.workspace-context-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pf-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  min-width: 0;
+  margin-bottom: 9px;
+}
+.workspace-context-path a {
+  color: inherit;
+  text-decoration: none;
+}
+.workspace-context-path a:hover,
+#sessionHeadingProject:hover {
+  color: var(--pf-accent);
+}
+.workspace-context-path .icon-slot,
+.workspace-context-path svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+}
+#sessionHeadingProject {
+  font-size: 11px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workspace-context-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+}
+.panda-workspace .workspace-context-row .thread-heading {
+  order: 0;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.panda-workspace .thread-heading::before {
+  content: none;
+}
+.panda-workspace #threadTitle {
+  margin: 0;
+  color: var(--pf-ink);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+.workspace-context-actions {
+  order: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.workspace-context-actions .icon-button {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  min-width: 36px;
+}
+.session-layout .workspace-context-actions > :is(#toggleFilesPanel, #toggleSummaryPanel, #toggleSidePanel) {
+  display: none;
+}
+[data-workbench-page="new"] .workspace-context-path {
+  display: none;
+}
+.panda-workspace .session-inspector {
+  width: var(--session-inspector-width);
+}
+.panda-workspace .conversation-scroll-bottom {
+  right: max(var(--session-content-gutter), calc((100cqw - var(--session-content-width)) / 2));
+}
+.panda-workspace .workbench-view {
+  width: min(100%, calc(var(--session-content-width) + 56px));
+}
+.panda-workspace #threadPath {
+  max-width: 100%;
+  font-size: 11px;
+}
+@media (min-width: 768px) {
+  .panda-workspace .app-shell {
+    --sidebar-w: 232px;
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--changes-w);
+    grid-template-rows: 64px minmax(0, 1fr);
+  }
+  .panda-workspace.sidebar-hidden .app-shell {
+    --sidebar-w: 0px;
+  }
+  .panda-workspace .sidebar {
+    position: static;
+    grid-column: 1;
+    grid-row: 2;
+    width: auto;
+    top: auto;
+    bottom: auto;
+    transform: none;
+    box-shadow: none;
+  }
+  .panda-workspace:not(.sidebar-hidden) .sidebar {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .panda-workspace:not(.sidebar-hidden) .sidebar > div {
+    opacity: 1;
+  }
+  .panda-workspace .conversation-shell {
+    grid-column: 2;
+    grid-row: 2;
+    overflow: hidden;
+  }
+  .panda-workspace .workbench-mobile-nav {
+    display: none;
+  }
+  .panda-workspace {
+    --pf-mobile-nav-height: 0px;
+  }
+}
+@media (min-width: 768px) and (max-width: 1080px) {
+  .panda-workspace .session-inspector {
+    width: 320px;
+    top: 76px;
+    height: calc(var(--app-viewport-height, 100dvh) - 88px);
+  }
+}
+@media (max-width: 767px) {
+  /* Home and list pages scroll inside the view, never in two nested containers. */
+  .panda-workspace .conversation-shell {
+    overflow: hidden;
+  }
+  .panda-workspace .workbench-view {
+    overscroll-behavior-y: contain;
+  }
+  .panda-workspace .session-inspector {
+    width: 100%;
+  }
+  .panda-workspace :is(.side-panel, .summary-panel) {
+    top: calc(var(--app-viewport-top, 0px) + 56px) !important;
+    height: calc(var(--app-viewport-height, 100dvh) - 56px);
+  }
+  .panda-workspace {
+    --session-content-gutter: 16px;
+  }
+  .panda-workspace .app-shell {
+    grid-template-rows: 56px minmax(0, 1fr) var(--pf-mobile-nav-height);
+  }
+  .panda-workspace.session-layout .app-shell {
+    grid-template-rows: 56px minmax(0, 1fr);
+  }
+  .panda-workspace .topbar {
+    height: 56px;
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .panda-workspace .window-brand {
+    flex: 1;
+    gap: 7px;
+    padding: 0;
+    min-width: 0;
+  }
+  .panda-workspace .window-brand strong {
+    font-size: 16px;
+    letter-spacing: -0.4px;
+  }
+  .panda-workspace .window-panda-mark {
+    height: 25px;
+    width: 25px;
+  }
+  .panda-workspace .workspace-navigation-toggle {
+    display: inline-grid;
+    order: -1;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    margin: 0;
+  }
+  .panda-workspace .workbench-global-context {
+    display: none;
+  }
+  .panda-workspace .top-actions {
+    padding: 0;
+  }
+  .panda-workspace .sidebar {
+    top: calc(var(--app-viewport-top, 0px) + 56px);
+    height: calc(var(--app-viewport-height, 100dvh) - 56px);
+    bottom: auto;
+  }
+  .workbench-sidebar-launch #toggleSidebar {
+    display: none;
+  }
+  .workspace-context-header {
+    padding: 12px 0 10px;
+  }
+  .workspace-context-path {
+    display: none;
+  }
+  .workspace-context-row {
+    gap: 8px;
+  }
+  .panda-workspace #threadTitle {
+    font-size: 18px;
+    line-height: 1.45;
+    letter-spacing: -0.3px;
+  }
+  .workspace-context-actions {
+    gap: 0;
+  }
+  .workspace-context-actions .icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .panda-workspace .conversation {
+    padding-block-start: 18px;
+  }
+}
+@media (max-width: 767px) and (max-height: 620px) {
+  .workspace-context-header {
+    padding-block: 4px;
+  }
+  .panda-workspace #threadTitle {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panda-workspace .app-shell,
+  .panda-workspace .sidebar {
+    transition: none;
+  }
+}

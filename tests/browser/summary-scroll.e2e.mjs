@@ -6,7 +6,7 @@ const runtime = await createBrowserFixture();
 
 const browser = await runtime.launchBrowser(launchOptions());
 const page = await browser.newPage({ viewport: { width: 591, height: 360 }, isMobile: true, hasTouch: true });
-await page.goto(runtime.base, { waitUntil: "networkidle" });
+await page.goto(runtime.base + "/new", { waitUntil: "networkidle" });
 await page.click("#toggleSummaryPanel");
 await page.waitForFunction(() => document.activeElement?.id === "closeSummaryPanel");
 const result = await page.evaluate(() => {

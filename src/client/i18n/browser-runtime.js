@@ -6,6 +6,7 @@ import {
   validPreference,
 } from "../../shared/i18n/locale-policy.js";
 import { createI18nRuntime } from "../../shared/i18n/runtime.js";
+import { englishMessages } from "../../shared/i18n/catalogs.js";
 import { sanitizeInterfaceHtml } from "../html-safety.js";
 import { request as fetch } from "./../http-client.js";
 import { clearMessageBinding, createMessageBindings } from "./bindings.js";
@@ -27,6 +28,10 @@ function cookieOf(doc) {
 
 const SLOT = Symbol.for("PandaForce.browserI18n");
 const messageOwners = new WeakMap();
+const compatibleOwners = new WeakSet();
+const requiredMessages = Object.entries(englishMessages).flatMap(([namespace, messages]) =>
+  Object.keys(messages).map((key) => namespace + "." + key),
+);
 /** @param {import("../../shared/i18n/contracts.js").BrowserI18nOptions} options */
 export function createI18n({
   storage = defaultStorage(),
@@ -102,7 +107,16 @@ export function createI18n({
 }
 /** @returns {ReturnType<typeof createI18n>} */
 export function getBrowserI18n() {
-  const runtime = (globalThis[SLOT] ||= createI18n());
+  let runtime = globalThis[SLOT];
+  // An older login bundle can initialize this slot before an upgraded workspace loads.
+  // Validate each owner once; checking every message on every render would be wasteful.
+  if (runtime && !compatibleOwners.has(runtime) && !requiredMessages.every((id) => runtime.has?.(id))) {
+    runtime.dispose?.();
+    runtime = null;
+  }
+  if (!runtime) runtime = globalThis[SLOT] = createI18n();
+  compatibleOwners.add(runtime);
+  messageOwners.set(runtime.t, runtime.bindings);
   // One owner shared by separately loaded entry bundles and the regression API.
   globalThis.__pandaForceI18n = runtime;
   return runtime;

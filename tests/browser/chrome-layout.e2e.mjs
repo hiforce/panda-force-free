@@ -9,7 +9,7 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, col
 const baseUrl = runtime.base;
 const pageErrors = [];
 page.on("pageerror", (error) => pageErrors.push(error.message));
-await page.goto(baseUrl, { waitUntil: "networkidle" });
+await page.goto(baseUrl + "/new", { waitUntil: "networkidle" });
 
 const initial = await page.evaluate(() => {
   const topbar = document.querySelector(".topbar");
@@ -145,7 +145,7 @@ const valid =
   summary.pressed === "true" &&
   JSON.stringify(summary.sections) ===
     JSON.stringify(["Usage", "Environment", "Session", "Scheduled", "Computer Use", "Plan", "Side tasks", "Sources"]) &&
-  summary.unavailable.every((text) => /native|app-server/i.test(text)) &&
+  summary.unavailable.every((text) => /native|app-server|^No side tasks$/i.test(text)) &&
   Math.abs(summary.geometry.total - summary.geometry.panelHeight) < 1 &&
   summary.geometry.scrollBottom <= summary.geometry.panelBottom + 0.5 &&
   opened.width >= 320 &&

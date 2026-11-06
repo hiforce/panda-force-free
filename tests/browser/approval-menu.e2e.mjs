@@ -100,7 +100,14 @@ try {
     const systemDanger = await card()
       .locator(".approval-deny")
       .evaluate((button) => getComputedStyle(button).color);
-    await page.evaluate((theme) => (document.documentElement.dataset.theme = theme), mobile ? "light" : "dark");
+    await page.evaluate(
+      (theme) => {
+        const select = document.querySelector("#themeSelect");
+        select.value = theme;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      },
+      mobile ? "light" : "dark",
+    );
     await checkLayout();
     assert.notEqual(
       await card()
@@ -108,7 +115,11 @@ try {
         .evaluate((button) => getComputedStyle(button).color),
       systemDanger,
     );
-    await page.evaluate(() => delete document.documentElement.dataset.theme);
+    await page.evaluate(() => {
+      const select = document.querySelector("#themeSelect");
+      select.value = "system";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
     await checkLayout();
     await decide(".approval-scoped", { decision: "acceptForSession" });
     await request(502, "similar");

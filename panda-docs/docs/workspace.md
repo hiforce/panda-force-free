@@ -12,9 +12,19 @@ The preparation screen reports actual reads. Retry a failed step instead of repe
 
 The file browser and terminal use the server's OS privileges. Review currently applies Undo/Reapply to the aggregated diff, not individual hunks. Treat the workspace as shared with every admitted user.
 
+## Customize your workspace
+
+The top navigation contains global search, **Language**, **Appearance**, **Layout**, browser full screen and your profile. On a phone, open **Workspace preferences** for language, appearance, layout and profile settings. Global preferences are separate from the current session's title and actions.
+
+Choose **Light** for white surfaces, **Graphite** for a neutral dark workspace, **Silk** for warm surfaces or **Aurora** for cool dark surfaces. **System default** follows your device. The top navigation and the Appearance settings page share the same preference.
+
+On a desktop, **Layout** offers **Comfortable** (up to 800 px), **Wide** (up to 1,040 px) and **Fill available space**. The title, messages and composer stay aligned within the space between the side panels. Width and desktop sidebar choices persist in this browser. **Focus mode** temporarily hides the panels and restores their previous visibility when you exit; it does not replace your saved choices. Browser full screen is independent and is available only when supported by the browser.
+
+Desktop preferences open beside their toolbar button. On a phone they open as bottom sheets. Press Escape or use Close to dismiss a menu and return focus to its trigger. Changing preferences preserves the current draft. Narrow desktop and tablet layouts use an overlay for session details; phones keep the attachment, permission, model, queue and send controls in a compact row.
+
 ## Session information and tools
 
-On a desktop, the **Session** panel sits beside the conversation. Its overview shows session usage above execution status, followed by project association, the working folder and configuration. Close it for more conversation space; use **Session information** in the header to reopen it. **Goal & plan** expands the session's Goal details when available. The **Session actions** menu lets you rename the session, copy its marker and change the theme.
+On a desktop, the **Session** panel sits beside the conversation. Its overview shows session usage above execution status, followed by project association, the working folder and configuration. Close it for more conversation space; use the details button beside the session title to reopen it. **Goal & plan** expands the session's Goal details when available. The **Session actions** menu lets you rename the session and copy its marker.
 
 Click the project to search by name or code and change its association. The working folder is displayed separately and does not change when you associate a different project.
 
@@ -31,3 +41,11 @@ On a phone, use the compact permission and model icons beside attachment, queue 
 Expand **Unassigned sessions** in the sidebar. **Recent** shows at most the latest ten. Switch to **Folders**, then expand a working folder to browse its older conversations. Click the same folder to collapse it; the arrow keys also move between folders and expand or collapse them. The folder name is followed by its path; hover to see the complete path when it is shortened. The directory entry stays available even when all recently loaded conversations have already been assigned to projects.
 
 A project's conversation list supports text search combined with a working-directory filter. **Link existing sessions** provides the same combination across native history, with pagination. Selected conversations remain selected when you change the search or directory, until you submit or close the dialog. Associating a conversation updates the unassigned directory count and does not move its working files.
+
+
+## Follow the latest messages
+
+Sending a new message returns the conversation to the bottom. While you are following
+the latest content, delayed image loading or a layout change keeps the newest content
+visible. Scroll upward to read history without being pulled back; use the down-arrow
+button to resume following the conversation.

@@ -52,6 +52,7 @@ export interface StateGrants {
   usage: { read: "connected"; write: never };
   viewport: { read: never; write: never };
   workbench: { read: "active" | "config" | "connected" | "newSessionProjectId" | "threads" | "workspaceContext"; write: never };
+  workbenchChrome: { read: never; write: never };
   workspace: { read: "active" | "backgroundAgentsVisible" | "cloudStartingState" | "composerMode" | "config" | "connected" | "goalMode" | "placeholderText" | "planMode" | "projectless" | "workspaceContext"; write: "projectless" | "workspaceContext" };
 }
 export type StateOwner = keyof StateGrants;

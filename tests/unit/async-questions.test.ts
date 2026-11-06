@@ -8,6 +8,8 @@ import {
   closeEarlierAsyncQuestions,
 } from "../../src/client/async-questions.js";
 import { parseRollout } from "../../src/server/conversation/live-session.js";
+import { retireAnsweredAsyncQuestions } from "../../src/shared/engine/async-questions.js";
+import { mergeConversationHistory } from "../../src/client/ui-core.js";
 const previous = globalThis.document;
 let dom: JSDOM;
 afterEach(() => {
@@ -244,4 +246,139 @@ test("native user message records retire a question and paired legacy records do
       .join("\n"),
   );
   expect(onlyNative.questionTurns.get("native-turn").items[0].questionState).toBe("earlier");
+});
+
+test("structured asynchronous agent messages are questions, not final answers or engine approvals", () => {
+  const native = {
+    id: "native-call",
+    type: "agentMessage",
+    phase: "final_answer",
+    delivery: "async",
+    text: "Choose the next step",
+    questions: [{ title: "Choose the next step", options: ["Preview", "Implement"] }],
+  };
+  expect(readAsyncQuestions(native)?.[0].question).toBe("Choose the next step");
+  expect(readAsyncQuestions({ ...native, delivery: undefined })).toBeNull();
+  expect(readAsyncQuestions({ ...native, questions: [{ title: "Invalid", options: {} }] })).toBeNull();
+  expect(readAsyncQuestions({ type: "agentMessage", text: native.text })).toBeNull();
+  expect(readAsyncQuestions({ type: "approval", questions: native.questions })).toBeNull();
+  const turns = [
+    {
+      id: "current",
+      items: [
+        { id: "opening", type: "userMessage", content: [] },
+        native,
+        { id: "approval", type: "approval", questions: native.questions },
+        { id: "reply", type: "userMessage", content: [{ type: "text", text: "Start with the preview" }] },
+        { ...native, id: "new-question" },
+      ],
+    },
+  ];
+  const result = retireAnsweredAsyncQuestions(turns);
+  expect(result[0].items[1].questionState).toBe("earlier");
+  expect(result[0].items[2].questionState).toBeUndefined();
+  expect(result[0].items[4].questionState).toBeUndefined();
+  expect(turns[0].items[1]).not.toHaveProperty("questionState");
+  const continued = retireAnsweredAsyncQuestions([
+    ...result,
+    { id: "empty", items: [{ id: "placeholder", type: "userMessage", content: [] }] },
+  ]);
+  expect(continued[0].items[4].questionState).toBeUndefined();
+  const answered = retireAnsweredAsyncQuestions([
+    ...continued,
+    { id: "next", items: [{ id: "next-prompt", type: "userMessage", content: [{ type: "text", text: "Continue" }] }] },
+  ]);
+  expect(answered[0].items[4].questionState).toBe("earlier");
+});
+
+test("native question call identity and pagination order override bounded rollout offsets", () => {
+  const native = {
+    id: "call-question",
+    type: "agentMessage",
+    delivery: "async",
+    phase: "final_answer",
+    text: "Preview or implement?",
+    questions: [{ title: "Preview or implement?", options: ["Preview", "Implement"] }],
+    historyOrder: 100,
+  };
+  const state = parseRollout(
+    [
+      { type: "event_msg", payload: { type: "task_started", turn_id: "turn" } },
+      { type: "event_msg", payload: { type: "user_message", message: "Opening" } },
+      {
+        type: "response_item",
+        payload: {
+          type: "function_call",
+          id: "fc-question",
+          call_id: native.id,
+          name: "request_user_input_async",
+          arguments: JSON.stringify({ questions: native.questions }),
+        },
+      },
+      {
+        type: "response_item",
+        payload: { type: "message", role: "user", content: [{ type: "input_text", text: "Preview first" }] },
+      },
+    ]
+      .map((event) => JSON.stringify(event))
+      .join("\n"),
+  );
+  const supplement = state.questionTurns.get("turn");
+  expect(supplement.items[0].id).toBe(native.id);
+  expect(supplement.items[0].questionSourceId).toBe("fc-question");
+  const response = {
+    thread: { id: "thread" },
+    history: {
+      mode: "snapshot",
+      nativePages: true,
+      turns: [
+        {
+          id: "turn",
+          status: "inProgress",
+          items: [
+            native,
+            { id: "reply", type: "userMessage", content: [{ type: "text", text: "Preview first" }], historyOrder: 101 },
+            { id: "progress", type: "agentMessage", text: "Preparing the preview", historyOrder: 102 },
+          ],
+        },
+      ],
+      questionTurns: [supplement],
+    },
+  };
+  const merged = mergeConversationHistory(null, response);
+  expect(merged.turns[0].items.map((item) => item.id)).toEqual([native.id, "reply", "progress"]);
+  expect(merged.turns[0].items[0].questionState).toBe("earlier");
+  expect(merged.turns[0].items[0].historyOrder).toBe(100);
+  const withoutSupplement = mergeConversationHistory(null, {
+    ...response,
+    history: { ...response.history, questionTurns: [] },
+  });
+  expect(withoutSupplement.turns[0].items[0].questionState).toBe("earlier");
+  const legacyCache = {
+    ...merged,
+    turns: [
+      {
+        ...merged.turns[0],
+        items: [...merged.turns[0].items, { ...supplement.items[0], id: "fc-question", questionState: undefined }],
+      },
+    ],
+  };
+  const restored = mergeConversationHistory(legacyCache, {
+    ...response,
+    history: { ...response.history, mode: "delta", turns: [] },
+  });
+  expect(restored.turns[0].items.map((item) => item.id)).toEqual([native.id, "reply", "progress"]);
+  expect(restored.turns[0].items[0].questionState).toBe("earlier");
+  const replayWithoutReply = mergeConversationHistory(restored, {
+    ...response,
+    history: {
+      ...response.history,
+      mode: "delta",
+      removedItemIds: ["turn:reply"],
+      questionTurns: [],
+      turns: [{ id: "turn", status: "inProgress", items: [native] }],
+    },
+  });
+  expect(replayWithoutReply.turns[0].items.map((item) => item.id)).toEqual([native.id, "progress"]);
+  expect(replayWithoutReply.turns[0].items[0].questionState).toBe("earlier");
 });

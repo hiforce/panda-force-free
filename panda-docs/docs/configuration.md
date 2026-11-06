@@ -27,10 +27,12 @@ Use Bun to install dependencies so the tracked compatibility patch is applied. S
 
 ## Interface language
 
-Choose **Settings → Appearance → Language** to use English, Simplified Chinese,
+Choose **Language** in the top navigation, or **Workspace preferences → Language**
+on a phone, to use English, Simplified Chinese,
 or the browser preference. If you have not selected a language, PandaForce follows
 the order of your browser languages and falls back to English. The choice persists
-across visits and also applies to sign-in pages.
+across visits and also applies to sign-in pages. The same preference is available
+under **Settings → Appearance → Language**.
 
 Language changes affect PandaForce controls. Native CLI responses, commands,
 logs, questions, filenames, project names, and your draft retain their original

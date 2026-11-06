@@ -10,8 +10,9 @@ import m0_7 from "./locales/en/projects.json";
 import m0_8 from "./locales/en/sessions.json";
 import m0_9 from "./locales/en/sessionview.json";
 import m0_10 from "./locales/en/settings.json";
-import m0_11 from "./locales/en/usage.json";
-import m0_12 from "./locales/en/workbench.json";
+import m0_11 from "./locales/en/shell.json";
+import m0_12 from "./locales/en/usage.json";
+import m0_13 from "./locales/en/workbench.json";
 export const englishMessages = {
   "approvals": m0_0,
   "auth": m0_1,
@@ -24,6 +25,7 @@ export const englishMessages = {
   "sessions": m0_8,
   "sessionview": m0_9,
   "settings": m0_10,
-  "usage": m0_11,
-  "workbench": m0_12,
+  "shell": m0_11,
+  "usage": m0_12,
+  "workbench": m0_13,
 };

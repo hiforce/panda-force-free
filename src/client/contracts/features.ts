@@ -242,6 +242,8 @@ export interface DetailsPort {
 }
 
 export interface SessionWorkspacePort {
+  isOpen: () => boolean;
+  setOpen: (open: boolean, settings?: { temporary?: boolean }) => void;
   openSettings: (kind: "model" | "permissions") => void;
   bind: () => void;
   refresh: () => void;
@@ -513,9 +515,10 @@ export interface DeliveryPort {
 }
 
 export interface SidebarLayoutPort {
+  isSidebarOpen: () => boolean;
   bind: () => void;
   mobileSidebarEnabled: () => boolean;
-  setSidebarOpen: (open: boolean) => void;
+  setSidebarOpen: (open: boolean, settings?: { temporary?: boolean }) => void;
   syncSidebarLayout: () => void;
   setSidebarSearchOpen: (open: boolean) => void;
   setSidebarHelpOpen: (open: boolean) => void;

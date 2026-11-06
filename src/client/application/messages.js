@@ -10,6 +10,7 @@ import {
 import { codexIcon } from "../codex-icons.js";
 import { attachmentsFromInput, composerInputKey, composerTextFromInput } from "../composer-attachments.js";
 import { agentMessageText, renderAssistantMarkdown, renderItemImages } from "../rendering.js";
+import { isAsyncQuestionReply } from "../../shared/engine/async-questions.js";
 // Projects native items into the timeline and delegates identity, activity and review details.
 /** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "$" | "state" | "t" | "escapeHtml", "turnFrames" | "identity" | "sideTasks" | "viewport" | "activity" | "submission" | "queue" | "timing" | "clipboard" | "review", "messages">} options */
 export function assembleMessages({
@@ -37,18 +38,33 @@ export function assembleMessages({
       mutations.collection("items").delete(item.id);
       el = null;
     }
+    const followSubmission = live && !el && item.type === "userMessage" && String(item.id).startsWith("local-");
     if (!el && item.type === "userMessage")
       el =
         identityPort.claimOptimisticUser(item, root, turnId) ||
         identityPort.claimEquivalentUserMessage(item, root, turnId);
     // History hydration and aliases of an existing prompt are not new answers.
-    if (!el && live && item.type === "userMessage") {
+    if (!el && live && isAsyncQuestionReply(item)) {
       closeEarlierAsyncQuestions(root, t);
       viewUpdates.request("sessionWorkspace");
     }
-    if (!el && item.type === "agentMessage") el = identityPort.claimEquivalentAgentMessage(item, turnId);
     const questions = readAsyncQuestions(item);
+    if (!el && questions && item.questionSourceId) {
+      const alias = state.items.get(item.questionSourceId);
+      if (alias?.matches("[data-async-question-card]") && root.contains(alias)) {
+        el = alias;
+        el.dataset.itemId = String(item.id);
+        mutations.collection("items").set(item.id, el);
+      }
+    }
+    if (!el && item.type === "agentMessage" && !questions) el = identityPort.claimEquivalentAgentMessage(item, turnId);
     if (questions) {
+      // Structured questions may arrive after the initial text-only item.
+      if (el && !el.matches("[data-async-question-card]")) {
+        el.remove();
+        mutations.collection("items").delete(item.id);
+        el = null;
+      }
       if (!el) {
         // Arguments can arrive after the generic tool row; replace that row once.
         const oldRow = findElement(
@@ -74,6 +90,7 @@ export function assembleMessages({
         mutations.collection("items").set(item.id, el);
       }
       if (item.questionState === "earlier") closeAsyncQuestionCard(el, t);
+      timingPort.syncWorkedForDivider(turnId);
       viewUpdates.request("sessionWorkspace");
       return;
     }
@@ -262,7 +279,7 @@ export function assembleMessages({
       viewUpdates.request("review");
     }
     if (item.type === "collabAgentToolCall" || item.type === "subAgentActivity") sideTasksPort.updateSideTasks(item);
-    if (live) viewportPort.scrollBottom();
+    if (live) viewportPort.scrollBottom({ force: followSubmission });
   }
   return {
     upsertItem,

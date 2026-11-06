@@ -9,7 +9,7 @@ const results = [];
 
 for (const width of [1101, 1150, 1190]) {
   const page = await browser.newPage({ viewport: { width, height: 800 }, colorScheme: "dark" });
-  await page.goto(runtime.base, { waitUntil: "networkidle" });
+  await page.goto(runtime.base + "/new", { waitUntil: "networkidle" });
   await page.waitForFunction(() => globalThis.__pandaForceDebug);
   await page.evaluate(() => {
     const api = globalThis.__pandaForceDebug;
@@ -38,7 +38,7 @@ for (const width of [1101, 1150, 1190]) {
 
 {
   const page = await browser.newPage({ viewport: { width: 1190, height: 800 }, colorScheme: "dark" });
-  await page.goto(runtime.base, { waitUntil: "networkidle" });
+  await page.goto(runtime.base + "/new", { waitUntil: "networkidle" });
   await page.click("#toggleSidePanel");
   await page.waitForFunction(
     () =>

@@ -36,7 +36,7 @@ const box = async (s) =>
     };
   });
 const closedSidebar = await box(".sidebar");
-await page.click("#toggleSidebar");
+await page.click("#workspaceNavigationToggle");
 await page.waitForFunction(() => Math.round(document.querySelector(".sidebar").getBoundingClientRect().x) === 0);
 const openSidebar = await box(".sidebar");
 const sidebarVisibility = await page.evaluate(() => {
@@ -62,7 +62,7 @@ const sidebarClosedAfterSelection = await page
   .then(() => true)
   .catch(() => false);
 if (!sidebarClosedAfterSelection) {
-  await page.click("#toggleSidebar");
+  await page.click("#workspaceNavigationToggle");
   await page.waitForFunction(() => document.querySelector(".sidebar").getBoundingClientRect().x < 0);
 }
 const closedSummary = await box("#sessionInspector");
@@ -115,7 +115,7 @@ const narrow = await browser.newPage({
   isMobile: true,
   hasTouch: true,
 });
-await narrow.goto(runtime.base, { waitUntil: "networkidle" });
+await narrow.goto(runtime.base + "/new", { waitUntil: "networkidle" });
 await narrow.locator("#workspacePreparation").waitFor({ state: "hidden" });
 const narrowChrome = await narrow.evaluate(() => ({
   hasBottomPanelButton: Boolean(document.querySelector("#toggleBottomPanel")),

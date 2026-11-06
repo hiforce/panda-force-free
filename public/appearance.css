@@ -1,0 +1,103 @@
+/* Appearance presets preserve the light/dark contract used by native engine views. */
+:root[data-appearance] {
+  --pf-primary-on: #fff;
+  --pf-success: #287654;
+  --pf-warning: #916623;
+  --pf-shadow: 0 16px 50px #16162c1a, 0 2px 8px #16162c08;
+  --pf-composer-shadow: 0 4px 18px #23244007;
+  --app-success: var(--pf-success);
+  --app-danger: var(--pf-danger);
+  --app-link: var(--pf-accent);
+  --app-selection: color-mix(in srgb, var(--pf-accent) 14%, var(--pf-card));
+  --app-fog: color-mix(in srgb, var(--pf-card) 96%, var(--pf-ink));
+  --app-elevation-shadow: var(--pf-shadow);
+  --accent: var(--pf-accent);
+  --success: var(--pf-success);
+  --warning: var(--pf-warning);
+  --danger: var(--pf-danger);
+}
+
+/* Light remains neutral white; choosing Spark-inspired styles is explicit. */
+:root[data-appearance="light"] {
+  --pf-card: #fff;
+  --pf-canvas: #fff;
+  --pf-sidebar: #f7f7f8;
+  --pf-ink: #24252b;
+  --pf-muted: #666872;
+  --pf-line: #e7e7eb;
+  --pf-soft: #f3f3f5;
+  --pf-message-bg: #ededf0;
+  --pf-accent: #4e59d9;
+  --pf-primary: #4e59d9;
+  --pf-danger: #a52f2a;
+}
+
+/* Graphite uses solid, low-saturation surfaces for long engineering sessions. */
+:root[data-appearance="graphite"] {
+  --pf-card: #202225;
+  --pf-canvas: #181a1d;
+  --pf-sidebar: #16181b;
+  --pf-ink: #f0f2f4;
+  --pf-muted: #b3b9c1;
+  --pf-line: #393d44;
+  --pf-soft: #2b2f35;
+  --pf-message-bg: #2d3239;
+  --pf-accent: #ced5e0;
+  --pf-primary: #495b75;
+  --pf-danger: #f0a8a8;
+  --pf-success: #a7d8b7;
+  --pf-warning: #e8c48c;
+  --pf-shadow: 0 18px 52px #0005, 0 2px 8px #0002;
+  --pf-composer-shadow: 0 4px 20px #0002;
+}
+
+/* Silk introduces warm paper surfaces without tinting the default Light preset. */
+:root[data-appearance="silk"] {
+  --pf-card: #fffdfb;
+  --pf-canvas: #fcfaf7;
+  --pf-sidebar: #f1ede7;
+  --pf-ink: #302923;
+  --pf-muted: #74685e;
+  --pf-line: #e7dfd5;
+  --pf-soft: #f2eee8;
+  --pf-message-bg: #efe9e0;
+  --pf-accent: #80613d;
+  --pf-primary: #80613d;
+  --pf-danger: #9e3f2e;
+  --pf-success: #446c60;
+  --pf-warning: #80613d;
+  --pf-shadow: 0 16px 42px #56453421, 0 2px 8px #56453408;
+  --pf-composer-shadow: 0 4px 18px #5645340b;
+}
+
+/* Aurora keeps restrained cyan emphasis on dark blue surfaces. */
+:root[data-appearance="aurora"] {
+  --pf-card: #0d2034;
+  --pf-canvas: #071423;
+  --pf-sidebar: #091a2b;
+  --pf-ink: #f2fbff;
+  --pf-muted: #b3ccd9;
+  --pf-line: #29485f;
+  --pf-soft: #122b42;
+  --pf-message-bg: #18364a;
+  --pf-accent: #76e1ee;
+  --pf-primary: #126d78;
+  --pf-danger: #ffaaaa;
+  --pf-success: #9ff8d7;
+  --pf-warning: #ffe4a3;
+  --pf-shadow: 0 18px 56px #010b1dcc, 0 0 18px #35e7ff0a;
+  --pf-composer-shadow: 0 3px 22px #35e7ff0b;
+}
+
+:root[data-appearance] .password-gate {
+  --auth-page: var(--pf-canvas);
+  --auth-card: var(--pf-card);
+  --auth-ink: var(--pf-ink);
+  --auth-muted: var(--pf-muted);
+  --auth-border: var(--pf-line);
+  --auth-soft: var(--pf-soft);
+}
+
+:root[data-appearance] .session-layout .composer {
+  box-shadow: var(--pf-composer-shadow);
+}

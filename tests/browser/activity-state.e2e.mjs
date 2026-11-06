@@ -244,17 +244,28 @@ const threadRestore = await page.evaluate(async () => {
     selected: document.querySelector(".thread-item.active")?.dataset.id,
   };
 });
-const sidebar = await page.evaluate(() => {
+const sidebar = await page.evaluate(async () => {
+  const settle = async () => {
+    await Promise.all(
+      document
+        .querySelector("#app")
+        .getAnimations({ subtree: true })
+        .filter((animation) => Number.isFinite(animation.effect?.getTiming().iterations))
+        .map((animation) => animation.finished.catch(() => {})),
+    );
+  };
   const api = globalThis.__pandaForceDebug,
     node = document.querySelector("#sidebar"),
     button = document.querySelector("#toggleSidebar");
   api.setSidebarOpen(true);
+  await settle();
   const open = {
     hidden: document.body.classList.contains("sidebar-hidden"),
     width: node.getBoundingClientRect().width,
     pressed: button.getAttribute("aria-pressed"),
   };
   api.setSidebarOpen(false);
+  await settle();
   const closed = {
     hidden: document.body.classList.contains("sidebar-hidden"),
     width: node.getBoundingClientRect().width,
@@ -311,11 +322,11 @@ if (
   !reloadPersistenceAfter.groupOpen ||
   reloadPersistenceAfter.itemExpanded !== "true" ||
   !reloadPersistenceAfter.outputVisible ||
-  !reloadPersistenceAfter.sidebarOpen ||
+  reloadPersistenceAfter.sidebarOpen ||
   reloadPersistenceAfter.sidebarShadow !== "none"
 )
   throw new Error(
-    `Activity expansion and default sidebar state must survive a real reload: ${JSON.stringify(reloadPersistenceAfter)}`,
+    `Activity expansion and the selected sidebar state must survive a real reload: ${JSON.stringify(reloadPersistenceAfter)}`,
   );
 if (
   threadRestore.activeId !== "remembered-thread" ||
