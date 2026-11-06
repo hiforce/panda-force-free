@@ -13,7 +13,7 @@
 
 [English](./README.md) · [帮助文档](./panda-docs/docs/overview.md)
 
-![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en.png)
+![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en.png?v=0.0.10)
 
 ## 快速开始
 
