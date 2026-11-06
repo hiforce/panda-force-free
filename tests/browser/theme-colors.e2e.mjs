@@ -81,8 +81,7 @@ for (const scheme of ["light", "dark"]) {
     older.textContent = "Load earlier messages";
     document.querySelector("#conversation").prepend(older);
   });
-  await page.click("#toggleSidePanel");
-  await page.click('[data-side-panel-action="review"]');
+  await page.locator('#sessionToolShortcuts [data-session-tool="changes"]').click();
   await page.click(".activity-item");
   await page.hover(".activity-item");
   await page.hover(".approval-deny");

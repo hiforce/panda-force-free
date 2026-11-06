@@ -63,7 +63,11 @@
     "browser/user-message.e2e.mjs",
     "browser/workspace-preparation.e2e.mjs",
     "browser/ws-sse-fallback.e2e.mjs",
-    "browser/session-discovery.e2e.mjs"
+    "browser/session-discovery.e2e.mjs",
+    "browser/session-workspace.e2e.mjs",
+    "browser/session-workspace-layout.e2e.mjs",
+    "browser/session-dialogs.e2e.mjs",
+    "browser/session-usage.e2e.mjs"
   ],
   "groups": {
     "runtime": [
@@ -77,7 +81,17 @@
     "failure-paths": ["browser/refactor-failure-paths.e2e.mjs"],
     "workbench": ["browser/panda-workbench.e2e.mjs", "browser/native-dialogs.e2e.mjs"],
     "projects": ["browser/product-projects.e2e.mjs", "browser/questionnaire.e2e.mjs"],
-    "i18n": ["browser/i18n.e2e.mjs", "browser/i18n-architecture.e2e.mjs", "browser/code-viewer-i18n.e2e.mjs"]
+    "i18n": ["browser/i18n.e2e.mjs", "browser/i18n-architecture.e2e.mjs", "browser/code-viewer-i18n.e2e.mjs"],
+    "session-workspace": [
+      "browser/session-workspace.e2e.mjs",
+      "browser/session-workspace-layout.e2e.mjs",
+      "browser/session-dialogs.e2e.mjs",
+      "browser/session-usage.e2e.mjs",
+      "browser/async-questions.e2e.mjs",
+      "browser/approval-menu.e2e.mjs",
+      "browser/composer-focus-paste.e2e.mjs",
+      "browser/session-status.e2e.mjs"
+    ]
   },
   "live": [
     {

@@ -1,6 +1,6 @@
 import { parseSlashCommand } from "./command-catalog.js";
 // Dispatches explicit local, native and Goal commands without owning composer drafts.
-/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "sessions" | "state" | "$" | "t", "transport" | "composer" | "models" | "workspace" | "notices" | "navigation" | "goals", "commands">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "sessions" | "state" | "$" | "t", "sessionWorkspace" | "transport" | "composer" | "models" | "workspace" | "notices" | "navigation" | "goals", "commands">} options */
 export function assembleCommands({
   transportPort,
   viewUpdates,
@@ -14,6 +14,7 @@ export function assembleCommands({
   noticesPort,
   navigationPort,
   goalsPort,
+  sessionWorkspacePort,
 }) {
   function parseGoalCommand(text) {
     const match = String(text || "")
@@ -35,9 +36,11 @@ export function assembleCommands({
       $("#prompt").value = "";
       viewUpdates.request("composerLayout");
     } else if (command === "model") {
-      modelsPort.openModelMenu();
+      if (state.active?.id) sessionWorkspacePort.openSettings("model");
+      else modelsPort.openModelMenu();
     } else if (command === "reasoning") {
-      modelsPort.openModelMenu();
+      if (state.active?.id) sessionWorkspacePort.openSettings("model");
+      else modelsPort.openModelMenu();
     } else if (command === "project") {
       workspacePort.openFolderPicker();
     } else if (command === "status") {

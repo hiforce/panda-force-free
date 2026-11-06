@@ -3,6 +3,7 @@ import type { StateOwner } from "../contracts/state-grants.js";
 import type * as Features from "../contracts/features.js";
 export interface ApplicationPorts {
   applicationProjections: Features.ApplicationProjectionsPort;
+  sessionWorkspace: Features.SessionWorkspacePort;
   localization: Features.LocalizationPort;
   history: Features.HistoryPort;
   queue: Features.QueuePort;

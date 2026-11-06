@@ -15,6 +15,7 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/workbench.css" />
+    <link rel="stylesheet" href="/session-workspace.css" />
     <link rel="modulepreload" href="/i18n.js" />
     <link rel="modulepreload" href="/panda-brand.js" />
     <script src="/auth-bootstrap.js" type="module"></script>
@@ -139,7 +140,15 @@
       hidden=""
     >
       <div class="workspace-preparation-card">
-        <p class="workspace-preparation-brand" data-pf-message="common.pandaforce">PandaForce</p>
+        <div class="workspace-preparation-banner">
+          <img src="/assets/panda-mark.svg" width="52" height="52" alt="" class="workspace-preparation-logo" />
+          <div class="workspace-preparation-brand-copy">
+            <p class="workspace-preparation-brand" data-pf-message="common.pandaforce">PandaForce</p>
+            <p class="workspace-preparation-tagline" data-pf-message="workbench.fromAGoalToAResult">
+              From goal to result
+            </p>
+          </div>
+        </div>
         <h2 id="workspacePreparationTitle" data-pf-message="common.preparingYourWorkspace">Preparing your workspace</h2>
         <p
           id="workspacePreparationMessage"
@@ -503,7 +512,12 @@
                   >
                     <div class="session-menu-heading">
                       <span data-pf-message="common.permissions">Permissions</span>
-                      <button type="button" class="session-menu-close" aria-label="Close" data-pf-aria-label="common.close">
+                      <button
+                        type="button"
+                        class="session-menu-close"
+                        aria-label="Close"
+                        data-pf-aria-label="common.close"
+                      >
                         <span class="icon-slot" data-icon="x"></span>
                       </button>
                     </div>

@@ -30,6 +30,7 @@ import type {
   WorkspacePreparation,
 } from "./platform.js";
 import type { ReviewModel } from "./state.js";
+import type { SessionControlView } from "./session-workspace.js";
 import type {
   DraftRepository,
   SessionRepository,
@@ -156,6 +157,8 @@ export interface GoalsPort {
 }
 
 export interface ApprovalsPort {
+  pendingInteraction: (id: string) => "approval" | "question" | null;
+  pendingCard: (id: string) => HTMLElement | null;
   hasPendingApproval: (id: string) => boolean;
   restorePendingApprovals: () => void;
   approvalMenuController: {
@@ -171,6 +174,9 @@ export interface ApprovalsPort {
 }
 
 export interface ModelsPort {
+  sessionControlView: () => SessionControlView;
+  applyModelSelection: (sessionId: string, model: string, effort: string) => void;
+  applyPermissionSelection: (sessionId: string, mode: string) => void;
   loadPermissionProfiles: () => Promise<boolean>;
   renderContextUsage: () => void;
   applySessionSettings: (
@@ -233,6 +239,15 @@ export interface ComposerPort {
 export interface DetailsPort {
   bind: () => void;
   syncSummaryPanel: () => void;
+}
+
+export interface SessionWorkspacePort {
+  openSettings: (kind: "model" | "permissions") => void;
+  bind: () => void;
+  refresh: () => void;
+  open: (tab?: string) => void;
+  close: () => void;
+  openUsage: () => void;
 }
 
 export interface TimingPort {
@@ -395,6 +410,7 @@ export interface ClipboardPort {
 }
 
 export interface PanelsPort {
+  openUtilityPanel: (kind: string) => void;
   dispose: () => void;
   setSummaryPanelOpen: (open: boolean) => void;
   closeFilesDialog: () => void;

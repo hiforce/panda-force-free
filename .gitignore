@@ -57,3 +57,7 @@ Thumbs.db
 
 # Generated language packs.
 public/locales
+
+# Generated verification and browser assets.
+/public/http-client.js
+/.build-proof/

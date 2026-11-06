@@ -39,6 +39,7 @@ export function createWorkbench({
   hasPendingApproval,
   closeSidebar,
   openFiles,
+  onViewChange = () => {},
 }) {
   const shell = requireElement(".conversation-shell"),
     viewport = requireElement(".conversation-viewport"),
@@ -70,7 +71,7 @@ export function createWorkbench({
     top,
     '<button type="button" data-wb="search" aria-label="Search anything" data-pf-aria-label="common.searchAnything">' +
       codexIcon("search") +
-      '<span></span><kbd>⌘ K</kbd></button><button type="button" data-wb="theme" aria-label="Toggle theme" data-pf-aria-label="common.toggleTheme">' +
+      '<span class="workbench-search-label"></span><kbd>⌘ K</kbd></button><button type="button" data-wb="theme" aria-label="Toggle theme" data-pf-aria-label="common.toggleTheme">' +
       codexIcon("monitor") +
       "</button>",
   );
@@ -159,8 +160,8 @@ export function createWorkbench({
     tasks: "list",
     projects: "folderOpen",
     deliverables: "file",
-    connections: "wrench",
-    settings: "wrench",
+    connections: "plug",
+    settings: "settings",
   };
   const {
     button,
@@ -273,13 +274,14 @@ export function createWorkbench({
       connection,
       `<span class="status-dot ${state.connected ? "connected" : "error"}"></span><span>${messageHtml(state.connected ? "common.codexConnected" : "auth.connectionUnavailable", undefined, t)}</span>`,
     );
-    localizeText(findElement("button span", top), "common.searchAnything", undefined, t);
+    localizeText(findElement(".workbench-search-label", top), "common.searchAnything", undefined, t);
     localizeAttribute(findElement('[data-wb="search"]', top), "aria-label", "common.searchAnything", undefined, t);
     if (!conversation)
       localizeText(requireElement("#threadTitle"), labels[route.page] || "common.workspace", undefined, t);
     if (!conversation) setOpaqueText(requireElement("#threadPath"), "");
     renderProjectContext();
     renderPreparation();
+    onViewChange();
     const nextFocus = focusedId && document.getElementById(focusedId);
     if (nextFocus && nextFocus !== focused) {
       nextFocus.focus({ preventScroll: true });
@@ -337,12 +339,9 @@ export function createWorkbench({
     opening = id;
     void openThread(id)
       .then((ok) => {
-        if (
-          !ok &&
-          route.page === "task" &&
-          route.id === id &&
-          (state.active?.id !== id || !state.active?.turns?.length)
-        ) {
+        // A superseded startup read may return false after another read opened an empty session.
+        // Its composer remains usable; a loaded session does not require an existing turn.
+        if (!ok && route.page === "task" && route.id === id && state.active?.id !== id) {
           unavailableId = id;
           render();
         }
@@ -369,7 +368,7 @@ export function createWorkbench({
     queueMicrotask(() => {
       scheduled = false;
       // A slower cached/history read may recover after an earlier startup read was superseded.
-      if (unavailableId === state.active?.id && state.active?.turns?.length) {
+      if (unavailableId === state.active?.id) {
         unavailableId = "";
         signature = "";
       }
@@ -380,6 +379,9 @@ export function createWorkbench({
         state.connected,
         state.threads.map((x) => [x.id, x.name, x.preview, x.cwd, x.status, x.turns?.at(-1)?.status, status(x)]),
         catalog.revision,
+        route.page === "projects"
+          ? catalog.projects().map((project) => [project.id, isProjectPinned("project:" + project.id)])
+          : null,
         state.newSessionProjectId,
         state.workspaceContext?.cwd,
       ]);

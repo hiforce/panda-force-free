@@ -95,6 +95,7 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
     open(
       fixedProject ? "common.linkExistingSessions" : "common.changeProject",
       `<form id="projectAssociationForm" class="project-form">
+      ${fixedProject ? "" : `<label class="sr-only" for="associationProjectSearch">${messageHtml("sessionview.searchProjects", undefined, t)}</label><input id="associationProjectSearch" type="search" ${messageAttributes("placeholder", "sessionview.searchProjects", undefined, t)} />`}
       <label for="associationProject">${messageHtml("common.project", undefined, t)}</label><select id="associationProject" ${fixedProject ? "disabled" : ""}><option value="" data-pf-message="common.unassigned">${escape(t("common.unassigned"))}</option>${catalog
         .projects()
         .map(
@@ -112,6 +113,29 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
       list = requireElement("#associationSessions", dialog),
       more = requireElement("#associationMore", dialog),
       submit = requireElement('[type="submit"]', form);
+    const projectSearch = findElement("#associationProjectSearch", dialog);
+    if (projectSearch)
+      projectSearch.oninput = () => {
+        const selector = requireElement("#associationProject", dialog),
+          value = selector.value;
+        const query = projectSearch.value.trim().toLocaleLowerCase();
+        const entries = catalog
+          .projects()
+          .filter((project) => `${project.name} ${project.code}`.toLocaleLowerCase().includes(query));
+        const current = catalog.get(value);
+        if (current && !entries.some((project) => project.id === value)) entries.unshift(current);
+        const empty = document.createElement("option");
+        empty.value = "";
+        localizeText(empty, "common.unassigned", undefined, t);
+        selector.replaceChildren(empty);
+        for (const project of entries) {
+          const option = document.createElement("option");
+          option.value = project.id;
+          setOpaqueText(option, `${project.name} · ${project.code}`);
+          selector.append(option);
+        }
+        selector.value = value;
+      };
     function render() {
       setMessageHtml(
         list,

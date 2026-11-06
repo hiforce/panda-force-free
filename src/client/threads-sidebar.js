@@ -99,7 +99,8 @@ export function createThreadSidebar({
     visibilityRead = null,
     visibilityUpdatedAt = 0;
   let sidebarProjectMenu = null,
-    sidebarProjectMenuTrigger = null;
+    sidebarProjectMenuTrigger = null,
+    sidebarProjectMenuSelector = "";
   const SIDEBAR_SESSION_PAGE_SIZE = 5;
   const sidebarSessionLimits = new Map();
   const savedProject = storage.get(STORAGE_KEYS.project);
@@ -113,7 +114,7 @@ export function createThreadSidebar({
       : normalizeProjectPath(thread.cwd, state.config.home) || String(thread.cwd);
   }
   function sidebarProjectName(key) {
-    if (key === "__pinned__") return "Pinned";
+    if (key === "__pinned__") return t("sessions.pinned");
     if (key === "__tasks__") return projectCatalog ? t("sessions.unassignedSessions") : t("common.sessions");
     if (projectCatalog) return projectCatalog.get(key.slice(8))?.name || key;
     if (key === state.config.home) return "Home";
@@ -248,6 +249,7 @@ export function createThreadSidebar({
       sidebarProjectMenu?.remove();
       sidebarProjectMenu = null;
       sidebarProjectMenuTrigger = null;
+      sidebarProjectMenuSelector = "";
     },
   });
   function closeSidebarProjectMenu(restoreFocus = false) {
@@ -256,7 +258,16 @@ export function createThreadSidebar({
   function showSidebarMenu(menu, trigger) {
     sidebarProjectMenu = menu;
     sidebarProjectMenuTrigger = trigger;
+    const project = closestElement(".sidebar-project-group", trigger)?.dataset.project || "";
+    const thread = closestElement(".thread-item", trigger)?.dataset.id;
+    sidebarProjectMenuSelector = `[data-project="${CSS.escape(project)}"] ${thread ? `.thread-item[data-id="${CSS.escape(thread)}"] .thread-options` : ".sidebar-project-options"}`;
     sidebarMenus.toggle(trigger, menu);
+  }
+  function refreshSidebarMenu() {
+    if (!sidebarProjectMenu) return;
+    const trigger = findElement(sidebarProjectMenuSelector, $("#threadList"));
+    sidebarProjectMenuTrigger = trigger;
+    sidebarMenus.reanchor(trigger);
   }
   function openSidebarProjectMenu(project, trigger) {
     const wasOpen = sidebarProjectMenuTrigger === trigger;
@@ -440,12 +451,13 @@ export function createThreadSidebar({
         t,
         appendRows: appendSessionRows,
         onError: (error) => addPersistentError(errorMessage(error)),
+        onRender: refreshSidebarMenu,
       })
     : null;
   function renderThreads() {
     onRender();
-    closeSidebarProjectMenu();
     if (projectCatalog ? !projectCatalog.ready : sidebarProjectVisibility.revision < 0) {
+      closeSidebarProjectMenu();
       setMessageHtml(
         $("#threadList"),
         `<div class="list-state">${messageHtml("common.loadingProjects2", undefined, t)}</div>`,
@@ -542,7 +554,7 @@ export function createThreadSidebar({
       );
       setMessageHtml(
         heading,
-        `${codexIcon(pinnedGroup ? "arrowUp" : group.key === "__tasks__" ? "messageSquare" : "folderOpen")}<span ${projectCatalog && group.key.startsWith("project:") ? "data-i18n-ignore" : ""}>${escapeHtml(sidebarProjectName(group.key))}</span>${codexIcon("chevronRight", "sidebar-project-chevron")}`,
+        `${codexIcon(pinnedGroup ? "arrowUp" : group.key === "__tasks__" ? "messageSquare" : "folderOpen")}<span ${projectCatalog && group.key.startsWith("project:") ? "data-i18n-ignore" : ""}>${pinnedGroup ? messageHtml("sessions.pinned", undefined, t) : group.key === "__tasks__" ? messageHtml(projectCatalog ? "sessions.unassignedSessions" : "common.sessions", undefined, t) : escapeHtml(sidebarProjectName(group.key))}</span>${codexIcon("chevronRight", "sidebar-project-chevron")}`,
       );
       header.append(heading);
       if (group.key !== "__tasks__" && !pinnedGroup) {
@@ -609,6 +621,7 @@ export function createThreadSidebar({
         list,
         `<div class="list-state">${messageHtml(q ? "common.noMatchingTasks" : "common.noVisibleProjects", undefined, t)}</div>`,
       );
+    refreshSidebarMenu();
   }
 
   function getProjects() {

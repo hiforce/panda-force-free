@@ -9,6 +9,12 @@ export const codexIconNodes = {
   circleHelp: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
   command: '<path d="M18 9a3 3 0 1 0-3-3v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3Z"/>',
   chevronDown: '<path d="m6 9 6 6 6-6"/>',
+  chevronUp: '<path d="m6 15 6-6 6 6"/>',
+  arrowLeft: '<path d="M20 12H4m7-7-7 7 7 7"/>',
+  arrowUpRight: '<path d="M7 17 17 7M7 7h10v10"/>',
+  folder: '<path d="M20 20H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2Z"/>',
+  pin: '<path d="m16 3 5 5-4 1-3 5v4l-8-8h4l5-3ZM2 22l7-7"/>',
+  chartNoAxesColumn: '<path d="M5 20V10m7 10V4m7 16V7"/>',
   chevronLeft: '<path d="m15 18-6-6 6-6"/>',
   chevronRight: '<path d="m9 18 6-6-6-6"/>',
   file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
@@ -47,6 +53,7 @@ export const codexIconNodes = {
   triangleAlert:
     '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
   panelLeft: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   panelRight: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/>',
   panelBottom: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 15h18"/>',
   paperclip:
@@ -61,6 +68,10 @@ export const codexIconNodes = {
     '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/>',
   wrench:
     '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+  // Local navigation icons share the existing 24-pixel stroke grid.
+  plug: '<path d="M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0V8ZM12 17v4"/>',
+  settings:
+    '<path d="m10 3-.5 3-1.4.8-2.8-1-2 3.4 2.3 2v1.6l-2.3 2 2 3.4 2.8-1 1.4.8.5 3h4l.5-3 1.4-.8 2.8 1 2-3.4-2.3-2v-1.6l2.3-2-2-3.4-2.8 1-1.4-.8L14 3Z"/><circle cx="12" cy="12" r="3"/>',
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
 };
 

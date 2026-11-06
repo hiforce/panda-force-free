@@ -154,10 +154,15 @@ export function assembleApprovals({
     restorePendingApprovals,
     clearApprovals,
     hasPendingApproval,
+    pendingInteraction,
+    pendingCard,
     refreshPendingApprovals,
   } = createApprovals({
     i18n,
-    onPendingChange: () => viewUpdates.request("workbench"),
+    onPendingChange: () => {
+      viewUpdates.request("workbench");
+      viewUpdates.request("sessionWorkspace");
+    },
     $,
     t,
     approvalMenuController,
@@ -178,6 +183,8 @@ export function assembleApprovals({
   });
   return {
     hasPendingApproval,
+    pendingInteraction,
+    pendingCard,
     restorePendingApprovals,
     approvalMenuController,
     refreshPendingApprovals,
@@ -186,8 +193,9 @@ export function assembleApprovals({
     resolveServerRequest,
   };
 }
-/** @param {import("./ports.js").FeatureOptions<"state" | "mutations" | "$" | "t" | "escapeHtml" | "workspacePreparation", "transport" | "notices", "models">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations" | "$" | "t" | "escapeHtml" | "workspacePreparation", "transport" | "notices", "models">} options */
 export function assembleModels({
+  viewUpdates,
   transportPort,
   $,
   t,
@@ -198,6 +206,9 @@ export function assembleModels({
   mutations,
 }) {
   const {
+    sessionControlView,
+    applyModelSelection,
+    applyPermissionSelection,
     applySessionSettings,
     closeModelMenu,
     closePermissionMenu,
@@ -232,6 +243,7 @@ export function assembleModels({
     addPersistentError: (message) => noticesPort.addPersistentError(message),
     state,
     mutations,
+    onSettingsChanged: () => viewUpdates.request("sessionWorkspace"),
   });
   function loadModels(options) {
     return workspacePreparation.track("models", loadModelsRaw(options));
@@ -240,6 +252,9 @@ export function assembleModels({
     return workspacePreparation.track("permissions", loadPermissionProfilesRaw());
   }
   return {
+    sessionControlView,
+    applyModelSelection,
+    applyPermissionSelection,
     loadPermissionProfiles,
     renderContextUsage,
     applySessionSettings,

@@ -271,8 +271,13 @@ export function assembleNotifications({
       synchronizationPort.scheduleActiveThreadSync(0);
       synchronizationPort.refreshThreadsSoon();
     } else if (method === "thread/tokenUsage/updated") {
-      const threadId = p.threadId || state.active?.id;
-      if (threadId && p.tokenUsage) mutations.collection("tokenUsage").set(threadId, p.tokenUsage);
+      const threadId = p.threadId;
+      if (typeof threadId === "string" && p.tokenUsage)
+        sessions.recordTokenUsage(
+          threadId,
+          p.tokenUsage,
+          p.pandaReceivedAt ? Date.parse(p.pandaReceivedAt) : Date.now(),
+        );
       if (threadId === state.active?.id) viewUpdates.request("contextUsage");
     } else if (method === "thread/status/changed") {
       if (p.threadId === state.active?.id) {

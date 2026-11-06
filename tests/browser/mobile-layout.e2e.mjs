@@ -65,20 +65,21 @@ if (!sidebarClosedAfterSelection) {
   await page.click("#toggleSidebar");
   await page.waitForFunction(() => document.querySelector(".sidebar").getBoundingClientRect().x < 0);
 }
-const closedSummary = await box("#summaryPanel");
+const closedSummary = await box("#sessionInspector");
 const closedSidePanel = await box("#sidePanel");
-await page.click("#toggleSummaryPanel");
+await page.click("#sessionInfoButton");
 await page.waitForFunction(
   () =>
-    !document.querySelector("#summaryPanel").hidden &&
-    document.querySelector("#summaryPanel").getBoundingClientRect().width > 0,
+    document.querySelector("#sessionInspector").open &&
+    document.querySelector("#sessionInspector").getBoundingClientRect().width > 0,
 );
-const openSummary = await box("#summaryPanel");
-await page.click("#closeSummaryPanel");
+const openSummary = await box("#sessionInspector");
+await page.click('#sessionInspector [data-session-action="close"]');
 await page.waitForFunction(
-  () => document.querySelector("#summaryPanel").hidden && document.activeElement?.id === "toggleSummaryPanel",
+  () => !document.querySelector("#sessionInspector").open && document.activeElement?.id === "sessionInfoButton",
 );
-await page.click("#toggleSidePanel");
+await page.click("#sessionInfoButton");
+await page.locator('#sessionToolShortcuts [data-session-tool="changes"]').click();
 await page.waitForFunction(
   () =>
     !document.querySelector("#sidePanel").hidden &&

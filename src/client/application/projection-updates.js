@@ -21,6 +21,7 @@ const TARGETS = new Set([
   "approvalMenu",
   "sessionOpened",
   "newTask",
+  "sessionWorkspace",
 ]);
 
 // This channel updates projections only. Native commands and approval decisions

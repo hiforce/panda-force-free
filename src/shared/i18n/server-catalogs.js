@@ -8,9 +8,10 @@ import m0_5 from "./locales/zh-CN/files.json";
 import m0_6 from "./locales/zh-CN/goals.json";
 import m0_7 from "./locales/zh-CN/projects.json";
 import m0_8 from "./locales/zh-CN/sessions.json";
-import m0_9 from "./locales/zh-CN/settings.json";
-import m0_10 from "./locales/zh-CN/usage.json";
-import m0_11 from "./locales/zh-CN/workbench.json";
+import m0_9 from "./locales/zh-CN/sessionview.json";
+import m0_10 from "./locales/zh-CN/settings.json";
+import m0_11 from "./locales/zh-CN/usage.json";
+import m0_12 from "./locales/zh-CN/workbench.json";
 export const serverMessages = {
   "zh-CN": {
     "approvals": m0_0,
@@ -22,8 +23,9 @@ export const serverMessages = {
     "goals": m0_6,
     "projects": m0_7,
     "sessions": m0_8,
-    "settings": m0_9,
-    "usage": m0_10,
-    "workbench": m0_11,
+    "sessionview": m0_9,
+    "settings": m0_10,
+    "usage": m0_11,
+    "workbench": m0_12,
   },
 };

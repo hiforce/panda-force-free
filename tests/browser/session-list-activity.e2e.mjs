@@ -6,7 +6,7 @@ const base = runtime.base;
 let browser;
 try {
   browser = await runtime.launchBrowser(launchOptions());
-  const context = await browser.newContext({ viewport: { width: 1018, height: 760 } });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   await context.addInitScript(() => {
     if (window === window.top) localStorage.setItem("panda-force-locale", "en");
   });
@@ -123,6 +123,7 @@ try {
       .catch(() => false),
     false,
   );
+  await page.locator("#sessionGoalPlan > summary").click();
   await page.locator("#goalStatus .goal-status-toggle").click();
   assert.equal(await page.locator("#goalDialog").isVisible(), true);
   assert.equal(await page.locator("#goalDialogObjective").inputValue(), "Complete the validation");
@@ -393,7 +394,7 @@ try {
     );
     globalThis.__pandaForceDebug.workbench.threadOpened("idle");
   });
-  await page.locator("#toggleSummaryPanel").click();
+  await page.locator("#sessionActionsButton").click();
   assert.equal(await page.locator("#summarySessionMarker").textContent(), "idle…");
   assert.equal(await page.locator("#summarySessionMarker").getAttribute("title"), "idle");
   assert.equal(await page.locator("#summarySessionModel").textContent(), "gpt-6.1-sol");
@@ -403,7 +404,7 @@ try {
   await page.locator("#saveSummarySessionName").click();
   await page.waitForFunction(() => globalThis.__pandaForceDebug.state.active?.name === "Renamed idle session");
   assert.equal(await row("idle").locator(".thread-name").textContent(), "Renamed idle session");
-  await page.locator("#closeSummaryPanel").click();
+  await page.locator("#sessionActionsDialog [data-session-dismiss]").click();
   await page.evaluate(() => {
     const api = globalThis.__pandaForceDebug,
       lastActivityAt = Date.now() / 1000 - 7200;

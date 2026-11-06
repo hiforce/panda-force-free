@@ -127,6 +127,10 @@ export function assembleSynchronization({
   async function latestThreadTurn(threadId) {
     try {
       const live = await transportPort.rpc("host/thread/live", { threadId });
+      if (live?.tokenUsage) {
+        sessions.recordTokenUsage(threadId, live.tokenUsage);
+        if (threadId === state.active?.id) viewUpdates.request("contextUsage");
+      }
       if (live?.active && live.turn) return live.turn;
     } catch (error) {
       reportDiagnostic("live-sessions", error);
@@ -173,6 +177,7 @@ export function assembleSynchronization({
         });
         if (!current() || threadId !== state.active?.id) return;
         sessions.replaceActive(thread);
+        viewUpdates.request("contextUsage");
         repositoriesPort.cacheConversation(thread);
         statusPort.syncThreadErrorsFromTurns(threadId, thread.turns || []);
         const latest = thread.turns.at(-1);

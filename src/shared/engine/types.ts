@@ -143,6 +143,7 @@ export interface SessionSummary {
   canAcceptDirectInput?: boolean;
   turns?: EngineTurn[];
   history?: ConversationHistory;
+  tokenUsage?: TokenUsage;
 }
 export interface Conversation extends SessionSummary {
   turns: EngineTurn[];
@@ -208,8 +209,11 @@ export interface TokenCount {
   outputTokens?: number;
   cachedInputTokens?: number;
   reasoningOutputTokens?: number;
+  cacheWriteInputTokens?: number;
 }
 export interface TokenUsage {
+  /** Provider observation time in Unix milliseconds, used to reject older snapshots. */
+  updatedAt?: number;
   modelContextWindow?: number;
   total?: TokenCount;
   last?: TokenCount;

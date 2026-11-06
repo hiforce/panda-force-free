@@ -176,7 +176,7 @@ await page.evaluate(() => {
     ],
   });
 });
-await page.click("#toggleSidePanel");
+await page.locator('#sessionToolShortcuts [data-session-tool="changes"]').click();
 await page.click("#reviewTab");
 const recovered = await page.evaluate(() => ({
   stopped: !document.querySelector("#sendButton")?.classList.contains("stop"),

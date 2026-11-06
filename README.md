@@ -6,6 +6,7 @@ Built on [Codex WebUI](https://github.com/lezi-fun/codex-webui) by [lezi-fun](ht
 
 - Organize conversations into projects and attach files or images.
 - Review approvals, answer questions and follow task progress.
+- Keep session usage, settings and tools together in a responsive side panel.
 - Browse workspace files and use the integrated terminal.
 - Use English or Simplified Chinese, follow your browser language, and keep native CLI output in its original language.
 
@@ -35,7 +36,7 @@ docker compose restart panda-force
 
 Follow the sign-in link shown in the terminal, then refresh PandaForce and start a conversation. Your PandaForce administrator is separate from your model account; provider access and charges follow your provider's terms.
 
-The default image is **`hiforceai/panda-force:0.0.8`**. State, model credentials, attachments and workspace files persist in Docker volumes across container restarts. `docker compose down` keeps these volumes. The default port is accessible only from the local machine.
+The default image is **`hiforceai/panda-force:0.0.9`**. State, model credentials, attachments and workspace files persist in Docker volumes across container restarts. `docker compose down` keeps these volumes. The default port is accessible only from the local machine.
 
 ## Already use Codex on the host?
 

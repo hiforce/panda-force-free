@@ -169,6 +169,7 @@ export function assemblePanels({
     }
     $("#toggleFilesPanel").setAttribute("aria-expanded", "true");
     $("#toggleFilesPanel").setAttribute("aria-pressed", "true");
+    viewUpdates.request("sessionWorkspace");
     requestAnimationFrame(() => $("#filesSearch").focus());
   }
   function closeFilesDialog() {
@@ -180,6 +181,7 @@ export function assemblePanels({
     document.body.classList.remove("files-workspace");
     $("#toggleFilesPanel").setAttribute("aria-expanded", "false");
     $("#toggleFilesPanel").setAttribute("aria-pressed", "false");
+    viewUpdates.request("sessionWorkspace");
   }
   function openUtilityPanel(kind) {
     if (kind === "files") {
@@ -252,6 +254,7 @@ export function assemblePanels({
       restorePanelFocus(panel, sidePanelReturnFocus);
       sidePanelReturnFocus = null;
     }
+    viewUpdates.request("sessionWorkspace");
   }
   function openUsageSummary() {
     viewUpdates.request("accountMenu", false);
@@ -283,6 +286,7 @@ export function assemblePanels({
       restorePanelFocus(panel, summaryPanelReturnFocus);
       summaryPanelReturnFocus = null;
     }
+    viewUpdates.request("sessionWorkspace");
   }
   function currentTerminalCwd() {
     const path =
@@ -328,6 +332,7 @@ export function assemblePanels({
     $("#closeSummaryPanel").onclick = () => setSummaryPanelOpen(false);
   }
   return {
+    openUtilityPanel,
     dispose: disposeTerminal,
     setSummaryPanelOpen,
     closeFilesDialog,

@@ -30,8 +30,11 @@
   "browserNotificationsAreBlocked": "Browser notifications are blocked",
   "count": "{count, plural, one {# session} other {# sessions}}",
   "browseSessions": "Browse sessions",
-  "byDirectory": "By directory",
-  "allDirectories": "All directories",
-  "loadingDirectories": "Loading directories…",
-  "directoryLoadFailed": "Could not load directories. You can still search for sessions."
+  "byDirectory": "Working folder",
+  "allDirectories": "All folders",
+  "loadingDirectories": "Loading folders…",
+  "directoryLoadFailed": "Could not load folders. You can still search for sessions.",
+  "recentTab": "Recent",
+  "foldersTab": "Folders",
+  "browseByFolder": "Browse sessions by working folder"
 }

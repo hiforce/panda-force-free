@@ -1,4 +1,5 @@
 import { isRecord } from "../../shared/records.js";
+import { tokenUsage } from "../../shared/engine/usage.js";
 import type { ContentPart, Conversation, EngineItem, EngineTurn } from "../../shared/engine/types.js";
 
 /** Native extensions remain opaque; portable fields are validated before entering an engine session. */
@@ -47,5 +48,7 @@ export function engineSession(value: unknown): Conversation {
   for (const key of ["createdAt", "updatedAt", "recencyAt"])
     if (typeof value[key] === "string" || typeof value[key] === "number") Object.assign(session, { [key]: value[key] });
   if (isRecord(value.status) && typeof value.status.type === "string") session.status = { type: value.status.type };
+  const usage = tokenUsage(value.tokenUsage);
+  if (usage) session.tokenUsage = usage;
   return session;
 }

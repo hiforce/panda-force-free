@@ -20,6 +20,7 @@ const publicFiles = [
   "index.html",
   "style.css",
   "workbench.css",
+  "session-workspace.css",
   "file-preview.css",
   "favicon.svg",
   "assets/panda-mark.svg",

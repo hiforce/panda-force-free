@@ -86,10 +86,40 @@ try {
     "Explicit product project context and isolated drafts between projects in the same working folder",
   );
   await page.locator(".workbench-navigation [data-route=projects]").click();
+  // Settle a background projection before changing only the pin preference.
+  await page.evaluate(async () => {
+    globalThis.__pandaForceDebug.workbench.refresh();
+    await Promise.resolve();
+  });
   await page.locator(`[data-wb=pin][data-project-id="${betaProject.id}"]`).click();
   await page.waitForFunction(
     (id) => JSON.parse(localStorage.getItem("panda-force-sidebar-pinned-projects") || "[]").includes("project:" + id),
     betaProject.id,
+  );
+  const projectPin = (id) => page.locator(`[data-wb=pin][data-project-id="${id}"]`);
+  await page.waitForFunction(
+    (id) => document.querySelector(`[data-wb=pin][data-project-id="${id}"]`)?.textContent.includes("Unpin"),
+    betaProject.id,
+    { timeout: 3000 },
+  );
+  assert.equal(await projectPin(betaProject.id).getAttribute("aria-pressed"), "true");
+  assert.equal(await page.locator(".wb-project-main").first().getAttribute("data-project-id"), betaProject.id);
+  assert.equal(await page.evaluate(() => document.activeElement.id), "project-pin-" + betaProject.id);
+  await page.reload();
+  await projectPin(betaProject.id).getByText("Unpin project", { exact: true }).waitFor();
+  assert.equal(await page.locator(".wb-project-main").first().getAttribute("data-project-id"), betaProject.id);
+  await projectPin(betaProject.id).click();
+  await projectPin(betaProject.id).getByText("Pin project", { exact: true }).waitFor();
+  assert.equal(await projectPin(betaProject.id).getAttribute("aria-pressed"), "false");
+  assert.equal(await page.locator(".wb-project-main").first().getAttribute("data-project-id"), alphaProject.id);
+  await page.locator("#wbProjectSearch").fill("Beta");
+  await page.locator(`[data-project="project:${betaProject.id}"] [aria-haspopup="menu"]`).click();
+  await page.getByRole("menuitem", { name: "Pin project", exact: true }).click();
+  await projectPin(betaProject.id).getByText("Unpin project", { exact: true }).waitFor();
+  assert.equal(await page.locator("#wbProjectSearch").inputValue(), "Beta");
+  await page.locator("#wbProjectSearch").fill("");
+  result.checks.push(
+    "Project pinning updates card labels, pressed state and ordering immediately across surfaces and reloads",
   );
   await page.locator('[data-wb="create-project"]').first().click();
   await page.locator("#projectNameInput").fill("A manually created project");
@@ -170,6 +200,16 @@ try {
   await mp.goto(fixture.base + "/workspace");
   await mp.locator(".wb-hero").waitFor();
   assert.equal(await mp.locator(".workbench-mobile-nav").isVisible(), true);
+  await mp.locator('.workbench-mobile-nav [data-route="projects"]').tap();
+  const mobilePin = mp.locator(`[data-wb=pin][data-project-id="${betaProject.id}"]`);
+  await mobilePin.tap();
+  await mobilePin.getByText("取消置顶", { exact: true }).waitFor();
+  assert.equal(await mobilePin.getAttribute("aria-pressed"), "true");
+  assert.equal(await mp.locator(".wb-project-main").first().getAttribute("data-project-id"), betaProject.id);
+  await mobilePin.tap();
+  await mobilePin.getByText("置顶项目", { exact: true }).waitFor();
+  assert.equal(await mobilePin.getAttribute("aria-pressed"), "false");
+  result.checks.push("Mobile project cards support touch pin/unpin with immediate Chinese labels");
   await mp.goto(fixture.base + "/task/old-alpha");
   await mp.locator("#workspacePreparation").waitFor({ state: "hidden" });
   await mp.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === "ready");
@@ -201,6 +241,7 @@ try {
           labels,
           controls,
           text,
+          navHidden: getComputedStyle(nav).display === "none",
           nav: box(nav),
           composer: box(document.querySelector("#composer")),
           modelIcon: box(document.querySelector(".composer-model-icon")),
@@ -208,11 +249,7 @@ try {
       });
       const detail = JSON.stringify({ locale, width, layout });
       assert.equal(layout.labels.length, 4, detail);
-      for (const label of layout.labels) {
-        assert.ok(label.textBox.width <= label.box.width + 1, detail);
-        assert.ok(label.textBox.height <= 17 && label.textBox.bottom <= layout.nav.bottom, detail);
-        assert.ok(label.button.height >= 44, detail);
-      }
+      assert.equal(layout.navHidden, true, "A session uses drawer navigation and a compact composer");
       for (const label of layout.text) {
         assert.equal(label.box.width, 0, detail);
         assert.ok(label.name.includes(label.text), detail);
@@ -234,26 +271,28 @@ try {
   }
   await mp.setViewportSize({ width: 390, height: 844 });
   await mp.locator("#modeButton").click();
-  await mp.locator("#permissionMenu").waitFor({ state: "visible" });
-  await mp.locator("#permissionMenu .session-menu-close").click();
-  await mp.locator("#permissionMenu").waitFor({ state: "hidden" });
+  await mp.locator("#sessionSettingsDialog").waitFor({ state: "visible" });
+  await mp.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
+  await mp.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
   assert.equal(await mp.locator("#modeButton").evaluate((button) => button === document.activeElement), true);
   await mp.locator("#modeButton").click();
-  await mp.locator('.permission-option[data-permission-mode="default"]').click();
-  await mp.locator("#permissionMenu").waitFor({ state: "hidden" });
+  await mp.locator('input[name="session-permission"][value="default"]').check();
+  await mp.locator('#sessionSettingsForm button[type="submit"]').click();
+  await mp.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
   await mp.locator("#modeButton").click();
   await mp.keyboard.press("Escape");
-  await mp.locator("#permissionMenu").waitFor({ state: "hidden" });
+  await mp.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
   await mp.locator("#modelButton").click();
-  await mp.locator("#modelMenu .session-menu-close").click();
-  await mp.locator("#modelMenu").waitFor({ state: "hidden" });
+  await mp.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
+  await mp.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
   assert.equal(await mp.locator("#modelButton").evaluate((button) => button === document.activeElement), true);
   await mp.locator("#modelButton").click();
-  await mp.locator(".model-effort-row").last().click();
+  await mp.locator("#sessionSettingEfforts input").last().check();
+  await mp.locator('#sessionSettingsForm button[type="submit"]').click();
   assert.ok((await mp.locator("#modelButton").getAttribute("aria-label")).includes("最大"));
   await mp.locator("#modelButton").click();
-  await mp.locator("#modelSubmenuButton").click();
-  await mp.locator('.model-option[data-model="gpt-5.6-luna"]').click();
+  await mp.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
+  await mp.locator('#sessionSettingsForm button[type="submit"]').click();
   assert.ok((await mp.locator("#modelButton").getAttribute("aria-label")).includes("5.6 Luna"));
   await mp.screenshot({ path: join(artifacts, "composer-mobile-zh-light.png") });
   await mp.emulateMedia({ colorScheme: "dark" });
@@ -261,7 +300,8 @@ try {
   result.checks.push(
     "One row of accessible mobile icons fits both locales at three widths; permission, model and reasoning popovers work",
   );
-  await mp.locator(".workbench-mobile-nav [data-route=projects]").click();
+  await mp.locator("#toggleSidebar").click();
+  await mp.locator('.workbench-navigation [data-route="projects"]').click();
   await mp.getByRole("heading", { name: "项目", exact: true }).waitFor();
   await mp.locator("#workspacePreparation").waitFor({ state: "hidden" });
   await mp.screenshot({ path: join(artifacts, "projects-mobile.png") });

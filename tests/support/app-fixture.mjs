@@ -29,6 +29,7 @@ export async function createAppFixture({
   historySessions = 0,
   questionnaireRollout = false,
   sharedApprovals = false,
+  usageRollout = false,
   models = null,
   account = null,
   workspaceDirectory = null,
@@ -74,6 +75,32 @@ export async function createAppFixture({
     },
     { id: "tasks", name: "Task without a project", projectless: true, status: { type: "idle" }, turns: [] },
   ];
+  if (usageRollout) {
+    const sessions = join(dir, "sessions");
+    mkdirSync(sessions);
+    const path = join(sessions, "usage.jsonl");
+    initial[0].path = path;
+    writeFileSync(
+      path,
+      JSON.stringify({
+        type: "event_msg",
+        timestamp: new Date().toISOString(),
+        payload: {
+          type: "token_count",
+          info: {
+            total_token_usage: {
+              total_tokens: 14000,
+              input_tokens: 12000,
+              output_tokens: 2000,
+              cached_input_tokens: 5000,
+            },
+            last_token_usage: { total_tokens: 4000, input_tokens: 3500, output_tokens: 500 },
+            model_context_window: 200000,
+          },
+        },
+      }) + "\n",
+    );
+  }
   if (sharedApprovals) {
     const sessions = join(dir, "sessions");
     mkdirSync(sessions);

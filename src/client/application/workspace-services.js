@@ -121,8 +121,9 @@ export function assembleSidebar({
     applyProjectVisibility,
   };
 }
-/** @param {import("./ports.js").FeatureOptions<"state" | "mutations" | "t" | "i18n" | "workspacePreparation", "navigation" | "workspace" | "settings" | "projects" | "sidebar" | "status" | "approvals" | "sidebarLayout" | "panels", "workbench">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations" | "t" | "i18n" | "workspacePreparation", "navigation" | "workspace" | "settings" | "projects" | "sidebar" | "status" | "approvals" | "sidebarLayout" | "panels", "workbench">} options */
 export function assembleWorkbench({
+  viewUpdates,
   t,
   i18n,
   workspacePreparation,
@@ -140,6 +141,7 @@ export function assembleWorkbench({
 }) {
   let workbench;
   workbench = createWorkbench({
+    onViewChange: () => viewUpdates.request("sessionWorkspace"),
     t,
     i18n,
     preparation: workspacePreparation,

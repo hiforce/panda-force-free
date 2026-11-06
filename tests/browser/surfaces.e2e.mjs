@@ -60,8 +60,8 @@ async function run(width, height, name) {
   await page.waitForSelector("[data-codex-approval-surface]");
   await page.waitForSelector(".activity-command-icon svg");
   await page.waitForSelector(".review-file", { state: "attached" });
-  await page.click("#toggleSidePanel");
-  await page.click('[data-side-panel-action="review"]');
+  if (!(await page.locator("#sessionInspector").isVisible())) await page.locator("#sessionInfoButton").click();
+  await page.locator('#sessionToolShortcuts [data-session-tool="changes"]').click();
   await page.waitForFunction(() => !document.querySelector("#reviewPanelContent").hidden);
   await page.waitForSelector("#reviewMode:not([disabled])");
   await page.click("#reviewMode");

@@ -27,13 +27,14 @@ export interface StateGrants {
   models: { read: "account" | "active" | "config" | "connected" | "modelLoadStatus" | "models" | "permissionMode" | "permissionProfiles" | "permissionVisibility" | "planMode" | "projectless" | "rpcId" | "selectedModel" | "sessionSettings" | "threads" | "tokenUsage" | "workspaceContext"; write: "modelLoadStatus" | "models" | "permissionMode" | "permissionProfiles" | "permissionVisibility" | "rpcId" | "selectedModel" | "sessionSettings" };
   navigation: { read: "active" | "changes" | "composerAttachments" | "composerMentions" | "connected" | "newSessionProjectId" | "projectless" | "sessionSettings" | "threads" | "turnWindow"; write: "changes" | "composerAttachments" | "composerMentions" | "newSessionProjectId" | "turnWindow" };
   notices: { read: "persistentErrors"; write: "persistentErrors" };
-  notifications: { read: "active" | "activityItems" | "items" | "threads" | "tokenUsage" | "turns"; write: "active" | "tokenUsage" };
+  notifications: { read: "active" | "activityItems" | "items" | "threads" | "turns"; write: "active" };
   panels: { read: "active" | "activeReview" | "config" | "turnDiffs"; write: "activeReview" };
   projects: { read: "threads"; write: never };
   queue: { read: "active" | "composerAttachments" | "composerMentions" | "config" | "newSessionProjectId" | "selectedModel" | "threads" | "turns"; write: "composerAttachments" | "composerMentions" };
   repositories: { read: "config"; write: "config" };
   review: { read: "active" | "activeReview" | "activityItems" | "changes" | "turnDiffs"; write: "activeReview" | "turnDiffs" };
-  sessionStore: { read: "active" | "threads"; write: "active" | "threads" };
+  sessionStore: { read: "active" | "threads" | "tokenUsage"; write: "active" | "threads" | "tokenUsage" };
+  sessionWorkspace: { read: "active" | "goals" | "items" | "tokenUsage" | "turnTimings"; write: never };
   settings: { read: "active" | "projectless"; write: never };
   sidebar: { read: "active" | "config" | "goals" | "newSessionProjectId" | "projectless" | "threads" | "workspaceContext"; write: "goals" };
   sidebarLayout: { read: never; write: never };

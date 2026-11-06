@@ -46,6 +46,10 @@
     "placeholderText": "features"
   },
   "features": {
+    "sessionWorkspace": {
+      "read": ["active", "goals", "items", "tokenUsage", "turnTimings"],
+      "write": []
+    },
     "bindings": {
       "read": ["modelLoadStatus"],
       "write": []
@@ -247,8 +251,8 @@
       "write": ["persistentErrors"]
     },
     "notifications": {
-      "read": ["active", "activityItems", "items", "threads", "tokenUsage", "turns"],
-      "write": ["active", "tokenUsage"]
+      "read": ["active", "activityItems", "items", "threads", "turns"],
+      "write": ["active"]
     },
     "panels": {
       "read": ["active", "activeReview", "config", "turnDiffs"],
@@ -366,8 +370,8 @@
       "write": ["projectless", "workspaceContext"]
     },
     "sessionStore": {
-      "read": ["active", "threads"],
-      "write": ["active", "threads"]
+      "read": ["active", "threads", "tokenUsage"],
+      "write": ["active", "threads", "tokenUsage"]
     },
     "transport": {
       "read": ["connected", "events", "pending", "rpcId", "transport", "ws", "wsFallbackTimer"],

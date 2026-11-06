@@ -65,7 +65,7 @@ export function closeEarlierAsyncQuestions(root, t) {
   for (const card of findElements("[data-async-question-card]", root)) closeAsyncQuestionCard(card, t);
 }
 
-export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
+export function createAsyncQuestionCard(item, questions, { t, sendAnswer, onChange = () => {} }) {
   const details = document.createElement("details");
   details.dataset.asyncQuestionCard = "";
   details.dataset.itemId = String(item.id);
@@ -88,11 +88,13 @@ export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
           .map((question) => question.question + "\n" + result.answers[question.id].answers.join("\n"))
           .join("\n\n");
         details.dataset.status = "submitting";
+        onChange();
         try {
           const result = await sendAnswer(text);
           if (result?.deliveryUncertain) details.dataset.status = "unconfirmed";
         } catch (error) {
           details.dataset.status = "open";
+          onChange();
           throw error;
         }
       },
@@ -100,6 +102,7 @@ export function createAsyncQuestionCard(item, questions, { t, sendAnswer }) {
         details.open = false;
         const uncertain = details.dataset.status === "unconfirmed";
         details.dataset.status = uncertain ? "unconfirmed" : "submitted";
+        onChange();
         localizeText(summary, uncertain ? "workbench.deliveryUnconfirmed" : "common.answerSubmitted", undefined, t);
         localizeText(
           hint,

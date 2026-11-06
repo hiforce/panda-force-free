@@ -45,7 +45,11 @@ import { assembleTurnFrames } from "./application/turn-frames.js";
 import { assembleViewport } from "./application/viewport.js";
 import { assembleProjects, assembleSidebar, assembleWorkbench } from "./application/workspace-services.js";
 import { assembleWorkspace } from "./application/workspace.js";
+import { assembleSessionWorkspace } from "./application/session-workspace.js";
 export function startApplication() {
+  const sessionWorkspace = /** @type {import('./application/ports.js').ApplicationPorts['sessionWorkspace']} */ (
+    createFeaturePort("sessionWorkspace")
+  );
   const environment = /** @type {import("./application/ports.js").ApplicationPorts["environment"]} */ (
     createFeaturePort("environment")
   );
@@ -288,6 +292,7 @@ export function startApplication() {
   install(
     models,
     assembleModels({
+      viewUpdates: environment.viewUpdates,
       transportPort: transport,
       $: environment.$,
       t: environment.t,
@@ -410,6 +415,7 @@ export function startApplication() {
   install(
     commands,
     assembleCommands({
+      sessionWorkspacePort: sessionWorkspace,
       transportPort: transport,
       viewUpdates: environment.viewUpdates,
       sessions: environment.sessions,
@@ -855,6 +861,7 @@ export function startApplication() {
   install(
     workbench,
     assembleWorkbench({
+      viewUpdates: environment.viewUpdates,
       t: environment.t,
       i18n: environment.i18n,
       workspacePreparation: environment.workspacePreparation,
@@ -869,6 +876,25 @@ export function startApplication() {
       panelsPort: panels,
       state: environment.stateFor("workbench").state,
       mutations: environment.stateFor("workbench").mutations,
+    }),
+  );
+  install(
+    sessionWorkspace,
+    assembleSessionWorkspace({
+      state: environment.stateFor("sessionWorkspace").state,
+      identity: environment.identityKey,
+      t: environment.t,
+      i18n: environment.i18n,
+      modelsPort: models,
+      statusPort: status,
+      approvalsPort: approvals,
+      projectsPort: projects,
+      workbenchPort: workbench,
+      panelsPort: panels,
+      detailsPort: details,
+      timingPort: timing,
+      noticesPort: notices,
+      sidebarLayoutPort: sidebarLayout,
     }),
   );
   install(
@@ -894,6 +920,7 @@ export function startApplication() {
       accountPort: account,
       messagesPort: messages,
       activityPort: activity,
+      sessionWorkspacePort: sessionWorkspace,
     }),
   );
   applicationProjections.bind();
@@ -910,6 +937,7 @@ export function startApplication() {
   images.bind();
   clipboard.bind();
   panels.bind();
+  sessionWorkspace.bind();
   diagnostics.bind();
   sidebarLayout.bind();
   workspace.bind();

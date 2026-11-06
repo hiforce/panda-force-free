@@ -4,6 +4,7 @@ import { unifiedDiffFromFileChanges } from "../../shared/codex-surfaces.js";
 import type { HistoryQuery } from "../../shared/data-contracts.js";
 import { reportDiagnostic } from "../../shared/diagnostics.js";
 import { isRecord } from "../../shared/records.js";
+import { latestTokenUsage, tokenUsage } from "../../shared/engine/usage.js";
 import { resolveSafeRegularFile } from "../path-utils.js";
 import { nativeThread, nativeTurn, resultPage, threadFromResult, type NativeThread } from "../protocol/native.js";
 import type { ReviewRecorder } from "../engines/runtime-contract.js";
@@ -182,7 +183,12 @@ export function createThreadHub({
     try {
       // Native item pagination omits host questionnaire calls, including completed turns.
       const live = await readLiveThread(params.threadId);
-      return { ...result, history: { ...result.history, questionTurns: live.questionTurns || [] } };
+      const usage = latestTokenUsage(tokenUsage(result.thread.tokenUsage), live.tokenUsage);
+      return {
+        ...result,
+        thread: { ...result.thread, ...(usage ? { tokenUsage: usage } : {}) },
+        history: { ...result.history, questionTurns: live.questionTurns || [] },
+      };
     } catch (error) {
       reportDiagnostic("history.questions", error);
       return result;
@@ -256,7 +262,7 @@ export function createThreadHub({
       recordThreadPathsFromRpc(result);
       path = threadPaths.get(threadId);
     }
-    if (!path) return { active: false, turn: null, lastEventAt: null, questionTurns: [] };
+    if (!path) return { active: false, turn: null, lastEventAt: null, questionTurns: [], tokenUsage: undefined };
     const child = relative(sessionsRoot, resolve(path));
     const safePath = child && !child.startsWith("..") ? resolveSafeRegularFile(sessionsRoot, child) : null;
     if (!safePath) throw new Error("Thread rollout is outside the Codex sessions directory");

@@ -34,6 +34,7 @@ export interface DraftRepository {
   updateAttachment(id: string, patch: Partial<ComposerAttachment>): void;
 }
 export interface SessionRepository {
+  recordTokenUsage(threadId: string, value: unknown, receivedAt?: number): void;
   replaceActive(thread: DataView<SessionSummary> | null): void;
   replaceThreads(threads: readonly DataView<SessionSummary>[]): void;
   setTurns(turns: readonly DataView<EngineTurn>[]): void;
@@ -47,6 +48,7 @@ export interface SidebarSnapshot {
   visibility?: DataView<ProjectVisibility>;
 }
 export interface ProjectionPayloads {
+  sessionWorkspace: undefined;
   composerPlaceholder: undefined;
   workspaceContext: undefined;
   accountMenu: boolean | undefined;

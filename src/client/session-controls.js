@@ -28,10 +28,12 @@ export function createSessionControls({
   toast,
   addPersistentError,
   mutations,
+  onSettingsChanged = () => {},
 }) {
   const permissionProfileRequestGate = createLatestRequestGate();
   let modelLoadPromise = null;
   let pendingFullAccessAction = "select";
+  let pendingFullAccessSession = "";
   let requestingNotificationPermission = false;
   function readLocalSessionModelSettings(threadId = state.active?.id) {
     if (!threadId) return null;
@@ -208,6 +210,7 @@ export function createSessionControls({
     );
     setOpaqueText($("#effortLabel"), reasoningLabel($("#effortSelect").value));
     syncModelDescription();
+    onSettingsChanged();
   }
   function syncModelDescription() {
     const values = {
@@ -630,6 +633,7 @@ export function createSessionControls({
     if ($("#settingsPermissionValue")) localizeText($("#settingsPermissionValue"), selected.label, undefined, t);
     syncPermissionSettings();
     renderPermissionMenu();
+    onSettingsChanged();
   }
   function setPermissionMode(mode) {
     if (!permissionModeAvailable(mode)) return;
@@ -704,14 +708,21 @@ export function createSessionControls({
   $("#modelButton").addEventListener("click", toggleModelMenu);
   $("#modeButton").onclick = togglePermissionMenu;
   $("#confirmFullAccess").onclick = () => {
-    const action = pendingFullAccessAction;
+    const action = pendingFullAccessAction,
+      sessionId = pendingFullAccessSession;
     $("#fullAccessDialog").close();
+    if (sessionId && state.active?.id !== sessionId) {
+      toast(t("sessionview.sessionChanged"));
+      return;
+    }
     if (action === "enable") setPermissionVisibility("fullAccess", true);
     else setPermissionMode("full-access");
     pendingFullAccessAction = "select";
+    pendingFullAccessSession = "";
   };
   $("#fullAccessDialog").addEventListener("close", () => {
     pendingFullAccessAction = "select";
+    pendingFullAccessSession = "";
     syncPermissionSettings();
   });
   $("#settingsAutoReviewToggle").onchange = (event) =>
@@ -727,7 +738,55 @@ export function createSessionControls({
     const dialog = $("#fullAccessDialog");
     if (!dialog.open) dialog.showModal();
   };
+  function sessionControlView() {
+    const modes = ["default"];
+    if (autoReviewSupported()) modes.push("guardian-approvals");
+    if (state.permissionVisibility.fullAccess) modes.push("full-access");
+    modes.push(...state.permissionProfiles.map((profile) => `${PERMISSION_PROFILE_PREFIX}${profile.id}`));
+    return {
+      sessionId: state.active?.id || "",
+      model: state.selectedModel,
+      effort: $("#effortSelect").value,
+      permission: state.permissionMode,
+      models: state.models.map((model) => ({
+        id: model.model,
+        label: modelDisplay(model),
+        defaultEffort: model.defaultReasoningEffort || "medium",
+        efforts: (model.supportedReasoningEfforts || [{ reasoningEffort: "medium" }]).map((item) => ({
+          id: item.reasoningEffort,
+          label: reasoningLabel(item.reasoningEffort),
+        })),
+      })),
+      permissions: modes
+        .map((mode) => permissionModeDefinition(mode))
+        .filter(Boolean)
+        .map((option) => ({
+          id: option.mode,
+          label: option.kind === "profile" ? option.label : t(option.label),
+          description: option.kind === "profile" ? option.description : t(option.description),
+          allowed: permissionModeAvailable(option.mode),
+        })),
+    };
+  }
+  function applyModelSelection(sessionId, model, effort) {
+    const view = sessionControlView();
+    if (!sessionId || view.sessionId !== sessionId) throw new Error(t("sessionview.sessionChanged"));
+    const selected = view.models.find((item) => item.id === model);
+    if (!selected || !selected.efforts.some((item) => item.id === effort))
+      throw new Error(t("errors.couldNotLoadModels"));
+    chooseModel(model, true);
+    chooseEffort(effort);
+  }
+  function applyPermissionSelection(sessionId, mode) {
+    if (!sessionId || state.active?.id !== sessionId) throw new Error(t("sessionview.sessionChanged"));
+    if (!permissionModeAvailable(mode)) throw new Error(t("sessionview.permissionUnavailable"));
+    choosePermissionMode(mode);
+    if (mode === "full-access" && $("#fullAccessDialog").open) pendingFullAccessSession = sessionId;
+  }
   return {
+    sessionControlView,
+    applyModelSelection,
+    applyPermissionSelection,
     applySessionSettings,
     closeModelMenu,
     closePermissionMenu,

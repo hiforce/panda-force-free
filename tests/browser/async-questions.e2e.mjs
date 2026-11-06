@@ -47,6 +47,11 @@ try {
   await page.reload();
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
   await card.waitFor();
+  await page.waitForFunction(() => document.querySelector("#sessionMobileStatus").textContent === "Your input needed");
+  await page.locator("#sessionInfoButton").tap();
+  await page.locator("#sessionPendingAction").tap();
+  await page.locator("#sessionInspector").waitFor({ state: "hidden" });
+  assert.equal(await card.evaluate((element) => element.contains(document.activeElement)), true);
   assert.equal(await card.locator("fieldset").count(), 2);
   // A native/rollout alias may arrive after the card, including on reconnect.
   await page.evaluate(() =>

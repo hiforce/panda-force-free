@@ -334,11 +334,13 @@ const server = createServer(
       "/index.html",
       "/style.css",
       "/workbench.css",
+      "/session-workspace.css",
       "/favicon.svg",
       "/auth-bootstrap.js",
       "/i18n.js",
       "/http-client.js",
       "/panda-brand.js",
+      "/assets/panda-mark.svg",
     ]);
     let idaasSession: { id: string; identity: unknown; expiresAt: number } | null = null;
     if (idaasAuth) {

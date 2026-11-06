@@ -59,6 +59,9 @@ try {
     held.set(key, () => route.fulfill({ response }));
   });
   await page.goto(fixture.base, { waitUntil: "domcontentloaded" });
+  const publicLogo = await context.request.get(fixture.base + "/assets/panda-mark.svg");
+  assert.equal(publicLogo.status(), 200);
+  assert.match(publicLogo.headers()["content-type"], /image\/svg\+xml/);
   await page.getByRole("heading", { name: "Create your administrator", exact: true }).waitFor();
   assert.equal(await page.locator("#workspacePreparation").isVisible(), false);
   assert.equal(
@@ -84,6 +87,14 @@ try {
   const bounds = await page.locator("#workspacePreparation").boundingBox();
   assert.equal(bounds.x, 0);
   assert.equal(bounds.width, 1280);
+  await page.waitForFunction(() => {
+    const logo = document.querySelector(".workspace-preparation-logo");
+    return logo instanceof HTMLImageElement && logo.complete && logo.naturalWidth > 0;
+  });
+  const brand = await page.locator(".workspace-preparation-banner").boundingBox();
+  const title = await page.locator("#workspacePreparationTitle").boundingBox();
+  assert.ok(brand.y + brand.height < title.y);
+  assert.match(await page.locator(".workspace-preparation-banner").innerText(), /PandaForce/);
   await page.screenshot({ path: artifact("workspace-preparation-desktop.png") });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("zh-CN"));
@@ -92,6 +103,10 @@ try {
   await page.screenshot({ path: artifact("workspace-preparation-mobile.png") });
   await page.emulateMedia({ colorScheme: "dark" });
   await page.screenshot({ path: artifact("workspace-preparation-mobile-dark.png") });
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.locator(".workspace-preparation-logo").scrollIntoViewIfNeeded();
+  const smallLogo = await page.locator(".workspace-preparation-logo").boundingBox();
+  assert.ok(smallLogo.x >= 0 && smallLogo.y >= 0 && smallLogo.x + smallLogo.width <= 320);
   await page.emulateMedia({ colorScheme: "light" });
   await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("en"));
   await page.setViewportSize({ width: 1280, height: 900 });

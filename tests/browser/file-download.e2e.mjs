@@ -101,7 +101,8 @@ try {
         document.querySelector("#filePreview")?.open &&
         document.querySelector("#filePreviewContent")?.getAttribute("aria-busy") === "false",
     );
-  await page.click("#toggleFilesPanel");
+  if (!(await page.locator("#sessionInspector").isVisible())) await page.locator("#sessionInfoButton").click();
+  await page.locator('#sessionToolShortcuts [data-session-tool="files"]').click();
   await page.waitForFunction(() => document.querySelectorAll(".files-tree-row").length > 0);
   assert.ok(await page.locator('.files-tree-row[data-path="source.ts"]').count());
   const gitBadge = page.locator('.files-tree-row[data-path="source.ts"] .files-tree-git');

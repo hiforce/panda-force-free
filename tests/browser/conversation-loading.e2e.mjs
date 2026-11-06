@@ -289,6 +289,31 @@ try {
   page.on("dialog", (dialog) => dialog.accept());
   await page.evaluate(() => globalThis.__pandaForceDebug.setSidebarOpen(true));
   await page.locator('.thread-item[data-id="paged"] .thread-options').click();
+  // A background list refresh must retain the open menu and its keyboard focus.
+  const refreshedMenu = await page.evaluate(() => {
+    const api = globalThis.__pandaForceDebug;
+    const focused = document.activeElement;
+    api.applyThreadSummaries(
+      api.state.threads.map((thread) =>
+        thread.id === "paged" ? { ...thread, name: "Refreshed paged history" } : thread,
+      ),
+    );
+    const menu = document.querySelector('.sidebar-project-menu[role="menu"]');
+    return {
+      visible: Boolean(menu && !menu.hidden),
+      focusRetained: document.activeElement === focused,
+      expanded: document.querySelector('.thread-item[data-id="paged"] .thread-options')?.getAttribute("aria-expanded"),
+    };
+  });
+  assert.deepEqual(refreshedMenu, { visible: true, focusRetained: true, expanded: "true" });
+  await page.keyboard.press("Escape");
+  assert.equal(
+    await page
+      .locator('.thread-item[data-id="paged"] .thread-options')
+      .evaluate((node) => node === document.activeElement),
+    true,
+  );
+  await page.locator('.thread-item[data-id="paged"] .thread-options').click();
   await page.getByRole("menuitem", { name: "Delete session", exact: true }).click();
   await page.locator(".confirmation-dialog").getByRole("button", { name: "Delete session", exact: true }).click();
   await page.waitForFunction(() => globalThis.__pandaForceDebug.state.active === null);

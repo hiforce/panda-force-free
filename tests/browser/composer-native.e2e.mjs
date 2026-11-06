@@ -82,6 +82,8 @@ const contextUsage = await page.evaluate(() => {
     beforeQueue: Boolean(indicator.compareDocumentPosition(queue) & Node.DOCUMENT_POSITION_FOLLOWING),
   };
 });
+// The new-session composer retains the immediate picker; active sessions use Save/Cancel sheets.
+await page.click("#newTask");
 await page.click("#modelButton");
 await page.screenshot({ path: artifact("composer-model-menu.png"), fullPage: false });
 const modelMain = await page.evaluate(() => ({

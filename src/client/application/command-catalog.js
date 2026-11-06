@@ -29,7 +29,7 @@ const commands = [
     kind: "local",
     title: "composer.commandModelTitle",
     description: "composer.commandModelDescription",
-    icon: "wrench",
+    icon: "slidersHorizontal",
   },
   {
     id: "plan",
@@ -50,7 +50,7 @@ const commands = [
     kind: "local",
     title: "composer.commandReasoningTitle",
     description: "composer.commandReasoningDescription",
-    icon: "wrench",
+    icon: "slidersHorizontal",
   },
   {
     id: "init",
@@ -64,7 +64,7 @@ const commands = [
     kind: "local",
     title: "composer.commandMcpTitle",
     description: "composer.commandMcpDescription",
-    icon: "wrench",
+    icon: "plug",
   },
   {
     id: "compact",

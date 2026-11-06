@@ -19,7 +19,7 @@ export function exportFree({ source = process.cwd(), ref = "HEAD", destination, 
       /^(?:package\.json|bun\.lock|eslint\.config\.mjs|prettier\.config\.mjs|tsconfig(?:\.(?:strict|contracts|tooling))?\.json|LICENSES\/(?:upstream|immer)-MIT\.txt)$/.test(
         path,
       ) ||
-      /^public\/(?:index\.html|style\.css|workbench\.css|file-preview\.css|favicon\.svg|assets\/panda-(?:mark\.svg|icon\.png))$/.test(
+      /^public\/(?:index\.html|style\.css|workbench\.css|session-workspace\.css|file-preview\.css|favicon\.svg|assets\/panda-(?:mark\.svg|icon\.png))$/.test(
         path,
       );
     if (!selected) continue;

@@ -45,3 +45,9 @@ public/locales
 
 # Generated shared authentication request bundle.
 public/http-client.js
+
+# Generated verification and browser assets.
+public/auth-bootstrap.js
+public/i18n.js
+public/panda-brand.js
+.build-proof

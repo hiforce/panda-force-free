@@ -56,7 +56,8 @@ try {
   checks.push(
     "Multiple questions, single-choice lists, permitted custom answers, required fields and masked private input",
   );
-  await page.locator("[data-wb=route][data-route=projects]:visible").first().click();
+  await page.locator("#toggleSidebar").click();
+  await page.locator(".workbench-navigation [data-wb=route][data-route=projects]").click();
   await page.locator("#pendingApprovalNotice").click();
   const inbox = page.locator("#approvalInboxDialog");
   assert.equal(

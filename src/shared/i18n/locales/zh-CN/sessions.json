@@ -33,5 +33,8 @@
   "byDirectory": "按目录浏览",
   "allDirectories": "所有目录",
   "loadingDirectories": "正在加载目录…",
-  "directoryLoadFailed": "目录暂时无法加载，仍可搜索会话。"
+  "directoryLoadFailed": "目录暂时无法加载，仍可搜索会话。",
+  "recentTab": "最近",
+  "foldersTab": "目录",
+  "browseByFolder": "按工作目录浏览会话"
 }

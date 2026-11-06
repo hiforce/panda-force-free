@@ -114,7 +114,8 @@ export function createWorkbenchViews({
     );
   }
   function projectCard(p) {
-    return `<article class="wb-project"><button class="wb-project-main" data-i18n-ignore data-wb="project" data-project-id="${escape(p.id)}"><span>${codexIcon("folderOpen")}</span><strong>${escape(p.name)}</strong><small class="project-code">${escape(p.code)}</small><p class="project-description">${escape(p.description || "")}</p><small>${messageHtml("sessions.count", { count: p.threads.length }, t)}</small></button><div class="wb-project-actions">${button("common.newSession", "project-new", `data-project-id="${escape(p.id)}"`)}${button(isProjectPinned("project:" + p.id) ? "common.unpin" : "common.pin", "pin", `data-project-id="${escape(p.id)}"`)}</div></article>`;
+    const pinned = isProjectPinned("project:" + p.id);
+    return `<article class="wb-project"><button class="wb-project-main" data-i18n-ignore data-wb="project" data-project-id="${escape(p.id)}"><span>${codexIcon("folderOpen")}</span><strong>${escape(p.name)}</strong><small class="project-code">${escape(p.code)}</small><p class="project-description">${escape(p.description || "")}</p><small>${messageHtml("sessions.count", { count: p.threads.length }, t)}</small></button><div class="wb-project-actions">${button("common.newSession", "project-new", `data-project-id="${escape(p.id)}"`)}${button(pinned ? "common.unpinProject" : "common.pinProject", "pin", `id="project-pin-${escape(p.id)}" data-project-id="${escape(p.id)}" aria-pressed="${pinned}" ${messageAttributes("aria-label", pinned ? "common.unpinProjectName" : "common.pinProjectName", { name: p.name }, t)}`)}</div></article>`;
   }
   function renderProjects() {
     setMessageHtml(

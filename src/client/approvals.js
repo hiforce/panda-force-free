@@ -282,6 +282,18 @@ export function createApprovals({
     mutations.collection("requestCards").clear();
   }
   return {
+    pendingInteraction: (id) => {
+      const request = [...pendingApprovals.values()].find(
+        (req) => req.params?.threadId === id || (!req.params?.threadId && state.active?.id === id),
+      );
+      return request ? (USER_INPUT_METHODS.includes(request.method) ? "question" : "approval") : null;
+    },
+    pendingCard: (id) => {
+      const request = [...pendingApprovals.values()].find(
+        (req) => req.params?.threadId === id || (!req.params?.threadId && state.active?.id === id),
+      );
+      return request ? state.requestCards.get(request.id) || null : null;
+    },
     onServerRequest,
     resolveServerRequest,
     restorePendingApprovals,

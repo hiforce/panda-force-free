@@ -1,4 +1,11 @@
-import type { Conversation, EngineTurn, Goal, ConversationHistory, SessionSummary } from "../../shared/engine/types.js";
+import type {
+  Conversation,
+  EngineTurn,
+  Goal,
+  ConversationHistory,
+  SessionSummary,
+  TokenUsage,
+} from "../../shared/engine/types.js";
 import type { NativeInput } from "../../shared/data-contracts.js";
 export interface QueuedSubmission {
   id: string;
@@ -13,7 +20,13 @@ export interface RpcResults {
   "thread/fork": { thread: Conversation };
   "thread/list": { data: SessionSummary[]; nextCursor?: string | null };
   "host/thread/history": { thread: SessionSummary; history: ConversationHistory & { turns: EngineTurn[] } };
-  "host/thread/live": { thread?: Conversation; turn?: EngineTurn; active?: boolean; unchanged?: boolean };
+  "host/thread/live": {
+    thread?: Conversation;
+    turn?: EngineTurn;
+    active?: boolean;
+    unchanged?: boolean;
+    tokenUsage?: TokenUsage;
+  };
   "turn/start": { turn: EngineTurn };
   "turn/steer": { turnId?: string };
   "turn/interrupt": unknown;

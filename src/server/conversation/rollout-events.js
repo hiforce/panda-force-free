@@ -9,6 +9,8 @@ import {
   reasoningItem,
 } from "./rollout-items.js";
 import { readRolloutEvent } from "./rollout-protocol.js";
+import { rolloutTokenUsage } from "./rollout-usage.js";
+import { latestTokenUsage } from "../../shared/engine/usage.js";
 export function newState() {
   return {
     active: false,
@@ -22,6 +24,7 @@ export function newState() {
     patchSequence: 0,
     questionTurns: new Map(),
     lastEventAt: null,
+    tokenUsage: /** @type {import("../../shared/engine/types.js").TokenUsage | undefined} */ (undefined),
   };
 }
 
@@ -58,6 +61,10 @@ export function applyRolloutEvent(state, input) {
   const event = readRolloutEvent(input);
   if (!event) return state;
   const payload = event.payload;
+  if (event.type === "event_msg" && payload.type === "token_count") {
+    state.tokenUsage = latestTokenUsage(state.tokenUsage, rolloutTokenUsage(payload.info, event.timestamp));
+    return state;
+  }
   if (event.type === "event_msg" && payload.type === "task_started") {
     state.active = true;
     state.itemIndex.clear();

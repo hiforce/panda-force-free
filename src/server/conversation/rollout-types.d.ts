@@ -1,5 +1,6 @@
 export interface RolloutPayload {
   type: string;
+  info?: unknown;
   turn_id?: string;
   started_at?: number;
   completed_at?: number;

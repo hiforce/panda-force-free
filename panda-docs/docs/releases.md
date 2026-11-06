@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.8`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.9`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -104,3 +104,25 @@ decisions from application code. Codex remains the registered engine; this relea
 does not add a Claude or Spark CLI adapter. An [optional gateway cluster](./cluster.md)
 adds authenticated owner routing, event replay and durable command identities.
 Default single-instance installations continue to use SQLite without PostgreSQL.
+
+## 0.0.9
+
+The session workspace now keeps usage, execution status, project context, model and
+permission settings, and tools in a dedicated side panel. The conversation and
+composer share one centered reading column as panels open or close. On phones,
+compact controls and bottom sheets leave more room for the conversation.
+
+Model, permission, usage and tool dialogs are centered on desktop, with visible
+headers and action bars when their content scrolls. Session usage is restored from
+native history after opening or refreshing a conversation, then updated by live
+reports. Missing values remain explicitly unavailable.
+
+The sidebar uses consistent typography and distinct connection and settings icons.
+**Recent** shows the latest ten unassigned sessions; **Folders** expands working
+folders in place, with readable paths, counts and keyboard navigation. Background
+list updates preserve an open session menu and its focus.
+
+Workspace preparation now displays the bundled Panda logo and a themed brand
+banner above the real loading steps. The logo loads before sign-in and supports
+small screens, Light and Dark themes. The build verifies all 76 required steps,
+including 68 isolated browser suites.

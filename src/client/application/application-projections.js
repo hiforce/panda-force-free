@@ -1,6 +1,6 @@
 // This parent connects read-model projections. Feature modules never resolve
 // arbitrary commands through the update channel.
-/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "renderBatch", "transport" | "connection" | "workbench" | "sidebar" | "workspace" | "details" | "review" | "goals" | "status" | "models" | "composer" | "timeline" | "sideTasks" | "delivery" | "approvals" | "account" | "messages" | "activity", "applicationProjections">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "renderBatch", "sessionWorkspace" | "transport" | "connection" | "workbench" | "sidebar" | "workspace" | "details" | "review" | "goals" | "status" | "models" | "composer" | "timeline" | "sideTasks" | "delivery" | "approvals" | "account" | "messages" | "activity", "applicationProjections">} options */
 export function assembleApplicationProjections({
   viewUpdates,
   renderBatch,
@@ -22,6 +22,7 @@ export function assembleApplicationProjections({
   accountPort,
   messagesPort,
   activityPort,
+  sessionWorkspacePort,
 }) {
   function bind() {
     transportPort.attach({
@@ -35,14 +36,30 @@ export function assembleApplicationProjections({
       sideTasksPort.flush();
     });
     viewUpdates.attach({
+      sessionWorkspace: () => sessionWorkspacePort.refresh(),
       workbench: () => workbenchPort.workbench?.refresh(),
       sidebar: () => sidebarPort.renderThreads(),
-      header: () => workspacePort.renderHeader(),
+      header: () => {
+        workspacePort.renderHeader();
+        sessionWorkspacePort.refresh();
+      },
       details: () => detailsPort.syncSummaryPanel(),
-      review: () => reviewPort.renderChanges(),
-      goals: (id) => goalsPort.syncGoalStatusSurface(id),
-      status: () => statusPort.syncSessionStatusSurface(),
-      contextUsage: () => modelsPort.renderContextUsage(),
+      review: () => {
+        reviewPort.renderChanges();
+        sessionWorkspacePort.refresh();
+      },
+      goals: (id) => {
+        goalsPort.syncGoalStatusSurface(id);
+        sessionWorkspacePort.refresh();
+      },
+      status: () => {
+        statusPort.syncSessionStatusSurface();
+        sessionWorkspacePort.refresh();
+      },
+      contextUsage: () => {
+        modelsPort.renderContextUsage();
+        sessionWorkspacePort.refresh();
+      },
       composerSubmit: () => composerPort.syncComposerSubmitState(),
       composerLayout: () => composerPort.resizePrompt(),
       composerDraft: () => composerPort.persistComposerDraft(),

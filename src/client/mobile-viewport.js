@@ -7,6 +7,7 @@ export function trackMobileViewport() {
     const mobile = root.classList.contains("mobile-device") || matchMedia("(max-width:760px)").matches;
     // Keep native pinch zoom: only adapt the keyboard/browser-chrome viewport at normal scale.
     const active = mobile && viewport && Math.abs(viewport.scale - 1) < 0.02 && viewport.height > 0;
+    root.classList.toggle("soft-keyboard-open", Boolean(active && innerHeight - viewport.height > 110));
     root.classList.toggle("visual-viewport-active", Boolean(active));
     if (active) {
       root.style.setProperty("--app-viewport-height", `${viewport.height}px`);

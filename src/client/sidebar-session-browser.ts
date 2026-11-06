@@ -4,8 +4,9 @@ import type { DirectoryEntry } from "../shared/session-discovery.js";
 import type { Translate } from "../shared/i18n/messages.js";
 import type { BusinessProjects } from "./contracts/features.js";
 import { closestElement, requireElement } from "./dom.js";
-import { localizeText, messageAttributes, messageHtml, setMessageHtml, setOpaqueText } from "./i18n.js";
+import { localizeText, messageAttributes, messageHtml, setMessageHtml } from "./i18n.js";
 import { storage, STORAGE_KEYS } from "./storage.js";
+import { renderSessionFolders } from "./sidebar-session-folders.js";
 
 /** Owns discovery controls and paged reads; session rows remain a sidebar projection. */
 export function createSidebarSessionBrowser({
@@ -13,11 +14,13 @@ export function createSidebarSessionBrowser({
   t,
   appendRows,
   onError,
+  onRender = () => {},
 }: {
   catalog: BusinessProjects;
   t: Translate;
   appendRows(container: HTMLElement, sessions: readonly DataView<SessionSummary>[]): void;
   onError(error: unknown): void;
+  onRender?(): void;
 }) {
   let view: "recent" | "folders" = storage.get(STORAGE_KEYS.sidebarUnassignedView) === "folders" ? "folders" : "recent";
   let host: HTMLElement | undefined;
@@ -75,111 +78,116 @@ export function createSidebarSessionBrowser({
       }
     }
   }
+  function toggleDirectory(path: string) {
+    version++;
+    busy = false;
+    if (directory === path) {
+      directory = undefined;
+      render();
+    } else {
+      directory = path;
+      sessions = [];
+      cursor = null;
+      void load();
+    }
+    host
+      ?.querySelector<HTMLButtonElement>(`[data-session-directory="${CSS.escape(path)}"]`)
+      ?.focus({ preventScroll: true });
+  }
+  function renderExpanded(body: HTMLElement) {
+    body.setAttribute("aria-busy", String(busy));
+    appendRows(
+      body,
+      sessions.filter((session) => !assigned(session)),
+    );
+    if (busy) {
+      const status = document.createElement("p");
+      status.setAttribute("role", "status");
+      localizeText(status, "workbench.loadingSessions", undefined, t);
+      body.append(status);
+    } else if (cursor) {
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "sidebar-sessions-more";
+      localizeText(more, "projects.loadOlderSessions", undefined, t);
+      more.onclick = () => void load(true);
+      body.append(more);
+    } else if (!sessions.some((session) => !assigned(session))) {
+      const empty = document.createElement("p");
+      localizeText(empty, "common.noMatchingSessions", undefined, t);
+      body.append(empty);
+    }
+  }
+  function selectView(next: "recent" | "folders") {
+    view = next;
+    storage.set(STORAGE_KEYS.sidebarUnassignedView, view);
+    render();
+    focusView();
+    if (view === "folders" && !directories && !indexPending && !indexFailed) void readIndex();
+    else if (view === "folders" && directory !== undefined && loadedSearch !== search) void load();
+  }
   function render() {
     if (!host) return;
+    const focused = host.contains(document.activeElement) ? document.activeElement : null;
+    const folder = closestElement("[data-session-directory]", focused);
+    const tab = closestElement("[data-session-browse-view]", focused);
+    const row = closestElement(".thread-item[data-id]", focused);
+    const focusSelector = folder
+      ? `[data-session-directory="${CSS.escape(folder.dataset.sessionDirectory || "")}"]`
+      : tab
+        ? `[data-session-browse-view="${CSS.escape(tab.dataset.sessionBrowseView || "")}"]`
+        : row
+          ? `.thread-item[data-id="${CSS.escape(row.dataset.id || "")}"]${closestElement(".thread-options", focused) ? " .thread-options" : ""}`
+          : "";
     setMessageHtml(
       host,
-      `<div class="sidebar-session-tabs" role="tablist" ${messageAttributes("aria-label", "sessions.browseSessions", undefined, t)}><button type="button" role="tab" data-session-browse-view="recent" aria-selected="${view === "recent"}">${messageHtml("workbench.recentSessions", undefined, t)} <span class="sidebar-session-recent-count">10</span></button><button type="button" role="tab" data-session-browse-view="folders" aria-selected="${view === "folders"}">${messageHtml("sessions.byDirectory", undefined, t)}</button></div><div class="sidebar-session-browser-body" role="tabpanel"></div>`,
+      `<div class="sidebar-session-tabs" role="tablist" ${messageAttributes("aria-label", "sessions.browseSessions", undefined, t)}><button type="button" role="tab" id="sidebarRecentTab" data-session-browse-view="recent" aria-controls="sidebarSessionPanel" tabindex="${view === "recent" ? 0 : -1}" aria-selected="${view === "recent"}">${messageHtml("sessions.recentTab", undefined, t)} <span class="sidebar-session-recent-count">10</span></button><button type="button" role="tab" id="sidebarFoldersTab" data-session-browse-view="folders" aria-controls="sidebarSessionPanel" tabindex="${view === "folders" ? 0 : -1}" aria-selected="${view === "folders"}" ${messageAttributes("title", "sessions.browseByFolder", undefined, t)}>${messageHtml("sessions.foldersTab", undefined, t)}</button></div><div class="sidebar-session-browser-body" id="sidebarSessionPanel" role="tabpanel" aria-labelledby="${view === "recent" ? "sidebarRecentTab" : "sidebarFoldersTab"}"></div>`,
     );
     const body = requireElement(".sidebar-session-browser-body", host);
     if (view === "recent") {
       appendRows(body, recent.slice(0, 10));
       if (!recent.length) localizeText(body, "common.noMatchingSessions", undefined, t);
-    } else if (directory === undefined) {
-      if (!directories) {
-        localizeText(body, indexPending ? "sessions.loadingDirectories" : "sessions.directoryLoadFailed", undefined, t);
-        if (!indexPending) {
-          const retry = document.createElement("button");
-          retry.type = "button";
-          retry.className = "sidebar-sessions-more";
-          localizeText(retry, "common.retry", undefined, t);
-          retry.onclick = () => void readIndex();
-          body.append(retry);
-        }
-      } else {
-        let count = 0;
-        for (const entry of directories) {
-          const unassigned = entry.unassignedCount ?? entry.count;
-          if (!unassigned || (search && !entry.path.toLocaleLowerCase().includes(search))) continue;
-          const button = document.createElement("button");
-          button.type = "button";
-          button.className = "sidebar-session-directory";
-          button.dataset.sessionDirectory = entry.path;
-          button.title = entry.path || t("common.noWorkingFolder");
-          const label = document.createElement("span"),
-            name = document.createElement("strong"),
-            path = document.createElement("span"),
-            total = document.createElement("small");
-          path.className = "sidebar-session-directory-path";
-          setOpaqueText(
-            name,
-            entry.path.split("/").filter(Boolean).at(-1) || entry.path || t("common.noWorkingFolder"),
-          );
-          setOpaqueText(path, entry.path);
-          label.append(name, path);
-          setOpaqueText(total, String(unassigned));
-          button.append(label, total);
-          button.onclick = () => {
-            directory = entry.path;
-            sessions = [];
-            cursor = null;
-            void load();
-          };
-          body.append(button);
-          count++;
-        }
-        if (!count) localizeText(body, "common.noMatchingSessions", undefined, t);
+    } else if (!directories) {
+      localizeText(body, indexPending ? "sessions.loadingDirectories" : "sessions.directoryLoadFailed", undefined, t);
+      if (!indexPending) {
+        const retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "sidebar-sessions-more";
+        localizeText(retry, "common.retry", undefined, t);
+        retry.onclick = () => void readIndex();
+        body.append(retry);
       }
     } else {
-      const back = document.createElement("button");
-      back.type = "button";
-      back.className = "sidebar-directory-back";
-      localizeText(back, "sessions.allDirectories", undefined, t);
-      back.onclick = () => {
-        version++;
-        busy = false;
-        directory = undefined;
-        render();
-      };
-      const title = document.createElement("div");
-      title.className = "sidebar-directory-path";
-      title.title = directory;
-      setOpaqueText(title, directory || t("common.noWorkingFolder"));
-      body.append(back, title);
-      appendRows(
-        body,
-        sessions.filter((session) => !assigned(session)),
-      );
-      if (busy) {
-        const status = document.createElement("p");
-        status.setAttribute("role", "status");
-        localizeText(status, "workbench.loadingSessions", undefined, t);
-        body.append(status);
-      }
-      if (cursor && !busy) {
-        const more = document.createElement("button");
-        more.type = "button";
-        more.className = "sidebar-sessions-more";
-        localizeText(more, "projects.loadOlderSessions", undefined, t);
-        more.onclick = () => void load(true);
-        body.append(more);
-      } else if (!busy && !sessions.some((session) => !assigned(session))) {
-        const empty = document.createElement("p");
-        localizeText(empty, "common.noMatchingSessions", undefined, t);
-        body.append(empty);
-      }
+      const count = renderSessionFolders({
+        root: body,
+        entries: directories,
+        expanded: directory,
+        search,
+        t,
+        toggle: toggleDirectory,
+        renderExpanded,
+      });
+      if (!count) localizeText(body, "common.noMatchingSessions", undefined, t);
     }
     host.onclick = (event) => {
       const button = closestElement("[data-session-browse-view]", event.target);
-      if (!button) return;
-      const nextView = button.dataset.sessionBrowseView;
-      if (nextView !== "recent" && nextView !== "folders") return;
-      view = nextView;
-      storage.set(STORAGE_KEYS.sidebarUnassignedView, view);
-      render();
-      focusView();
-      if (view === "folders" && !directories && !indexPending && !indexFailed) void readIndex();
+      if (button?.dataset.sessionBrowseView === "recent" || button?.dataset.sessionBrowseView === "folders")
+        selectView(button.dataset.sessionBrowseView);
     };
+    host.onkeydown = (event) => {
+      if (
+        !closestElement("[data-session-browse-view]", event.target) ||
+        !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      selectView(
+        event.key === "Home" ? "recent" : event.key === "End" ? "folders" : view === "recent" ? "folders" : "recent",
+      );
+    };
+    if (focusSelector) host.querySelector<HTMLElement>(focusSelector)?.focus({ preventScroll: true });
+    if (host.isConnected) onRender();
   }
   return {
     render(container: HTMLElement, threads: readonly DataView<SessionSummary>[], query = "") {

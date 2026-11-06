@@ -1,3 +1,5 @@
+import { codexIcon } from "../codex-icons.js";
+import { setMessageHtml } from "../i18n.js";
 // Owns sidebar layout, mobile visibility and help/search affordances.
 /** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "$" | "t", "notices" | "settings", "sidebarLayout">} options */
 export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settingsPort }) {
@@ -17,6 +19,7 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
     const mobile = mobileSidebarEnabled();
     if (mobile === sidebarLayoutMobile) return;
     sidebarLayoutMobile = mobile;
+    setMessageHtml($("#toggleSidebar"), codexIcon(mobile ? "menu" : "panelLeft"));
     setSidebarOpen(!mobile);
   }
   function setSidebarSearchOpen(open) {
@@ -38,6 +41,7 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
     $("#sidebarHelpButton").setAttribute("aria-expanded", String(open));
   }
   function mobileSidebarEnabled() {
+    if (document.body.classList.contains("session-layout")) return innerWidth < 768;
     return document.documentElement.classList.contains("mobile-device") || innerWidth < 720;
   }
   function bind() {

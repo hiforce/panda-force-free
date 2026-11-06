@@ -1,5 +1,5 @@
 import { request as fetch } from "./http-client.js";
-import { setMessageHtml, setOpaqueText } from "./i18n.js";
+import { localizeAttribute, localizeText, setMessageHtml, setOpaqueText } from "./i18n.js";
 import { codexIcon } from "./codex-icons.js";
 import { createLatestRequestGate } from "./ui-core.js";
 /**
@@ -45,13 +45,20 @@ export function createAccountView({
             ? "Amazon Bedrock"
             : "";
     const profileMenuAvailable = type === "chatgpt";
-    setOpaqueText($("#accountName"), displayName);
-    setOpaqueText($("#accountMenuName"), displayName);
-    setOpaqueText($("#settingsAccountName"), displayName);
+    for (const id of ["accountName", "accountMenuName", "settingsAccountName"]) {
+      if (type !== "unknown" && account?.displayName?.trim()) setOpaqueText($(`#${id}`), displayName);
+      else localizeText($(`#${id}`), "common.settings", undefined, t);
+    }
     setOpaqueText($("#accountFooterMeta"), "");
     setOpaqueText($("#accountMenuSubtitle"), plan);
     setOpaqueText($("#settingsAccountMeta"), plan || t("common.codexModelAccount"));
-    $("#accountButton").setAttribute("aria-label", profileMenuAvailable ? "Open profile menu" : "Open settings");
+    localizeAttribute(
+      $("#accountButton"),
+      "aria-label",
+      profileMenuAvailable ? "common.openProfileMenu" : "common.openSettings",
+      undefined,
+      t,
+    );
     const avatarUrl =
         profileMenuAvailable &&
         typeof account?.avatarUrl === "string" &&
@@ -75,7 +82,7 @@ export function createAccountView({
     } else {
       footerAvatar.dataset.imageUrl = "";
       footerAvatar.className = "account-avatar account-settings-icon";
-      setMessageHtml(footerAvatar, codexIcon("wrench"));
+      setMessageHtml(footerAvatar, codexIcon("settings"));
     }
     if (avatarUrl) {
       const image = new Image();

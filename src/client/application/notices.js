@@ -79,6 +79,8 @@ export function assembleNotices({ mutations, $, state, t }) {
   /** @param {string} text @param {number} duration @param {{label: string; project?: string; run: () => unknown} | null} action */
   function toast(text, duration = 2200, action = null) {
     const e = $("#toast");
+    // Native dialogs form a top layer; feedback must belong to the active dialog to remain visible.
+    (Array.from(document.querySelectorAll("dialog:modal")).at(-1) || document.body).append(e);
     setOpaqueText(e, text);
     e.classList.toggle("has-action", Boolean(action));
     toastAction = action;

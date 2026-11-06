@@ -91,6 +91,7 @@ export class LiveSessionStore {
         lastEventAt: entry.state.lastEventAt,
         turn: entry.state.active && entry.state.turn ? structuredClone(entry.state.turn) : null,
         questionTurns: structuredClone([...entry.state.questionTurns.values()]),
+        tokenUsage: entry.state.tokenUsage ? structuredClone(entry.state.tokenUsage) : undefined,
       };
     } finally {
       closeSync(fd);

@@ -33,6 +33,7 @@ export function createAnchoredMenu({ onClose = () => {} } = {}) {
     const width = viewport?.width || innerWidth,
       height = viewport?.height || innerHeight;
     const anchor = trigger.getBoundingClientRect();
+    active.anchor = anchor;
     menu.style.width = `${Math.max(0, Math.min(240, width - 16))}px`;
     menu.style.maxHeight = `${Math.max(0, height - 16)}px`;
     const rect = menu.getBoundingClientRect();
@@ -60,9 +61,21 @@ export function createAnchoredMenu({ onClose = () => {} } = {}) {
     for (const item of items) item.setAttribute("role", "menuitem");
     trigger.setAttribute("aria-haspopup", "menu");
     trigger.setAttribute("aria-expanded", "true");
-    active = { trigger, menu, placeholder };
+    active = { trigger, menu, placeholder, anchor: null };
     position();
     items[0]?.focus({ preventScroll: true });
+  };
+  // List projections can replace a trigger while its menu is being used.
+  const reanchor = (trigger) => {
+    if (!active) return;
+    if (!trigger?.isConnected || closestElement("[inert]", trigger)) {
+      close();
+      return;
+    }
+    active.trigger.setAttribute("aria-expanded", "false");
+    active.trigger = trigger;
+    trigger.setAttribute("aria-expanded", "true");
+    position();
   };
   lifecycle.on(document, "click", (event) => {
     if (active && !event.composedPath().includes(active.menu) && !event.composedPath().includes(active.trigger))
@@ -91,7 +104,14 @@ export function createAnchoredMenu({ onClose = () => {} } = {}) {
     document,
     "scroll",
     (event) => {
-      if (active && !active.menu.contains(event.target)) close();
+      if (!active || active.menu.contains(event.target)) return;
+      if (event.target instanceof Element && event.target.contains(active.trigger)) {
+        const anchor = active.trigger.getBoundingClientRect();
+        // Focus can scroll the trigger before opening, with its event delivered afterwards.
+        if (active.anchor && ["left", "top", "right", "bottom"].every((edge) => anchor[edge] === active.anchor[edge]))
+          return;
+      }
+      close();
     },
     true,
   );
@@ -104,6 +124,7 @@ export function createAnchoredMenu({ onClose = () => {} } = {}) {
       lifecycle.dispose();
     },
     toggle,
+    reanchor,
     close,
     closeFor: (container) => {
       if (active && container?.contains(active.trigger)) close();

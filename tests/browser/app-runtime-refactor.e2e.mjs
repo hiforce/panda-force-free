@@ -102,6 +102,7 @@ try {
       goal: { id: "goal-check", status: "active", objective: "Review runtime architecture", updatedAt: 200 },
     }),
   );
+  await page.locator("#sessionGoalPlan > summary").click();
   await page.locator(".goal-status-toggle").click();
   await page.locator("#goalDialogObjective").fill("Updated runtime objective");
   await page.locator("#saveGoalDialog").click();

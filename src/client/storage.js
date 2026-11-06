@@ -21,6 +21,9 @@ export const STORAGE_KEYS = {
   permissionMode: "panda-force-permission-mode",
   permissionFullAccess: "panda-force-permission-full-access",
   reviewPreferences: "panda-force-review-preferences",
+  sessionToolsFor: (identity) => `panda-force-session-tools:${encodeURIComponent(identity)}`,
+  sessionToolDataFor: (identity, session) =>
+    `panda-force-session-tool-data:${encodeURIComponent(identity)}:${encodeURIComponent(session)}`,
   effortFor: (model) => `panda-force-effort:${model}`,
 };
 
