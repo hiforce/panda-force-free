@@ -428,6 +428,27 @@ try {
   assert.equal(deletedByUI, true);
   await page.waitForFunction(() => !globalThis.__pandaForceDebug.state.threads.some((thread) => thread.id === "paged"));
   assert.deepEqual(errors, []);
+  await page.unroute("**/api/rpc");
+  await page.route("**/api/rpc", (route) => {
+    const call = route.request().postDataJSON();
+    if (call.method === "host/thread/history")
+      return route.fulfill({ status: 401, json: { error: "Authentication required" } });
+    return route.continue();
+  });
+  await page.evaluate(async () => {
+    const api = globalThis.__pandaForceDebug;
+    api.applyThreadSummaries([{ id: "expired-history", name: "Expired history", cwd: "/tmp" }]);
+    await api.openThread("expired-history");
+  });
+  await page.getByText("Sign in again to load this conversation. Your history has not been deleted.").waitFor();
+  assert.equal(await page.getByText("Send a message to start fresh.", { exact: false }).count(), 0);
+  await page.evaluate(() => {
+    window.reauthenticationRequested = false;
+    addEventListener("panda-force:reauthenticate", () => (window.reauthenticationRequested = true));
+  });
+  await page.locator("#conversation").getByRole("button", { name: "Sign in again", exact: true }).click();
+  assert.equal(await page.evaluate(() => window.reauthenticationRequested), true);
+
   console.log(
     JSON.stringify({
       boundedHistory: true,

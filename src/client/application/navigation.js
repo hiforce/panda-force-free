@@ -1,5 +1,5 @@
 import { localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
-import { errorMessage } from "./../../shared/errors.js";
+import { errorMessage, errorStatus } from "./../../shared/errors.js";
 
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { parseWorkbenchRoute } from "../workbench-route.js";
@@ -196,6 +196,22 @@ export function assembleNavigation({
       return true;
     } catch (error) {
       if (!selection.isCurrent(navigationId)) return false;
+      if (errorStatus(error) === 401) {
+        historyPort.syncConversationLoadingSurface(false);
+        if (!cached && !deferTransition && summary && state.active?.id === id) {
+          const surface = document.createElement("div");
+          surface.className = "list-state conversation-loading";
+          const message = document.createElement("p"),
+            button = document.createElement("button");
+          localizeText(message, "common.historyRequiresSignIn", undefined, t);
+          localizeText(button, "common.signInAgain", undefined, t);
+          button.type = "button";
+          button.onclick = () => dispatchEvent(new Event("panda-force:reauthenticate"));
+          surface.append(message, button);
+          $("#conversation").replaceChildren(surface);
+        }
+        return false;
+      }
       if (cached) {
         historyPort.syncConversationLoadingSurface(false);
         viewUpdates.request("approvals");
@@ -207,10 +223,15 @@ export function assembleNavigation({
         return false;
       }
       if (!summary || state.active?.id !== id) return false;
-      setMessageHtml(
-        $("#conversation"),
-        '<div class="list-state conversation-loading">Could not load history. Send a message to start fresh.</div>',
-      );
+      const surface = document.createElement("div");
+      surface.className = "list-state conversation-loading";
+      localizeText(surface, "common.historyLoadFailed", undefined, t);
+      const retry = document.createElement("button");
+      retry.type = "button";
+      localizeText(retry, "common.retry", undefined, t);
+      retry.onclick = () => void openThread(id, fallbackSummary);
+      surface.append(retry);
+      $("#conversation").replaceChildren(surface);
       statusPort.syncThreadErrorSurface(id);
       historyPort.syncConversationLoadingSurface(false);
       viewUpdates.request("pendingMessages");
@@ -219,6 +240,9 @@ export function assembleNavigation({
   }
   function bind() {
     $("#newTask").onclick = () => startNewTask();
+    globalThis.addEventListener("panda-force:authenticated", () => {
+      if (state.active?.id) void openThread(state.active.id);
+    });
   }
   return {
     bind,

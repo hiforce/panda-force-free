@@ -48,13 +48,13 @@
     {
       "path": "README-zh.md",
       "bytes": 3827,
-      "sha256": "401b92ed60233900660f2b2526ae53c14150f5e8fc16ed08056ea9aba8debc27",
+      "sha256": "de6a061cc1fa9da6eff23b7105c291fe91adaf201b53b46f890893ca2e8cdc57",
       "mode": "100644"
     },
     {
       "path": "README.md",
       "bytes": 4159,
-      "sha256": "c9c79759e33bd78b974666153a13a45566e07ac25e85fd7be8467a9bcbcbf58d",
+      "sha256": "a27214fe42ff0b827b134f1e1d940f4c57bba94f0d391211dc8548f5e9127520",
       "mode": "100644"
     },
     {
@@ -78,7 +78,7 @@
     {
       "path": "docker-compose.yml",
       "bytes": 1474,
-      "sha256": "3973eef4abdf8a79d4120521c62a0947e704b4890d96fba2b75b6777b5175bb2",
+      "sha256": "4f2371c7a5febdeaffe1a6d07f0f6fc6d69b1572d71b69dc5a120d040f1a4fc1",
       "mode": "100644"
     },
     {
@@ -90,7 +90,7 @@
     {
       "path": "package.json",
       "bytes": 4632,
-      "sha256": "149718a2599c9aee7d61c8f41516d317ce06fab7e1a050d6a0c8a420fc97fea1",
+      "sha256": "8334b0da3e9865235380716cf323dff8075d94bfe7e3e86d0d2485d1820ea952",
       "mode": "100644"
     },
     {
@@ -354,13 +354,13 @@
     {
       "path": "release/community/README-zh.md",
       "bytes": 3827,
-      "sha256": "401b92ed60233900660f2b2526ae53c14150f5e8fc16ed08056ea9aba8debc27",
+      "sha256": "de6a061cc1fa9da6eff23b7105c291fe91adaf201b53b46f890893ca2e8cdc57",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
       "bytes": 4159,
-      "sha256": "c9c79759e33bd78b974666153a13a45566e07ac25e85fd7be8467a9bcbcbf58d",
+      "sha256": "a27214fe42ff0b827b134f1e1d940f4c57bba94f0d391211dc8548f5e9127520",
       "mode": "100644"
     },
     {
@@ -378,7 +378,7 @@
     {
       "path": "release/community/docker-compose.yml",
       "bytes": 1474,
-      "sha256": "3973eef4abdf8a79d4120521c62a0947e704b4890d96fba2b75b6777b5175bb2",
+      "sha256": "4f2371c7a5febdeaffe1a6d07f0f6fc6d69b1572d71b69dc5a120d040f1a4fc1",
       "mode": "100644"
     },
     {
@@ -707,8 +707,8 @@
     },
     {
       "path": "src/client/application/navigation.js",
-      "bytes": 9801,
-      "sha256": "b4193999d2883de71baf1ed75abf04aa133c17f04cac0072ed1bd41a11e93122",
+      "bytes": 11068,
+      "sha256": "97451b4cf726d5548432159ed17d9c3de0d7aafa950ff1245035db935499f92b",
       "mode": "100644"
     },
     {
@@ -905,8 +905,8 @@
     },
     {
       "path": "src/client/auth-session.js",
-      "bytes": 7336,
-      "sha256": "66317660d6e62a5b455ddb3b7a4f2885cfa44a45717340604b75343b80176626",
+      "bytes": 7928,
+      "sha256": "2cc2925adcd1abfad23c167c2caed3e7c01cdcbd53848635b6974921c721b8aa",
       "mode": "100644"
     },
     {
@@ -2213,8 +2213,8 @@
     },
     {
       "path": "src/shared/i18n/locales/en/common.json",
-      "bytes": 29713,
-      "sha256": "de1ebc34d05ef21076ad6354b22499a30b2445f1892b013a38591c801cb24b7e",
+      "bytes": 30056,
+      "sha256": "f0cae36f0d24e9ddf33fe98fe42ff4e58c084f552aae99cdc38d10ac3ebca95b",
       "mode": "100644"
     },
     {
@@ -2297,8 +2297,8 @@
     },
     {
       "path": "src/shared/i18n/locales/zh-CN/common.json",
-      "bytes": 29156,
-      "sha256": "b3e758c4badd4f454fa7bfbd49f9c3323a3cd5524b94c59581148e3c2ad0227b",
+      "bytes": 29450,
+      "sha256": "a5ede97442e4bcad754cb03e9f85bd88f75a8e4ca2fba9b708e64152fff9de4f",
       "mode": "100644"
     },
     {
@@ -2381,8 +2381,8 @@
     },
     {
       "path": "src/shared/i18n/messages.d.ts",
-      "bytes": 39080,
-      "sha256": "9c84f965ae2ac19bb55e8cb20b17600c186a949765cac05022fb02aca7fb6cd8",
+      "bytes": 39200,
+      "sha256": "df6e45e8894fc9cdbb6c1bea2aba2181162dc4ad5208ae023ccb5e295810b80f",
       "mode": "100644"
     },
     {
@@ -2471,8 +2471,8 @@
     },
     {
       "path": "tests/browser/auth-session.e2e.mjs",
-      "bytes": 3439,
-      "sha256": "74a9b804cc3b0704c69d54cbff9730ee4f50bb224f4f9cfd0f9495c270d0c327",
+      "bytes": 4561,
+      "sha256": "5fddfdf88a44cd53e2e6b9fec597afe8715a8e8c7ac8bb5ccb40b7585a028ea7",
       "mode": "100644"
     },
     {
@@ -2561,8 +2561,8 @@
     },
     {
       "path": "tests/browser/conversation-loading.e2e.mjs",
-      "bytes": 20729,
-      "sha256": "82d8d1b42c6e54b81fd896c85510ea7d5c6ae452ba72f128878dc8eeda096927",
+      "bytes": 21849,
+      "sha256": "7de763c08eda7c2ee9c2be6c067394b3dc3c6fe042e8d8ebd740e5af86cf1e85",
       "mode": "100644"
     },
     {
@@ -3640,5 +3640,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "309b6b07ef0eaea167d8cbdb060035dfaa49af29e93dd0f074ed89218ad2b0fb"
+  "contentSha256": "477ea6a7d057e0bf3433449f225cb191fa13168a205d45ae135f66f8902649b0"
 }

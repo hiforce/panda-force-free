@@ -590,5 +590,8 @@
   "browserEmbeddingBlockedDetail": "网站未能在面板中加载完成，可能不允许嵌入。请在外部浏览器中打开。",
   "enterValidUrl": "请输入有效的网址",
   "httpUrlsOnly": "只能嵌入 http:// 和 https:// 网址",
-  "noUrlCredentials": "不支持带有凭据的网址"
+  "noUrlCredentials": "不支持带有凭据的网址",
+  "applicationSessionExpired": "应用会话已失效，当前页面和草稿已保留。请通过登录服务恢复连接。",
+  "historyRequiresSignIn": "请恢复登录后加载此会话，历史记录未被删除。",
+  "historyLoadFailed": "暂时无法加载会话历史，请重试。"
 }

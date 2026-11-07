@@ -590,5 +590,8 @@
   "browserEmbeddingBlockedDetail": "This site did not finish loading in the panel. It may block embedded browsers; you can open it externally instead.",
   "enterValidUrl": "Enter a valid URL",
   "httpUrlsOnly": "Only http:// and https:// URLs can be embedded",
-  "noUrlCredentials": "URLs with embedded credentials are not supported"
+  "noUrlCredentials": "URLs with embedded credentials are not supported",
+  "applicationSessionExpired": "Your application session has expired. Your page and draft are kept here. Continue through your sign-in provider to reconnect.",
+  "historyRequiresSignIn": "Sign in again to load this conversation. Your history has not been deleted.",
+  "historyLoadFailed": "Could not load conversation history. Please retry."
 }

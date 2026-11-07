@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import { launchOptions } from "../support/browser-runtime.mjs";
-const status = { authMode: "idaas", authenticated: true, identity: { account: "demo" } };
+const status = {
+  authMode: "idaas",
+  loginUrl: "/auth/login?provider=enterprise",
+  authenticated: true,
+  identity: { account: "demo" },
+};
 let requests = 0;
 const build = await Bun.build({
   entrypoints: [new URL("../../src/client/auth-session.js", import.meta.url).pathname],
@@ -88,6 +93,25 @@ try {
   await check();
   assert.equal(requests, 4);
   assert.equal(await page.locator("#pandaSessionNotice").isVisible(), false);
+  await page.evaluate(() => {
+    window.authRecoveries = 0;
+    addEventListener("panda-force:authenticated", () => window.authRecoveries++);
+  });
+  status.authenticated = false;
+  await page.evaluate(() => globalThis.__pandaForceCheckAuth({ force: true }));
+  await page.locator('#pandaSessionNotice[data-status="expired"]').waitFor();
+  assert.match(await page.locator("#pandaSessionNotice").innerText(), /application session/);
+  const expiredRequests = requests;
+  status.authenticated = true;
+  await page.clock.fastForward(30_000);
+  await page.waitForFunction(() => window.authRecoveries === 1);
+  assert.equal(requests, expiredRequests + 1);
+  assert.equal(await page.locator("#pandaSessionNotice").isVisible(), false);
+  assert.equal(await page.locator("main").innerText(), "Workspace");
+  status.authenticated = false;
+  await page.evaluate(() => globalThis.__pandaForceCheckAuth({ force: true }));
+  await page.getByRole("button", { name: "Sign in again", exact: true }).click();
+  await page.waitForURL("**/auth/login?provider=enterprise&returnTo=%2F");
   console.log("Browser five-minute polling, background/offline suspension and foreground deduplication passed.");
 } finally {
   await browser?.close();

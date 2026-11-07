@@ -92,6 +92,7 @@ export interface MessageParameters {
   "common.answerSubmitted": {  };
   "common.aPasswordWasAlreadySetLogInToContinue": {  };
   "common.appearance": {  };
+  "common.applicationSessionExpired": {  };
   "common.approval": {  };
   "common.approvalOptions": {  };
   "common.approveForMe": {  };
@@ -291,6 +292,8 @@ export interface MessageParameters {
   "common.hidePassword": {  };
   "common.high": {  };
   "common.history": {  };
+  "common.historyLoadFailed": {  };
+  "common.historyRequiresSignIn": {  };
   "common.hooks": {  };
   "common.howShouldAgentActionsBeApproved": {  };
   "common.httpUrlsOnly": {  };

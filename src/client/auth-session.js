@@ -4,13 +4,11 @@ import { getBrowserI18n, localizeText } from "./i18n.js";
 import { createLifecycle } from "./lifecycle.js";
 const sessions = new WeakMap();
 
-import { sessionLoginUrl } from "../shared/auth-return-path.js";
-
 const CHECK_INTERVAL_MS = 5 * 60_000;
 const CHECK_TIMEOUT_MS = 20_000;
 const NOTICE_DELAY_MS = 15_000;
 
-/** @param {{authMode: string; identity?: {username?: string; account?: string}}} status @param {{translate?: import("../shared/i18n/messages.js").Translate; i18n?: ReturnType<typeof getBrowserI18n>}} options */
+/** @param {{authMode: string; loginUrl?: string; identity?: {username?: string; account?: string}}} status @param {{translate?: import("../shared/i18n/messages.js").Translate; i18n?: ReturnType<typeof getBrowserI18n>}} options */
 export function installPandaForceSession(status, { translate: t = getBrowserI18n().t, i18n = undefined } = {}) {
   if (sessions.has(document)) return sessions.get(document);
   const lifecycle = createLifecycle();
@@ -34,10 +32,13 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
   };
   const schedule = () => {
     clearTimer();
-    if (paused() || navigating || condition === "expired") return;
-    const delay = failures
-      ? Math.min(2000 * 2 ** Math.min(failures - 1, 5), 60_000)
-      : Math.max(1000, CHECK_INTERVAL_MS - (Date.now() - lastVerifiedAt));
+    if (paused() || navigating) return;
+    const delay =
+      condition === "expired"
+        ? 30_000
+        : failures
+          ? Math.min(2000 * 2 ** Math.min(failures - 1, 5), 60_000)
+          : Math.max(1000, CHECK_INTERVAL_MS - (Date.now() - lastVerifiedAt));
     timer = setTimeout(() => void check({ force: true }), delay);
   };
   const pause = () => {
@@ -62,17 +63,7 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
         button = document.createElement("button");
       message.className = "panda-session-message";
       button.type = "button";
-      button.onclick = () => {
-        if (condition !== "expired") {
-          void check({ force: true });
-          return;
-        }
-        if (navigating) return;
-        dispatchEvent(new Event("panda-force:before-login"));
-        navigating = true;
-        const current = location.pathname + location.search + location.hash;
-        location.assign(status.authMode === "idaas" ? sessionLoginUrl(current) : current);
-      };
+      button.onclick = () => void reconnect();
       notice.append(message, button);
       document.body.append(notice);
     }
@@ -82,7 +73,9 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
     localizeText(
       findElement("span", notice),
       expired
-        ? "common.yourSignInHasExpiredYourPageAndDraftAre"
+        ? status.loginUrl || status.authMode === "idaas"
+          ? "common.applicationSessionExpired"
+          : "common.yourSignInHasExpiredYourPageAndDraftAre"
         : "common.signInVerificationIsTemporarilyUnavailableRetryingInTheBackground",
       undefined,
       t,
@@ -90,11 +83,29 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
     localizeText(findElement("button", notice), expired ? "common.signInAgain" : "common.retry", undefined, t);
   }
 
+  async function reconnect() {
+    if (navigating) return;
+    await check({ force: true });
+    if (condition !== "expired" || navigating) return;
+    dispatchEvent(new Event("panda-force:before-login"));
+    navigating = true;
+    const current = location.pathname + location.search + location.hash;
+    const login = new URL(status.loginUrl || (status.authMode === "idaas" ? "/auth/login" : current), location.origin);
+    if (login.origin !== location.origin) {
+      navigating = false;
+      return;
+    }
+    if (status.loginUrl || status.authMode === "idaas") login.searchParams.set("returnTo", current);
+    location.assign(login.href);
+  }
+
   function setCondition(value) {
     // A network error cannot turn confirmed expiry back into an uncertain state.
     if (condition === "expired" && value === "unavailable") return;
+    const recovered = condition === "expired" && value === "authenticated";
     condition = value;
     render();
+    if (recovered) dispatchEvent(new Event("panda-force:authenticated"));
   }
 
   function check({ force = false } = {}) {
@@ -139,6 +150,7 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
   }
 
   const unobserve = observeAuthentication(check);
+  lifecycle.on(globalThis, "panda-force:reauthenticate", () => void reconnect());
   const resume = () => {
     schedule();
     if (Date.now() - lastVerifiedAt >= 60_000) void check({ force: true });
