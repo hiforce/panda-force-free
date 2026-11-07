@@ -103,6 +103,8 @@ try {
     visibleBefore,
   );
   const settle = async () => {
+    // A completed request may still be waiting for an active gesture to finish.
+    await page.waitForFunction(() => !document.querySelector('#conversation .load-older[aria-busy="true"]'));
     await page.waitForFunction(
       () =>
         !document

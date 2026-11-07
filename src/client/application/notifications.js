@@ -1,10 +1,8 @@
-import { setMessageHtml, setOpaqueText } from "../i18n.js";
-import { findElement, requireElement } from "./../dom.js";
-
-import { renderAssistantMarkdown } from "../rendering.js";
+import { setOpaqueText } from "../i18n.js";
+import { findElement } from "./../dom.js";
 
 // Interprets native lifecycle events and routes them to their owning features.
-/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "sessions" | "state" | "$", "messages" | "models" | "status" | "notices" | "queue" | "timing" | "goals" | "approvals" | "synchronization" | "usage" | "account" | "composer" | "identity" | "viewport" | "review", "notifications">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "sessions" | "state" | "$", "messages" | "models" | "status" | "notices" | "queue" | "timing" | "goals" | "approvals" | "synchronization" | "usage" | "account" | "composer" | "viewport" | "review", "notifications">} options */
 export function assembleNotifications({
   viewUpdates,
   mutations,
@@ -23,7 +21,6 @@ export function assembleNotifications({
   usagePort,
   accountPort,
   composerPort,
-  identityPort,
   viewportPort,
   reviewPort,
 }) {
@@ -179,28 +176,7 @@ export function assembleNotifications({
         p.turnId,
       );
     } else if (method === "item/agentMessage/delta") {
-      let el = state.items.get(p.itemId);
-      if (!el) {
-        messagesPort.upsertItem(
-          {
-            id: p.itemId,
-            type: "agentMessage",
-            text: "",
-            receivedAt: p.pandaReceivedAt,
-          },
-          p.turnId,
-        );
-        el = state.items.get(p.itemId);
-      }
-      const body = requireElement(".message-text", el);
-      body.dataset.raw = (body.dataset.raw || "") + p.delta;
-      setMessageHtml(
-        body,
-        renderAssistantMarkdown(body.dataset.raw, {
-          cwd: identityPort.imageCwd(),
-        }),
-      );
-      viewportPort.scrollBottom();
+      messagesPort.appendAssistantDelta(p);
     } else if (method === "item/reasoning/summaryPartAdded") upsertReasoningDelta(p, null);
     else if (method === "item/reasoning/summaryTextDelta") upsertReasoningDelta(p, "summary");
     else if (method === "item/reasoning/textDelta") upsertReasoningDelta(p, "content");

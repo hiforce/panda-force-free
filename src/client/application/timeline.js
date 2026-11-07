@@ -1,3 +1,4 @@
+import { isConversationInteraction, retainInteractionFocus } from "../conversation-interactions.js";
 import { retireAnsweredAsyncQuestions } from "../../shared/engine/async-questions.js";
 import { localizeText, messageHtml, setMessageHtml } from "../i18n.js";
 import { errorMessage } from "./../../shared/errors.js";
@@ -26,6 +27,7 @@ export function assembleTimeline({
   messagesPort,
 }) {
   const earlierLoads = new Set();
+  let requestedHistoryWindow = 0;
   /** @param {HTMLButtonElement} button @param {boolean} loading */
   function syncEarlierButton(button, loading) {
     button.disabled = loading;
@@ -37,9 +39,16 @@ export function assembleTimeline({
     else if (count) localizeText(button.lastElementChild, "sessions.loadEarlierMessagesCount", { count }, t);
     else localizeText(button.lastElementChild, "sessions.loadEarlierMessages", undefined, t);
   }
-  function clearConversationRuntime() {
+  function clearConversationRuntime({ retainInteractions = false } = {}) {
+    if (!retainInteractions) requestedHistoryWindow = 0;
     viewUpdates.request("approvalMenu");
-    mutations.collection("items").clear();
+    // Keep interactive roots and their handlers during same-session projections.
+    // Navigation calls the default path and drops all cards from the prior session.
+    for (const [id, node] of state.items)
+      if (!retainInteractions || !isConversationInteraction(node)) {
+        messagesPort.releaseItem(node);
+        mutations.collection("items").delete(id);
+      }
     mutations.collection("turns").clear();
     mutations.collection("turnTimings").clear();
     mutations.collection("activities").clear();
@@ -54,7 +63,16 @@ export function assembleTimeline({
     viewUpdates.request("sideTasks");
   }
   function renderThread(thread, loadMore = 0) {
-    viewportPort.preserveReadingPosition(() => renderThreadContent(thread, loadMore));
+    if (!thread) return Promise.resolve();
+    requestedHistoryWindow = Math.max(requestedHistoryWindow, loadMore);
+    return viewportPort.renderHistoryWhenIdle(() => {
+      if (state.active?.id !== thread.id) return;
+      // Coalescing snapshots must not discard an explicit load-older request.
+      const requested = requestedHistoryWindow;
+      requestedHistoryWindow = 0;
+      // Native events may have arrived while the user was touching the history.
+      viewportPort.preserveReadingPosition(() => renderThreadContent(state.active, requested));
+    });
   }
   function renderThreadContent(thread, loadMore) {
     const root = $("#conversation"),
@@ -68,7 +86,8 @@ export function assembleTimeline({
     );
     window.threadId = thread.id;
     mutations.set("turnWindow", window);
-    clearConversationRuntime();
+    const restoreFocus = retainInteractionFocus(root);
+    clearConversationRuntime({ retainInteractions: true });
     setMessageHtml(root, "");
     statusPort.syncThreadErrorSurface(thread.id);
     if (window.hiddenCount || thread.history?.nextCursor) {
@@ -100,15 +119,17 @@ export function assembleTimeline({
             current = active;
           }
           if (window.hiddenCount) {
-            renderThread(current, DEFAULT_TURN_PAGE_SIZE);
+            await renderThread(current, DEFAULT_TURN_PAGE_SIZE);
             return;
           }
           if (historyPort.conversationItemCount(current) > historyPort.conversationItemCount(thread)) {
             mutations.set("turnWindow", null);
-            renderThread(current, current.turns.length);
+            await renderThread(current, current.turns.length);
             return;
           }
-          await historyPort.loadEarlierConversation(current);
+          const earlier = await historyPort.loadEarlierConversation(current);
+          if (earlier && selection.isCurrent(generation) && state.active?.id === thread.id)
+            await renderThread(earlier, earlier.turns?.length || 0);
         } catch (error) {
           if (!selection.isCurrent(generation) || state.active?.id !== thread.id) return;
           if (await historyPort.resyncActiveConversation()) return;
@@ -123,6 +144,12 @@ export function assembleTimeline({
       root.append(more);
     }
     for (const turn of window.visible) renderTurn(turn, root);
+    for (const [id, node] of state.items)
+      if (!root.contains(node)) {
+        messagesPort.releaseItem(node);
+        mutations.collection("items").delete(id);
+      }
+    restoreFocus();
     viewUpdates.request("approvals");
     viewUpdates.request("pendingMessages");
     if (!root.children.length) showEmpty();
@@ -140,6 +167,9 @@ export function assembleTimeline({
   }
 
   function renderTurn(turn, root = $("#conversation")) {
+    viewportPort.preserveReadingPosition(() => renderTurnContent(turn, root));
+  }
+  function renderTurnContent(turn, root) {
     timingPort.recordTurnTiming(turn.id, turn);
     let userSeen = false;
     renderBatch.begin();

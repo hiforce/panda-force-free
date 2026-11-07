@@ -1,104 +1,131 @@
-// Owns scroll-follow intent and scroll controls independently of history loading.
+import { createHistoryProjectionBoundary } from "../conversation-interactions.js";
+import { createConversationGestures } from "../conversation-gestures.js";
+import { captureConversationAnchor, conversationAnchorTop } from "../conversation-scroll-anchor.js";
+
+// Owns follow intent, user gestures and scroll writes independently of rendering.
 /** @param {import("./ports.js").FeatureOptions<"$", never, "viewport">} options */
 export function assembleViewport({ $ }) {
-  let conversationAutoScroll = true;
-  let lastScrollTop = 0,
+  let following = true,
     frame = 0,
-    forced = false;
-  /** @type {{node: Element; selector: string; offset: number; top: number} | null} */
-  let readingPosition = null;
-  function conversationNearBottom(root = $("#conversation")) {
-    return !root || root.scrollHeight - root.scrollTop - root.clientHeight < 2;
-  }
-  function followLatest(root = $("#conversation")) {
-    root.scrollTop = root.scrollHeight;
-    lastScrollTop = root.scrollTop;
-    conversationAutoScroll = true;
-    readingPosition = null;
-  }
-  function captureReadingPosition(root = $("#conversation")) {
-    const bounds = root.getBoundingClientRect();
-    for (const attribute of ["data-item-id", "data-turn-id", "data-user-turn-id"]) {
-      for (const node of root.querySelectorAll(`[${attribute}]`)) {
-        const rect = node.getBoundingClientRect();
-        if (rect.height && rect.bottom > bounds.top && rect.top < bounds.bottom)
-          return {
-            node,
-            selector: `[${attribute}="${CSS.escape(node.getAttribute(attribute) || "")}"]`,
-            offset: rect.top - bounds.top,
-            top: root.scrollTop,
-          };
+    forced = false,
+    renderDepth = 0;
+  const gestures = createConversationGestures($("#conversation"), {
+    onDirection(direction) {
+      if (direction < 0 && measure().top > 0) {
+        following = false;
+        forced = false;
+        anchor = captureConversationAnchor($("#conversation"));
       }
-    }
-    return null;
+    },
+    onIdle() {
+      historyProjection.flush();
+      scrollBottom();
+    },
+  });
+  const historyProjection = createHistoryProjectionBoundary(() => gestures.active);
+  /** @type {ReturnType<typeof captureConversationAnchor>} */
+  let anchor = null;
+  const measure = () => {
+    const root = $("#conversation");
+    const height = root.scrollHeight,
+      view = root.clientHeight;
+    // Elastic overscroll must not turn a bottom bounce into an upward gesture.
+    return { top: Math.max(0, Math.min(root.scrollTop, height - view)), height, view };
+  };
+  let last = measure();
+  const nearBottom = (position = measure()) => position.height - position.view - position.top < 2;
+
+  function syncConversationScrollSurface() {
+    const button = $("#conversationScrollBottom");
+    if (!button) return;
+    button.hidden = nearBottom();
+    button.setAttribute("aria-hidden", String(button.hidden));
   }
-  function restoreReadingPosition(root = $("#conversation")) {
-    if (!readingPosition) return;
-    const { node, selector, offset, top } = readingPosition;
-    const anchor = root.contains(node) ? node : root.querySelector(selector);
-    // WebKit does not preserve an anchor when a history snapshot replaces the DOM.
-    root.scrollTop = anchor
-      ? root.scrollTop + anchor.getBoundingClientRect().top - root.getBoundingClientRect().top - offset
-      : top;
-    lastScrollTop = root.scrollTop;
-    readingPosition = captureReadingPosition(root);
+  function observeScroll() {
+    const next = measure(),
+      delta = next.top - last.top,
+      layoutChanged = next.height !== last.height || next.view !== last.view;
+    // WebKit clamps scrollTop when content shrinks. A later append must not turn
+    // that layout correction into an upward gesture and disable following.
+    // Small compositor steps accumulate into real reading movement. Dropping
+    // each one preserves an obsolete anchor that the next output pulls back to.
+    if (delta !== 0 && (Math.sign(delta) === gestures.direction || !layoutChanged)) {
+      if (delta < 0) following = false;
+      else if (nearBottom(next) || (gestures.direction > 0 && next.top >= last.height - last.view - 2))
+        following = true;
+      anchor = following ? null : captureConversationAnchor($("#conversation"));
+      gestures.observeScroll();
+    }
+    last = next;
+    syncConversationScrollSurface();
+  }
+  function applyPosition(rendered = false) {
+    const root = $("#conversation");
+    if (!root.clientHeight) return;
+    if (!rendered) observeScroll();
+    // Never fight touch momentum with a scheduled write, including zero-distance
+    // writes. A synchronous history replacement still restores its visible anchor.
+    if (!forced && gestures.active && !rendered) return;
+    if (forced) {
+      following = true;
+      anchor = null;
+    }
+    forced = false;
+    const target = following ? root.scrollHeight - root.clientHeight : anchor && conversationAnchorTop(root, anchor);
+    if (target !== null && Math.abs(target - root.scrollTop) > 1) root.scrollTop = target;
+    last = measure();
+    anchor = following ? null : captureConversationAnchor(root);
+    syncConversationScrollSurface();
   }
   /** @param {() => void} render */
   function preserveReadingPosition(render) {
-    if (!forced && Math.abs($("#conversation").scrollTop - lastScrollTop) > 1) handleConversationScroll();
-    if (!conversationAutoScroll && !forced) readingPosition = captureReadingPosition();
+    const before = measure();
+    if (!renderDepth++) {
+      observeScroll();
+      if (!following && !anchor) anchor = captureConversationAnchor($("#conversation"));
+    }
     try {
       render();
     } finally {
-      if (!conversationAutoScroll && !forced) restoreReadingPosition();
-      else followLatest();
+      if (!--renderDepth) {
+        if (gestures.active && following && !forced) {
+          const root = $("#conversation"),
+            after = measure();
+          // A render can briefly empty the scroller and clamp it to zero. Repair
+          // that loss without chasing new output or treating it as finger input.
+          if (after.top < before.top) root.scrollTop = Math.min(before.top, after.height - after.view);
+          last = measure();
+          syncConversationScrollSurface();
+        } else applyPosition(true);
+      }
     }
-  }
-  function syncConversationScrollSurface() {
-    const root = $("#conversation"),
-      button = $("#conversationScrollBottom");
-    if (!root || !button) return;
-    button.hidden = conversationNearBottom(root);
-    button.setAttribute("aria-hidden", String(button.hidden));
-  }
-  function handleConversationScroll() {
-    const root = $("#conversation");
-    if (!root) return;
-    if (conversationNearBottom(root)) conversationAutoScroll = true;
-    else if (root.scrollTop < lastScrollTop - 1) conversationAutoScroll = false;
-    lastScrollTop = root.scrollTop;
-    readingPosition = conversationAutoScroll ? null : captureReadingPosition(root);
-    syncConversationScrollSurface();
   }
   function scrollBottom({ force = false } = {}) {
     forced ||= force;
     if (frame) return;
     frame = requestAnimationFrame(() => {
       frame = 0;
-      const root = $("#conversation");
-      if (!root) return;
-      // A touch/scrollbar move may arrive before its deferred scroll event.
-      if (!forced && Math.abs(root.scrollTop - lastScrollTop) > 1) handleConversationScroll();
-      const follow = forced || conversationAutoScroll;
-      forced = false;
-      if (follow) followLatest(root);
-      else restoreReadingPosition(root);
-      syncConversationScrollSurface();
+      applyPosition();
     });
   }
-  function scrollOpenedThreadToBottom() {
-    forced = false;
-    followLatest();
-    scrollBottom();
+  function resetAutoScroll({ discardHistory = true } = {}) {
+    following = true;
+    anchor = null;
+    gestures.reset();
+    if (discardHistory) historyProjection.cancel();
+    last = measure();
   }
-  function resetAutoScroll() {
-    conversationAutoScroll = true;
-    readingPosition = null;
+  function scrollOpenedThreadToBottom() {
+    resetAutoScroll();
+    forced = true;
+    applyPosition();
+    scrollBottom();
   }
   function bind() {
     const root = $("#conversation");
-    // Images, fonts and layout changes can finish after the message's render frame.
-    // Observe turn containers without treating their growth as user scroll intent.
+    last = measure();
+    gestures.bind();
+    root.addEventListener("scroll", observeScroll, { passive: true });
     const sizes = new ResizeObserver(() => scrollBottom());
     sizes.observe(root);
     for (const child of root.children) sizes.observe(child);
@@ -109,15 +136,9 @@ export function assembleViewport({ $ }) {
       }
       scrollBottom();
     }).observe(root, { childList: true });
-    $("#conversation").addEventListener(
-      "scroll",
-      /** @param {Parameters<typeof handleConversationScroll>} args */ (...args) => handleConversationScroll(...args),
-      {
-        passive: true,
-      },
-    );
     $("#conversationScrollBottom").onclick = () => {
-      resetAutoScroll();
+      resetAutoScroll({ discardHistory: false });
+      historyProjection.flush();
       scrollBottom({ force: true });
     };
   }
@@ -128,5 +149,6 @@ export function assembleViewport({ $ }) {
     syncConversationScrollSurface,
     scrollOpenedThreadToBottom,
     preserveReadingPosition,
+    renderHistoryWhenIdle: (render) => historyProjection.render(render),
   };
 }

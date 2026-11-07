@@ -1,3 +1,4 @@
+import { CONVERSATION_INTERACTION } from "./conversation-interactions.js";
 import { findElement, findElements, requireElement } from "./dom.js";
 import { localizeText } from "./i18n.js";
 import { createUserInputCard } from "./user-input.js";
@@ -26,6 +27,7 @@ export function closeEarlierAsyncQuestions(root, t) {
 export function createAsyncQuestionCard(item, questions, { t, sendAnswer, onChange = () => {} }) {
   const details = document.createElement("details");
   details.dataset.asyncQuestionCard = "";
+  details.setAttribute(CONVERSATION_INTERACTION, "");
   details.dataset.itemId = String(item.id);
   details.dataset.status = "open";
   details.className = "async-question-card";

@@ -172,8 +172,27 @@ try {
   });
   const readingTop = await reading.evaluate((node) => node.getBoundingClientRect().top);
   await page.evaluate(() => {
+    window.__paginationTouchTarget = document.querySelector('[data-item-id="final"] p');
+    const event = new Event("touchstart", { bubbles: true });
+    Object.defineProperty(event, "touches", { value: [{ clientY: 200 }] });
+    window.__paginationTouchTarget.dispatchEvent(event);
     window.__holdEarlier = false;
     window.__earlierResolvers.shift()();
+  });
+  await page.waitForFunction(
+    () => globalThis.__pandaForceDebug.state.active.turns.reduce((count, turn) => count + turn.items.length, 0) === 200,
+  );
+  assert.equal(await page.locator(".activity-item").count(), 99, "A full projection waits for the active touch");
+  assert.equal(
+    await page.locator(".load-older").isDisabled(),
+    true,
+    "Loading covers both the request and its pending projection",
+  );
+  assert.equal(await page.locator(".load-older").getAttribute("aria-busy"), "true");
+  await page.evaluate(() => {
+    const event = new Event("touchend", { bubbles: true });
+    Object.defineProperty(event, "touches", { value: [] });
+    window.__paginationTouchTarget.dispatchEvent(event);
   });
   await page.waitForFunction(() => document.querySelectorAll(".activity-item").length === 199);
   assert.equal(await page.locator(".activity-item").count(), 199);

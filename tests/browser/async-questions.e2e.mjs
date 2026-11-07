@@ -1,11 +1,12 @@
 import { appendFileSync } from "node:fs";
 import { join } from "node:path";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { chromium, webkit } from "playwright";
 import { createAppFixture } from "../support/app-fixture.mjs";
 import { parseRollout } from "../../src/server/conversation/live-session.js";
+import { checkInteractiveHistory } from "../support/conversation-interactions.mjs";
 const fixture = await createAppFixture({ questionnaireRollout: true });
-const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
+const browser = await (process.env.PANDA_FORCE_TEST_BROWSER === "webkit" ? webkit : chromium).launch();
 try {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -275,10 +276,12 @@ try {
   );
   assert.equal(await nativeCard.count(), 1);
   assert.equal(await nativeCard.getAttribute("data-status"), "earlier");
+  await checkInteractiveHistory(page, context, browser.browserType().name());
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({
       interactiveOptionsAndText: true,
+      historyRefreshDuringTouchAndSubmission: true,
       draftPreserved: true,
       singleClickSubmission: true,
       doubleClickDoesNotDuplicate: true,

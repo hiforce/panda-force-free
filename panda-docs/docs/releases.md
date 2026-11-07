@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.11`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.12`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -170,3 +170,26 @@ The release also retains the versioned English workspace screenshot in the READM
 The image build requires all 80 verification steps. Focused Chromium and WebKit
 regressions cover history feedback, retries, cached expansion and reading position.
 Images remain available for Linux amd64, with the same persistent-volume layout.
+
+## 0.0.12
+
+Conversation rendering now uses explicit, typed renderers for text, images, questions
+and tool activity. New bundled controls have a shared update and disposal contract;
+streaming text and history use the same rendering path. Gesture detection, reading
+anchors and scroll ownership are separate from message presentation.
+
+Mobile reading remains stable through small upward movements, touch momentum and
+background history refreshes. Returning to the bottom resumes following new output.
+Full history updates wait for an active gesture to settle, including when streamed
+content replaces the original touch target.
+
+Questionnaire selections, text, focus and in-flight submissions survive background
+refreshes. Approval controls retain their request state across redraws. Completed
+activity no longer leaves a stale processing indicator below the conversation.
+
+Loading earlier messages stays busy until both the request and the visible history
+update complete, preventing duplicate page loads while a touch gesture is active.
+
+The image build runs all 80 required verification steps. Focused Chromium and WebKit
+checks cover reading position, touch gestures, questionnaires and paged history.
+Images remain available for Linux amd64, with unchanged persistent-volume paths.

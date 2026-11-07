@@ -139,8 +139,9 @@ export function assembleHistory({
     sessions.replaceActive(merged);
     repositoriesPort.cacheConversation(merged);
     mutations.set("turnWindow", null);
-    // The timeline preserves the current reading anchor, including movement while this request was pending.
-    viewUpdates.request("conversation", { thread: merged, loadMore: merged.turns.length });
+    // The caller owns projection completion so loading feedback covers both
+    // network work and any wait for the reader's active gesture to finish.
+    return merged;
   }
   return {
     syncConversationLoadingSurface,

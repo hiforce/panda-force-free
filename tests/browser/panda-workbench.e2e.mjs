@@ -32,6 +32,17 @@ try {
       return await originalWait(...args);
     } catch (error) {
       console.error("Wait failed:", String(args[0]));
+      console.error(
+        "Page state:",
+        await page.evaluate(() => ({
+          route: location.pathname,
+          active: globalThis.__pandaForceDebug?.state.active?.id,
+          folderInput: document.querySelector("#folderPathInput")?.value,
+          folderSelection: document.querySelector("#folderSelection")?.textContent,
+          folderList: document.querySelector("#folderList")?.textContent,
+          folderConfirmDisabled: document.querySelector("#folderConfirm")?.disabled,
+        })),
+      );
       throw error;
     }
   };
@@ -213,7 +224,12 @@ try {
   result.checks.push("Mobile project cards support touch pin/unpin with immediate Chinese labels");
   await mp.goto(fixture.base + "/task/old-alpha");
   await mp.locator("#workspacePreparation").waitFor({ state: "hidden" });
-  await mp.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === "ready");
+  await mp.waitForFunction(
+    () =>
+      globalThis.__pandaForceDebug?.state.modelLoadStatus === "ready" &&
+      globalThis.__pandaForceDebug.state.active?.id === "old-alpha" &&
+      document.body.dataset.workbenchPage === "task",
+  );
   for (const locale of ["en", "zh-CN"]) {
     await mp.evaluate((value) => globalThis.__pandaForceI18n.setPreference(value), locale);
     for (const width of [320, 390, 430]) {

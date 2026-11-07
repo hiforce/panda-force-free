@@ -114,7 +114,7 @@ export interface HistoryPort {
   INITIAL_CONVERSATION_HISTORY_LIMIT: number;
   conversationItemCount: (thread: View<SessionSummary> | null) => number;
   prefetchEarlierConversation: (thread: View<SessionSummary> | null, navigationId: number) => Promise<void>;
-  loadEarlierConversation: (thread: View<SessionSummary> | null) => Promise<void>;
+  loadEarlierConversation: (thread: View<SessionSummary> | null) => Promise<View<SessionSummary> | undefined>;
   resyncActiveConversation: () => Promise<boolean>;
 }
 
@@ -275,6 +275,7 @@ export interface ViewportPort {
   syncConversationScrollSurface: () => void;
   scrollOpenedThreadToBottom: () => void;
   preserveReadingPosition: (render: () => void) => void;
+  renderHistoryWhenIdle: (render: () => void) => Promise<void>;
 }
 
 export interface NoticesPort {
@@ -334,7 +335,7 @@ export interface ConnectionPort {
 export interface TimelinePort {
   showEmpty: () => void;
   clearConversationRuntime: () => void;
-  renderThread: (thread: View<SessionSummary> | null, loadMore?: number) => void;
+  renderThread: (thread: View<SessionSummary> | null, loadMore?: number) => Promise<void>;
   renderTurn: (turn: View<EngineTurn>, root?: HTMLElement) => void;
 }
 
@@ -478,6 +479,8 @@ export interface SubmissionPort {
 }
 
 export interface MessagesPort {
+  appendAssistantDelta: (params: { itemId: string; turnId: string; delta: string; pandaReceivedAt?: number }) => void;
+  releaseItem: (node: HTMLElement) => void;
   upsertItem: (item: View<EngineItem>, turnId: string, root?: HTMLElement, live?: boolean) => void;
 }
 

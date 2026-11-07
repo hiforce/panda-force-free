@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { chromium, webkit } from "playwright";
 import { createBrowserFixture } from "../support/browser-runtime.mjs";
 import { createConversationHistory } from "../../src/server/conversation/history.js";
+import { checkConversationScrollGeometry } from "../support/conversation-scroll.mjs";
 
 async function checkHistoryRefresh(browser, fixture, viewport) {
   const context = await browser.newContext({
@@ -120,6 +121,139 @@ async function checkHistoryRefresh(browser, fixture, viewport) {
   await bottom();
   await refresh("Appended while following the latest messages");
   await bottom();
+  await page.evaluate(() => {
+    window.__longReadingText = Array.from({ length: 30 }, (_, index) => `Reading paragraph ${index}.`).join("\n\n");
+    window.__pandaForceDebug.notify("item/completed", {
+      threadId: "reading-position",
+      turnId: "reading-14",
+      item: { id: "reply-14", type: "agentMessage", text: window.__longReadingText },
+    });
+  });
+  await bottom();
+  const paragraph = page.locator('[data-item-id="reply-14"] .message-text p').nth(14);
+  await paragraph.evaluate((node) => {
+    const root = document.querySelector("#conversation");
+    root.scrollTop += node.getBoundingClientRect().top - root.getBoundingClientRect().top - 20;
+  });
+  await page.locator("#conversationScrollBottom").waitFor({ state: "visible" });
+  const paragraphTop = await paragraph.evaluate((node) => node.getBoundingClientRect().top);
+  await page.evaluate(() => {
+    window.__pandaForceDebug.notify("item/completed", {
+      threadId: "reading-position",
+      turnId: "reading-14",
+      item: {
+        id: "reply-14",
+        type: "agentMessage",
+        text: window.__longReadingText.replace(
+          "Reading paragraph 0.",
+          "Expanded content above the reader. ".repeat(60),
+        ),
+      },
+    });
+    window.__pandaForceDebug.notify("item/agentMessage/delta", {
+      threadId: "reading-position",
+      turnId: "reading-14",
+      itemId: "reply-14",
+      delta: "\n\nMore content arrives while reading the same paragraph.",
+    });
+  });
+  await page.waitForTimeout(150);
+  assert.ok(
+    Math.abs((await paragraph.evaluate((node) => node.getBoundingClientRect().top)) - paragraphTop) < 2,
+    "Native item updates and streamed Markdown must preserve the visible paragraph inside a long response",
+  );
+  await page.evaluate(() => {
+    const api = window.__pandaForceDebug;
+    // Incremental polling updates an existing turn without rebuilding history.
+    api.syncTurnSnapshot({
+      id: "reading-14",
+      status: "inProgress",
+      items: [
+        {
+          id: "reply-14",
+          type: "agentMessage",
+          text: window.__longReadingText.replace(
+            "Reading paragraph 0.",
+            "Snapshot content before the reader. ".repeat(80),
+          ),
+        },
+      ],
+    });
+  });
+  await page.waitForTimeout(150);
+  assert.ok(
+    Math.abs((await paragraph.evaluate((node) => node.getBoundingClientRect().top)) - paragraphTop) < 2,
+    "Incremental turn snapshots must preserve the same visible paragraph as native events",
+  );
+  await page.evaluate(() => {
+    const api = window.__pandaForceDebug;
+    api.notify("item/started", {
+      threadId: "reading-position",
+      turnId: "phase-turn",
+      item: { id: "phase-command", type: "commandExecution", command: "echo progress" },
+    });
+    api.notify("item/started", {
+      threadId: "reading-position",
+      turnId: "phase-turn",
+      item: { id: "phase-commentary", type: "agentMessage" },
+    });
+    api.notify("item/agentMessage/delta", {
+      threadId: "reading-position",
+      turnId: "phase-turn",
+      itemId: "phase-commentary",
+      delta: "Progress before the message phase is known.",
+    });
+  });
+  const phaseTurn = page.locator('[data-turn-id="phase-turn"]'),
+    divider = phaseTurn.locator(".worked-for-divider"),
+    pending = phaseTurn.locator('[data-item-id="phase-commentary"]');
+  assert.equal(await divider.isHidden(), true, "Pending output must not create a premature worked-for divider");
+  assert.equal(await pending.getAttribute("data-message-phase"), "pending");
+  assert.equal(await pending.evaluate((node) => node.parentElement.className), "turn-event-stream");
+  await page.evaluate(() => {
+    const api = window.__pandaForceDebug;
+    api.notify("item/completed", {
+      threadId: "reading-position",
+      turnId: "phase-turn",
+      item: {
+        id: "phase-commentary",
+        type: "agentMessage",
+        phase: "commentary",
+        text: "Progress before the message phase is known.",
+      },
+    });
+    api.syncTurnSnapshot({
+      id: "phase-turn",
+      status: "inProgress",
+      items: [
+        { id: "phase-command", type: "commandExecution", command: "echo progress", status: "completed" },
+        { id: "phase-commentary", type: "agentMessage", text: "A snapshot keeps the known commentary phase." },
+      ],
+    });
+    // A delta may arrive before item/started. It has the same pending semantics.
+    api.notify("item/agentMessage/delta", {
+      threadId: "reading-position",
+      turnId: "phase-turn",
+      itemId: "phase-answer",
+      delta: "The finished answer.",
+    });
+  });
+  assert.equal(await divider.isHidden(), true, "Polling and unclassified deltas must keep the divider hidden");
+  assert.equal(await pending.getAttribute("data-message-phase"), "commentary");
+  await page.evaluate(() => {
+    window.__pandaForceDebug.notify("item/completed", {
+      threadId: "reading-position",
+      turnId: "phase-turn",
+      item: { id: "phase-answer", type: "agentMessage", phase: "final_answer", text: "The finished answer." },
+    });
+  });
+  assert.equal(await divider.isVisible(), true, "Confirmed final content retains its normal activity divider");
+  assert.equal(await phaseTurn.locator(".turn-final-slot > [data-item-id=phase-answer]").count(), 1);
+  await page.waitForTimeout(150);
+  assert.ok(
+    Math.abs((await paragraph.evaluate((node) => node.getBoundingClientRect().top)) - paragraphTop) < 2,
+    "Phase resolution and activity updates below the reader must not move the reading position",
+  );
   await context.close();
 }
 
@@ -203,9 +337,15 @@ try {
   // Let the responsive sidebar transition settle before isolating content growth.
   await page.waitForTimeout(600);
   await atBottom();
-  await page.locator("#conversation").evaluate((view) => {
-    view.scrollTop -= 600;
-  });
+  await page.locator("#conversation").evaluate(
+    (view) =>
+      new Promise((resolve) => {
+        // The button may already be visible during responsive layout. Wait for the
+        // scroll itself before testing a separate, later content-height change.
+        view.addEventListener("scroll", resolve, { once: true });
+        view.scrollTop -= 600;
+      }),
+  );
   await page.locator("#conversationScrollBottom").waitFor({ state: "visible" });
   const before = await page.locator("#conversation").evaluate((view) => view.scrollTop);
   await page
@@ -224,6 +364,7 @@ try {
   assert.deepEqual(errors, []);
   await checkHistoryRefresh(browser, fixture, { width: 390, height: 844 });
   await checkHistoryRefresh(browser, fixture, { width: 1440, height: 900 });
+  console.log(JSON.stringify(await checkConversationScrollGeometry(browser)));
   console.log(
     "Conversation follow: explicit send, streamed content, late growth and viewport changes reach the bottom; reading history stays put.",
   );

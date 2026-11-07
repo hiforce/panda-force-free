@@ -198,10 +198,31 @@ try {
   await page.routeWebSocket("**/ws", (socket) => socket.close());
   await page.evaluate(() => globalThis.__pandaForceDebug.state.ws?.close());
   await page.waitForFunction(() => globalThis.__pandaForceDebug.state.transport === "sse");
-  await page.route("**/api/engine/respond", (route) =>
-    route.fulfill({ status: 503, json: { error: "Temporary transport failure" } }),
-  );
+  let rejectDecision;
+  let decisionAttempts = 0;
+  await page.route("**/api/engine/respond", async (route) => {
+    decisionAttempts++;
+    await new Promise((resolve) => {
+      rejectDecision = resolve;
+    });
+    await route.fulfill({ status: 503, json: { error: "Temporary transport failure" } });
+  });
   await page.locator(".approval-primary").click();
+  await waitFor(() => decisionAttempts === 1);
+  await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-alpha"));
+  await page.locator(".approval-card").waitFor();
+  assert.equal(
+    await page.locator(".approval-primary").isDisabled(),
+    true,
+    "A rebuilt card must retain its pending decision",
+  );
+  await page.locator(".approval-actions").dispatchEvent("submit");
+  await page.waitForTimeout(50);
+  assert.equal(decisionAttempts, 1, "Rebuilding a card must not allow a duplicate decision");
+  rejectDecision();
+  await page.locator(".approval-submit-error").waitFor();
+  assert.equal(await page.locator(".approval-primary").isEnabled(), true);
+  await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-alpha"));
   await page.locator(".approval-submit-error").waitFor();
   assert.equal(await page.locator(".approval-primary").isEnabled(), true);
   assert.equal(
@@ -212,7 +233,7 @@ try {
   await page.locator(".approval-primary").click();
   await waitFor(() => fixture.calls().find((c) => c.type === "response" && c.id === "restore-and-retry"));
   checks.push(
-    "Detached approval cards restore after history refresh; failed decisions keep their actions for explicit retry",
+    "Rebuilt approval cards retain pending and failed decisions, prevent duplicate submission, and support explicit retry",
   );
   const reasoning = await page.evaluate(() => {
     const api = globalThis.__pandaForceDebug;

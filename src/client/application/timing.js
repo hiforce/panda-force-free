@@ -1,5 +1,5 @@
 import { localizeAttribute, localizeText } from "../i18n.js";
-import { findElement } from "./../dom.js";
+import { findElement, findElements } from "./../dom.js";
 
 // Owns message timestamps and worked-duration projections.
 /** @param {import("./ports.js").FeatureOptions<"renderBatch" | "mutations" | "i18n" | "state" | "t", never, "timing">} options */
@@ -59,8 +59,10 @@ export function assembleTiming({ renderBatch, mutations, i18n, state, t }) {
       divider = state.dividers.get(turnId);
     if (!turn || !divider) return;
     if (Number.isFinite(durationMs)) turn.dataset.durationMs = String(durationMs);
-    const hasActivity = Boolean(findElement("[data-agent-activity-group]", turn)),
-      hasFinal = Boolean(findElement("[data-local-conversation-final-assistant]", turn));
+    const hasActivity = Boolean(findElement("[data-agent-activity-group]:not([hidden])", turn)),
+      hasFinal = [...findElements("[data-local-conversation-final-assistant]", turn)].some(
+        (message) => message.textContent.trim() || findElement("img", message),
+      );
     divider.hidden = !(hasActivity && hasFinal);
     const duration = formatWorkedDuration(Number(turn.dataset.durationMs));
     localizeText(findElement("span", divider), duration ? "common.workedDuration" : "common.worked", { duration }, t);

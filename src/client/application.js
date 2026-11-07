@@ -658,7 +658,6 @@ export function startApplication() {
       usagePort: usage,
       accountPort: account,
       composerPort: composer,
-      identityPort: identity,
       viewportPort: viewport,
       reviewPort: review,
     }),

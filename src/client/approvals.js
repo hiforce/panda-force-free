@@ -39,6 +39,8 @@ export function createApprovals({
 }) {
   const pendingApprovals = new Map();
   const userInputDrafts = new Map();
+  // Submission state belongs to the request, because history can replace its card.
+  const approvalSubmissions = new Map();
   const notice = document.createElement("button");
   notice.id = "pendingApprovalNotice";
   notice.type = "button";
@@ -128,6 +130,7 @@ export function createApprovals({
     if (card && !USER_INPUT_METHODS.includes(req?.method))
       setApprovalWaiting(card.previousElementSibling, req?.params?.itemId, false);
     pendingApprovals.delete(requestId);
+    approvalSubmissions.delete(requestId);
     pendingChanged();
     userInputDrafts.delete(requestId);
     approvalMenuController.closeFor(card);
@@ -137,6 +140,25 @@ export function createApprovals({
   function restorePendingApprovals() {
     for (const req of pendingApprovals.values())
       if (inbox.open || belongsToActiveThread(req.params || {})) void onServerRequest(req);
+  }
+  function syncApprovalSubmission(requestId) {
+    const card = state.requestCards.get(requestId);
+    if (!card) return;
+    const submission = approvalSubmissions.get(requestId);
+    card.dataset.submitting = String(Boolean(submission?.pending));
+    findElements("button", card).forEach((button) => (button.disabled = Boolean(submission?.pending)));
+    let message = findElement(".approval-submit-error", card);
+    if (!submission?.failed) {
+      message?.remove();
+      return;
+    }
+    if (!message) {
+      message = document.createElement("p");
+      message.className = "approval-submit-error";
+      message.setAttribute("role", "alert");
+      card.append(message);
+    }
+    localizeText(message, "errors.couldNotSubmitTheDecisionTheRequestIsStillWaiting", undefined, t);
   }
   async function onServerRequest(
     req,
@@ -231,28 +253,24 @@ export function createApprovals({
       container.append(card);
     } else group.after(card);
     mutations.collection("requestCards").set(req.id, card);
+    syncApprovalSubmission(req.id);
     if (group) setApprovalWaiting(group, p.itemId, true);
     const answer = async (decision) => {
       approvalMenuController.closeFor(card);
-      if (card.dataset.submitting === "true") return;
-      card.dataset.submitting = "true";
-      findElements("button", card).forEach((b) => (b.disabled = true));
+      if (approvalSubmissions.get(req.id)?.pending) return;
+      const submission = { pending: true, failed: false };
+      approvalSubmissions.set(req.id, submission);
+      syncApprovalSubmission(req.id);
       try {
         await respondToEngine(req.id, req.surface ? decision : approvalDecisionResponse(req, decision, model.kind));
+        if (approvalSubmissions.get(req.id) !== submission) return;
         if (group) setApprovalWaiting(group, p.itemId, decision !== model.deny.decision);
         resolveServerRequest(req.id);
       } catch (error) {
-        if (pendingApprovals.has(req.id)) {
-          card.dataset.submitting = "false";
-          findElements("button", card).forEach((b) => (b.disabled = false));
-          let message = findElement(".approval-submit-error", card);
-          if (!message) {
-            message = document.createElement("p");
-            message.className = "approval-submit-error";
-            message.setAttribute("role", "alert");
-            card.append(message);
-          }
-          localizeText(message, "errors.couldNotSubmitTheDecisionTheRequestIsStillWaiting", undefined, t);
+        if (pendingApprovals.has(req.id) && approvalSubmissions.get(req.id) === submission) {
+          submission.pending = false;
+          submission.failed = true;
+          syncApprovalSubmission(req.id);
           if (!isTransportSwitch(error)) addPersistentError(errorMessage(error));
         }
       }
@@ -276,6 +294,7 @@ export function createApprovals({
   function clearApprovals({ removeCards = false } = {}) {
     approvalMenuController.close();
     pendingApprovals.clear();
+    approvalSubmissions.clear();
     pendingChanged();
     userInputDrafts.clear();
     if (removeCards) for (const card of state.requestCards.values()) card.remove();

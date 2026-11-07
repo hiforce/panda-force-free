@@ -1524,3 +1524,6 @@
     animation: none !important;
   }
 }
+
+/* The conversation viewport owns reading anchors across streamed updates. */
+#conversation { overflow-anchor: none; }

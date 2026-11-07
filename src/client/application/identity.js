@@ -34,11 +34,19 @@ export function assembleIdentity({ mutations, deliveryPort, state }) {
     const value = String(id || "");
     return /^item[-_]/.test(value) ? "app" : /^(?:msg_|host-message-)/.test(value) ? "rollout" : "";
   }
+  /** @param {{phase?: string; status?: string}} item @param {HTMLElement | null} element */
+  function messagePhase(item, element = null) {
+    if (item.phase) return item.phase;
+    const known = element?.dataset.messagePhase;
+    if (known && known !== "pending") return known;
+    // A delta without phase metadata is not evidence of a final answer.
+    return item.status === "inProgress" ? "pending" : "final_answer";
+  }
   function claimEquivalentAgentMessage(item, turnId) {
     const family = agentMessageIdFamily(item.id);
     if (!family) return null;
     const text = agentMessageText(item, ""),
-      commentary = item.phase === "commentary";
+      commentary = messagePhase(item) !== "final_answer";
     for (const [id, node] of state.items) {
       if (agentMessageIdFamily(id) === family || closestElement("[data-turn-id]", node)?.dataset.turnId !== turnId)
         continue;
@@ -52,8 +60,10 @@ export function assembleIdentity({ mutations, deliveryPort, state }) {
     return null;
   }
   function placeAgentMessage(el, item, timeline) {
-    const commentary = item.phase === "commentary",
+    const phase = messagePhase(item, el),
+      commentary = phase !== "final_answer",
       slot = requireElement(commentary ? ".turn-event-stream" : ".turn-final-slot", timeline);
+    el.dataset.messagePhase = phase;
     el.className = commentary ? "assistant-response assistant-commentary" : "assistant-response";
     if (commentary) {
       delete el.dataset.localConversationFinalAssistant;
