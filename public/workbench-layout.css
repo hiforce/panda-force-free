@@ -195,7 +195,7 @@
   right: max(var(--session-content-gutter), calc((100cqw - var(--session-content-width)) / 2));
 }
 .panda-workspace .workbench-view {
-  width: min(100%, calc(var(--session-content-width) + 56px));
+  width: 100%;
 }
 .panda-workspace #threadPath {
   max-width: 100%;

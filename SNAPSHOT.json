@@ -48,13 +48,13 @@
     {
       "path": "README-zh.md",
       "bytes": 3827,
-      "sha256": "8a711345ec1dd45bfdf790b45eae2db96ba8fc81986a70f7b8ec18cae6432905",
+      "sha256": "401b92ed60233900660f2b2526ae53c14150f5e8fc16ed08056ea9aba8debc27",
       "mode": "100644"
     },
     {
       "path": "README.md",
       "bytes": 4159,
-      "sha256": "ee497e984ded9c1d88cd8d8619e97ee8071f673a47e36622df9e9c19ece845f3",
+      "sha256": "c9c79759e33bd78b974666153a13a45566e07ac25e85fd7be8467a9bcbcbf58d",
       "mode": "100644"
     },
     {
@@ -78,7 +78,7 @@
     {
       "path": "docker-compose.yml",
       "bytes": 1474,
-      "sha256": "d7ed26d2abb143f21a9f1b0abc4e5cf872f96a30e62435f2a506f62fd5d7be9e",
+      "sha256": "3973eef4abdf8a79d4120521c62a0947e704b4890d96fba2b75b6777b5175bb2",
       "mode": "100644"
     },
     {
@@ -90,7 +90,7 @@
     {
       "path": "package.json",
       "bytes": 4632,
-      "sha256": "e6592df6817f00e6c704cf3bd19d64e8ea69b3a359206acb9b4a0396a843becc",
+      "sha256": "149718a2599c9aee7d61c8f41516d317ce06fab7e1a050d6a0c8a420fc97fea1",
       "mode": "100644"
     },
     {
@@ -311,8 +311,8 @@
     },
     {
       "path": "public/workbench-layout.css",
-      "bytes": 8085,
-      "sha256": "bb24719a92a0a64a1ac892678b18228b152b74bbc3f807015ef2e8df3b49b788",
+      "bytes": 8037,
+      "sha256": "92b7f2c613174bae07886b49a255d5f94a384464ada133ca17cb480cccd301e5",
       "mode": "100644"
     },
     {
@@ -354,13 +354,13 @@
     {
       "path": "release/community/README-zh.md",
       "bytes": 3827,
-      "sha256": "8a711345ec1dd45bfdf790b45eae2db96ba8fc81986a70f7b8ec18cae6432905",
+      "sha256": "401b92ed60233900660f2b2526ae53c14150f5e8fc16ed08056ea9aba8debc27",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
       "bytes": 4159,
-      "sha256": "ee497e984ded9c1d88cd8d8619e97ee8071f673a47e36622df9e9c19ece845f3",
+      "sha256": "c9c79759e33bd78b974666153a13a45566e07ac25e85fd7be8467a9bcbcbf58d",
       "mode": "100644"
     },
     {
@@ -378,7 +378,7 @@
     {
       "path": "release/community/docker-compose.yml",
       "bytes": 1474,
-      "sha256": "d7ed26d2abb143f21a9f1b0abc4e5cf872f96a30e62435f2a506f62fd5d7be9e",
+      "sha256": "3973eef4abdf8a79d4120521c62a0947e704b4890d96fba2b75b6777b5175bb2",
       "mode": "100644"
     },
     {
@@ -3640,5 +3640,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "c7b7b31f41fff12c9b19eb2d046f415de2a30989ee9928e0b0a91c33612efdb0"
+  "contentSha256": "309b6b07ef0eaea167d8cbdb060035dfaa49af29e93dd0f074ed89218ad2b0fb"
 }
