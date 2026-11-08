@@ -1,5 +1,5 @@
 import { findElement } from "../dom.js";
-import { isConversationInteraction } from "../conversation-interactions.js";
+import { isConversationInteraction, isRetainedConversationItem } from "../conversation-interactions.js";
 import { closeEarlierAsyncQuestions, readAsyncQuestions } from "../async-questions.js";
 import { isAsyncQuestionReply } from "../../shared/engine/async-questions.js";
 import { createBuiltinConversationRenderers } from "../conversation-renderers/index.js";
@@ -45,7 +45,7 @@ export function assembleMessages({
     findElement("#emptyState", root)?.remove();
     let el = state.items.get(item.id) || null;
     const questions = readAsyncQuestions(item);
-    if (el && !root.contains(el) && !isConversationInteraction(el)) {
+    if (el && !root.contains(el) && !isRetainedConversationItem(el)) {
       renderers.release(el);
       mutations.collection("items").delete(item.id);
       el = null;

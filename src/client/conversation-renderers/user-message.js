@@ -4,6 +4,7 @@ import { attachmentDisplayUrl } from "../../shared/attachment-urls.js";
 import { codexIcon } from "../codex-icons.js";
 import { attachmentsFromInput, composerInputKey, composerTextFromInput } from "../composer-attachments.js";
 import { renderItemImages } from "../rendering.js";
+import { setConversationContent } from "./content.js";
 
 // Owns this element type; identity, transactions and lifecycle belong to the caller.
 /** @param {Pick<import("./types.js").ConversationRendererServices, "state" | "turnFramesPort" | "queuePort" | "timingPort" | "identityPort" | "clipboardPort" | "t">} services */
@@ -28,8 +29,12 @@ export function createUserMessageRenderer({
         el.dataset.userTurnId = turnId;
         if (String(item.id).startsWith("local-")) el.dataset.optimisticUser = "true";
         setMessageHtml(el, '<div class="user-message"></div>');
+      }
+      if (!root.contains(el)) {
         const steer =
-          item.steer ?? Boolean(findElement(`.user-turn[data-user-turn-id="${CSS.escape(String(turnId))}"]`, root));
+          item.steer ??
+          (el.dataset.steer === "true" ||
+            Boolean(findElement(`.user-turn[data-user-turn-id="${CSS.escape(String(turnId))}"]`, root)));
         if (steer) {
           el.dataset.steer = "true";
           requireElement(".turn-event-stream", turnFramesPort.ensureTurnTimeline(turnId, root)).append(el);
@@ -102,7 +107,7 @@ export function createUserMessageRenderer({
           images.className = "user-message-images";
           requireElement(".user-message", el).after(images);
         }
-        setMessageHtml(images, imageHtml);
+        setConversationContent(images, imageHtml);
       } else images?.remove();
       if (item.steer || item.delivery || el.dataset.delivery || el.dataset.steer === "true") {
         if (item.steer) el.dataset.steer = "true";

@@ -144,10 +144,28 @@ try {
   await page.locator("#sessionProjectSelect").selectOption("");
   assert.equal(await page.locator("#composerProjectButton").isEnabled(), true);
   await page.locator("#composerProjectButton").click();
-  await page.locator("#folderPathInput").fill(fixture.dir);
+  await page.waitForFunction(() => !document.querySelector("#folderConfirm").disabled);
+  const readableFolder = join(fixture.dir, "panda-workspace");
+  await mkdir(readableFolder);
+  await page.locator("#folderPathInput").fill(readableFolder);
   await page.locator("#folderGo").click();
-  await page.waitForFunction((path) => document.querySelector("#folderSelection").textContent === path, fixture.dir);
+  await page.waitForFunction((path) => document.querySelector("#folderSelection").textContent === path, readableFolder);
   await page.locator("#folderConfirm").click();
+  await page.waitForFunction(() => document.querySelector("#composerProjectLabel").textContent === "panda-workspace");
+  for (const width of [320, 390, 430, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const folderLayout = await page.locator("#composerProjectLabel").evaluate((label) => ({
+      text: label.textContent,
+      width: label.clientWidth,
+      content: label.scrollWidth,
+      row: label.closest(".conversation-project-picker").getBoundingClientRect().toJSON(),
+      button: label.closest("button").getBoundingClientRect().toJSON(),
+    }));
+    assert.equal(folderLayout.text, "panda-workspace");
+    assert.ok(folderLayout.width >= folderLayout.content, `Folder name fits at ${width}px`);
+    assert.ok(folderLayout.button.right <= folderLayout.row.right + 1);
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
   await page.locator(".workbench-navigation [data-route=projects]").click();
   assert.equal(await page.locator(".wb-project-main").count(), 3);
   result.checks.push(

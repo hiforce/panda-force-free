@@ -1,4 +1,4 @@
-import { setMessageHtml } from "../i18n.js";
+import { setConversationContent } from "./content.js";
 import { requireElement } from "../dom.js";
 import { renderItemImages } from "../rendering.js";
 
@@ -14,14 +14,15 @@ export function createGeneratedImageRenderer({ turnFramesPort, identityPort }) {
       if (!el) {
         el = document.createElement("div");
         el.className = "assistant-generated-image";
-        requireElement(".turn-event-stream", turnFramesPort.ensureTurnTimeline(turnId, root)).append(el);
       }
+      if (!root.contains(el))
+        requireElement(".turn-event-stream", turnFramesPort.ensureTurnTimeline(turnId, root)).append(el);
       const html = renderItemImages(item, {
         cwd: identityPort.imageCwd(item),
         className: "generated-image-grid",
         thumbnail: true,
       });
-      setMessageHtml(
+      setConversationContent(
         el,
         html ||
           `<div class="generated-image-pending ${item.status === "inProgress" ? "loading-shimmer" : ""}">${item.status === "failed" ? "Image generation failed" : "Generating image"}</div>`,

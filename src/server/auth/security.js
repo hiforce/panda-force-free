@@ -1,3 +1,4 @@
+import { INSTALL_ASSETS } from "../../shared/install-assets.js";
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { SUPPORTED_LOCALES } from "../../shared/i18n/locale-policy.js";
 import { resolveSafeRegularFile } from "../path-utils.js";
@@ -51,6 +52,7 @@ const PUBLIC_ASSETS = new Set([
   "/terminal-runtime.bundle.js",
   "/assets/panda-icon.png",
   "/assets/panda-mark.svg",
+  ...INSTALL_ASSETS,
 ]);
 
 function safeEqual(left, right) {

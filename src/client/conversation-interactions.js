@@ -7,6 +7,12 @@ export function isConversationInteraction(node) {
   return node.hasAttribute(CONVERSATION_INTERACTION);
 }
 
+// Loaded media and interactive controls retain their DOM across history snapshots.
+/** @param {Element} node */
+export function isRetainedConversationItem(node) {
+  return isConversationInteraction(node) || Boolean(node.querySelector("img.message-image"));
+}
+
 /** @param {HTMLElement} root */
 export function retainInteractionFocus(root) {
   const focused = document.activeElement;

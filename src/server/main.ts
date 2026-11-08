@@ -1,3 +1,4 @@
+import { INSTALL_ASSETS } from "../shared/install-assets.js";
 import { createBrowserWire } from "./bridge/browser-wire.js";
 import { readClusterConfig } from "./cluster/config.js";
 import { createClusterWorker } from "./cluster/worker.js";
@@ -258,6 +259,7 @@ const mime: Record<string, string> = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".ico": "image/x-icon",
@@ -361,6 +363,7 @@ const server = createServer(
       "/http-client.js",
       "/panda-brand.js",
       "/assets/panda-mark.svg",
+      ...INSTALL_ASSETS,
     ]);
     let idaasSession: { id: string; identity: unknown; expiresAt: number } | null = null;
     if (url.pathname === "/api/auth/status" && directoryPolicy.browserScope)

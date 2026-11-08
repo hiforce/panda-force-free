@@ -25,11 +25,14 @@ Review source, dependency licenses, English comments and the explicit public inv
 
 ## 0.0.15
 
+- Home Screen installation includes dedicated opaque PandaForce icons, light/dark iPhone launch images, a standalone web app manifest and immediate startup feedback before JavaScript, localization and authentication finish. Authentication and language loading run concurrently.
+
 - New projects own persistent folders named by their code. New project sessions use the server-bound folder; linking historical sessions preserves their original directories.
 - Configure `PANDA_FORCE_PROJECTS_ROOT` for Docker, Compose or Kubernetes. Shared host engines need the same absolute persistent path in both environments.
 - `PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES` defaults to `true`. Setting `false` limits web directory and session browsing, filters external history and notifications, and isolates browser caches. This visibility setting is separate from engine permissions.
 - Project creation is retryable without creating duplicates. Existing unknown folders and symbolic links are preserved; bound project codes remain fixed while names and descriptions stay editable.
 - File mention search remains available before the first project folder is created.
+- Working-folder controls use the available row width on phones instead of truncating short names. Loaded conversation images retain their decoded nodes across live updates and history resynchronization.
 
 ## 0.0.3
 

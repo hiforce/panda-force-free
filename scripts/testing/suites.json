@@ -54,6 +54,7 @@
     "browser/shared-approvals.e2e.mjs",
     "browser/side-utilities.e2e.mjs",
     "browser/sidebar-refresh.e2e.mjs",
+    "browser/mobile-install.e2e.mjs",
     "browser/startup-loading.e2e.mjs",
     "browser/summary-scroll.e2e.mjs",
     "browser/surfaces.e2e.mjs",

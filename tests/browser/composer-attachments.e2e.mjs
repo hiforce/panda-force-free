@@ -51,6 +51,7 @@ try {
   await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.config.defaultCwd);
   await page.evaluate(() => {
     const api = globalThis.__pandaForceDebug;
+    window.__attachmentReceive = api.state.ws.onmessage;
     api.state.ws.onmessage = null;
     api.state.events?.close();
     api.mutations.set("transport", "sse");
@@ -84,7 +85,7 @@ try {
             id: payload.params.threadId || "new-attachment-thread",
             name: "Attachment task",
             cwd: api.state.config.defaultCwd,
-            turns: [],
+            turns: window.__snapshotTurns || [],
             canAcceptDirectInput: true,
           },
         };
@@ -170,6 +171,48 @@ try {
   assert.equal(await page.locator(".user-turn").count(), 1);
   assert.equal(await page.locator(".user-message").textContent(), "Review these attachments");
   assert.equal(await page.locator(".user-message-files a").textContent(), "notes.txt");
+  await page.setViewportSize({ width: 390, height: 844 });
+  // Repeated live snapshots and a full history resync retain the decoded upload.
+  await page.evaluate((call) => {
+    const api = globalThis.__pandaForceDebug;
+    window.__decodedUpload = document.querySelector(".user-message-images img");
+    window.__uploadReloads = 0;
+    window.__decodedUpload.addEventListener("load", () => {
+      window.__uploadReloads++;
+    });
+    const user = {
+      id: "host-user-attachment-turn-1-1",
+      clientId: call.params.clientUserMessageId,
+      type: "userMessage",
+      content: call.params.input,
+    };
+    for (let index = 0; index < 5; index++) {
+      api.syncTurnSnapshot({
+        id: "attachment-turn-1",
+        status: "completed",
+        items: [user, { id: "image-reply", type: "agentMessage", text: `Reply ${index}` }],
+      });
+      if (document.querySelector(".user-message-images img") !== window.__decodedUpload)
+        throw new Error("A live snapshot replaced the uploaded image");
+    }
+    window.__snapshotTurns = [
+      {
+        id: "attachment-turn-1",
+        status: "completed",
+        items: [user, { id: "image-reply", type: "agentMessage", text: "History rebuilt with retained image" }],
+      },
+    ];
+    window.__attachmentReceive({ data: JSON.stringify({ type: "bridge/resync" }) });
+  }, call);
+  await page.getByText("History rebuilt with retained image", { exact: true }).waitFor();
+  assert.equal(
+    await page.evaluate(() => document.querySelector(".user-message-images img") === window.__decodedUpload),
+    true,
+  );
+  assert.ok(await page.evaluate(() => window.__decodedUpload.naturalWidth > 0));
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.equal(await page.evaluate(() => window.__uploadReloads), 0);
+  await page.setViewportSize({ width: 1018, height: 760 });
   await prompt.focus();
   await page.keyboard.press("ArrowUp");
   assert.equal(await prompt.inputValue(), "Review these attachments");

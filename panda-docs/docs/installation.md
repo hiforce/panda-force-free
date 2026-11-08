@@ -125,3 +125,11 @@ docker compose logs panda-force
 ```
 
 The community Dockerfile uses public base images. This source build is optional; normal installation pulls the released image.
+
+## Install on your phone
+
+Use your own HTTPS address. In iPhone Safari, choose **Share → Add to Home Screen**, enable **Open as Web App** when offered, and open PandaForce from its Home Screen icon. This opens an independent window without browser navigation controls. Android browsers can offer **Install app** or **Add to Home screen** from their menu.
+
+Version 0.0.15 adds the PandaForce Home Screen icon and dedicated iPhone launch screens in light and dark appearances, plus immediate feedback before language and sign-in checks finish. If you installed an older shortcut showing a letter P, remove that shortcut and add the site again after updating. This removes the shortcut, not your server data. Browser and installed-app sign-in storage can differ; sign in again if prompted.
+
+A normal browser tab controls its own address bar and navigation. PandaForce cannot force those controls to disappear. Installation does not enable offline access; a connection to your server is required.

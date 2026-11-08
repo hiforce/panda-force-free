@@ -1,4 +1,5 @@
 import { setMessageHtml } from "../i18n.js";
+import { setConversationContent } from "./content.js";
 import { requireElement } from "../dom.js";
 import { agentMessageText, renderAssistantMarkdown, renderItemImages } from "../rendering.js";
 
@@ -29,7 +30,7 @@ export function createAssistantMessageRenderer({ turnFramesPort, identityPort, t
       timingPort.setMessageTime(el, el.dataset.messageTimestamp, "Received at {time}");
       identityPort.placeAgentMessage(el, item, timeline);
       body.dataset.raw = text;
-      setMessageHtml(
+      setConversationContent(
         body,
         renderAssistantMarkdown(text, { cwd }) +
           renderItemImages(item, { cwd, className: "message-image-grid structured-message-images", excludeText: text }),

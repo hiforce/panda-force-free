@@ -1,3 +1,4 @@
+import { INSTALL_ASSETS } from "../../src/shared/install-assets.js";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -28,6 +29,7 @@ const publicFiles = [
   "favicon.svg",
   "assets/panda-mark.svg",
   "assets/panda-icon.png",
+  ...INSTALL_ASSETS.map((path) => path.slice(1)),
 ];
 export function verificationFiles(root = process.cwd()): string[] {
   const result = files.filter((path) => existsSync(join(root, path)));

@@ -1,4 +1,4 @@
-import { isConversationInteraction, retainInteractionFocus } from "../conversation-interactions.js";
+import { isRetainedConversationItem, retainInteractionFocus } from "../conversation-interactions.js";
 import { retireAnsweredAsyncQuestions } from "../../shared/engine/async-questions.js";
 import { localizeText, messageHtml, setMessageHtml } from "../i18n.js";
 import { errorMessage } from "./../../shared/errors.js";
@@ -39,13 +39,13 @@ export function assembleTimeline({
     else if (count) localizeText(button.lastElementChild, "sessions.loadEarlierMessagesCount", { count }, t);
     else localizeText(button.lastElementChild, "sessions.loadEarlierMessages", undefined, t);
   }
-  function clearConversationRuntime({ retainInteractions = false } = {}) {
-    if (!retainInteractions) requestedHistoryWindow = 0;
+  function clearConversationRuntime({ retainItems = false } = {}) {
+    if (!retainItems) requestedHistoryWindow = 0;
     viewUpdates.request("approvalMenu");
-    // Keep interactive roots and their handlers during same-session projections.
+    // Preserve loaded media and interactive controls during same-session projections.
     // Navigation calls the default path and drops all cards from the prior session.
     for (const [id, node] of state.items)
-      if (!retainInteractions || !isConversationInteraction(node)) {
+      if (!retainItems || !isRetainedConversationItem(node)) {
         messagesPort.releaseItem(node);
         mutations.collection("items").delete(id);
       }
@@ -87,7 +87,7 @@ export function assembleTimeline({
     window.threadId = thread.id;
     mutations.set("turnWindow", window);
     const restoreFocus = retainInteractionFocus(root);
-    clearConversationRuntime({ retainInteractions: true });
+    clearConversationRuntime({ retainItems: true });
     setMessageHtml(root, "");
     statusPort.syncThreadErrorSurface(thread.id);
     if (window.hiddenCount || thread.history?.nextCursor) {

@@ -28,8 +28,14 @@ const i18n = getBrowserI18n();
 
 const t = i18n.t;
 
+function dismissStartupScreen() {
+  const screen = findElement("#startupScreen");
+  if (screen) screen.hidden = true;
+}
+
 function showAuthFailure(message) {
   $("#passwordGate").hidden = false;
+  dismissStartupScreen();
   $("#app").hidden = true;
   localizeText($("#passwordStep"), "auth.connectionUnavailable", undefined, t);
   localizeText($("#passwordTitle"), "auth.pleaseTryAgain", undefined, t);
@@ -43,6 +49,7 @@ function showAuthFailure(message) {
 async function loadApp() {
   const preparation = getWorkspacePreparation();
   preparation.begin();
+  dismissStartupScreen();
   startStartupReads();
   for (const href of ["/vendor/katex/katex.min.css", "/vendor/xterm/xterm.css"]) {
     if (findElement(`link[href="${href}"]`)) continue;
@@ -70,11 +77,10 @@ async function readStatus() {
 }
 
 async function start() {
-  await i18n.ready;
-  bindMessages(document);
   let status;
   try {
-    status = await readStatus();
+    [, status] = await Promise.all([i18n.ready, readStatus()]);
+    bindMessages(document);
   } catch (error) {
     showAuthFailure(errorMessage(error));
     return;
@@ -202,6 +208,7 @@ async function start() {
     localizeAttribute(visibility, "aria-label", show ? "common.hidePassword" : "common.showPassword", undefined, t);
   };
   gate.hidden = false;
+  dismissStartupScreen();
   configure();
   $("#passwordLoginForm").onsubmit = async (event) => {
     event.preventDefault();

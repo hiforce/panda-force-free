@@ -1685,6 +1685,25 @@
 #workbenchComposerSlot .business-project-context select {
   max-width: none;
 }
+.conversation-project-picker .working-folder-label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.conversation-project-picker .composer-project-control {
+  flex: 1 1 0;
+  max-width: none;
+  min-width: 0;
+  min-height: 44px;
+  justify-content: flex-start;
+}
+.conversation-project-picker .composer-project-control > .icon-slot {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+.conversation-project-picker #composerProjectLabel {
+  max-width: none;
+  min-width: 0;
+}
 #workbenchComposerSlot .composer-dock {
   grid-column: 1/-1;
 }

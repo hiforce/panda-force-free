@@ -272,6 +272,7 @@ export interface InterfaceElements {
   "#sideTaskPanel": HTMLElementTagNameMap["section"];
   "#sideTerminalHost": HTMLElementTagNameMap["div"];
   "#sideTerminalPanel": HTMLElementTagNameMap["section"];
+  "#startupScreen": HTMLElementTagNameMap["section"];
   "#statusDot": HTMLElementTagNameMap["span"];
   "#statusText": HTMLElementTagNameMap["span"];
   "#summaryBranch": HTMLElementTagNameMap["span"];
