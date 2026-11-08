@@ -291,6 +291,7 @@ else createInterface({input:process.stdin}).on('line',handleLine);
           ),
           PANDA_FORCE_ATTACHMENT_STORAGE: "local",
           PANDA_FORCE_ATTACHMENT_ROOT: join(dir, "panda-state", "attachments"),
+          PANDA_FORCE_PROJECTS_ROOT: join(dir, "panda-state", "projects"),
           PANDA_FORCE_APP_SERVER_MODE: sharedApprovals ? "shared" : "isolated",
           ...(sharedApprovals ? { PANDA_FORCE_APP_SERVER_SOCKET: join(dir, "daemon.sock") } : {}),
           SHELL: "/bin/bash",

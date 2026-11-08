@@ -782,6 +782,7 @@ export interface MessageParameters {
   "projects.descriptionOptional": {  };
   "projects.errorAProjectWithThisCodeAlreadyExists": {  };
   "projects.errorCrossOriginRequestRejected": {  };
+  "projects.errorDirectoryOutsideRoot": {  };
   "projects.errorInvalidProjectDetails": {  };
   "projects.errorInvalidSessionCursor": {  };
   "projects.errorInvalidSessionSelection": {  };
@@ -792,6 +793,11 @@ export interface MessageParameters {
   "projects.errorProjectsChangedInAnotherWindowReviewTheLatestInformationAndTryAgain": {  };
   "projects.errorSelectBetween1And100Sessions": {  };
   "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain": {  };
+  "projects.errorWorkspaceCodeImmutable": {  };
+  "projects.errorWorkspaceConflict": {  };
+  "projects.errorWorkspaceRequestChanged": {  };
+  "projects.errorWorkspaceSharedRootRequired": {  };
+  "projects.errorWorkspaceUnavailable": {  };
   "projects.linkingChangesOnlyTheProjectAssociationSessionContentsAndWorking": {  };
   "projects.loadOlderSessions": {  };
   "projects.projectCode": {  };
@@ -799,6 +805,11 @@ export interface MessageParameters {
   "projects.reloadLatestProjectDetails": {  };
   "projects.searchBySessionNameOrWorkingFolder": {  };
   "projects.uniqueCode264CharactersLettersNumbersHyphensOrUnderscores": {  };
+  "projects.workspaceCodeHelp": {  };
+  "projects.workspaceCodeLocked": {  };
+  "projects.workspaceLegacy": {  };
+  "projects.workspacePath": {  };
+  "projects.workspacePreparing": {  };
   "sessions.activityTimeUnavailable": {  };
   "sessions.allDirectories": {  };
   "sessions.browseByFolder": {  };

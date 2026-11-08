@@ -59,7 +59,10 @@ export function createInstalledEngine({
   return {
     driver,
     request,
-    history: { ...history, readComposerHistory: () => readComposerHistory(resolve(history.sessionsRoot, "..")) },
+    history: {
+      ...history,
+      readComposerHistory: (options) => readComposerHistory(resolve(history.sessionsRoot, ".."), options),
+    },
     goals: new GoalStore({
       home,
       onChange: (goal) => {

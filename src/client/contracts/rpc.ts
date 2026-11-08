@@ -5,6 +5,7 @@ import type {
   ConversationHistory,
   SessionSummary,
   TokenUsage,
+  ProjectSnapshot,
 } from "../../shared/engine/types.js";
 import type { NativeInput } from "../../shared/data-contracts.js";
 export interface QueuedSubmission {
@@ -14,7 +15,7 @@ export interface QueuedSubmission {
 }
 /** Application RPC results are independent of any engine's transport envelopes. */
 export interface RpcResults {
-  "thread/start": { thread: Conversation };
+  "thread/start": { thread: Conversation; pandaProjectId?: string; pandaProjectCatalog?: ProjectSnapshot };
   "thread/resume": { thread: Conversation };
   "thread/read": { thread: Conversation };
   "thread/fork": { thread: Conversation };

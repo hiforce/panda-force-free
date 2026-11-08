@@ -40,18 +40,21 @@ export function assembleInputSessions({
     onCreated = (_created) => {},
   }) {
     if (!thread) {
-      const projectless = state.projectless;
-      await workspacePort.prepareBusinessSession(projectId);
+      const projectless = projectId ? false : state.projectless;
+      const workspace = await workspacePort.prepareBusinessSession(projectId);
       const result = await transportPort.rpc("thread/start", {
-        cwd,
+        cwd: workspace?.path || cwd,
         model,
         ...policy,
+        ...(projectId ? { pandaProjectId: projectId } : {}),
         sessionStartSource: "startup",
         pandaProjectless: projectless,
       });
       thread = { ...result.thread, projectless };
       onCreated(thread);
-      if (projectId) projectsPort.businessProjects.pendingAssignments.set(thread.id, projectId);
+      if (projectId && result.pandaProjectId === projectId && result.pandaProjectCatalog)
+        projectsPort.businessProjects.apply(result.pandaProjectCatalog);
+      else if (projectId) projectsPort.businessProjects.pendingAssignments.set(thread.id, projectId);
       pending.owner = thread.id;
       deliveryPort.lockIfFree(thread.id, token);
       sessions.addSummary(thread);

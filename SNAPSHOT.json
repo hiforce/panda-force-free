@@ -11,8 +11,8 @@
     },
     {
       "path": ".env.example",
-      "bytes": 778,
-      "sha256": "f5fe2f8604255d4d1ad2606ce8023333a13dbf6bd2f62ce3de61f1b2892ea622",
+      "bytes": 1050,
+      "sha256": "de8dfb05af7f8849fa9d0398072afd89ff575d08404c06561c28cca73c1305df",
       "mode": "100644"
     },
     {
@@ -47,14 +47,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 3827,
-      "sha256": "de6a061cc1fa9da6eff23b7105c291fe91adaf201b53b46f890893ca2e8cdc57",
+      "bytes": 4255,
+      "sha256": "e6bdc9c231de91e16189ccd903a97f0559faa8c55caa65b6c6badd3892462f55",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 4159,
-      "sha256": "a27214fe42ff0b827b134f1e1d940f4c57bba94f0d391211dc8548f5e9127520",
+      "bytes": 4684,
+      "sha256": "82d5922a10aef692ecdc87854cf0e2e5992a9d798698c7634dbbf5f782891b0a",
       "mode": "100644"
     },
     {
@@ -77,8 +77,8 @@
     },
     {
       "path": "docker-compose.yml",
-      "bytes": 1474,
-      "sha256": "4f2371c7a5febdeaffe1a6d07f0f6fc6d69b1572d71b69dc5a120d040f1a4fc1",
+      "bytes": 1666,
+      "sha256": "de4e7eefab72086c8d67f31fe50faf37511b79be47fd135c63041599b75b3301",
       "mode": "100644"
     },
     {
@@ -90,7 +90,7 @@
     {
       "path": "package.json",
       "bytes": 4632,
-      "sha256": "8334b0da3e9865235380716cf323dff8075d94bfe7e3e86d0d2485d1820ea952",
+      "sha256": "01c99292040856241ec00f9aaae4ff0b396de163ca2ed8771da75b8905a3c6a4",
       "mode": "100644"
     },
     {
@@ -119,20 +119,20 @@
     },
     {
       "path": "panda-docs/docs/configuration.md",
-      "bytes": 3321,
-      "sha256": "689dbd806785312989650922036a0ad0f6746e9142a6ff1d27632cc232ca124f",
+      "bytes": 3616,
+      "sha256": "1448de32ec845d4b842b277c89e6e1dea284eae4955a56bc7517a4dbb20a4a10",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/installation.md",
       "bytes": 8577,
-      "sha256": "19f0a3ca1d9ecd3151ac505a536e970af238299bd52d5217912d61b37c6c7502",
+      "sha256": "8f2a59926c5ad31b3b514373d34a2529a09fe25fe50a1c37b12937321ab4109c",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/kubernetes.md",
       "bytes": 9474,
-      "sha256": "8043ef6595df4e5396312dd39921c28045136c384c1942faafb4801d6deffe0c",
+      "sha256": "cd215ab5ae8082c92e5c885ae708bf836effb2069b95b2ba1a92064d6a48afe1",
       "mode": "100644"
     },
     {
@@ -143,8 +143,8 @@
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 11901,
-      "sha256": "09bf991ffaf17af17f15851cd3cdfff2984b28f7a0579c95c6b3a5286e8e9067",
+      "bytes": 12781,
+      "sha256": "5f6051d98bfc9c0a8e7bdfb6670e5dfad5eedd7771927f3f5164eaf3cddb8ea1",
       "mode": "100644"
     },
     {
@@ -155,8 +155,8 @@
     },
     {
       "path": "panda-docs/docs/storage.md",
-      "bytes": 1566,
-      "sha256": "f2c78c270da1614600c5cee3e02b8545c730acf4c3ce1fdbe9e0560709f8ea49",
+      "bytes": 3624,
+      "sha256": "7c1ce1d79cc382f8fefe86cd7e9d7a6bec9b0557908e97b58c5d593dfb967722",
       "mode": "100644"
     },
     {
@@ -173,8 +173,8 @@
     },
     {
       "path": "panda-docs/docs/workspace.md",
-      "bytes": 6464,
-      "sha256": "302904b5fb4e18cb28bd8cd6ac81cc681d9757e0548561b59a258064167744d8",
+      "bytes": 6845,
+      "sha256": "c154265635e8864c706793e3ea0899bd74d455ac21a8f76bbea33ac54ce6c018",
       "mode": "100644"
     },
     {
@@ -209,14 +209,14 @@
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-isolated.yaml",
-      "bytes": 3603,
-      "sha256": "e9109bffee2a0302153f82f4133d960942f0401cbb70b0ff81f8b3167de110bc",
+      "bytes": 3848,
+      "sha256": "335b3b9ad560d4ae3221dab16a6bae6df57d9f8cfbc39a2f65e9b1d0020ad6b5",
       "mode": "100644"
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-shared.yaml",
-      "bytes": 4354,
-      "sha256": "13d9e9475e5de903539c476149ceb33c08026981637fcc27ea506047d670d6a4",
+      "bytes": 4595,
+      "sha256": "1d71d1e0b0b3d7990c3c51e04a9d9aa9fc076a7c8dcef98a4cdd30e11be351b6",
       "mode": "100644"
     },
     {
@@ -329,8 +329,8 @@
     },
     {
       "path": "release/community/.env.example",
-      "bytes": 778,
-      "sha256": "f5fe2f8604255d4d1ad2606ce8023333a13dbf6bd2f62ce3de61f1b2892ea622",
+      "bytes": 1050,
+      "sha256": "de8dfb05af7f8849fa9d0398072afd89ff575d08404c06561c28cca73c1305df",
       "mode": "100644"
     },
     {
@@ -353,14 +353,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 3827,
-      "sha256": "de6a061cc1fa9da6eff23b7105c291fe91adaf201b53b46f890893ca2e8cdc57",
+      "bytes": 4255,
+      "sha256": "e6bdc9c231de91e16189ccd903a97f0559faa8c55caa65b6c6badd3892462f55",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 4159,
-      "sha256": "a27214fe42ff0b827b134f1e1d940f4c57bba94f0d391211dc8548f5e9127520",
+      "bytes": 4684,
+      "sha256": "82d5922a10aef692ecdc87854cf0e2e5992a9d798698c7634dbbf5f782891b0a",
       "mode": "100644"
     },
     {
@@ -377,14 +377,14 @@
     },
     {
       "path": "release/community/docker-compose.yml",
-      "bytes": 1474,
-      "sha256": "4f2371c7a5febdeaffe1a6d07f0f6fc6d69b1572d71b69dc5a120d040f1a4fc1",
+      "bytes": 1666,
+      "sha256": "de4e7eefab72086c8d67f31fe50faf37511b79be47fd135c63041599b75b3301",
       "mode": "100644"
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 23954,
-      "sha256": "abe5f40c3d917e00d789a6313a89a7e03c43aae8e709a3ef8b44bc1b94e0e2e5",
+      "bytes": 24250,
+      "sha256": "e831585ef37604e519ad845a91773c4b97853ac31b4e70081a814da1e29fd0a2",
       "mode": "100644"
     },
     {
@@ -563,8 +563,8 @@
     },
     {
       "path": "src/client/application/application-projections.js",
-      "bytes": 3070,
-      "sha256": "01151eae4a90982f3af57ae06227c841039bc97c51ac6db564c7dedd65286c8a",
+      "bytes": 3144,
+      "sha256": "234cdd2c6e84f6fdd10fd50c1f9187396f024fbd12a8613ba5843d505408126e",
       "mode": "100644"
     },
     {
@@ -683,8 +683,8 @@
     },
     {
       "path": "src/client/application/input-sessions.js",
-      "bytes": 2619,
-      "sha256": "125d76cdad94b3654035310a0acc018e691111c7260fd4d43f0840d469be3f12",
+      "bytes": 2910,
+      "sha256": "f5c9873c3576f91530b560d645091b7340972cf0b78a3fc33f3dcf00de186a82",
       "mode": "100644"
     },
     {
@@ -708,7 +708,7 @@
     {
       "path": "src/client/application/navigation.js",
       "bytes": 11068,
-      "sha256": "97451b4cf726d5548432159ed17d9c3de0d7aafa950ff1245035db935499f92b",
+      "sha256": "6c586c64cd5ad006870e19938dd0399c9e29766c02b2eb194f0da9afffc9e72e",
       "mode": "100644"
     },
     {
@@ -797,8 +797,8 @@
     },
     {
       "path": "src/client/application/state-contracts.json",
-      "bytes": 9960,
-      "sha256": "253ea354a4f4d321f70a6e6a0a21ea386afabfcbd9cfabd3a9b098da92f2000a",
+      "bytes": 9991,
+      "sha256": "b719d28d91ca9ef498145c972849ff5ada9e503315a28934b12d6d33418dd622",
       "mode": "100644"
     },
     {
@@ -815,8 +815,8 @@
     },
     {
       "path": "src/client/application/submission.js",
-      "bytes": 10251,
-      "sha256": "c6530d71f2fd0b54841e5d5262e6085557307cf75de74b49dd95a063c2f4fb48",
+      "bytes": 10339,
+      "sha256": "3910c57730dbfc0ef08d1f05387dbc4d1a26fe55f206bacf4f8531ed40ae6ed2",
       "mode": "100644"
     },
     {
@@ -875,14 +875,14 @@
     },
     {
       "path": "src/client/application/workspace-services.js",
-      "bytes": 7325,
-      "sha256": "21b25acf53c921ced51dba64069c1dabe2f22c4e0e230a41b83cdff0280057b6",
+      "bytes": 7374,
+      "sha256": "f43b441d9ee1458ccd9391f4bbea5463a1c0a0f43a4464177e38b48cd6b82f3c",
       "mode": "100644"
     },
     {
       "path": "src/client/application/workspace.js",
-      "bytes": 10799,
-      "sha256": "390051a09037aabc78066a81794779f8e6cd24c4d639bed067955147d280d166",
+      "bytes": 11884,
+      "sha256": "81ae277de54557162ccc74b7fd1c0be41485ca63c20d19795c3bc9aaf68ab7c5",
       "mode": "100644"
     },
     {
@@ -899,8 +899,8 @@
     },
     {
       "path": "src/client/auth-bootstrap.js",
-      "bytes": 9721,
-      "sha256": "c8cc568d2aa0cc13be72c5efd33c056bba8e5dec1aaa9a0cd86d9c95de53c293",
+      "bytes": 9874,
+      "sha256": "7722ab58893e120f4db7f3848f6cddf8326b46925b495070efb8bdcb9b710381",
       "mode": "100644"
     },
     {
@@ -959,8 +959,8 @@
     },
     {
       "path": "src/client/contracts/features.ts",
-      "bytes": 23183,
-      "sha256": "663ec87db016874d536f57f37654111cbff35e5d0716cdf140011d5333286098",
+      "bytes": 23380,
+      "sha256": "2179bc44e3219b1c623e0ed7417946a0eeff62dc072007a3fb2c955a9996277c",
       "mode": "100644"
     },
     {
@@ -989,8 +989,8 @@
     },
     {
       "path": "src/client/contracts/rpc.ts",
-      "bytes": 1756,
-      "sha256": "f3dbc41808b70ac95c35c5bec3cd75d5260600a02a6dc18deb4ad9fdf02d7ead",
+      "bytes": 1839,
+      "sha256": "0cd8221594dd624aa14dcadb38d1f63605d34d64c68ec55a472ee7a0c53aa7b5",
       "mode": "100644"
     },
     {
@@ -1001,8 +1001,8 @@
     },
     {
       "path": "src/client/contracts/state-grants.d.ts",
-      "bytes": 7589,
-      "sha256": "2fcc26d35767b3c31450d1e44e06cad7ceecef2c75f789812d83eeb1ecb9dab8",
+      "bytes": 7613,
+      "sha256": "9d29bd49419d2ce1ac84e022e84fc4474e49aae8d615c6f07ea1c2c6d82f740d",
       "mode": "100644"
     },
     {
@@ -1211,14 +1211,14 @@
     },
     {
       "path": "src/client/project-catalog.js",
-      "bytes": 3973,
-      "sha256": "cc3143e87fc644f0e8927c4991f4b00b67b13d555db643c765c8102356f244aa",
+      "bytes": 4390,
+      "sha256": "4450b26f5e4378b344c88bcc8be81d03b5f9301b263e2c7538b395110eda6f3c",
       "mode": "100644"
     },
     {
       "path": "src/client/project-dialogs.js",
-      "bytes": 12979,
-      "sha256": "d8c5c2c114c30e766569c491605397c3563bab36b8140441df9963b0c0cf4fb7",
+      "bytes": 13091,
+      "sha256": "63d333fe2f9144296e61c3ac0e190a860d28ab1d725eee0c459a91f8ddd23a54",
       "mode": "100644"
     },
     {
@@ -1433,8 +1433,8 @@
     },
     {
       "path": "src/client/workbench-views.js",
-      "bytes": 14541,
-      "sha256": "dc0143cab024f91e76664e396431bd7f6a64b512f9bfc5e0c9619e801b934cf3",
+      "bytes": 15002,
+      "sha256": "9036683298c01964f158e5dc6e20443bd90863e109decda7b6fe65389b22da79",
       "mode": "100644"
     },
     {
@@ -1541,14 +1541,14 @@
     },
     {
       "path": "src/server/bridge/browser-dispatch.ts",
-      "bytes": 5004,
-      "sha256": "6c5afc1caaa638c1bb8977ebdb815f11e1a5789cee2ef022f23f6391a4293bf8",
+      "bytes": 5138,
+      "sha256": "157ea547f65ccc05e0422f5d743f10bdb7597669a10b05f6d6872d480c5138c7",
       "mode": "100644"
     },
     {
       "path": "src/server/bridge/browser-engine.ts",
-      "bytes": 7663,
-      "sha256": "bc6eee2516ecdde36264a76e2ac6172f27a73f32d0de53fedac64a2bfbbb98f3",
+      "bytes": 9544,
+      "sha256": "e4f31ab148d9ffae5def6105b89ba63f7bf0430aed20d1b9f39f1ac8f46f681f",
       "mode": "100644"
     },
     {
@@ -1637,8 +1637,8 @@
     },
     {
       "path": "src/server/config.ts",
-      "bytes": 3816,
-      "sha256": "390491f08f6b80629e9845c974fdcfa41e8550f2650ce59a16b05c95015e0dfc",
+      "bytes": 4747,
+      "sha256": "06f3e31b47792d5d4e0780870825eb4cb19c078f7d54eafd7e7070efd1683c6d",
       "mode": "100644"
     },
     {
@@ -1649,8 +1649,8 @@
     },
     {
       "path": "src/server/conversation/composer-history.js",
-      "bytes": 1361,
-      "sha256": "fc0b6ee43a39032f67201ead0fbaa45c831bfc342a8860fc714989d9b07aa4ca",
+      "bytes": 1845,
+      "sha256": "f0a5a318d5fec87c312a0366e4a5dc983ff8138020b7221939188fcf60240e4b",
       "mode": "100644"
     },
     {
@@ -1739,8 +1739,8 @@
     },
     {
       "path": "src/server/engines/installed.ts",
-      "bytes": 2853,
-      "sha256": "67b0d1245cac857dba187e84bf3455c298eda6be04ad7025a6b61a401aa9e691",
+      "bytes": 2886,
+      "sha256": "e2530bae9c8471aeb44923362289e0509fcfd9b118953aac5ef1937c53e52922",
       "mode": "100644"
     },
     {
@@ -1757,8 +1757,8 @@
     },
     {
       "path": "src/server/engines/runtime-contract.ts",
-      "bytes": 1892,
-      "sha256": "fa813af2e84e644ebb274dd196f4e63a003c07857828947621a6c05bb00055e6",
+      "bytes": 1962,
+      "sha256": "e0cf1f0930e8e7c2781cf94de1e0359ce48f43ef312fc45d815bc007cea1167f",
       "mode": "100644"
     },
     {
@@ -1793,14 +1793,14 @@
     },
     {
       "path": "src/server/http/bridge-routes.ts",
-      "bytes": 7359,
-      "sha256": "65a21fd4489130908253678792f97bbcee3914d75c571b5a7d77493736b4f5a7",
+      "bytes": 7824,
+      "sha256": "2a9f97322e9f2169dfaad0a40f879300c2e1161ac9235a6c51dcfc49f5d0db34",
       "mode": "100644"
     },
     {
       "path": "src/server/http/project-routes.js",
-      "bytes": 4995,
-      "sha256": "565aa1e472822eae8131d295e2830b064ffb65a31d68c5ef028ef630941cc08f",
+      "bytes": 6517,
+      "sha256": "8f0e3fee19be8d3d48e064ec04774862e2eabcff912181eb76b88a15448f8105",
       "mode": "100644"
     },
     {
@@ -1829,8 +1829,8 @@
     },
     {
       "path": "src/server/http/workspace-routes.ts",
-      "bytes": 7923,
-      "sha256": "671da6a6c2d2dcbfdc3f6dd274d76d3d17bbf3957e7a2dec70329e0439099c05",
+      "bytes": 8575,
+      "sha256": "0cf8ed04b675f5512425f995249acb5c57caa39a3d5bc064435671bf8c2973f2",
       "mode": "100644"
     },
     {
@@ -1871,8 +1871,8 @@
     },
     {
       "path": "src/server/main.ts",
-      "bytes": 17031,
-      "sha256": "b515b58155ccc4a8d58ed30b6aaa3a86298441b0601512e18de8f6b0e524448c",
+      "bytes": 17950,
+      "sha256": "27ee9b4eed3e124791bd02444d0e70de64d0545ee0a1ffb1ff2d60ec19a6ca40",
       "mode": "100644"
     },
     {
@@ -1907,14 +1907,38 @@
     },
     {
       "path": "src/server/projects/catalog.js",
-      "bytes": 7591,
-      "sha256": "b35f6dd65b6851b9a1632d264c0f972a07c6d7e8308807e9a3fe770f6cccba7a",
+      "bytes": 8401,
+      "sha256": "5c4d690cda5358ef82ffed8b903fda3d754c4f249e56b69ab8264f319580e387",
+      "mode": "100644"
+    },
+    {
+      "path": "src/server/projects/directory-policy.ts",
+      "bytes": 5947,
+      "sha256": "28efd74a16ece7f51e8b4ce54531a7cc0fdce1b332cbb0bdb28495958c00abdb",
       "mode": "100644"
     },
     {
       "path": "src/server/projects/publish.js",
       "bytes": 425,
       "sha256": "e19e9fc61632209cd7067ae6fd18a4817b7070f73fe790e0ea0ae26c4bd7536d",
+      "mode": "100644"
+    },
+    {
+      "path": "src/server/projects/workspaces/directory.ts",
+      "bytes": 3809,
+      "sha256": "a844430c7f6e709ec3c5e707d3d7e89961899f8b7a204df0ba10d7e692f53930",
+      "mode": "100644"
+    },
+    {
+      "path": "src/server/projects/workspaces/repository.ts",
+      "bytes": 3240,
+      "sha256": "9c9c3da89edccfe0f2b4f2682b54c970a5e735bbe7d3156d5e54861c0f8d86ee",
+      "mode": "100644"
+    },
+    {
+      "path": "src/server/projects/workspaces/service.ts",
+      "bytes": 4388,
+      "sha256": "88f31f3e16aee28fac1366258db6e77e26ccec3d690dee911d35e3953b957414",
       "mode": "100644"
     },
     {
@@ -1949,8 +1973,8 @@
     },
     {
       "path": "src/server/services.ts",
-      "bytes": 1994,
-      "sha256": "350e80d057690519611b60e01adc72471220173e87f433b9044df04b998816f3",
+      "bytes": 2167,
+      "sha256": "870a0a581f108e5fe02773720caba610471fea0699ac4a9be7b6cc58de1b9d24",
       "mode": "100644"
     },
     {
@@ -2051,8 +2075,8 @@
     },
     {
       "path": "src/server/workspace/search.js",
-      "bytes": 2594,
-      "sha256": "4dda94d89df8fe647f97bbcc276552a40f800dad635a00603c9f16f778f1e987",
+      "bytes": 2484,
+      "sha256": "10bb18b35c23e0648b047de4d2d0b4fca545d2fade7cfbbbf5cb3040f0f27e54",
       "mode": "100644"
     },
     {
@@ -2087,8 +2111,8 @@
     },
     {
       "path": "src/shared/browser-rpc-compat.js",
-      "bytes": 485,
-      "sha256": "7a9844ad848995900c73674a7c08a9c59f2fd8d3a70523e1def7c434dc2e2dd4",
+      "bytes": 572,
+      "sha256": "0244d4d141c08f3de62f61bba819d2f88806ea66acdd243219738cd19420afb6",
       "mode": "100644"
     },
     {
@@ -2099,8 +2123,8 @@
     },
     {
       "path": "src/shared/data-contracts.ts",
-      "bytes": 2973,
-      "sha256": "50797cb848e8a0d3bed9e8dded735b2036ae157d6933b5818340c003df6776b9",
+      "bytes": 3035,
+      "sha256": "9ee6445f215414d1a5a70a9c374a23facc54fec369dd2e149dd4f73364d48b6e",
       "mode": "100644"
     },
     {
@@ -2243,8 +2267,8 @@
     },
     {
       "path": "src/shared/i18n/locales/en/projects.json",
-      "bytes": 1867,
-      "sha256": "9efede793d306875d9bcc5678fae42333e2961bfd52e78c5067852d98eb5869a",
+      "bytes": 3239,
+      "sha256": "5f916744d45bdd431fe292375b5b1603aa32ea98e7f91e6a9111fd5bdcb1f7b4",
       "mode": "100644"
     },
     {
@@ -2327,8 +2351,8 @@
     },
     {
       "path": "src/shared/i18n/locales/zh-CN/projects.json",
-      "bytes": 1784,
-      "sha256": "7d740b8a6bb5f8183db3c609b203511d4fd32382ad9b5edc82e9ddaee0a408be",
+      "bytes": 2969,
+      "sha256": "7237fd0712485c236b8f6bbb1dae5a9d8b12636521691a1156fa075706af9d8f",
       "mode": "100644"
     },
     {
@@ -2381,8 +2405,8 @@
     },
     {
       "path": "src/shared/i18n/messages.d.ts",
-      "bytes": 39200,
-      "sha256": "df6e45e8894fc9cdbb6c1bea2aba2181162dc4ad5208ae023ccb5e295810b80f",
+      "bytes": 39672,
+      "sha256": "fe907de9782bf92d7d6bb8d0f7f2e366a91b1a92501fd1c875445210b3bb3935",
       "mode": "100644"
     },
     {
@@ -2675,8 +2699,8 @@
     },
     {
       "path": "tests/browser/panda-workbench.e2e.mjs",
-      "bytes": 20643,
-      "sha256": "d102517b17b6c5275e02d2f32612621750f195bd120ca57d1614f22bbf077e44",
+      "bytes": 21086,
+      "sha256": "59404cc614c6ab6f6e54544e946f2a6c5a58d91688165273ee47f650ade12d13",
       "mode": "100644"
     },
     {
@@ -2693,8 +2717,8 @@
     },
     {
       "path": "tests/browser/product-projects.e2e.mjs",
-      "bytes": 17022,
-      "sha256": "c6d7de9b0713bdfa6a80be4072016cab48cf9380a8ba9c54138d439f98090a4d",
+      "bytes": 19865,
+      "sha256": "c9d115779973fb2dfde886d0b8e1365f7e1a0e02ed407d18e718dbb012b983ff",
       "mode": "100644"
     },
     {
@@ -2944,6 +2968,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/integration/project-workspaces.integration.test.ts",
+      "bytes": 6915,
+      "sha256": "dc5c65d0aacac528ff00de10b67cd3047cd8482cb62dc4c88ed67ebc97cc06bd",
+      "mode": "100644"
+    },
+    {
       "path": "tests/integration/service-logging.integration.test.ts",
       "bytes": 5428,
       "sha256": "99790ec72df4eb83ea0238b3f2a76b967e158cc5ebcec128720b52b890db221d",
@@ -3023,8 +3053,8 @@
     },
     {
       "path": "tests/support/app-fixture.mjs",
-      "bytes": 15174,
-      "sha256": "ba704f30c2bfede082d4c6b36b1edc4cd16205af66abe42f3b354fdb84d132db",
+      "bytes": 15249,
+      "sha256": "013a3d641399cac314372787ec2f0241cc49c3c68a2bd200a92f3c735af84ecb",
       "mode": "100644"
     },
     {
@@ -3113,8 +3143,8 @@
     },
     {
       "path": "tests/unit/approval-dispatch.test.ts",
-      "bytes": 2234,
-      "sha256": "cfc5b2c083096e17c96fcaa8447509dbeef05bfc36c929e9d910f226e25fb0a5",
+      "bytes": 3323,
+      "sha256": "52fc92de9ea54a55fbe9829d6bd8da69658d679b66601225ef4ec1deb96d8284",
       "mode": "100644"
     },
     {
@@ -3227,8 +3257,8 @@
     },
     {
       "path": "tests/unit/composer-history-service.test.ts",
-      "bytes": 1018,
-      "sha256": "2eeab689de31660d688c0fd13b3e823aaaee20f257b41291dd2fc9f81dc601ab",
+      "bytes": 2008,
+      "sha256": "443ca7e386da818607a6eaf7ccc79076db7fad4b296032d825d70d8fc2eb849f",
       "mode": "100644"
     },
     {
@@ -3275,8 +3305,8 @@
     },
     {
       "path": "tests/unit/file-search.test.ts",
-      "bytes": 2160,
-      "sha256": "71d8bdcb4b0a422726418e9fc217786cc612b0dcb5dc8982b8a6d7ceeeea9f62",
+      "bytes": 2695,
+      "sha256": "233f5b3feacde32b7eba12eded6a9958539e7719b14e0b643c1f4a6c96712caa",
       "mode": "100644"
     },
     {
@@ -3427,6 +3457,12 @@
       "path": "tests/unit/project-visibility-service.test.ts",
       "bytes": 3334,
       "sha256": "736ad953e64e6d7614e1cedeb0796b0bc17dd5c46bf27fbd36dd24fbc182cc0d",
+      "mode": "100644"
+    },
+    {
+      "path": "tests/unit/project-workspaces.test.ts",
+      "bytes": 7530,
+      "sha256": "ba6a75f6b60272cd6a94b7f65183844d416cf7cee7210161e5a99a279b703544",
       "mode": "100644"
     },
     {
@@ -3640,5 +3676,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "477ea6a7d057e0bf3433449f225cb191fa13168a205d45ae135f66f8902649b0"
+  "contentSha256": "656b17148021c69fcf913dfd7fcd6a57d4fbd3f3805ddfa7e4fd24ddab2a7fd3"
 }

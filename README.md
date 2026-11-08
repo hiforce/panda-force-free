@@ -4,6 +4,7 @@ A workspace for natural-language work, powered by Codex today, with other CLI en
 
 Built on [Codex WebUI](https://github.com/lezi-fun/codex-webui) by [lezi-fun](https://github.com/lezi-fun). Thank you to the upstream author and contributors.
 
+- Give each new project a real workspace folder named by its project code.
 - Organize conversations into projects and attach files or images.
 - Review approvals, answer questions and follow task progress.
 - Keep session usage, settings and tools together in a responsive side panel.
@@ -37,7 +38,11 @@ docker compose restart panda-force
 
 Follow the sign-in link shown in the terminal, then refresh PandaForce and start a conversation. Your PandaForce administrator is separate from your model account; provider access and charges follow your provider's terms.
 
-The default image is **`hiforceai/panda-force:0.0.14`**. State, model credentials, attachments and workspace files persist in Docker volumes across container restarts. `docker compose down` keeps these volumes. The default port is accessible only from the local machine.
+The default image is **`hiforceai/panda-force:0.0.15`**. State, model credentials, attachments and workspace files persist in Docker volumes across container restarts. `docker compose down` keeps these volumes. The default port is accessible only from the local machine.
+
+## Project folders
+
+New conversations inside a project use its workspace folder. Historical conversations keep their original folders when linked to a project. `PANDA_FORCE_PROJECTS_ROOT` chooses the persistent project root. `PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES` defaults to `true`; set it to `false` to limit web directory and session browsing to that root. See [storage and configuration](./panda-docs/docs/storage.md) for mounts and examples.
 
 ## Already use Codex on the host?
 

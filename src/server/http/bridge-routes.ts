@@ -22,6 +22,8 @@ export function bridgeRoutes({
   appServerConnection,
   projectVisibility,
   projectCatalog,
+  projectWorkspaces,
+  directoryPolicy,
   sseClients,
   pendingEngineRequests,
   threadHub,
@@ -44,6 +46,8 @@ export function bridgeRoutes({
   | "appServerConnection"
   | "projectVisibility"
   | "projectCatalog"
+  | "projectWorkspaces"
+  | "directoryPolicy"
   | "sseClients"
   | "pendingEngineRequests"
   | "threadHub"
@@ -64,6 +68,8 @@ export function bridgeRoutes({
     },
     ...projectRoutes({
       catalog: projectCatalog,
+      workspaces: projectWorkspaces,
+      directoryPolicy,
       request,
       getSession: (id: string) => threadHub.getThreadMetadata(id),
       recordSessions: (result: unknown) => threadHub.recordThreadPathsFromRpc(result),
@@ -108,7 +114,9 @@ export function bridgeRoutes({
           );
         else sseClients.add(res);
         if (res.destroyed) return;
-        res.write(`data: ${JSON.stringify({ type: "projects/visibility", ...projectVisibility.snapshot() })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({ type: "projects/visibility", ...directoryPolicy.visibility(projectVisibility.snapshot()) })}\n\n`,
+        );
         res.write(
           `data: ${JSON.stringify({ type: "bridge/status", status: engineDriver.connected ? "connected" : "connecting" })}\n\n`,
         );
@@ -172,10 +180,11 @@ export function bridgeRoutes({
           if (req.method === "POST") {
             const { project, hidden, expectedHiddenAt } = await readJsonBody(req);
             if (typeof hidden !== "boolean") throw new Error("Invalid project visibility");
+            if (!directoryPolicy.allowsPath(project)) throw new Error("Directory is outside the project root");
             if (projectVisibility.setHidden(project, hidden, expectedHiddenAt))
               broadcast({ type: "projects/visibility", ...projectVisibility.snapshot() });
           }
-          respondJson(res, 200, projectVisibility.snapshot());
+          respondJson(res, 200, directoryPolicy.visibility(projectVisibility.snapshot()));
         } catch (error) {
           respondError(res, 400, error);
         }
@@ -201,6 +210,8 @@ export function bridgeRoutes({
           defaultCwd,
           reviewRoot: reviewRoots[0],
           browseRoots,
+          allowExternalDirectories: config.allowExternalDirectories,
+          projectWorkspaceRoot: config.projectWorkspaceRoot,
           projectless,
           attachmentStorage: attachmentStorage ? "oss" : "local",
           attachmentUrlPrefix: attachmentStorage?.urlPrefix || null,

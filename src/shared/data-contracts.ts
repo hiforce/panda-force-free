@@ -36,6 +36,7 @@ export interface ProductProject {
   name: string;
   code: string;
   description?: string;
+  workspace?: { path: string; state: "preparing" | "ready" };
 }
 
 export interface NativeTurn {

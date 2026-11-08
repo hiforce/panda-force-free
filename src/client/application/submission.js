@@ -83,9 +83,9 @@ export function assembleSubmission({
       model = state.selectedModel,
       productProjectId = state.newSessionProjectId,
       effort = $("#effortSelect").value;
-    const cwd = thread?.cwd || $("#projectPath").textContent.replace(/^~/, state.config.home);
-    const threadPolicy = modelsPort.permissionThreadPolicy(),
-      turnPolicy = modelsPort.permissionTurnPolicy(cwd);
+    let cwd = thread?.cwd || $("#projectPath").textContent.replace(/^~/, state.config.home);
+    const threadPolicy = modelsPort.permissionThreadPolicy();
+    let turnPolicy = modelsPort.permissionTurnPolicy(cwd);
     let optimisticId = null,
       sent = false,
       dispatchStarted = false,
@@ -172,6 +172,8 @@ export function assembleSubmission({
         },
       });
       dispatchStarted = true;
+      cwd = thread.cwd || cwd;
+      turnPolicy = modelsPort.permissionTurnPolicy(cwd);
       const result = await transportPort.rpc("turn/start", {
         threadId: thread.id,
         ...(thread.canAcceptDirectInput !== true ? { pandaPrepareInput: true } : {}),

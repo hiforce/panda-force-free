@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { errorPayload } from "../i18n/error-payload.js";
+import { migrateProjectWorkspaces, workspaceSummaries, workspaceSummary } from "./workspaces/repository.js";
 
 export class ProjectError extends Error {
   constructor(status, messageId) {
@@ -53,6 +54,7 @@ export class ProjectCatalog {
       );
       CREATE INDEX IF NOT EXISTS session_projects_by_project ON session_projects(project_id);
     `);
+    migrateProjectWorkspaces(this.db);
   }
   revision() {
     return this.db.query("SELECT revision FROM catalog_meta WHERE id=1").get().revision;
@@ -64,22 +66,34 @@ export class ProjectCatalog {
       )
       .get(id);
     if (!result) throw new ProjectError(404, "projects.errorProjectNotFound");
-    return result;
+    const workspace = workspaceSummary(this.db, id);
+    return workspace ? { ...result, workspace } : result;
   }
   snapshot() {
-    return this.db.transaction(() => ({
-      revision: this.revision(),
-      projects: this.db
-        .query(
-          "SELECT id, code, name, description, created_at AS createdAt, updated_at AS updatedAt FROM projects ORDER BY created_at, id",
-        )
-        .all(),
-      assignments: this.db
-        .query(
-          "SELECT session_id AS id, project_id AS projectId, name, cwd, updated_at AS updatedAt FROM session_projects",
-        )
-        .all(),
-    }))();
+    return this.db.transaction(() => {
+      const workspaces = workspaceSummaries(this.db);
+      return {
+        revision: this.revision(),
+        projects: this.db
+          .query(
+            "SELECT id, code, name, description, created_at AS createdAt, updated_at AS updatedAt FROM projects ORDER BY created_at, id",
+          )
+          .all()
+          .map((project) => {
+            const workspace = workspaces.get(project.id);
+            return workspace ? { ...project, workspace } : project;
+          }),
+        assignments: this.db
+          .query(
+            "SELECT session_id AS id, project_id AS projectId, name, cwd, updated_at AS updatedAt FROM session_projects",
+          )
+          .all(),
+      };
+    })();
+  }
+  /** @template T @param {() => T} work @returns {T} */
+  atomic(work) {
+    return this.db.transaction(work).immediate();
   }
   mutate(revision, callback) {
     return this.db
@@ -99,7 +113,11 @@ export class ProjectCatalog {
     const fields = projectFields(input);
     const id = input.id || randomUUID();
     return this.mutate(revision, () => {
-      if (input.id) this.project(input.id);
+      if (input.id) {
+        const current = this.project(input.id);
+        if (current.workspace && current.code !== fields.code)
+          throw new ProjectError(409, "projects.errorWorkspaceCodeImmutable");
+      }
       const duplicate = this.db
         .query("SELECT id FROM projects WHERE code=? COLLATE NOCASE AND id<>?")
         .get(fields.code, id);

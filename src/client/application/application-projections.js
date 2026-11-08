@@ -71,7 +71,10 @@ export function assembleApplicationProjections({
       sessionOpened: (id) => workbenchPort.workbench?.threadOpened(id),
       newTask: () => workbenchPort.workbench?.taskStarted(),
       composerPlaceholder: () => workspacePort.refreshComposerPlaceholder(),
-      workspaceContext: () => workspacePort.syncProjectControl(),
+      workspaceContext: () => {
+        workspacePort.applySelectedProjectWorkspace();
+        workspacePort.syncProjectControl();
+      },
       accountMenu: (force) => accountPort.toggleAccountMenu(force),
       item: ({ item, turnId, root, live }) => messagesPort.upsertItem(item, turnId, root, live),
     });

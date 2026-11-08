@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.12`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.15`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -22,6 +22,14 @@ docker compose logs panda-force
 ```
 
 Review source, dependency licenses, English comments and the explicit public inventory before exporting. Verify the final clean tree, then review staged files. No internal Git history, old help, design records or agent directories belong in the public snapshot. Release changes go to the private repository for review first.
+
+## 0.0.15
+
+- New projects own persistent folders named by their code. New project sessions use the server-bound folder; linking historical sessions preserves their original directories.
+- Configure `PANDA_FORCE_PROJECTS_ROOT` for Docker, Compose or Kubernetes. Shared host engines need the same absolute persistent path in both environments.
+- `PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES` defaults to `true`. Setting `false` limits web directory and session browsing, filters external history and notifications, and isolates browser caches. This visibility setting is separate from engine permissions.
+- Project creation is retryable without creating duplicates. Existing unknown folders and symbolic links are preserved; bound project codes remain fixed while names and descriptions stay editable.
+- File mention search remains available before the first project folder is created.
 
 ## 0.0.3
 

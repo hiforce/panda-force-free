@@ -6,6 +6,7 @@ import { threadFromResult } from "../protocol/native.js";
 import type { RuntimeServices } from "./../services.js";
 import { createBrowserDispatch } from "./browser-dispatch.js";
 import { prepareSharedInput, submitPreparedInput } from "./shared-input.js";
+import { ProjectError } from "../projects/catalog.js";
 
 /** Composes browser RPC handlers without owning the native connection or its storage. */
 export function createBrowserEngine({
@@ -16,12 +17,14 @@ export function createBrowserEngine({
   appServerConnection,
   projectVisibility,
   projectCatalog,
+  projectWorkspaces,
+  directoryPolicy,
   goalStore,
   pendingEngineRequests,
   autoContinueRecovery,
   recoverMessageQueue,
   threadHub,
-  request,
+  request: nativeRequest,
   broadcast,
 }: Pick<
   RuntimeServices,
@@ -32,6 +35,8 @@ export function createBrowserEngine({
   | "appServerConnection"
   | "projectVisibility"
   | "projectCatalog"
+  | "projectWorkspaces"
+  | "directoryPolicy"
   | "goalStore"
   | "pendingEngineRequests"
   | "autoContinueRecovery"
@@ -40,12 +45,27 @@ export function createBrowserEngine({
   | "request"
   | "broadcast"
 >) {
+  const request: RuntimeServices["request"] = async (method, params) =>
+    directoryPolicy.list(method, await nativeRequest(method, params), (id) => threadHub.getThreadMetadata(id));
   const browserDispatch = createBrowserDispatch({
     isAllowedMethod: isAllowedBrowserRpcMethod,
     request,
     pendingServerRequests: pendingEngineRequests,
     sendRaw,
     broadcast,
+  });
+  browserDispatch.before(({ method, params, flags }) =>
+    directoryPolicy.allowExternal
+      ? undefined
+      : directoryPolicy.assertRequest(method, params, flags, (id) => threadHub.getThreadMetadata(id)),
+  );
+  browserDispatch.resolve("thread/start", async ({ params, flags }) => {
+    if (flags.pandaProjectId === undefined) return undefined;
+    if (typeof flags.pandaProjectId !== "string" || !flags.pandaProjectId)
+      throw new ProjectError(400, "projects.errorInvalidProjectDetails");
+    const workspace = await projectWorkspaces.ensure(flags.pandaProjectId);
+    params.cwd = workspace.path;
+    return request("thread/start", params);
   });
   browserDispatch.before(({ method, params }) => {
     if (method === "thread/list" && appServerConnection.mode === "shared") params.useStateDbOnly = true;
@@ -108,7 +128,29 @@ export function createBrowserEngine({
   browserDispatch.after(({ method, params }) => {
     if (method === "thread/delete" && params.threadId) threadHub.invalidateHistory(params.threadId);
   });
-  browserDispatch.after(({ result }) => threadHub.recordThreadPathsFromRpc(result));
+  browserDispatch.after(({ result }) => {
+    const thread = threadFromResult(result);
+    if (thread) directoryPolicy.remember(thread);
+    threadHub.recordThreadPathsFromRpc(result);
+  });
+  browserDispatch.after(({ method, flags, result }) => {
+    if (method !== "thread/start" || typeof flags.pandaProjectId !== "string") return;
+    const thread = threadFromResult(result);
+    if (!thread) return;
+    // A native creation is already committed. Metadata failure must never look like a retryable creation failure.
+    publishCatalogUpdate(projectCatalog, broadcast, () => {
+      const snapshot = projectCatalog.assign(
+        flags.pandaProjectId as string,
+        [thread],
+        projectCatalog.snapshot().revision,
+      );
+      if (isRecord(result)) {
+        result.pandaProjectId = flags.pandaProjectId;
+        result.pandaProjectCatalog = directoryPolicy.snapshot(snapshot);
+      }
+      return snapshot;
+    });
+  });
   browserDispatch.after(({ method, params, result }) => {
     publishCatalogUpdate(projectCatalog, broadcast, () => {
       const snapshot =
@@ -157,7 +199,7 @@ export function createBrowserEngine({
         console.error("[panda-force] could not restore project visibility:", error);
       }
     }
-    replyExtras.projectVisibility = projectVisibility.snapshot();
+    replyExtras.projectVisibility = directoryPolicy.visibility(projectVisibility.snapshot());
   });
   browserDispatch.after(({ method, params }) => {
     if (["thread/resume", "thread/queue/add", "thread/queue/list"].includes(method))

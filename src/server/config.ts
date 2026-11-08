@@ -25,11 +25,23 @@ const configuredReviewRoot = env.PANDA_FORCE_REVIEW_ROOT || null;
 if (projectless && !configuredReviewRoot) {
   throw new Error("PANDA_FORCE_REVIEW_ROOT is required when PANDA_FORCE_PROJECTLESS=true");
 }
-const defaultCwd = resolve(env.PANDA_FORCE_CWD || env.PANDA_FORCE_DEFAULT_CWD || (projectless ? homeDir : appRoot));
-const browseRoots = defaultBrowseRoots(homeDir);
+const configuredDefaultCwd = resolve(
+  env.PANDA_FORCE_CWD || env.PANDA_FORCE_DEFAULT_CWD || (projectless ? homeDir : appRoot),
+);
 const legacyAttachmentRoot = existingApplicationPath(resolve(codexHome, "panda-force-uploads"));
 const attachmentRoot = resolve(env.PANDA_FORCE_ATTACHMENT_ROOT || legacyAttachmentRoot);
 const stateRoot = resolve(env.PANDA_FORCE_HOME || join(homeDir, ".panda-force"));
+const projectWorkspaceRoot = resolve(env.PANDA_FORCE_PROJECTS_ROOT || join(stateRoot, "projects"));
+if (
+  env.PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES !== undefined &&
+  !["true", "false"].includes(env.PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES)
+)
+  throw new Error("PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES must be true or false");
+const allowExternalDirectories = env.PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES !== "false";
+const defaultCwd = allowExternalDirectories ? configuredDefaultCwd : projectWorkspaceRoot;
+const browseRoots = allowExternalDirectories
+  ? [...new Set([...defaultBrowseRoots(homeDir), projectWorkspaceRoot])]
+  : [projectWorkspaceRoot];
 
 export const config = Object.freeze({
   version: packageInfo.version,
@@ -53,6 +65,9 @@ export const config = Object.freeze({
   browseRoots,
   attachmentRoot,
   stateRoot,
+  projectWorkspaceRoot,
+  projectWorkspaceRootConfigured: Boolean(env.PANDA_FORCE_PROJECTS_ROOT),
+  allowExternalDirectories,
   projectCatalogPath: resolve(stateRoot, "data", "projects.sqlite"),
   projectVisibilityPath: existingApplicationPath(resolve(codexHome, "panda-force-project-visibility.json")),
   defaultCodexSessionsRoot: resolve(codexHome, "sessions"),
@@ -61,15 +76,19 @@ export const config = Object.freeze({
       ...browseRoots,
       attachmentRoot,
       legacyAttachmentRoot,
-      resolve(codexHome, "generated_images"),
-      resolve(tmpdir()),
-      resolve("/tmp"),
+      ...(allowExternalDirectories ? [resolve(codexHome, "generated_images"), resolve(tmpdir()), resolve("/tmp")] : []),
     ]),
   ],
   fileRoots: [
-    ...new Set([...browseRoots, attachmentRoot, legacyAttachmentRoot, defaultCwd, resolve(tmpdir()), resolve("/tmp")]),
+    ...new Set([
+      ...browseRoots,
+      defaultCwd,
+      ...(allowExternalDirectories ? [attachmentRoot, legacyAttachmentRoot, resolve(tmpdir()), resolve("/tmp")] : []),
+    ]),
   ],
-  reviewRoots: [resolve(configuredReviewRoot || defaultCwd)],
+  reviewRoots: allowExternalDirectories
+    ? [...new Set([resolve(configuredReviewRoot || defaultCwd), projectWorkspaceRoot])]
+    : [projectWorkspaceRoot],
 });
 
 /** Startup guardrails that need to know how authentication was resolved. */

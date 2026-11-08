@@ -4,7 +4,9 @@ title: Work with projects and conversations
 
 Create a project with a name, unique code and optional description. Start a conversation inside it, or associate an existing conversation. Projects and native sessions are separate: moving a conversation does not move files or rewrite native history.
 
-Select a working folder before submitting a new conversation. Type an instruction, attach files or paste an image. Wait until attachments are ready. Limits are ten files per message and 25 MiB per file. Browser-provided filenames are preserved; clipboard images can have generic names.
+PandaForce 0.0.15 and later creates a real folder named after the project code under `PANDA_FORCE_PROJECTS_ROOT`. New conversations inside that project use its folder automatically. The code becomes fixed once bound to a folder; the display name and description remain editable. Linking a historical conversation keeps its original working folder and native history.
+
+For an unassigned conversation, select a working folder before submitting. Type an instruction, attach files or paste an image. Wait until attachments are ready. Limits are ten files per message and 25 MiB per file. Browser-provided filenames are preserved; clipboard images can have generic names.
 
 Read command/file approvals before responding. Requests also appear in the pending-request inbox. Failed responses remain available for retry. Questionnaires support multiple questions, per-question single choice, permitted custom text and masked private answers. Same-question multi-select is not implemented.
 

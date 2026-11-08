@@ -10,6 +10,7 @@ export function assembleProjects({ viewUpdates, state, mutations }) {
       queueMicrotask(() => {
         viewUpdates.request("sidebar");
         viewUpdates.request("workbench");
+        viewUpdates.request("workspaceContext");
       }),
     state,
   });

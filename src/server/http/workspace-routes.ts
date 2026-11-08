@@ -24,6 +24,7 @@ export function workspaceRoutes({
   imageRoots,
   fileRoots,
   threadHub,
+  directoryPolicy,
   encodeContentDispositionFilename,
 }: Pick<
   RuntimeServices,
@@ -36,6 +37,7 @@ export function workspaceRoutes({
   | "imageRoots"
   | "fileRoots"
   | "threadHub"
+  | "directoryPolicy"
   | "encodeContentDispositionFilename"
 >): Route[] {
   return [
@@ -44,7 +46,19 @@ export function workspaceRoutes({
       method: "GET",
       handler: async ({ res }) => {
         try {
-          const entries = await threadHub.readComposerHistory();
+          const entries = await threadHub.readComposerHistory(
+            directoryPolicy.allowExternal
+              ? undefined
+              : {
+                  includeSession: async (id) => {
+                    try {
+                      return directoryPolicy.remember(await threadHub.getThreadMetadata(id));
+                    } catch {
+                      return false;
+                    }
+                  },
+                },
+          );
           respondJson(res, 200, { entries });
         } catch (error) {
           reportDiagnostic("composer.history", error);
@@ -152,7 +166,8 @@ export function workspaceRoutes({
           const file = resolveLocalFile(url.searchParams.get("path"), {
             cwd: url.searchParams.get("cwd") || defaultCwd,
             home: homeDir,
-            allowedRoots: fileRoots,
+            // Uploaded files remain downloadable without exposing their directory in the browser.
+            allowedRoots: [...fileRoots, attachmentRoot],
           });
           res.writeHead(200, {
             "content-type": "application/octet-stream",
@@ -202,7 +217,11 @@ export function workspaceRoutes({
       path: "/api/folders",
       handler: ({ res, url }) => {
         try {
-          const path = resolveBrowsePath(url.searchParams.get("path") || "~", browseRoots, homeDir);
+          const path = resolveBrowsePath(
+            url.searchParams.get("path") || (directoryPolicy.allowExternal ? "~" : defaultCwd),
+            browseRoots,
+            homeDir,
+          );
           if (!isDirectory(path)) throw new Error("Directory not found");
           respondJson(res, 200, listFolders(path, browseRoots));
         } catch (error) {

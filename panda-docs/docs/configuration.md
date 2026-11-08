@@ -10,6 +10,8 @@ PandaForce settings use the `PANDA_FORCE_` prefix. Legacy environment settings r
 | `PANDA_FORCE_BIND_IP`, `PANDA_FORCE_PORT`                | Compose host binding; legacy aliases remain accepted.                 |
 | `PANDA_FORCE_HOME`                                       | Private application state root.                                       |
 | `PANDA_FORCE_CWD`                                        | Default working folder.                                               |
+| `PANDA_FORCE_PROJECTS_ROOT`                              | Persistent root for new project folders named by project code.        |
+| `PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES`                 | `true` by default. Set `false` to restrict web directory and session browsing to the project root. |
 | `PANDA_FORCE_REVIEW_ROOT`                                | Review boundary. Required in projectless mode.                        |
 | `PANDA_FORCE_APP_SERVER_MODE`                            | `auto`, `isolated` or `shared` native engine connection.              |
 | `PANDA_FORCE_APP_SERVER_SOCKET`                          | Explicit shared-engine socket.                                        |

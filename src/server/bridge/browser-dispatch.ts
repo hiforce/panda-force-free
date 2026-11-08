@@ -7,7 +7,7 @@ export type DispatchContext = {
   method: string;
   params: BrowserParams;
   /** PandaForce-only hints stripped from the native RPC params. */
-  flags: { pandaProjectless?: unknown; pandaPrepareInput?: unknown };
+  flags: { pandaProjectless?: unknown; pandaPrepareInput?: unknown; pandaProjectId?: unknown };
   result?: unknown;
   /** Extra top-level fields merged into the rpc/result reply. */
   replyExtras: Record<string, unknown>;
@@ -42,7 +42,7 @@ export function createBrowserDispatch({
 }) {
   const terminals = new Map<string, (ctx: DispatchContext) => unknown>();
   const resolvers = new Map<string, Array<(ctx: DispatchContext) => unknown>>();
-  const beforeHooks: Array<(ctx: DispatchContext) => void> = [];
+  const beforeHooks: Array<(ctx: DispatchContext) => void | Promise<void>> = [];
   const afterHooks: Array<(ctx: DispatchContext) => void | Promise<void>> = [];
 
   async function dispatch(input: unknown) {
@@ -59,7 +59,10 @@ export function createBrowserDispatch({
           flags,
           replyExtras: {},
         };
-        for (const hook of beforeHooks) hook(ctx);
+        for (const hook of beforeHooks) {
+          const pending = hook(ctx);
+          if (pending) await pending;
+        }
         const terminal = terminals.get(ctx.method);
         if (terminal) return { type: "rpc/result", id, result: await terminal(ctx) };
         let result;
@@ -109,7 +112,7 @@ export function createBrowserDispatch({
       list.push(fn);
       resolvers.set(method, list);
     },
-    before(hook: (ctx: DispatchContext) => void) {
+    before(hook: (ctx: DispatchContext) => void | Promise<void>) {
       beforeHooks.push(hook);
     },
     after(hook: (ctx: DispatchContext) => void | Promise<void>) {

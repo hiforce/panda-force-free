@@ -21,5 +21,16 @@
   "errorInvalidSessionSelection": "Invalid session selection",
   "errorCrossOriginRequestRejected": "Cross-origin request rejected",
   "errorSessionNotFoundRefreshTheSessionListAndTryAgain": "Session not found. Refresh the session list and try again.",
-  "errorInvalidSessionCursor": "Invalid session cursor"
+  "errorInvalidSessionCursor": "Invalid session cursor",
+  "workspaceCodeHelp": "A unique code creates your project folder. New sessions work there. Use 2–64 letters, numbers, hyphens or underscores.",
+  "workspaceCodeLocked": "This code is bound to the project folder and cannot be changed. You can rename the project.",
+  "workspacePath": "Project folder",
+  "workspacePreparing": "The project folder needs preparation. Starting a new session will retry.",
+  "workspaceLegacy": "Historical sessions keep their original folders. A project folder is prepared when you start a new session.",
+  "errorWorkspaceConflict": "The project folder already exists without matching PandaForce ownership, or its identity changed. Choose another code or ask the administrator to check it.",
+  "errorWorkspaceUnavailable": "The project folder could not be prepared. Check the mounted directory and permissions, then retry.",
+  "errorWorkspaceSharedRootRequired": "Configure PANDA_FORCE_PROJECTS_ROOT with a folder shared by PandaForce and the host engine before creating project workspaces.",
+  "errorWorkspaceRequestChanged": "This project creation request has already been used with different details. Reopen the form to create a different project.",
+  "errorWorkspaceCodeImmutable": "The project code is bound to its folder and cannot be changed.",
+  "errorDirectoryOutsideRoot": "This directory is outside the configured project root."
 }

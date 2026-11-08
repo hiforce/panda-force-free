@@ -38,6 +38,16 @@ describe("workspace file mention search", () => {
     );
   });
 
+  test("an uncreated projects root does not disable existing folder search or remove the configured boundary", async () => {
+    const root = await fixture(),
+      missing = join(root, "projects-not-created");
+    const matches = await searchWorkspaceFiles(root, "package", { allowedRoots: [root, missing] });
+    expect(matches.some((item) => item.path === "package.json")).toBe(true);
+    await expect(searchWorkspaceFiles(root, "package", { allowedRoots: [missing] })).rejects.toThrow(
+      "outside allowed roots",
+    );
+  });
+
   test("does not follow symlinks outside the workspace", async () => {
     const root = await fixture();
     const outside = await mkdtemp(join(tmpdir(), "panda-force-outside-"));

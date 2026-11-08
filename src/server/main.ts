@@ -40,6 +40,8 @@ import { serveStaticAsset } from "./http/static-assets.js";
 import { createAccountIdentityLoader, resolveAccountIdentity } from "./misc/profile.js";
 import { ProjectVisibilityStore } from "./misc/project-visibility.js";
 import { ProjectCatalog } from "./projects/catalog.js";
+import { ProjectWorkspaceService } from "./projects/workspaces/service.js";
+import { ProjectDirectoryPolicy } from "./projects/directory-policy.js";
 import { ReviewDiffStore } from "./review/state.js";
 import { createLocalImagePresenter } from "./workspace/image-presentation.js";
 import { createImageThumbnailCache } from "./workspace/image-thumbnails.js";
@@ -92,6 +94,13 @@ console.info(
 );
 const projectVisibility = new ProjectVisibilityStore(config.projectVisibilityPath, homeDir);
 const projectCatalog = new ProjectCatalog(config.projectCatalogPath);
+const projectWorkspaces = new ProjectWorkspaceService(
+  projectCatalog,
+  config.projectWorkspaceRoot,
+  appServerConnection.mode !== "shared" || config.projectWorkspaceRootConfigured,
+);
+if (!config.allowExternalDirectories) await projectWorkspaces.initialize();
+const directoryPolicy = new ProjectDirectoryPolicy(config.projectWorkspaceRoot, config.allowExternalDirectories);
 const browserWire = createBrowserWire();
 const clients = new Set<WebSocket>();
 const sseClients = new Set<ServerResponse>();
@@ -136,8 +145,9 @@ const handleEngineMessage = createEngineNotifications({
   broadcast,
 });
 engineDriver.subscribe((event) => {
-  if (event.kind === "notification" || event.kind === "approval") handleEngineMessage(event.envelope);
-  else if (event.kind === "connected") {
+  if (event.kind === "notification" || event.kind === "approval") {
+    if (directoryPolicy.envelope(event.envelope)) handleEngineMessage(event.envelope);
+  } else if (event.kind === "connected") {
     const info = event.info;
     broadcast({ type: "bridge/status", status: "connected", info, engine: engineDriver.descriptor });
   } else {
@@ -175,8 +185,10 @@ function maybeFinishShutdown() {
 }
 
 function broadcast(data: object) {
-  if (cluster) cluster.publish(data, deliver);
-  else deliver(data);
+  const visible = directoryPolicy.event(data);
+  if (!visible) return;
+  if (cluster) cluster.publish(visible, deliver);
+  else deliver(visible);
 }
 function deliver(data: object, event?: import("./cluster/contracts.js").JournalEvent) {
   for (const client of clients)
@@ -196,6 +208,8 @@ const localBrowserMessage = createBrowserEngine({
   appServerConnection,
   projectVisibility,
   projectCatalog,
+  projectWorkspaces,
+  directoryPolicy,
   goalStore,
   pendingEngineRequests,
   autoContinueRecovery,
@@ -263,6 +277,8 @@ const dispatchApiRoute = createRouter([
     appServerConnection,
     projectVisibility,
     projectCatalog,
+    projectWorkspaces,
+    directoryPolicy,
     sseClients,
     pendingEngineRequests,
     threadHub,
@@ -282,6 +298,7 @@ const dispatchApiRoute = createRouter([
     imageRoots,
     fileRoots,
     threadHub,
+    directoryPolicy,
     encodeContentDispositionFilename,
   }),
   ...accountRoutes({ reviewRoots, appServerConnection, reviewDiffs, threadHub, accountLoader, request }),
@@ -346,6 +363,8 @@ const server = createServer(
       "/assets/panda-mark.svg",
     ]);
     let idaasSession: { id: string; identity: unknown; expiresAt: number } | null = null;
+    if (url.pathname === "/api/auth/status" && directoryPolicy.browserScope)
+      res.setHeader("x-panda-directory-scope", directoryPolicy.browserScope);
     if (idaasAuth) {
       if (await idaasAuth.handle(req, res, url)) return;
       try {

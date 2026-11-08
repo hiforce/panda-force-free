@@ -35,11 +35,12 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
   async function edit(project = null) {
     if (!catalog.ready) await catalog.load();
     const revision = catalog.revision;
+    const operationId = crypto.randomUUID();
     open(
       project ? "common.editProject" : "common.createProject",
       `<form id="projectForm" class="project-form">
       <label for="projectNameInput">${messageHtml("projects.projectName", undefined, t)}</label><input id="projectNameInput" name="projectName" required maxlength="100" autocomplete="off" value="${escape(project?.name || "")}">
-      <label for="projectCodeInput">${messageHtml("projects.projectCode", undefined, t)}</label><input id="projectCodeInput" name="code" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" value="${escape(project?.code || "")}"><p class="wb-help">${messageHtml("projects.uniqueCode264CharactersLettersNumbersHyphensOrUnderscores", undefined, t)}</p>
+      <label for="projectCodeInput">${messageHtml("projects.projectCode", undefined, t)}</label><input id="projectCodeInput" name="code" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" ${project?.workspace ? "readonly" : ""} value="${escape(project?.code || "")}"><p class="wb-help">${messageHtml(project?.workspace ? "projects.workspaceCodeLocked" : "projects.workspaceCodeHelp", undefined, t)}</p>
       <label for="projectDescriptionInput">${messageHtml("projects.descriptionOptional", undefined, t)}</label><textarea id="projectDescriptionInput" name="description" maxlength="2000" rows="4">${escape(project?.description || "")}</textarea>
       <footer><button type="submit" class="wb-button primary">${messageHtml(project ? "common.saveProject" : "common.createProject", undefined, t)}</button></footer></form>`,
     );
@@ -53,7 +54,7 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
         const fields = Object.fromEntries(new FormData(form));
         fields.name = fields.projectName;
         delete fields.projectName;
-        const saved = await catalog.save({ ...fields, ...(project ? { id: project.id, revision } : {}) });
+        const saved = await catalog.save({ ...fields, ...(project ? { id: project.id, revision } : { operationId }) });
         dialog.close();
         onSaved(saved);
       } catch (reason) {

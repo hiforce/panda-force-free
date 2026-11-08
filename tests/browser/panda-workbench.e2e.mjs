@@ -93,9 +93,7 @@ try {
   await page.locator("#prompt").fill("Beta project draft");
   await page.locator("#sessionProjectSelect").selectOption(alphaProject.id);
   assert.equal(await page.locator("#prompt").inputValue(), "Alpha project draft");
-  result.checks.push(
-    "Explicit product project context and isolated drafts between projects in the same working folder",
-  );
+  result.checks.push("Explicit product project context and isolated drafts between managed project folders");
   await page.locator(".workbench-navigation [data-route=projects]").click();
   // Settle a background projection before changing only the pin preference.
   await page.evaluate(async () => {
@@ -140,6 +138,11 @@ try {
   await page.reload();
   await page.getByRole("heading", { name: "A manually created project", exact: true }).waitFor();
   await page.locator('[data-wb="project-new"]').first().click();
+  assert.equal(await page.locator("#composerProjectButton").isDisabled(), true);
+  assert.equal(await page.locator("#composerProjectButton").getAttribute("aria-label"), "Project folder");
+  assert.equal(await page.locator("#projectPath").textContent(), "~/panda-state/projects/manual-project");
+  await page.locator("#sessionProjectSelect").selectOption("");
+  assert.equal(await page.locator("#composerProjectButton").isEnabled(), true);
   await page.locator("#composerProjectButton").click();
   await page.locator("#folderPathInput").fill(fixture.dir);
   await page.locator("#folderGo").click();
@@ -147,7 +150,9 @@ try {
   await page.locator("#folderConfirm").click();
   await page.locator(".workbench-navigation [data-route=projects]").click();
   assert.equal(await page.locator(".wb-project-main").count(), 3);
-  result.checks.push("Project pinning, explicit creation/persistence, and independent working-folder selection");
+  result.checks.push(
+    "Project pinning, persistent managed project folders, and independent unassigned working-folder selection",
+  );
   const outside = await context.request.get(fixture.base + "/api/workspace/context?cwd=" + encodeURIComponent("/tmp"));
   assert.ok([400, 403].includes(outside.status()));
   const traversal = await context.request.get(

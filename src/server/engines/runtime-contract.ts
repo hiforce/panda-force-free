@@ -15,7 +15,9 @@ export interface SessionHistory {
   readBrowserThread(params: HistoryQuery & { includeTurns?: boolean }): Promise<unknown>;
   readBrowserTurns(params: HistoryQuery & { itemsView?: string; sortDirection?: string }): Promise<unknown>;
   readLiveThread(threadId: unknown): Promise<unknown>;
-  readComposerHistory(): Promise<Array<{ text: string }>>;
+  readComposerHistory(options?: {
+    includeSession?: (id: string) => Promise<boolean>;
+  }): Promise<Array<{ text: string }>>;
   subscribeSharedThread(value: unknown): Promise<void>;
   recordThreadStatus(threadId: string, status: unknown): void;
   recordFileChangeDiff(params: { threadId?: unknown; turnId?: unknown; changes?: unknown }): void;

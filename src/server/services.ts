@@ -33,6 +33,8 @@ export interface RuntimeServices {
   appServerConnection: EngineConnection;
   projectVisibility: ProjectVisibilityRepository;
   projectCatalog: ProjectRepository;
+  projectWorkspaces: import("./projects/workspaces/service.js").ProjectWorkspaceService;
+  directoryPolicy: import("./projects/directory-policy.js").ProjectDirectoryPolicy;
   goalStore: EngineGoals;
   reviewDiffs: ReviewDiffStore;
   clients: Set<WebSocket>;

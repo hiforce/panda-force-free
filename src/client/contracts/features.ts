@@ -68,6 +68,7 @@ export interface BusinessProjects extends DirectorySource {
   assignment(id: string): View<ProjectAssignment> | null;
   readonly ready: boolean;
   readonly revision: number;
+  workspace(projectId: string): Promise<{ path: string; state: "preparing" | "ready" }>;
   save(fields: Partial<ProductProject>): Promise<ProductProject>;
   assign(projectId: string | null, sessionIds: readonly string[], revision?: number): Promise<void>;
   history(options?: {
@@ -543,13 +544,16 @@ export interface SynchronizationPort {
 }
 
 export interface WorkspacePort {
+  applySelectedProjectWorkspace: () => void;
   bind: () => void;
   openFolderPicker: () => void;
   selectWorkbenchProject: (path: string) => Promise<void>;
   setProjectless: (refreshProfiles?: boolean) => void;
   syncProjectControl: () => void;
   renderHeader: () => void;
-  prepareBusinessSession: (projectId: string | null) => Promise<void>;
+  prepareBusinessSession: (
+    projectId: string | null,
+  ) => Promise<{ path: string; state: "preparing" | "ready" } | undefined>;
   refreshComposerPlaceholder: () => void;
   setWorkspace: (path: string, refreshProfiles?: boolean) => void;
   useProjectless: () => void;

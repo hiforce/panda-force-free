@@ -66,7 +66,7 @@ async function loadApp() {
 async function readStatus() {
   const response = await fetch("/api/auth/status", { cache: "no-store" });
   if (!response.ok) throw new Error(t("errors.authenticationIsTemporarilyUnavailablePleaseRetry"));
-  return response.json();
+  return { ...(await response.json()), directoryScope: response.headers.get("x-panda-directory-scope") || "" };
 }
 
 async function start() {
@@ -84,7 +84,8 @@ async function start() {
     const identity =
       status.authMode +
       ":" +
-      (status.identity?.uuid || status.identity?.username || status.identity?.account || "local");
+      (status.identity?.uuid || status.identity?.username || status.identity?.account || "local") +
+      (status.directoryScope ? ":" + status.directoryScope : "");
     globalThis.__pandaForceIdentityKey = identity;
     try {
       const previous = localStorage.getItem("panda-force-browser-identity");

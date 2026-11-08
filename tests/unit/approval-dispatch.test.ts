@@ -6,6 +6,39 @@ import {
   approvalDecisionResponse,
 } from "../../src/shared/codex-surfaces.js";
 
+test("asynchronous request authorization finishes before native dispatch and rejects without native side effects", async () => {
+  const calls: string[] = [];
+  let finish!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const bridge = createBrowserDispatch({
+    isAllowedMethod: () => true,
+    request: async () => {
+      calls.push("native");
+      return {};
+    },
+    pendingServerRequests: new Map(),
+    sendRaw: () => {},
+    broadcast: () => {},
+  });
+  bridge.before(async () => {
+    await waiting;
+    calls.push("authorized");
+  });
+  const pending = bridge.dispatch({ type: "rpc", id: "one", method: "thread/read", params: {} });
+  expect(calls).toEqual([]);
+  finish();
+  await pending;
+  expect(calls).toEqual(["authorized", "native"]);
+  bridge.before(async () => {
+    throw new Error("Outside root");
+  });
+  const denied = await bridge.dispatch({ type: "rpc", id: "two", method: "thread/read", params: {} });
+  expect(denied.type).toBe("rpc/error");
+  expect(calls).toEqual(["authorized", "native", "authorized"]);
+});
+
 test("native string approval IDs are forwarded exactly once and cannot match a numeric request", async () => {
   const pending = new Map<any, any>([
       ["approval-string", {}],

@@ -362,6 +362,7 @@
         "config",
         "connected",
         "goalMode",
+        "newSessionProjectId",
         "placeholderText",
         "planMode",
         "projectless",

@@ -1,14 +1,20 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
+import { Database } from "bun:sqlite";
+import { join } from "node:path";
 import { createAppFixture, waitFor } from "../support/app-fixture.mjs";
 
-const fixture = await createAppFixture();
+let allowExternalDirectories = true;
+const fixture = await createAppFixture({
+  extraEnvironment: () => ({ PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES: String(allowExternalDirectories) }),
+});
 const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
 const artifacts = ".artifacts/product-projects";
 await mkdir(artifacts, { recursive: true });
 const checks = [],
   errors = [];
+let projectDatabase;
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "en" });
   await fixture.signIn(context);
@@ -37,18 +43,29 @@ try {
     b = await create("Product Beta", "beta");
   assert.equal(a.code, "alpha");
   assert.equal("cwd" in a, false);
-  checks.push("Explicit project name/code/optional description; existing folders do not create projects");
+  assert.equal(a.workspace.path, join(fixture.dir, "panda-state", "projects", "alpha"));
+  checks.push(
+    "Explicit project name/code/optional description and real managed folders; existing native folders do not create projects",
+  );
   await page.locator('[data-wb="project-edit"]').click();
-  await page.locator("#projectCodeInput").fill("ALPHA");
-  await page.locator('#projectForm [type="submit"]').click();
-  await page.locator(".project-error").waitFor({ state: "visible" });
-  assert.ok((await page.locator(".project-error").innerText()).includes("already exists"));
-  await page.locator("#projectCodeInput").fill("beta");
+  assert.equal(await page.locator("#projectCodeInput").evaluate((input) => input.readOnly), true);
+  assert.equal(await page.locator("#projectCodeInput").inputValue(), "beta");
   await page.locator("#projectDescriptionInput").fill("Updated description");
   await page.locator('#projectForm [type="submit"]').click();
   await page.locator("#projectDialog").waitFor({ state: "hidden" });
   assert.equal((await catalog()).projects.find((p) => p.id === b.id).description, "Updated description");
-  checks.push("Editing and case-insensitive code uniqueness with inline validation");
+  await page.locator('.workbench-navigation [data-route="projects"]').click();
+  await page.locator('[data-wb="create-project"]').first().click();
+  await page.locator("#projectNameInput").fill("Duplicate alpha");
+  await page.locator("#projectCodeInput").fill("ALPHA");
+  await page.locator('#projectForm [type="submit"]').click();
+  await page.locator(".project-error").waitFor({ state: "visible" });
+  assert.ok((await page.locator(".project-error").innerText()).includes("already exists"));
+  assert.equal((await catalog()).projects.length, 2);
+  await page.locator("[data-project-close]").click();
+  checks.push(
+    "Names/descriptions remain editable, bound codes are read-only, and creation preserves case-insensitive uniqueness with inline validation",
+  );
   await go("/project?id=" + a.id);
   await page.locator('[data-wb="project-link"]').click();
   await page.locator('#associationSessions input[value="old-alpha"]').check();
@@ -93,20 +110,27 @@ try {
   await page.waitForFunction(() => document.querySelector("#prompt")?.value === "Draft for Alpha");
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
   assert.equal(await page.locator("#sessionProjectSelect").inputValue(), a.id);
-  assert.equal(await page.locator(".working-folder-label").innerText(), "Working folder");
+  assert.equal(await page.locator(".working-folder-label").innerText(), "Project folder");
+  assert.equal(await page.locator("#composerProjectButton").isDisabled(), true);
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await page.waitForFunction(() => globalThis.__pandaForceDebug.state.active?.id?.startsWith("new-"));
   const created = await page.evaluate(() => globalThis.__pandaForceDebug.state.active.id);
   await waitFor(async () => (await catalog()).assignments.find((s) => s.id === created));
   assert.equal((await catalog()).assignments.find((s) => s.id === created).projectId, a.id);
-  assert.equal(fixture.calls().find((c) => c.method === "thread/start").params.cwd, fixture.alpha);
+  assert.equal(fixture.calls().find((c) => c.method === "thread/start").params.cwd, a.workspace.path);
+  assert.equal(fixture.calls().find((c) => c.method === "turn/start").params.cwd, a.workspace.path);
   checks.push(
-    "Separate project and working-folder controls, isolated same-folder project drafts, automatic new-session association",
+    "Managed project folder controls, isolated project drafts, server-owned native cwd and immediate new-session association",
   );
   // If association fails, the native session already created must be reused on retry.
   await go("/project?id=" + b.id);
   await page.locator('[data-wb="project-new"]').first().click();
   await page.locator("#prompt").fill("Retry association without duplicate session");
+  projectDatabase = new Database(join(fixture.dir, "panda-state", "data", "projects.sqlite"));
+  // Fail the real post-creation metadata write as well as the browser fallback; native identity must survive both.
+  projectDatabase.exec(
+    "CREATE TRIGGER reject_test_assignment BEFORE INSERT ON session_projects BEGIN SELECT RAISE(FAIL,'Injected project assignment failure'); END;",
+  );
   await page.route("**/api/projects/assign", (route) =>
     route.fulfill({ status: 503, json: { error: "Project information is temporarily unavailable. Please retry." } }),
   );
@@ -116,6 +140,9 @@ try {
   );
   const failedThread = await page.evaluate(() => globalThis.__pandaForceDebug.state.active.id),
     starts = fixture.calls().filter((c) => c.method === "thread/start").length;
+  projectDatabase.exec("DROP TRIGGER reject_test_assignment");
+  projectDatabase.close();
+  projectDatabase = null;
   await page.unroute("**/api/projects/assign");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await waitFor(async () => (await catalog()).assignments.find((s) => s.id === failedThread));
@@ -310,11 +337,45 @@ try {
   await page.locator("#approvalInboxDialog .approval-deny").click();
   await waitFor(() => fixture.calls().find((c) => c.type === "response" && c.id === mobileApproval.id));
   checks.push("Global approval controls remain visible and touch-sized at 320/390 pixels with long commands");
+  await page.evaluate(
+    ({ outside }) => {
+      localStorage.setItem(
+        "panda-force-sidebar-snapshot-v1",
+        JSON.stringify({
+          version: 1,
+          home: outside,
+          updatedAt: Date.now(),
+          threads: [{ id: "old-alpha", name: "STALE_EXTERNAL_HISTORY", cwd: outside }],
+          visibility: { revision: 0, hiddenProjects: {} },
+        }),
+      );
+    },
+    { outside: fixture.alpha },
+  );
+  allowExternalDirectories = false;
+  await fixture.stop();
+  await fixture.start();
+  await go("/projects");
+  assert.ok(await page.evaluate(() => globalThis.__pandaForceIdentityKey.includes(":projects-")));
+  assert.equal(await page.evaluate(() => document.body.textContent.includes("STALE_EXTERNAL_HISTORY")), false);
+  assert.equal(
+    await page.evaluate(() =>
+      (localStorage.getItem("panda-force-sidebar-snapshot-v1") || "").includes("STALE_EXTERNAL_HISTORY"),
+    ),
+    false,
+  );
+  assert.equal(
+    (await context.request.get(fixture.base + "/api/config").then((response) => response.json()))
+      .allowExternalDirectories,
+    false,
+  );
+  checks.push("Changing the directory scope invalidates old sidebar/history cache identity before importing the app");
   assert.deepEqual(errors, []);
   const result = { result: "passed", checks, errors };
   await writeFile(artifacts + "/browser-results.json", JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
 } finally {
+  if (projectDatabase) projectDatabase.close();
   await browser.close();
   await fixture.dispose();
 }

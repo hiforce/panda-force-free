@@ -5,7 +5,23 @@ import { ProjectError } from "../projects/catalog.js";
 import { readJsonBody, RequestBodyError } from "./body.js";
 import { respondJson } from "./respond.js";
 
-export function projectRoutes({ catalog, request, getSession, recordSessions, broadcast }) {
+export function projectRoutes({
+  catalog,
+  workspaces,
+  directoryPolicy,
+  request: nativeRequest,
+  getSession: nativeGetSession,
+  recordSessions,
+  broadcast,
+}) {
+  const getSession = async (id) => {
+    const session = await nativeGetSession(id);
+    if (!directoryPolicy.remember(session))
+      throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
+    return session;
+  };
+  const request = async (method, params) =>
+    directoryPolicy.list(method, await nativeRequest(method, params), getSession);
   const candidates = new Map();
   const discovery = createSessionDiscovery({ request, recordSessions });
   function queryCursor(url) {
@@ -42,10 +58,23 @@ export function projectRoutes({ catalog, request, getSession, recordSessions, br
     }
   };
   const changed = (res, snapshot, status = 200) => {
-    broadcast({ type: "project-catalog/changed", ...snapshot });
-    respondJson(res, status, snapshot);
+    const visible = directoryPolicy.snapshot(snapshot);
+    broadcast({ type: "project-catalog/changed", ...visible });
+    respondJson(res, status, visible);
   };
   return [
+    {
+      path: "/api/projects/workspace",
+      method: "POST",
+      handler: protect(async ({ req, res }) => {
+        const body = await readJsonBody(req);
+        if (typeof body.projectId !== "string") throw new ProjectError(400, "projects.errorInvalidProjectDetails");
+        const workspace = await workspaces.ensure(body.projectId);
+        const snapshot = directoryPolicy.snapshot(catalog.snapshot());
+        broadcast({ type: "project-catalog/changed", ...snapshot });
+        respondJson(res, 200, { ...snapshot, workspace });
+      }),
+    },
     {
       path: "/api/projects/directories",
       method: "GET",
@@ -64,13 +93,17 @@ export function projectRoutes({ catalog, request, getSession, recordSessions, br
       path: "/api/projects",
       method: ["GET", "POST", "PATCH"],
       handler: protect(async ({ req, res }) => {
-        if (req.method === "GET") return respondJson(res, 200, catalog.snapshot());
+        if (req.method === "GET") return respondJson(res, 200, directoryPolicy.snapshot(catalog.snapshot()));
         const body = await readJsonBody(req);
         if (req.method === "PATCH" && typeof body.id !== "string")
           throw new ProjectError(400, "projects.errorProjectNotFound");
         if (req.method === "POST" && body.id !== undefined)
           throw new ProjectError(400, "projects.errorInvalidProjectDetails");
-        changed(res, catalog.save(body, body.revision), req.method === "POST" ? 201 : 200);
+        const snapshot =
+          req.method === "POST"
+            ? await workspaces.create(body, body.revision, body.operationId)
+            : catalog.save(body, body.revision);
+        changed(res, snapshot, req.method === "POST" ? 201 : 200);
       }),
     },
     {
@@ -91,7 +124,13 @@ export function projectRoutes({ catalog, request, getSession, recordSessions, br
         const sessions = [];
         for (const id of sessionIds) {
           try {
-            sessions.push(projectId === null ? { id } : candidates.get(id) || (await getSession(id)));
+            const session =
+              projectId === null && directoryPolicy.allowExternal
+                ? { id }
+                : candidates.get(id) || (await getSession(id));
+            if (!directoryPolicy.allowExternal && !directoryPolicy.remember(session))
+              throw new Error("Session outside project root");
+            sessions.push(session);
           } catch {
             throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
           }

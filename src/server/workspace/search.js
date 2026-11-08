@@ -1,6 +1,6 @@
 import { readdir, realpath } from "node:fs/promises";
 import { basename, relative, resolve, sep } from "node:path";
-import { clampLimit } from "../path-utils.js";
+import { canonicalRoots, clampLimit, inside } from "../path-utils.js";
 
 const skippedDirectories = new Set([
   ".git",
@@ -16,10 +16,6 @@ const skippedDirectories = new Set([
   "vendor",
 ]);
 
-function isInside(path, root) {
-  return path === root || path.startsWith(root + sep);
-}
-
 export async function searchWorkspaceFiles(root, query, options = {}) {
   const allowedRoots = options.allowedRoots || [];
   const limit = clampLimit(options.limit, { fallback: 30, max: 100 });
@@ -28,8 +24,8 @@ export async function searchWorkspaceFiles(root, query, options = {}) {
     .toLowerCase();
   if (!needle) return [];
   const workspace = await realpath(resolve(root));
-  const boundaries = await Promise.all(allowedRoots.map((path) => realpath(resolve(path))));
-  if (boundaries.length && !boundaries.some((boundary) => isInside(workspace, boundary)))
+  const boundaries = canonicalRoots(allowedRoots);
+  if (allowedRoots.length && !boundaries.some((boundary) => inside(workspace, boundary)))
     throw new Error("Workspace path is outside allowed roots");
 
   const matches = [];
@@ -49,7 +45,7 @@ export async function searchWorkspaceFiles(root, query, options = {}) {
       if (++visited > 5000) break;
       if (entry.isSymbolicLink()) continue;
       const fullPath = resolve(directory, entry.name);
-      if (!isInside(fullPath, workspace)) continue;
+      if (!inside(fullPath, workspace)) continue;
       const relativePath = relative(workspace, fullPath).split(sep).join("/");
       if (entry.isDirectory()) {
         if (entry.name.startsWith(".") || skippedDirectories.has(entry.name)) continue;

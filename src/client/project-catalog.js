@@ -77,6 +77,15 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
     get ready() {
       return snapshot.revision >= 0;
     },
+    async workspace(projectId) {
+      const result = await read("/api/projects/workspace", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      apply(result);
+      return result.workspace;
+    },
     get revision() {
       return snapshot.revision;
     },
@@ -98,6 +107,10 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
     async finishAssignment(thread) {
       if (!pendingAssignments.has(thread.id)) return;
       const id = pendingAssignments.get(thread.id);
+      if (assignments.get(thread.id)?.projectId === id) {
+        pendingAssignments.delete(thread.id);
+        return;
+      }
       await this.assign(id, [thread.id]);
       pendingAssignments.delete(thread.id);
     },

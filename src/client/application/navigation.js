@@ -52,6 +52,7 @@ export function assembleNavigation({
     synchronizationPort.resetActiveThreadSync();
     rememberActiveThread(null);
     sessions.replaceActive(null);
+    viewUpdates.request("workspaceContext");
     mutations.set("composerMentions", []);
     mutations.set("composerAttachments", []);
     mutations.set("turnWindow", null);
@@ -63,7 +64,6 @@ export function assembleNavigation({
     setOpaqueText($("#threadPath"), state.projectless ? "" : $("#projectPath").textContent);
     composerPort.restoreComposerDraft();
     composerPort.setPlanMode(false);
-    viewUpdates.request("workspaceContext");
     suggestionsPort.renderContextTray();
     viewUpdates.request("contextUsage");
     viewUpdates.request("composerLayout");

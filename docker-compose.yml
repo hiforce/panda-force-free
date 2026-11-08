@@ -1,6 +1,6 @@
 services:
   panda-force:
-    image: ${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.0.14}
+    image: ${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.0.15}
     restart: unless-stopped
     user: "${PUID:-1000}:${PGID:-1000}"
     command: ["bun", "run", "start"]
@@ -14,6 +14,8 @@ services:
       PANDA_FORCE_HOME: /var/lib/panda-force
       SHELL: /bin/bash
       PANDA_FORCE_CWD: /home/codex/workspace
+      PANDA_FORCE_PROJECTS_ROOT: "${PANDA_FORCE_PROJECTS_ROOT:-/home/codex/workspace/projects}"
+      PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES: "${PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES:-true}"
       PANDA_FORCE_REVIEW_ROOT: /home/codex/workspace
       PANDA_FORCE_APP_SERVER_MODE: isolated
       PANDA_FORCE_AUTH_MODE: password

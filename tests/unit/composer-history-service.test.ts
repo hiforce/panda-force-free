@@ -18,3 +18,33 @@ test("CLI history handles absent files, malformed rows, limits and truncated tai
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("scoped history keeps prompts only for approved sessions and never returns source session identities", async () => {
+  const root = mkdtempSync(join(tmpdir(), "composer-history-scope-"));
+  try {
+    writeFileSync(
+      join(root, "history.jsonl"),
+      [
+        { session_id: "inside", text: "First" },
+        { session_id: "outside", text: "External prompt" },
+        { text: "Unknown origin" },
+        { session_id: "inside", text: "Second" },
+      ]
+        .map((row) => JSON.stringify(row))
+        .join("\n"),
+    );
+    const checked: string[] = [];
+    expect(
+      await readComposerHistory(root, {
+        includeSession: async (id) => {
+          checked.push(id);
+          return id === "inside";
+        },
+      }),
+    ).toEqual([{ text: "First" }, { text: "Second" }]);
+    expect(checked).toEqual(["inside", "outside"]);
+    expect(await readComposerHistory(root)).toHaveLength(4);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

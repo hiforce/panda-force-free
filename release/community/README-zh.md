@@ -37,7 +37,11 @@ docker compose restart panda-force
 
 按终端显示的链接完成登录，然后刷新 PandaForce，即可开始会话。PandaForce 管理员与模型账号相互独立；模型服务的权限和费用遵循服务商规则。
 
-默认镜像为 **`hiforceai/panda-force:0.0.14`**。管理员、模型认证、附件及工作文件保存在 Docker 卷中，重启容器不会丢失。`docker compose down` 保留数据卷。默认端口仅本机可访问。
+默认镜像为 **`hiforceai/panda-force:0.0.15`**。管理员、模型认证、附件及工作文件保存在 Docker 卷中，重启容器不会丢失。`docker compose down` 保留数据卷。默认端口仅本机可访问。
+
+## 项目目录
+
+新建项目会按项目 code 建立实际工作目录，项目内的新会话默认使用该目录；关联的历史会话保留原目录。通过 `PANDA_FORCE_PROJECTS_ROOT` 配置持久根目录。`PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES` 默认 `true`，设为 `false` 可将网页目录及会话浏览范围限制在该根目录内。挂载与配置说明见[存储指南](./panda-docs/docs/storage.md)。
 
 ## 宿主机已有 Codex？
 

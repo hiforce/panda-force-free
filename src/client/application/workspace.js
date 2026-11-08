@@ -76,6 +76,12 @@ export function assembleWorkspace({
     }
   }
   function openFolderPicker() {
+    if (
+      !state.active &&
+      state.newSessionProjectId &&
+      projectsPort.businessProjects.get(state.newSessionProjectId)?.workspace
+    )
+      return;
     const dialog = $("#folderDialog");
     folderBrowse.selected = null;
     dialog.showModal();
@@ -110,14 +116,27 @@ export function assembleWorkspace({
       picker = $("#conversationProjectPicker"),
       label = $("#composerProjectLabel"),
       hidden = Boolean(state.active) || !["workspace", "new", "task"].includes(parseWorkbenchRoute().page);
+    const managed =
+      !state.active &&
+      state.newSessionProjectId &&
+      projectsPort.businessProjects.get(state.newSessionProjectId)?.workspace;
     button.hidden = hidden;
+    button.disabled = Boolean(managed);
     if (picker) picker.hidden = hidden;
+    const caption = picker?.querySelector(".working-folder-label");
+    if (caption) localizeText(caption, managed ? "projects.workspacePath" : "common.workingFolder", undefined, t);
+    localizeAttribute(button, "aria-label", managed ? "projects.workspacePath" : "common.workingFolder", undefined, t);
     setOpaqueText(
       label,
       state.projectless
         ? t("common.noWorkingFolder")
         : $("#projectName").textContent || t("common.chooseWorkingFolder"),
     );
+  }
+  function applySelectedProjectWorkspace() {
+    if (state.active || !state.newSessionProjectId) return;
+    const workspace = projectsPort.businessProjects.get(state.newSessionProjectId)?.workspace;
+    if (workspace?.state === "ready" && state.workspaceContext?.cwd !== workspace.path) setWorkspace(workspace.path);
   }
   function refreshComposerPlaceholder() {
     if (!state.active && state.composerMode === "local") {
@@ -183,6 +202,7 @@ export function assembleWorkspace({
     if (!projectId) return;
     if (!projectsPort.businessProjects.ready) await projectsPort.businessProjects.load();
     if (!projectsPort.businessProjects.get(projectId)) throw new Error(t("errors.projectNotFound"));
+    return projectsPort.businessProjects.workspace(projectId);
   }
   async function useSelectedFolder() {
     if (!folderBrowse.selected) return;
@@ -252,6 +272,7 @@ export function assembleWorkspace({
       useSelectedFolder(...args);
   }
   return {
+    applySelectedProjectWorkspace,
     bind,
     openFolderPicker,
     selectWorkbenchProject,

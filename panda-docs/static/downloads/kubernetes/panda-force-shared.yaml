@@ -49,7 +49,7 @@ spec:
       terminationGracePeriodSeconds: 30
       initContainers:
       - name: prepare-state
-        image: hiforceai/panda-force:0.0.12
+        image: hiforceai/panda-force:0.0.15
         command:
         - bun
         - -e
@@ -61,7 +61,7 @@ spec:
           mountPath: /var/lib/panda-force
       containers:
       - name: panda-force
-        image: hiforceai/panda-force:0.0.12
+        image: hiforceai/panda-force:0.0.15
         imagePullPolicy: IfNotPresent
         ports:
         - name: http
@@ -79,6 +79,11 @@ spec:
           value: /var/lib/panda-force
         - name: PANDA_FORCE_CWD
           value: /srv/panda-force/workspace
+        # Managed project options require version 0.0.15 or later.
+        - name: PANDA_FORCE_PROJECTS_ROOT
+          value: /srv/panda-force/workspace/projects
+        - name: PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES
+          value: 'true'
         - name: PANDA_FORCE_REVIEW_ROOT
           value: /srv/panda-force/workspace
         - name: PANDA_FORCE_ATTACHMENT_ROOT

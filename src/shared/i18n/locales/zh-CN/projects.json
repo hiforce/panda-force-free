@@ -21,5 +21,16 @@
   "errorInvalidSessionSelection": "会话选择无效",
   "errorCrossOriginRequestRejected": "跨域请求已被拒绝",
   "errorSessionNotFoundRefreshTheSessionListAndTryAgain": "未找到会话，请刷新会话列表后重试。",
-  "errorInvalidSessionCursor": "会话游标无效"
+  "errorInvalidSessionCursor": "会话游标无效",
+  "workspaceCodeHelp": "唯一 code 用于创建项目目录，新会话默认在此工作。使用 2–64 位字母、数字、连字符或下划线。",
+  "workspaceCodeLocked": "此 code 已绑定项目目录，不能更改。项目名称可以修改。",
+  "workspacePath": "项目目录",
+  "workspacePreparing": "项目目录尚未准备完成，新建会话时会重试。",
+  "workspaceLegacy": "历史会话保留原目录。新建会话时会准备项目目录。",
+  "errorWorkspaceConflict": "项目目录已存在但不属于该项目，或目录身份已变化。请使用其他 code，或联系管理员检查。",
+  "errorWorkspaceUnavailable": "项目目录暂时无法准备。请检查挂载目录和权限后重试。",
+  "errorWorkspaceSharedRootRequired": "请先配置 PANDA_FORCE_PROJECTS_ROOT，指定 PandaForce 与宿主机引擎均可访问的共享目录。",
+  "errorWorkspaceRequestChanged": "此项目创建请求已使用其他信息。请重新打开表单以创建不同的项目。",
+  "errorWorkspaceCodeImmutable": "项目 code 已绑定目录，不能更改。",
+  "errorDirectoryOutsideRoot": "此目录位于配置的项目根目录之外。"
 }
