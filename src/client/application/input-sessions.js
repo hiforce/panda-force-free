@@ -61,6 +61,7 @@ export function assembleInputSessions({
       if (generation === selection.current) {
         sessions.replaceActive(thread);
         navigationPort.rememberActiveThread(thread.id);
+        viewUpdates.request("sessionOpened", thread.id);
         viewUpdates.request("contextUsage");
         viewUpdates.request("header");
         viewUpdates.request("approvals");

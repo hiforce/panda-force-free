@@ -48,14 +48,20 @@ describe("latest request gate", () => {
 });
 
 describe("model selection", () => {
-  test("keeps only GPT models for the desktop model picker", () => {
+  test("keeps configured provider models without restricting their names", () => {
     const models = [
       { model: "gpt-5.6-sol", displayName: "GPT-5.6-Sol" },
       { model: "o3", displayName: "o3" },
       { model: "codex-mini", displayName: "Codex Mini" },
-      { id: "gpt-5.5", displayName: "GPT-5.5" },
+      { model: "glm-5.3-flash", displayName: "GLM 5.3 Flash" },
+      { model: "qwen3-coder:30b", displayName: "Local Ollama model" },
     ];
-    expect(filterAppModels(models).map((model) => model.model || model.id)).toEqual(["gpt-5.6-sol", "gpt-5.5"]);
+    expect(filterAppModels(models)).toEqual(models);
+  });
+
+  test("ignores entries without a usable model identifier", () => {
+    expect(filterAppModels([null, {}, { displayName: "Label only" }, { model: " " }, { model: 3 }])).toEqual([]);
+    expect(filterAppModels(null)).toEqual([]);
   });
 
   test("selects a model and its advertised default effort", () => {

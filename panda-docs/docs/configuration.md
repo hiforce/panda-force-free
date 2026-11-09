@@ -39,3 +39,7 @@ under **Settings → Appearance → Language**.
 Language changes affect PandaForce controls. Native CLI responses, commands,
 logs, questions, filenames, project names, and your draft retain their original
 text. Additional language packs are published after translation and review.
+
+## Third-party model providers
+
+See [Model providers · 模型服务配置](model-providers.md) for Codex CLI configuration with 智谱 GLM, Ollama and DeepSeek, including Docker environment variables and model catalogs.

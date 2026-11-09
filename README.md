@@ -38,7 +38,7 @@ docker compose restart panda-force
 
 Follow the sign-in link shown in the terminal, then refresh PandaForce and start a conversation. Your PandaForce administrator is separate from your model account; provider access and charges follow your provider's terms.
 
-The default image is **`hiforceai/panda-force:0.0.16`**. State, model credentials, attachments and workspace files persist in Docker volumes across container restarts. `docker compose down` keeps these volumes. The default port is accessible only from the local machine.
+The default image is **`hiforceai/panda-force:0.0.17`**. State, model credentials, attachments and workspace files persist in Docker volumes across container restarts. `docker compose down` keeps these volumes. The default port is accessible only from the local machine.
 
 ## Project folders
 
@@ -67,3 +67,7 @@ If PandaForce helps you, consider supporting Rocky's work. Contributions are vol
 PandaForce Free is derived from [lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui), originally released under the MIT license. We thank lezi-fun and all upstream contributors for the foundation their work provides.
 
 The original copyright notice and MIT license are preserved in [LICENSE](./LICENSE) and [LICENSES/upstream-MIT.txt](./LICENSES/upstream-MIT.txt). Additional component attribution is recorded in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md). PandaForce is developed independently; upstream attribution does not imply endorsement.
+
+## Other model providers
+
+[Codex CLI · 智谱 GLM / Ollama / DeepSeek](panda-docs/docs/model-providers.md)

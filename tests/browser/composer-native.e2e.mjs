@@ -16,12 +16,17 @@ await page.waitForFunction(
 );
 const modelFilter = await page.evaluate(() => {
   const api = globalThis.__pandaForceDebug;
-  const mixed = [...api.state.models, { model: "o3", displayName: "o3" }];
+  const mixed = [
+    ...api.state.models,
+    { model: "o3", displayName: "o3" },
+    { model: "glm-5.3-flash", displayName: "GLM 5.3 Flash" },
+  ];
   api.mutations.set("models", api.filterAppModels(mixed));
   api.renderModels();
   return {
     models: api.state.models.map((model) => model.model),
     hasO3: api.state.models.some((model) => model.model === "o3"),
+    hasGlm: api.state.models.some((model) => model.model === "glm-5.3-flash"),
   };
 });
 const home = await page.evaluate(() => {
@@ -187,11 +192,8 @@ const expected = ["add", "approval", "model", "queue", "send"];
   qualityAssert.ok(contextUsage.inComposerRight, "Condition: !contextUsage.inComposerRight");
   qualityAssert.ok(contextUsage.beforeQueue, "Condition: !contextUsage.beforeQueue");
   qualityAssert.ok(!/^GPT-/i.test(home.triggerText || ""), "Condition: /^GPT-/i.test(home.triggerText||'')");
-  qualityAssert.ok(!modelFilter.hasO3, "Condition: modelFilter.hasO3");
-  qualityAssert.ok(
-    !modelFilter.models.some((model) => !/^gpt(?:[-_.\s]|$)/i.test(model)),
-    "Condition: modelFilter.models.some(model=>!/^gpt(?:[-_.\\s]|$)/i.test(model))",
-  );
+  qualityAssert.ok(modelFilter.hasO3, "The model picker preserves provider models without a GPT prefix");
+  qualityAssert.ok(modelFilter.hasGlm, "The model picker includes configured GLM models");
   qualityAssert.equal(home.trigger.border, "1px", "Desktop model settings keep a complete dropdown field");
   qualityAssert.equal(home.iconWidth, 0, "Desktop fields retain their complete text labels");
   qualityAssert.equal(modelMain.title, "Reasoning", "Condition: modelMain.title!=='Reasoning'");

@@ -108,8 +108,8 @@ export function selectModelState(models, requestedModel) {
 }
 
 export function filterAppModels(models) {
-  return (Array.isArray(models) ? models : []).filter((model) =>
-    [model?.model, model?.id, model?.displayName].some((value) => /^gpt(?:[-_.\s]|$)/i.test(String(value || ""))),
+  return (Array.isArray(models) ? models : []).filter(
+    (model) => typeof model?.model === "string" && model.model.trim().length > 0,
   );
 }
 

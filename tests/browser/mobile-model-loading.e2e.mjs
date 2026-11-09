@@ -2,7 +2,25 @@ import { createBrowserFixture } from "../support/browser-runtime.mjs";
 import assert from "node:assert/strict";
 import { devices } from "playwright";
 import { launchOptions } from "../support/browser-runtime.mjs";
-const runtime = await createBrowserFixture();
+const runtime = await createBrowserFixture({
+  models: [
+    {
+      id: "glm-5.3-flash",
+      model: "glm-5.3-flash",
+      displayName: "GLM 5.3 Flash",
+      isDefault: true,
+      defaultReasoningEffort: "medium",
+      supportedReasoningEfforts: [{ reasoningEffort: "medium" }],
+    },
+    {
+      id: "qwen3-coder:30b",
+      model: "qwen3-coder:30b",
+      displayName: "Local Ollama model",
+      defaultReasoningEffort: "medium",
+      supportedReasoningEfforts: [{ reasoningEffort: "medium" }],
+    },
+  ],
+});
 const base = runtime.base;
 let browser;
 try {
@@ -39,6 +57,11 @@ try {
   assert.equal(await page.locator("#composerSteerHint").count(), 0);
   assert.equal(await page.evaluate(() => window.__modelsViaWs), 0);
   assert.ok((await page.evaluate(() => globalThis.__pandaForceDebug.state.models.length)) > 0);
+  assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), "glm-5.3-flash");
+  assert.deepEqual(await page.evaluate(() => globalThis.__pandaForceDebug.state.models.map((model) => model.model)), [
+    "glm-5.3-flash",
+    "qwen3-coder:30b",
+  ]);
   // A response that never arrives must time out and expose a usable retry action.
   const failure = await page.evaluate(async () => {
     const api = globalThis.__pandaForceDebug,

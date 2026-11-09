@@ -65,6 +65,26 @@ try {
         globalThis.__pandaForceDebug.notify("thread/tokenUsage/updated", { threadId: "old-alpha", tokenUsage: usage }),
       usage,
     );
+  await page.goto(fixture.base + "/new");
+  await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
+  await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.models.length > 0);
+  await page.evaluate(() => (window.__newSessionDocument = true));
+  await page.locator("#prompt").fill("Check the new session inspector");
+  await page.locator("#sendButton").click();
+  await page.waitForURL("**/task/**");
+  await page.locator("#sessionInspector").waitFor({ state: "visible" });
+  const createdId = await page.evaluate(() => globalThis.__pandaForceDebug.state.active.id);
+  await page.evaluate(
+    ({ id, usage }) => {
+      globalThis.__pandaForceDebug.notify("thread/tokenUsage/updated", { threadId: id, tokenUsage: usage });
+    },
+    { id: createdId, usage },
+  );
+  await page.waitForFunction(
+    () => document.querySelector("#sessionUsageView .session-usage-total strong")?.getAttribute("title") === "124,800",
+  );
+  assert.equal(await page.evaluate(() => window.__newSessionDocument), true);
+  checks.push("New session inspector and live token usage appear without reloading");
   await go("old-alpha");
   await page.waitForFunction(
     () =>

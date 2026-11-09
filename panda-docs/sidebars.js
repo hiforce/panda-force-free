@@ -1,1 +1,12 @@
-export default {guides: ['overview', {type: 'category', label: 'Getting started', items: ['installation', 'kubernetes', 'workspace']}, {type: 'category', label: 'Administration', items: ['configuration', 'cluster', 'storage', 'security', 'troubleshooting']}, {type: 'category', label: 'Development', items: ['building', 'releases', 'updates']}]};
+export default {
+  guides: [
+    "overview",
+    { type: "category", label: "Getting started", items: ["installation", "kubernetes", "workspace"] },
+    {
+      type: "category",
+      label: "Administration",
+      items: ["configuration", "model-providers", "cluster", "storage", "security", "troubleshooting"],
+    },
+    { type: "category", label: "Development", items: ["building", "releases", "updates"] },
+  ],
+};
