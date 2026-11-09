@@ -65,8 +65,8 @@
     },
     {
       "path": "bun.lock",
-      "bytes": 80703,
-      "sha256": "2e41f30e5ac0c1d349b317a20d3e2447fc000805c7328039301c0f9198b2657e",
+      "bytes": 80487,
+      "sha256": "2d0ef1006c3e251bea24c7b7a0dcb3f9dfb467b441691d05704522f329e3554b",
       "mode": "100644"
     },
     {
@@ -4036,5 +4036,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "c5181933ba02c610fbde3dde71495de5f18504676501d018c69a0786700f998e"
+  "contentSha256": "39cef5cf8ca4a5ea9c3b1fe0043a969bf88b0c97a85ce2bea27c443d68719416"
 }
