@@ -69,4 +69,4 @@ PandaForce Free 衍生自 MIT 许可的 [lezi-fun/codex-webui](https://github.co
 
 ## 其他模型配置
 
-[Codex CLI · 智谱 GLM / Ollama / DeepSeek](panda-docs/docs/model-providers.md)
+[Codex CLI：智谱 GLM、Ollama 和 DeepSeek](panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md)

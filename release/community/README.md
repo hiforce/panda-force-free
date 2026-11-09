@@ -70,4 +70,4 @@ The original copyright notice and MIT license are preserved in [LICENSE](./LICEN
 
 ## Other model providers
 
-[Codex CLI · 智谱 GLM / Ollama / DeepSeek](panda-docs/docs/model-providers.md)
+[Codex CLI: Zhipu GLM, Ollama and DeepSeek](panda-docs/docs/model-providers.md)

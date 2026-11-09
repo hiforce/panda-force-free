@@ -30,6 +30,8 @@
   "panda-docs/docs/updates.md",
   "panda-docs/docs/workspace.md",
   "panda-docs/docusaurus.config.js",
+  "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current.json",
+  "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md",
   "panda-docs/package.json",
   "panda-docs/sidebars.js",
   "panda-docs/src/css/custom.css",

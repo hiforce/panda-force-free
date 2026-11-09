@@ -47,14 +47,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 4361,
-      "sha256": "90a4e73ee5aafe8c591edd8909736bda3f3c22b65d06e08bc3544c465b973f18",
+      "bytes": 4409,
+      "sha256": "4d513197022fcc3e05de3d4a3d4eaeae3aa4fcb62d04083ff1c5bb8ff70c35d1",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 4793,
-      "sha256": "83b5f439c20335b7c726008fd76fadd57d381cd7bdffc40560218949bc5c51d4",
+      "bytes": 4791,
+      "sha256": "12204cf6972faf478d8bc20999b5f2b24dd72a6175acffd7b0f85a2b596ea8d8",
       "mode": "100644"
     },
     {
@@ -119,8 +119,8 @@
     },
     {
       "path": "panda-docs/docs/configuration.md",
-      "bytes": 3838,
-      "sha256": "1b7b91c5bd0d8d1f4dae9423a00f44d273cbf9601dbed7513177d8455bfd9323",
+      "bytes": 4250,
+      "sha256": "521d615279a63525d7287a7d356867580ca7093a2fbac7d9fcc4448f66583f71",
       "mode": "100644"
     },
     {
@@ -137,8 +137,8 @@
     },
     {
       "path": "panda-docs/docs/model-providers.md",
-      "bytes": 9984,
-      "sha256": "9eb9346254f077397fad1456e8546ffc0fce84cd30eb2f3995e901d876e66fd5",
+      "bytes": 14368,
+      "sha256": "6ec206bae76c60ba8ded90daeaba6c605c121379435af1ba5ed9ffc290c07680",
       "mode": "100644"
     },
     {
@@ -187,6 +187,18 @@
       "path": "panda-docs/docusaurus.config.js",
       "bytes": 952,
       "sha256": "877e4f900df0245367fca2361829a3f2d560f28c51d3b306894d97f9440eaf77",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current.json",
+      "bytes": 476,
+      "sha256": "25fc6aad2ded7e6879ebe78d5f7640c960b630a08f6abdacdc698377759774e4",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md",
+      "bytes": 13821,
+      "sha256": "b72a8b3a296a1794a09ced5c1754736f7ac61c3e25a1647a0ea5ba229bcb5a8d",
       "mode": "100644"
     },
     {
@@ -647,14 +659,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 4361,
-      "sha256": "90a4e73ee5aafe8c591edd8909736bda3f3c22b65d06e08bc3544c465b973f18",
+      "bytes": 4409,
+      "sha256": "4d513197022fcc3e05de3d4a3d4eaeae3aa4fcb62d04083ff1c5bb8ff70c35d1",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 4793,
-      "sha256": "83b5f439c20335b7c726008fd76fadd57d381cd7bdffc40560218949bc5c51d4",
+      "bytes": 4791,
+      "sha256": "12204cf6972faf478d8bc20999b5f2b24dd72a6175acffd7b0f85a2b596ea8d8",
       "mode": "100644"
     },
     {
@@ -677,8 +689,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 27138,
-      "sha256": "950fe3bb9d5bedbe68ebc4c5ba14cf282814fa7238b46691a5b9f0b81293caf0",
+      "bytes": 27298,
+      "sha256": "697c296a777fe7a6a7a80d36e7fabdf796a5932672cfbf1c286587b7c6c1d7e0",
       "mode": "100644"
     },
     {
@@ -4036,5 +4048,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "39cef5cf8ca4a5ea9c3b1fe0043a969bf88b0c97a85ce2bea27c443d68719416"
+  "contentSha256": "e6bde96fd7de7c9b73ff45a3b26d5a986632383e6c11b607825a80611ef19256"
 }

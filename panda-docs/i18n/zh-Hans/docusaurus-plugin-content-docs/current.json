@@ -1,0 +1,14 @@
+{
+  "sidebar.guides.category.Getting started": {
+    "message": "开始使用",
+    "description": "The label for category Getting started in sidebar guides"
+  },
+  "sidebar.guides.category.Administration": {
+    "message": "管理配置",
+    "description": "The label for category Administration in sidebar guides"
+  },
+  "sidebar.guides.category.Development": {
+    "message": "开发维护",
+    "description": "The label for category Development in sidebar guides"
+  }
+}

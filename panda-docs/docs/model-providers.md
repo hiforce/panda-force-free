@@ -1,29 +1,121 @@
 ---
-title: Model providers · 模型服务配置
+title: Model providers
 ---
 
-PandaForce uses Codex CLI for model execution. Configure the CLI that runs on the **server**, not your browser. The model selector chooses models from that provider; selecting a model does not configure its endpoint or credentials. These instructions were checked against provider documentation on 2026-11-09. This release packages Codex CLI 0.166.0; check your actual runtime with `codex --version`.
+PandaForce executes models through Codex CLI on the server. Configure that CLI before choosing a model in the browser. Website sign-in and model-provider authentication are separate. This guide covers Zhipu GLM, Ollama and DeepSeek. Provider documentation was reviewed on 2026-11-09; the released image includes Codex CLI 0.166.0. Check the actual runtime with `codex --version`.
 
-PandaForce 的模型执行由服务端 Codex CLI 完成。先配置服务端 CLI，再选择网页里的模型。网页管理员登录、IDAAS/OIDC 登录与模型 API Key 是独立的。本文优先补充智谱 GLM，同时整理 Ollama 与 DeepSeek；示例经过配置语法检查，未使用用户密钥发起付费模型调用。
+The examples were checked for configuration syntax. Paid model requests have not been verified with a live account key.
 
-## Before configuring · 配置位置
+## Configuration directory
 
-Codex reads `config.toml` under its `CODEX_HOME`, normally `~/.codex` (`%USERPROFILE%\.codex` on Windows). Back up existing configuration; merge provider sections without duplicating TOML tables. Put root settings **before** `[model_providers.…]` tables. Use absolute catalog paths as seen by the CLI process.
+**`CODEX_HOME` points directly to the Codex state directory, conventionally named `.codex`. It is not its parent directory.** For example:
 
-- Local installation: use the account that starts PandaForce. A different terminal user has a different Codex home.
-- Docker Compose: the bundled CLI uses `/home/codex/.codex`; its persistent model-state volume is mounted there. Use the same persisted volume when editing configuration. A host `~/.codex` is not automatically mounted.
-- Shared app-server: configure and restart that daemon with its administrator. Restarting only the web application does not reload the shared daemon's configuration. An isolated CLI is recreated with the application.
+```text
+CODEX_HOME=/home/panda/.codex
+Configuration file: /home/panda/.codex/config.toml
+Model catalog: /home/panda/.codex/models-glm.json
+```
 
-这些是管理员操作，保存配置后在合适的维护时间重启实际 Codex 进程，再新建会话验证；不要为了切换模型删除 `auth.json` 或会话目录。现有会话可能仍绑定原来的 provider。设置变更不会自动迁移旧会话。
+Do not create `/home/panda/.codex/.codex/config.toml`. If `CODEX_HOME` is unset, Codex defaults to the running user's `~/.codex` (`%USERPROFILE%\.codex` on Windows). The spelling is `CODEX_HOME`, not `CODEX_HOMO`. An explicit `CODEX_HOME` can name another directory; `.codex` is the convention, not a required literal directory name.
 
-OpenAI's [custom provider configuration](https://learn.chatgpt.com/docs/config-file/config-advanced) describes `model_provider`, provider tables and `env_key`. The examples below use `wire_api = "responses"`; a Chat Completions-compatible URL alone is insufficient.
+| Setting                              | Purpose                                                                                                   |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| CLI executable and `PATH`            | Select the program that runs. Installing it as root does not select root's configuration for other users. |
+| `PANDA_FORCE_CWD` and session folder | Select where tasks read and edit project files.                                                           |
+| `PANDA_FORCE_PROJECTS_ROOT`          | Select where new project folders are created.                                                             |
+| `HOME`                               | The user home inherited by an isolated CLI; relevant to paths containing `~`.                             |
+| `CODEX_HOME`                         | Select the configuration, credentials, catalogs and session-state directory.                              |
 
-## 智谱 GLM Coding Plan
+Changing a working folder does not move or select Codex configuration. Back up existing configuration before editing. Put root TOML settings before provider tables; merge tables without duplicating their names. Prefer absolute catalog paths as seen by the CLI process.
 
-Use a key for the correct Coding Plan product; individual, team and standard API keys are not interchangeable. The Codex-specific endpoint differs from the usual Chat Completions endpoint. Follow the [official GLM Codex guide](https://docs.bigmodel.cn/cn/coding-plan/tool/codex) for current model availability and account eligibility.
+## Choose your deployment arrangement
 
-1. Create an API Key in your 智谱编程套餐 account.
-2. Write the following catalog to `models-glm.json` in the CLI's Codex home. It declares one GLM model and contains no credential.
+### Local CLI
+
+Use the environment and account that actually start Codex. A host CLI running as root may use `HOME=/root`, `CODEX_HOME=/root/.codex` and a working folder of `/home/panda`; those paths do not have to share a parent. Another user may not be able to read root's directory. Verify from both the workspace root and a newly created project folder. Project subfolders should use the same user-level configuration without separate credential copies.
+
+### Isolated CLI in a container
+
+The standard Compose installation mounts a persistent model-state volume at `/home/codex/.codex`. Its `CODEX_HOME` points there. Edit the configuration in that volume. A host `/root/.codex` is not automatically present or readable in the container.
+
+An alternative persistent layout mounts the workspace at `/home/panda` inside the container and uses:
+
+```text
+HOME=/home/panda
+CODEX_HOME=/home/panda/.codex
+PANDA_FORCE_CWD=/home/panda
+PANDA_FORCE_PROJECTS_ROOT=/home/panda
+```
+
+Then provide `/home/panda/.codex/config.toml` and every file it references. For example, `model_catalog_json` must identify an existing catalog inside the container. Match ownership to the container UID; use directory mode `0700` and file mode `0600` for credential-bearing files. Do not weaken permissions on host root credentials to work around container isolation.
+
+### Docker and Kubernetes do not discover host configuration
+
+A container cannot discover or read the browser user's or host user's `~/.codex` automatically. Choose how an administrator supplies state:
+
+- **Existing host directory:** explicitly bind-mount an absolute directory on the Docker daemon host. `CODEX_HOME` names the destination inside the container, not the host source.
+- **Independent engine state:** use the standard named volume or a Kubernetes PVC, and initialize configuration and authentication inside that persistent state. An empty volume does not contain your host login.
+- **Shared host engine:** leave provider credentials with that engine; mount/connect its socket and matching workspace instead.
+
+For an existing configuration, a Compose override can use:
+
+```yaml
+services:
+  panda-force:
+    environment:
+      CODEX_HOME: /home/codex/.codex
+    volumes:
+      - type: bind
+        source: /srv/codex-state
+        target: /home/codex/.codex
+        bind:
+          create_host_path: false
+```
+
+`/srv/codex-state` is an example, not an auto-created copy of `~/.codex`. Prepare it on the Docker daemon host with the intended `config.toml`, catalogs and required authentication material. Ensure the container UID can write session state. With a remote Docker daemon, a path on your laptop is not a path on that host.
+
+Kubernetes has no access to the operator's laptop home. A generic PVC arrangement is:
+
+```yaml
+spec:
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  containers:
+    - name: panda-force
+      image: hiforceai/panda-force:0.0.17
+      env:
+        - name: CODEX_HOME
+          value: /home/codex/.codex
+        - name: ZHIPU_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: model-provider
+              key: zhipu-api-key
+      volumeMounts:
+        - name: codex-state
+          mountPath: /home/codex/.codex
+  volumes:
+    - name: codex-state
+      persistentVolumeClaim:
+        claimName: codex-state
+```
+
+This is a Pod-spec fragment, not a full Deployment. Supply the PVC, Secret and initialization workflow yourself; adapt the UID and storage policy to the image and cluster. Put `config.toml` and referenced catalogs into the PVC using an administrator-controlled initialization Job or mount non-secret files individually from a ConfigMap. Supply provider keys from Secrets. Do not mount a read-only Secret over the entire writable `CODEX_HOME`. Do not bake credentials into images. A `hostPath` refers to a particular cluster node and requires matching node scheduling and permissions; it is not a portable way to access a user's home.
+
+### Shared host daemon
+
+The host daemon reads model configuration and credentials. The web container connects through its socket. Changing only the web container's `HOME` or `CODEX_HOME` does not reconfigure a running daemon. Ensure the socket is accessible and task workspace paths correspond on both sides. Follow the [shared-engine installation guide](installation.md#use-codex-already-installed-on-the-host).
+
+After editing configuration, restart the actual engine during an appropriate maintenance window, then create a new session. Restarting the web application alone does not reload an external daemon. Do not delete `auth.json` or session directories to switch providers; existing sessions may remain associated with their original provider.
+
+## Zhipu GLM
+
+Use the API Key for your Coding Plan product; individual, team and standard API keys are separate. Check model entitlement and current metadata in the [official GLM Codex guide](https://docs.bigmodel.cn/cn/coding-plan/tool/codex). Codex uses the dedicated Responses endpoint rather than the usual Chat Completions URL.
+
+1. Obtain your Coding Plan key.
+2. Save this catalog as `models-glm.json` directly inside `CODEX_HOME`:
 
 ```json
 {
@@ -59,7 +151,7 @@ Use a key for the correct Coding Plan product; individual, team and standard API
 }
 ```
 
-3. Merge into `config.toml`. Replace the catalog path for a local installation; the example path is for our container. `env_key` refers to an environment variable, not the key itself.
+3. Merge these settings into `config.toml`. The example catalog path is for the standard container; replace it for another layout. `env_key` names an environment variable, not the key value.
 
 ```toml
 model_provider = "zhipu"
@@ -76,20 +168,20 @@ env_key = "ZHIPU_API_KEY"
 requires_openai_auth = false
 ```
 
-4. Supply `ZHIPU_API_KEY` privately to the CLI process, then start `codex`. Confirm the selected provider/model and run a small coding task in a disposable folder. In PandaForce, create a new session and choose GLM from the model selector.
+4. Pass `ZHIPU_API_KEY` privately to the actual CLI process. Start `codex`, check the provider and model, and run a small task in a disposable folder. Then create a PandaForce session and select GLM.
 
-智谱需要同时配置端点、密钥和模型目录；只在模型选择框输入名称不等于完成接入。模型不可用或套餐不支持时，以智谱控制台和官方文档为准。
+Selecting a model name alone does not configure its endpoint, key or catalog. See OpenAI's [custom-provider configuration](https://learn.chatgpt.com/docs/config-file/config-advanced) for provider settings. These examples use `wire_api = "responses"`; Chat Completions compatibility alone is insufficient.
 
 ## Ollama
 
-[Ollama's Codex guide](https://docs.ollama.com/integrations/codex) recommends tool-capable models and at least 64K context. Install Ollama, start its service, pull a model your hardware can run, then launch:
+Install and start Ollama, then pull a tool-capable model that fits your hardware. The [official Codex guide](https://docs.ollama.com/integrations/codex) recommends at least 64K context.
 
 ```bash
 ollama pull gpt-oss:20b
 codex --oss --local-provider ollama -m gpt-oss:20b
 ```
 
-For a persistent PandaForce server configuration, use a custom provider ID:
+For a persistent server configuration:
 
 ```toml
 model_provider = "local_ollama"
@@ -103,13 +195,13 @@ wire_api = "responses"
 requires_openai_auth = false
 ```
 
-Ollama must provide the Responses endpoint and the chosen model must support the required tools. Tune context using Ollama's model/server settings; sufficient RAM/VRAM is required. `ollama launch codex` is an alternative in Ollama versions that provide that command; inspect its generated configuration before using it with a server.
+Ensure Ollama supports the Responses endpoint and tune the model's context in Ollama. Available RAM/VRAM limits model and context size. `ollama launch codex` is another option on versions that include that command; review its generated configuration before applying it to a server.
 
-容器里的 `127.0.0.1` 是容器本身。Ollama 在宿主机时，改用可访问的宿主机地址；Docker Desktop 可用 `host.docker.internal`，Linux Compose 需要相应的 `host-gateway` 映射，或将两个服务放进同一网络。不要把无认证的 Ollama 端口直接暴露到公网。
+Inside a container, `127.0.0.1` refers to that container. To reach a host service, use an accessible host address. Docker Desktop provides `host.docker.internal`; Linux Compose may require a `host-gateway` mapping. Alternatively, put both services on one container network. Keep an unauthenticated Ollama port off the public internet.
 
 ## DeepSeek
 
-DeepSeek now documents a native Responses API and [Codex integration](https://api-docs.deepseek.com/quick_start/agent_integrations/codex/). Use a DeepSeek account API Key. Download/review the model catalog from that official guide, store it as `models-deepseek.json` in the runtime's Codex home, then use:
+Use a DeepSeek API Key. Review the catalog in the [official Codex integration guide](https://api-docs.deepseek.com/quick_start/agent_integrations/codex/), save it as `models-deepseek.json` inside `CODEX_HOME`, and configure:
 
 ```toml
 model_provider = "deepseek"
@@ -126,11 +218,11 @@ env_key = "DEEPSEEK_API_KEY"
 requires_openai_auth = false
 ```
 
-Pass `DEEPSEEK_API_KEY` to the CLI process. Select a model available to your account and matching your reviewed catalog. The endpoint here intentionally has no appended `/v1/chat/completions`. Do not assume every older DeepSeek model or compatible gateway supports Codex tools. See the [Responses API guide](https://api-docs.deepseek.com/guides/responses_api/) for protocol details.
+Pass `DEEPSEEK_API_KEY` to the CLI process. Match the model to your account and catalog. The base URL intentionally has no `/v1/chat/completions` suffix. Verify tool support for the selected model or gateway; see the [Responses API guide](https://api-docs.deepseek.com/guides/responses_api/).
 
-## Pass secrets to Docker · 容器密钥传入
+## Pass keys to containers
 
-Compose does **not** pass arbitrary host environment variables into a container automatically. Add an override, for example for GLM:
+Compose does not automatically forward arbitrary host variables. Save this override as `compose.provider.yml`:
 
 ```yaml
 services:
@@ -139,7 +231,7 @@ services:
       ZHIPU_API_KEY: ${ZHIPU_API_KEY:?Set ZHIPU_API_KEY privately}
 ```
 
-Save this as `compose.provider.yml`, obtain the key via your secret manager or a private shell prompt, then recreate the service:
+Obtain the key from your secret manager or use this Bash prompt, then recreate the service:
 
 ```bash
 read -r -s -p 'Zhipu API key: ' ZHIPU_API_KEY
@@ -148,17 +240,17 @@ export ZHIPU_API_KEY
 docker compose -f docker-compose.yml -f compose.provider.yml up -d --no-build
 ```
 
-This prompt is for Bash; Windows PowerShell needs its own secure-input/environment workflow. For DeepSeek replace the environment-variable name with `DEEPSEEK_API_KEY`. Avoid logging `docker compose config` or container environments containing secrets. Shared daemons need the secret in **their** environment, not just the web container's.
+PowerShell needs its own secure-input workflow. For DeepSeek, substitute `DEEPSEEK_API_KEY`. Do not log rendered Compose configuration or container environments containing secrets. A shared daemon needs the key in its own environment, not merely in the web container.
 
-## Verify and troubleshoot · 验证与排错
+## Verification and troubleshooting
 
-| Symptom                                         | Check                                                                                                                                                |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Model list still shows old models               | Confirm the CLI user, `CODEX_HOME`, absolute `model_catalog_json` path and file permissions; restart the actual app-server and create a new session. |
-| Missing API key / 401                           | Confirm `env_key` is visible to the process, not just your interactive shell; check the provider account/key type.                                   |
-| 404 / unsupported wire API                      | Use the provider's Responses base URL, not a Chat Completions URL; check CLI/provider versions.                                                      |
-| Model is listed but tool calls fail             | Listing confirms metadata only. Verify Responses streaming, tool calls, model entitlement and context support with a small CLI task.                 |
-| Ollama connection refused                       | Check container networking, service listen address and firewall from the CLI host/container.                                                         |
-| Old sessions disappear after changing providers | Restore the previous config to inspect the previous provider's sessions. Do not delete the model-state volume.                                       |
+| Symptom                                            | Check                                                                                                              |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Old model list                                     | Runtime user, `CODEX_HOME`, absolute catalog path and permissions; restart the actual engine and create a session. |
+| Missing key or 401                                 | The environment of the CLI/daemon, provider key type and entitlement.                                              |
+| 404 or unsupported protocol                        | The Responses base URL and supported CLI/provider versions.                                                        |
+| Listed model cannot send or call tools             | Listing confirms metadata only. Test streaming, tools and context with a small CLI task.                           |
+| Ollama connection refused                          | Network address from the CLI container, listen address and firewall.                                               |
+| Older sessions disappear after switching providers | Restore the previous configuration to inspect its sessions; keep the persistent model-state volume.                |
 
-CLI 验证成功后再测试 PandaForce 新会话，包括首轮回复、工具调用、右侧统计更新与重启后配置保留。不同模型可能不返回相同的用量字段，面板显示“未报告”不代表零用量。本文没有修改任何线上模型配置、密钥或共享 daemon。
+First verify the CLI from the workspace root and a project subfolder. Then test a new PandaForce session: initial reply, tool call, live inspector update and configuration persistence after restart. Some models omit usage fields; “not reported” does not mean zero usage. This guide does not change your live configuration, credentials or daemon.
