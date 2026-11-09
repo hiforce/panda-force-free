@@ -148,7 +148,12 @@ export interface StatusPort {
 }
 
 export interface GoalsPort {
-  submitGoalCommand: (thread: View<SessionSummary> | null, command: GoalCommand) => Promise<void>;
+  submitGoalCommand: (
+    thread: View<SessionSummary> | null,
+    command: GoalCommand,
+    options?: { preserveDraft?: boolean },
+  ) => Promise<void>;
+  loadGoal: (threadId: string) => Promise<void>;
   syncGoalDialogSession: () => void;
   syncGoalStatusSurface: (threadId?: string) => void;
   closeGoalDialog: () => void;

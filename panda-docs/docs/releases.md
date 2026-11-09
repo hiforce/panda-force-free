@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.15`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.16`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -22,6 +22,13 @@ docker compose logs panda-force
 ```
 
 Review source, dependency licenses, English comments and the explicit public inventory before exporting. Verify the final clean tree, then review staged files. No internal Git history, old help, design records or agent directories belong in the public snapshot. Release changes go to the private repository for review first.
+
+## 0.0.16
+
+- Paused goals appear when opening or reconnecting to a session, with explicit Resume goal controls in the status area and goal details.
+- Resuming keeps the same goal, objective, budget and unsent message. Failed requests can be retried, and delayed responses cannot overwrite another session.
+- Native goal changes outside a running turn are accepted at the engine adapter boundary; newer notifications take precedence over an older status read.
+- The required browser checks cover desktop Chromium and mobile WebKit.
 
 ## 0.0.15
 

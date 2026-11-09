@@ -744,6 +744,7 @@ export function startApplication() {
   install(
     synchronization,
     assembleSynchronization({
+      goalsPort: goals,
       transportPort: transport,
       viewUpdates: environment.viewUpdates,
       sessions: environment.sessions,

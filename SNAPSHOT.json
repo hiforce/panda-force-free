@@ -23,8 +23,8 @@
     },
     {
       "path": "Dockerfile",
-      "bytes": 3097,
-      "sha256": "08a7e8063b2bb61630c86e2d5c175a5663152bb553d7181601262eac9014867d",
+      "bytes": 3104,
+      "sha256": "2dec677651251a8a3b1fbb4a259bec3c37fd81243ffb206a506a2e502fece8fc",
       "mode": "100644"
     },
     {
@@ -48,13 +48,13 @@
     {
       "path": "README-zh.md",
       "bytes": 4255,
-      "sha256": "e6bdc9c231de91e16189ccd903a97f0559faa8c55caa65b6c6badd3892462f55",
+      "sha256": "e73ddde1641ba488ec7a117c572dc2fc55673c0e831b8d7e70622246131da140",
       "mode": "100644"
     },
     {
       "path": "README.md",
       "bytes": 4684,
-      "sha256": "82d5922a10aef692ecdc87854cf0e2e5992a9d798698c7634dbbf5f782891b0a",
+      "sha256": "4153ded27d44838079e8be6d3fae341335eebb3c0f1b3bc7c4492bc6a3ca4e9a",
       "mode": "100644"
     },
     {
@@ -78,7 +78,7 @@
     {
       "path": "docker-compose.yml",
       "bytes": 1666,
-      "sha256": "de4e7eefab72086c8d67f31fe50faf37511b79be47fd135c63041599b75b3301",
+      "sha256": "83c618a8e60be2ba67a8a04028d14bb85fa99decdcaa99f87d37aae77007183c",
       "mode": "100644"
     },
     {
@@ -90,7 +90,7 @@
     {
       "path": "package.json",
       "bytes": 4632,
-      "sha256": "01c99292040856241ec00f9aaae4ff0b396de163ca2ed8771da75b8905a3c6a4",
+      "sha256": "19abde7421cdf62eeca6c147b5f318fb97f8f63c6d1e600183ffd36a00010f5b",
       "mode": "100644"
     },
     {
@@ -107,8 +107,8 @@
     },
     {
       "path": "panda-docs/docs/building.md",
-      "bytes": 4115,
-      "sha256": "f77ece0c9fd3eee041219e5fb094f2556086a16952f372e38222c963946f0c4a",
+      "bytes": 4133,
+      "sha256": "1eb8902e15f714747d9ddc05b8f7b343aa1223a4b0fc414a72f14921a32453c2",
       "mode": "100644"
     },
     {
@@ -126,13 +126,13 @@
     {
       "path": "panda-docs/docs/installation.md",
       "bytes": 9573,
-      "sha256": "a36d0e1e2fe729febc32e82c60a9827a19662487b1c9d4da6ccd9ae9443f93b9",
+      "sha256": "c0c67d5f7d2b57f2ee49c6352c10cfd08b48e52b3300ce4ad235c070e35ffefe",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/kubernetes.md",
       "bytes": 9474,
-      "sha256": "cd215ab5ae8082c92e5c885ae708bf836effb2069b95b2ba1a92064d6a48afe1",
+      "sha256": "ae014e858dbe7a1030069c4a7c79ab0803451be1639382db43f6b72c688742a8",
       "mode": "100644"
     },
     {
@@ -143,8 +143,8 @@
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 13264,
-      "sha256": "c9f0a49ed5a786407687cf88d35cf787d9681c03299506a3bd207d9946014b76",
+      "bytes": 13796,
+      "sha256": "f450965d7e08d952a83680a0dab43c7284e8eb99fd70dc6b71bea7e97449fa39",
       "mode": "100644"
     },
     {
@@ -210,13 +210,13 @@
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-isolated.yaml",
       "bytes": 3848,
-      "sha256": "335b3b9ad560d4ae3221dab16a6bae6df57d9f8cfbc39a2f65e9b1d0020ad6b5",
+      "sha256": "842dd1a5ce389c85286f1e0a4e1ddf85635dc3db25888518f750e32d4b33abf2",
       "mode": "100644"
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-shared.yaml",
       "bytes": 4595,
-      "sha256": "1d71d1e0b0b3d7990c3c51e04a9d9aa9fc076a7c8dcef98a4cdd30e11be351b6",
+      "sha256": "a3dfa862f264b3037f58c6da0f75602be54e761489bf1aeac4528883465a0854",
       "mode": "100644"
     },
     {
@@ -569,8 +569,8 @@
     },
     {
       "path": "public/index.html",
-      "bytes": 86932,
-      "sha256": "a0d5e92ca1e62a8e8956d56f68a2c13adff7d75caac9298685d3f2d315007ee0",
+      "bytes": 87097,
+      "sha256": "fa98ec6cc3a95f6c0b1b945a1ccfcb746a2b563050c7fc306e7c64861f3344ce",
       "mode": "100644"
     },
     {
@@ -587,8 +587,8 @@
     },
     {
       "path": "public/style.css",
-      "bytes": 136328,
-      "sha256": "6637a2fcbc56fa7454b64c8cef6d142fc8931a0071fc1e7d84b6d6972cb5e91f",
+      "bytes": 136768,
+      "sha256": "c17f1345e313198af4610e8163456aa1cd8ca9d8265fd236868fc7c06872bd70",
       "mode": "100644"
     },
     {
@@ -629,8 +629,8 @@
     },
     {
       "path": "release/community/Dockerfile",
-      "bytes": 3097,
-      "sha256": "08a7e8063b2bb61630c86e2d5c175a5663152bb553d7181601262eac9014867d",
+      "bytes": 3104,
+      "sha256": "2dec677651251a8a3b1fbb4a259bec3c37fd81243ffb206a506a2e502fece8fc",
       "mode": "100644"
     },
     {
@@ -642,13 +642,13 @@
     {
       "path": "release/community/README-zh.md",
       "bytes": 4255,
-      "sha256": "e6bdc9c231de91e16189ccd903a97f0559faa8c55caa65b6c6badd3892462f55",
+      "sha256": "e73ddde1641ba488ec7a117c572dc2fc55673c0e831b8d7e70622246131da140",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
       "bytes": 4684,
-      "sha256": "82d5922a10aef692ecdc87854cf0e2e5992a9d798698c7634dbbf5f782891b0a",
+      "sha256": "4153ded27d44838079e8be6d3fae341335eebb3c0f1b3bc7c4492bc6a3ca4e9a",
       "mode": "100644"
     },
     {
@@ -666,13 +666,13 @@
     {
       "path": "release/community/docker-compose.yml",
       "bytes": 1666,
-      "sha256": "de4e7eefab72086c8d67f31fe50faf37511b79be47fd135c63041599b75b3301",
+      "sha256": "83c618a8e60be2ba67a8a04028d14bb85fa99decdcaa99f87d37aae77007183c",
       "mode": "100644"
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 26868,
-      "sha256": "2d443f5b094594c29a93fe5adc024ce060acca1cc3e5195a96052f6245db37dc",
+      "bytes": 27098,
+      "sha256": "a711a2d01913a0cf4bf08d74a4c670eda1ea1703b32836ad4f882b5dc69c7fa1",
       "mode": "100644"
     },
     {
@@ -785,8 +785,8 @@
     },
     {
       "path": "scripts/testing/suites.json",
-      "bytes": 5203,
-      "sha256": "1d21aa8afb4d5456ec2718e3df78780b258fe4acca8a4fc6803b077d908ebfe2",
+      "bytes": 5238,
+      "sha256": "49bd26fd0f39495be3c7476761104e894aa2aea3f87cdf7fa8d6bd5e606e896d",
       "mode": "100644"
     },
     {
@@ -851,8 +851,8 @@
     },
     {
       "path": "src/client/application.js",
-      "bytes": 32160,
-      "sha256": "2e11471fbf5ef263c345412991e3f550358e168bd0eb23e37330834c4dbbdc84",
+      "bytes": 32184,
+      "sha256": "978cd36a4ee0e9bd00597c626de12e9aafe559c1edae33ad8cc4078f27f90e65",
       "mode": "100644"
     },
     {
@@ -935,8 +935,8 @@
     },
     {
       "path": "src/client/application/engine-services.js",
-      "bytes": 8812,
-      "sha256": "637dfbcbc11a4a90dfa9014d146269e16e04e10274d5634b0bb5ba482461c849",
+      "bytes": 9024,
+      "sha256": "6bb428f8f9f25a7591e1dd28d11b8d04ac3861668dfe8b62ffe79592c5ba0f28",
       "mode": "100644"
     },
     {
@@ -1001,8 +1001,8 @@
     },
     {
       "path": "src/client/application/navigation.js",
-      "bytes": 11068,
-      "sha256": "6c586c64cd5ad006870e19938dd0399c9e29766c02b2eb194f0da9afffc9e72e",
+      "bytes": 11101,
+      "sha256": "0eb8a42393c8cf4cfcd1072fa9cc4207886697a0d12ae46241fe707c074f26ad",
       "mode": "100644"
     },
     {
@@ -1121,8 +1121,8 @@
     },
     {
       "path": "src/client/application/synchronization.js",
-      "bytes": 9003,
-      "sha256": "7f0a35b70dfe938d02d8fd424a5f6791826681b95fdfbfe41f5e2bd1af856db0",
+      "bytes": 9094,
+      "sha256": "92c252d01db91912e19bcb49547d2d1ebbd33be8888ede3ed9d0db0eeb982e6f",
       "mode": "100644"
     },
     {
@@ -1223,8 +1223,8 @@
     },
     {
       "path": "src/client/codex-icons.js",
-      "bytes": 6467,
-      "sha256": "22401302b7d4d67122b036dddb427e2c762b2d8110f444013b20bbe3a017c4d6",
+      "bytes": 6577,
+      "sha256": "a789a687dff032786f42e52228e5b7f82f832396338373529ae37e743244768d",
       "mode": "100644"
     },
     {
@@ -1253,8 +1253,8 @@
     },
     {
       "path": "src/client/contracts/features.ts",
-      "bytes": 23380,
-      "sha256": "2179bc44e3219b1c623e0ed7417946a0eeff62dc072007a3fb2c955a9996277c",
+      "bytes": 23485,
+      "sha256": "8d79117bec0021e8d562f2dc04fc2b0bb1bd566da1abf4cf1790a795a141becd",
       "mode": "100644"
     },
     {
@@ -1283,8 +1283,8 @@
     },
     {
       "path": "src/client/contracts/rpc.ts",
-      "bytes": 1839,
-      "sha256": "0cd8221594dd624aa14dcadb38d1f63605d34d64c68ec55a472ee7a0c53aa7b5",
+      "bytes": 1884,
+      "sha256": "8d5b1872d91c634e069d6d4a7c07142664f905cf267075fc6ab24c51809fec39",
       "mode": "100644"
     },
     {
@@ -1409,8 +1409,8 @@
     },
     {
       "path": "src/client/dom-elements.d.ts",
-      "bytes": 19141,
-      "sha256": "9515cc31ea764a8705a6f4a8218dfe5513ceabd9d1dda853f8ce35a1458289cb",
+      "bytes": 19197,
+      "sha256": "dd59b1e5494c2bb97dedb88d2574681028bd9acedee0787d493d2bbc50fb6dea",
       "mode": "100644"
     },
     {
@@ -1439,8 +1439,14 @@
     },
     {
       "path": "src/client/goal-controller.js",
-      "bytes": 10536,
-      "sha256": "501ecb5ef27ffa63aa6cf5ef792f2c08303d9a9bbecdba299d61f5fbf64b2bbc",
+      "bytes": 13452,
+      "sha256": "e6786ebb1ac2e31080ac6dfbcec21c01f8fdd371e725c73ee453eee09e67fac7",
+      "mode": "100644"
+    },
+    {
+      "path": "src/client/goals/loader.js",
+      "bytes": 1479,
+      "sha256": "5ecb80397e4f2058140769d1a55c56f0bb4d6a6d1195995d89382ea40ca5e5d4",
       "mode": "100644"
     },
     {
@@ -1673,8 +1679,8 @@
     },
     {
       "path": "src/client/transport.js",
-      "bytes": 11298,
-      "sha256": "05f2b69e4cb5230534835c696a58e3c9dbbed42da1cc40b4d521b87cb3f586c9",
+      "bytes": 11319,
+      "sha256": "bb1b23ef94fe313475146abde32d8ca755fafd9bf0c5d81f372d8e6ab2235440",
       "mode": "100644"
     },
     {
@@ -2248,9 +2254,15 @@
       "mode": "100644"
     },
     {
+      "path": "src/server/protocol/codex-envelope.ts",
+      "bytes": 560,
+      "sha256": "0e41c8aba43306a11a31f485c615a5af166e7fe5ce0f2e57bcbbf0af850b775d",
+      "mode": "100644"
+    },
+    {
       "path": "src/server/protocol/native.ts",
-      "bytes": 2757,
-      "sha256": "60a1982dcd497410864b6588dfb53ca837a6a7e0f45ebfccc00b0d6fd5e8b5f2",
+      "bytes": 2746,
+      "sha256": "973dd69e3bcb404b96f300474736d1206f575e7dea93385a5a9aefb01de1b3b1",
       "mode": "100644"
     },
     {
@@ -2914,6 +2926,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/browser/goal-resume.e2e.mjs",
+      "bytes": 10247,
+      "sha256": "4b237288aa322bbd1c1bc2359d11e7fe891c52e262c0c9290afd9cac1a7c173b",
+      "mode": "100644"
+    },
+    {
       "path": "tests/browser/home-viewport.e2e.mjs",
       "bytes": 5925,
       "sha256": "4a6ed4978564d6a80860677a4a6d9194e5669f74e76c02a64dffc5b7174ba224",
@@ -3365,8 +3383,8 @@
     },
     {
       "path": "tests/support/app-fixture.mjs",
-      "bytes": 15249,
-      "sha256": "013a3d641399cac314372787ec2f0241cc49c3c68a2bd200a92f3c735af84ecb",
+      "bytes": 17099,
+      "sha256": "4aa297a9e54242c28f65e7fed220d5748930b50e81b1c0f26030746689f97a48",
       "mode": "100644"
     },
     {
@@ -3385,6 +3403,12 @@
       "path": "tests/support/conversation-scroll.mjs",
       "bytes": 13679,
       "sha256": "3574426f4e545cada75d258dc64f9a3323e640153088cd5d5dd39c7adfa349ca",
+      "mode": "100644"
+    },
+    {
+      "path": "tests/support/goal-fixture.mjs",
+      "bytes": 989,
+      "sha256": "4d51150f8c4d57be5c4a54b84e07e23305a80082ed0ebb38806699de5dfea5bd",
       "mode": "100644"
     },
     {
@@ -3538,6 +3562,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/unit/codex-goal-envelope.test.ts",
+      "bytes": 1467,
+      "sha256": "ecb17d0f42c1bd246cfb0557228d31e439e2cddfaed13530831709231778ff6a",
+      "mode": "100644"
+    },
+    {
       "path": "tests/unit/codex-icons.test.ts",
       "bytes": 1993,
       "sha256": "7ca4746d82c9b4eee68f3c4517c3efee719ac4189587f30c8da8c7b0248170e5",
@@ -3649,6 +3679,12 @@
       "path": "tests/unit/git-service.test.ts",
       "bytes": 3360,
       "sha256": "b3e3a5682f3d9e9327c91e1a6d0e70a3fb2963c3fd7d9be368d5f7fca19c7636",
+      "mode": "100644"
+    },
+    {
+      "path": "tests/unit/goal-loader.test.ts",
+      "bytes": 2751,
+      "sha256": "c762f67646d6da7b7442d8e275430c1e98f60bf09483f92dca6dd79f3649e918",
       "mode": "100644"
     },
     {
@@ -3994,5 +4030,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "540ffeaa79530ae6bf9fc830cd2b48292fc07e8659036de9da515371d4747fae"
+  "contentSha256": "928bca6d80dbf87d11826d2501396888ac21ffa668681b0afeed3cffaf213dba"
 }

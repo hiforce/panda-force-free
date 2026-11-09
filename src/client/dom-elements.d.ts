@@ -164,6 +164,7 @@ export interface InterfaceElements {
   "#prompt": HTMLElementTagNameMap["textarea"];
   "#queueButton": HTMLElementTagNameMap["button"];
   "#refreshUsage": HTMLElementTagNameMap["button"];
+  "#resumeGoalDialog": HTMLElementTagNameMap["button"];
   "#retryModels": HTMLElementTagNameMap["button"];
   "#reviewExpand": HTMLElementTagNameMap["button"];
   "#reviewMode": HTMLElementTagNameMap["button"];

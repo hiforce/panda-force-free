@@ -2,6 +2,7 @@ import { errorMessage } from "./../shared/errors.js";
 import { closestElement, findElement, requireElement } from "./dom.js";
 import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "./i18n.js";
 import { codexIcon } from "./codex-icons.js";
+import { createGoalLoader } from "./goals/loader.js";
 // Goal dialog identity, event ordering and focus restoration stay together.
 export function createGoalController({
   $,
@@ -14,7 +15,11 @@ export function createGoalController({
   addPersistentError,
   toast,
   mutations,
+  onChange,
 }) {
+  const loader = createGoalLoader({ rpc, apply: applyGoalStatusEvent, clear: clearGoal });
+  const pendingActions = new Set();
+  const resumable = (goal) => goal && ["paused", "blocked"].includes(goal.status);
   function normalizeGoalStatus(value) {
     const status = String(value || "active")
       .trim()
@@ -47,6 +52,42 @@ export function createGoalController({
     const dialog = $("#goalDialog");
     if (dialog?.open) dialog.close();
   }
+  function syncGoalActions() {
+    const threadId = goalDialogThreadId,
+      goal = threadId && state.goals.get(threadId),
+      button = $("#resumeGoalDialog");
+    button.hidden = !resumable(goal);
+    button.disabled = pendingActions.has(threadId);
+    button.setAttribute("aria-busy", String(pendingActions.has(threadId)));
+  }
+  async function resumeGoal(threadId) {
+    const thread = state.active,
+      goal = state.goals.get(threadId);
+    if (thread?.id !== threadId || !resumable(goal) || pendingActions.has(threadId)) return;
+    pendingActions.add(threadId);
+    if (goalDialogThreadId === threadId) $("#goalDialogError").hidden = true;
+    syncGoalActions();
+    const button = findElement("button.goal-status-resume", $("#goalStatus"));
+    if (button) {
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+    }
+    try {
+      await submitGoalCommand(thread, { command: "resume" }, { preserveDraft: true });
+    } catch (error) {
+      if (goalDialogThreadId === threadId) {
+        setOpaqueText($("#goalDialogError"), errorMessage(error));
+        $("#goalDialogError").hidden = false;
+      } else addPersistentError(errorMessage(error));
+    } finally {
+      pendingActions.delete(threadId);
+      syncGoalActions();
+      if (button?.isConnected) {
+        button.disabled = false;
+        button.setAttribute("aria-busy", "false");
+      }
+    }
+  }
   function openGoalDialog(threadId = state.active?.id) {
     const goal = threadId && state.goals.get(threadId),
       dialog = $("#goalDialog");
@@ -75,6 +116,7 @@ export function createGoalController({
       [goal.detail || goal.message, goalProgressText(goal.progress)].filter(Boolean).join(" · "),
     );
     $("#goalDialogError").hidden = true;
+    syncGoalActions();
     localizeAttribute($("#goalDialogObjective"), "aria-label", "goals.goalObjective", undefined, t);
     if (!dialog.open) dialog.showModal();
     requestAnimationFrame(() => $("#goalDialogObjective").focus());
@@ -157,15 +199,21 @@ export function createGoalController({
     setOpaqueAttribute(root, "title", `${label}${progress ? ` · ${progress}` : ""}`);
     setMessageHtml(
       root,
-      `<span class="goal-status-icon" aria-hidden="true">${codexIcon(icons[goal.status] || icons.active)}</span><span class="goal-status-copy">${escapeHtml(label)}</span>${progress ? `<span class="goal-status-progress">${escapeHtml(progress)}</span>` : ""}<button type="button" class="goal-status-toggle" aria-haspopup="dialog" aria-controls="goalDialog">${t("goals.showGoalDetails")}</button>`,
+      `<span class="goal-status-icon" aria-hidden="true">${codexIcon(icons[goal.status] || icons.active)}</span><span class="goal-status-copy">${escapeHtml(label)}</span>${progress ? `<span class="goal-status-progress">${escapeHtml(progress)}</span>` : ""}${resumable(goal) ? `<button type="button" class="goal-status-resume" ${pendingActions.has(threadId) ? 'disabled aria-busy="true"' : ""}>${escapeHtml(t("common.resumeGoal"))}</button>` : ""}<button type="button" class="goal-status-toggle" aria-haspopup="dialog" aria-controls="goalDialog">${t("goals.showGoalDetails")}</button>`,
     );
+    const resume = findElement(".goal-status-resume", root);
+    if (resume)
+      resume.onclick = (event) => {
+        event.stopPropagation();
+        void resumeGoal(threadId);
+      };
     requireElement(".goal-status-toggle", root).onclick = (event) => {
       event.stopPropagation();
       openGoalDialog(threadId);
     };
     root.onclick = (event) => {
       if (
-        goal.status !== "blocked" ||
+        !resumable(goal) ||
         closestElement(".goal-status-toggle", event.target) ||
         closestElement(".goal-status-menu", event.target)
       )
@@ -189,7 +237,7 @@ export function createGoalController({
         localizeText(button, labelKey, undefined, t);
         button.onclick = () => {
           menu.remove();
-          void submitGoalCommand(state.active, { command }).catch((error) =>
+          void submitGoalCommand(state.active, { command }, { preserveDraft: true }).catch((error) =>
             addPersistentError(error?.message || String(error)),
           );
         };
@@ -206,7 +254,7 @@ export function createGoalController({
       source = goalPayload(payload),
       goalId = String(source.goalId || source.id || existing?.goalId || "default"),
       updatedAt = (timestampSeconds(source.updatedAt ?? source.timestamp) || 0) * 1000;
-    if (existing && existing.goalId !== goalId) return;
+    if (existing && existing.goalId !== "default" && existing.goalId !== goalId) return;
     if (existing && updatedAt && existing.updatedAt && updatedAt < existing.updatedAt) return;
     const next = {
       ...(existing || {}),
@@ -222,8 +270,28 @@ export function createGoalController({
     if (source.message !== undefined) next.message = String(source.message || "").trim();
     if (source.progress && typeof source.progress === "object") next.progress = source.progress;
     mutations.collection("goals").set(threadId, next);
-    if (threadId === state.active?.id) syncGoalStatusSurface(threadId);
+    loader.changed(threadId);
+    if (goalDialogThreadId === threadId) {
+      if (goalDialogGoalId === "default") goalDialogGoalId = goalId;
+      localizeText(
+        $("#goalDialogStatus"),
+        {
+          active: "common.goalInProgress",
+          paused: "common.goalPaused",
+          blocked: "common.goalBlocked",
+          usage_limited: "common.goalUsageLimited",
+          budget_limited: "common.goalBudgetLimited",
+          completed: "common.goalCompleted",
+          failed: "common.goalFailed",
+        }[next.status] || "common.goalInProgress",
+        undefined,
+        t,
+      );
+      syncGoalActions();
+    }
+    if (threadId === state.active?.id) onChange(threadId);
   }
+  $("#resumeGoalDialog").onclick = () => void resumeGoal(goalDialogThreadId);
   $("#closeGoalDialog").onclick = closeGoalDialog;
   $("#cancelGoalDialog").onclick = closeGoalDialog;
   $("#goalDialogObjective").oninput = () => $("#goalDialogObjective").setCustomValidity("");
@@ -245,9 +313,10 @@ export function createGoalController({
     saveGoalDialog();
   };
   function clearGoal(threadId) {
+    loader.changed(threadId);
     mutations.collection("goals").delete(threadId);
     if (threadId === goalDialogThreadId) closeGoalDialog();
-    syncGoalStatusSurface();
+    onChange(state.active?.id);
   }
   function syncGoalDialogSession() {
     if ($("#goalDialog").open && goalDialogThreadId !== state.active?.id) closeGoalDialog();
@@ -259,5 +328,6 @@ export function createGoalController({
     applyGoalStatusEvent,
     clearGoal,
     syncGoalDialogSession,
+    loadGoal: (threadId) => loader.load(threadId),
   };
 }

@@ -268,7 +268,7 @@ body{background:var(--app-main);color:var(--app-text)}
 .composer-caption{color:var(--app-text-secondary)}
 .session-status{display:flex;align-items:center;gap:7px;min-height:26px;width:min(800px,100%);margin:0 auto;padding:0 8px;color:var(--app-text-secondary);font-size:12px;line-height:18px}
 .goal-status{display:flex;align-items:center;gap:7px;min-height:26px;width:min(800px,100%);margin:0 auto;padding:0 8px;color:var(--app-text-secondary);font-size:12px;line-height:18px}
-.goal-status[data-state=blocked]{position:relative;cursor:pointer}
+.goal-status[data-state=blocked],.goal-status[data-state=paused]{position:relative;cursor:pointer}
 .goal-status[hidden]{display:none}
 .goal-status-icon{display:grid;place-items:center;width:16px;height:16px;flex:0 0 16px}
 .goal-status-icon .icon-slot,.goal-status-icon .icon-slot svg{width:14px;height:14px}
@@ -278,6 +278,10 @@ body{background:var(--app-main);color:var(--app-text)}
 .goal-status-toggle{margin-left:auto;padding:2px 5px;border:0;border-radius:5px;background:transparent;color:var(--app-text-tertiary);font:inherit;font-size:11px;white-space:nowrap;cursor:pointer}
 .goal-status-toggle:hover{background:var(--app-hover);color:var(--app-text)}
 .goal-status-toggle:focus-visible{outline:2px solid var(--app-link);outline-offset:1px}
+.goal-status-resume{min-height:32px;padding:4px 10px;border:1px solid var(--app-border-default);border-radius:7px;background:var(--app-input);color:var(--app-link);font:inherit;white-space:nowrap;cursor:pointer}
+.goal-status-resume:hover{background:var(--app-hover)}
+.goal-status-resume:focus-visible{outline:2px solid var(--app-link);outline-offset:2px}
+.goal-status-resume:disabled{opacity:.6;cursor:wait}
 .goal-status[data-state=active]{color:var(--app-link)}
 .goal-status[data-state=active] .goal-status-icon{animation:browser-spin .85s linear infinite}
 .goal-status[data-state=completed]{color:var(--app-success,#62b58a)}

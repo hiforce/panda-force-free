@@ -14,7 +14,7 @@ export type {
   EngineEnvelope as NativeEnvelope,
   EngineEventParameters as NativeNotificationParams,
 } from "../../shared/engine/contracts.js";
-export { engineEnvelope as nativeEnvelope } from "../../shared/engine/events.js";
+export { codexEnvelope as nativeEnvelope } from "./codex-envelope.js";
 
 export function nativeItem(value: unknown): NativeItem | null {
   if (!isRecord(value) || typeof value.id !== "string" || typeof value.type !== "string") return null;

@@ -46,7 +46,7 @@ spec:
       terminationGracePeriodSeconds: 30
       initContainers:
       - name: prepare-state
-        image: hiforceai/panda-force:0.0.15
+        image: hiforceai/panda-force:0.0.16
         command:
         - bun
         - -e
@@ -58,7 +58,7 @@ spec:
           mountPath: /var/lib/panda-force
       containers:
       - name: panda-force
-        image: hiforceai/panda-force:0.0.15
+        image: hiforceai/panda-force:0.0.16
         imagePullPolicy: IfNotPresent
         ports:
         - name: http

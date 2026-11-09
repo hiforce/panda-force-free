@@ -14,7 +14,7 @@ RUN bun install --frozen-lockfile
 RUN apt-get update \
     && apt-get install -y --no-install-recommends postgresql \
     && rm -rf /var/lib/apt/lists/* \
-    && bun node_modules/playwright/cli.js install --with-deps chromium
+    && bun node_modules/playwright/cli.js install --with-deps chromium webkit
 RUN apt-get update \
     && apt-get install -y --no-install-recommends vim \
     && rm -rf /var/lib/apt/lists/* \

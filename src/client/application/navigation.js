@@ -149,6 +149,7 @@ export function assembleNavigation({
     const navigationId = invalidateNavigation();
     if (!repositoriesPort.conversations.has(id)) await repositoriesPort.conversations.load(id);
     if (!selection.isCurrent(navigationId)) return false;
+    void goalsPort.loadGoal(id);
     const listedSummary = state.threads.find((x) => x.id === id),
       cached = repositoriesPort.conversations.get(id),
       summary = listedSummary || fallbackSummary || cached,

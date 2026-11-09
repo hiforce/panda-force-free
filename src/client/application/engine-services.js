@@ -66,6 +66,7 @@ export function assembleGoals({
     applyGoalStatusEvent,
     clearGoal,
     syncGoalDialogSession,
+    loadGoal,
   } = createGoalController({
     $,
     t,
@@ -79,8 +80,9 @@ export function assembleGoals({
     toast: /** @param {Parameters<typeof noticesPort.toast>} args */ (...args) => noticesPort.toast(...args),
     state,
     mutations,
+    onChange: (threadId) => viewUpdates.request("goals", threadId),
   });
-  async function submitGoalCommand(thread, command) {
+  async function submitGoalCommand(thread, command, options = {}) {
     if (!thread?.id) {
       noticesPort.toast(t("workbench.startATaskFirst"));
       return;
@@ -114,9 +116,13 @@ export function assembleGoals({
         goal: result.goal,
       });
     if (command.command === "clear") clearGoal(thread.id);
-    $("#prompt").value = "";
-    viewUpdates.request("composerLayout");
-    viewUpdates.request("goals", thread.id);
+    if (thread.id === state.active?.id) {
+      if (!options.preserveDraft) {
+        $("#prompt").value = "";
+        viewUpdates.request("composerLayout");
+      }
+      viewUpdates.request("goals", thread.id);
+    }
     noticesPort.toast(t(command.command === "clear" ? "goals.goalCleared" : "goals.goalUpdated"));
   }
   return {
@@ -127,6 +133,7 @@ export function assembleGoals({
     clearGoal,
     applyGoalStatusEvent,
     openGoalDialog,
+    loadGoal,
   };
 }
 /** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations" | "i18n" | "$" | "t" | "state" | "escapeHtml" | "shortPath", "transport" | "turnFrames" | "notices" | "activity" | "viewport" | "review" | "panels", "approvals">} options */

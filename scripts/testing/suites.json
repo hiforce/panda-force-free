@@ -24,6 +24,7 @@
     "browser/conversation-native.e2e.mjs",
     "browser/desktop-shell.e2e.mjs",
     "browser/file-download.e2e.mjs",
+    "browser/goal-resume.e2e.mjs",
     "browser/i18n-architecture.e2e.mjs",
     "browser/i18n.e2e.mjs",
     "browser/idaas-auth.e2e.mjs",

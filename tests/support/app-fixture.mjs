@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { createServer } from "node:net";
+import { seedGoalFixture } from "./goal-fixture.mjs";
 
 export async function waitFor(check) {
   const deadline = performance.now() + 20_000;
@@ -32,6 +33,7 @@ export async function createAppFixture({
   usageRollout = false,
   models = null,
   account = null,
+  goals = [],
   workspaceDirectory = null,
   extraEnvironment = /** @type {(context: {base: string; dir: string}) => NodeJS.ProcessEnv} */ (() => ({})),
 } = {}) {
@@ -166,11 +168,14 @@ export async function createAppFixture({
       turns: [],
     });
   const trace = join(dir, "native-calls.jsonl");
+  const goalPath = join(dir, "goals_1.sqlite");
+  if (goals.length) seedGoalFixture(goalPath, goals);
   const serverRequest = join(dir, "server-request.json");
   writeFileSync(
     join(dir, "codex"),
     `#!${process.execPath}
 import { createInterface } from 'node:readline';
+import { Database } from 'bun:sqlite';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 import { appendFileSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
@@ -178,6 +183,11 @@ let count=0;
 let account=${JSON.stringify(account)};
 const threads=${JSON.stringify(initial)};
 const queues=new Map();
+const goalDb=${goals.length > 0} ? new Database(${JSON.stringify(goalPath)}) : null;
+function goalResult(id){
+  const row=goalDb?.query('SELECT * FROM thread_goals WHERE thread_id=?').get(id);
+  return row ? {threadId:row.thread_id,objective:row.objective,status:row.status,tokenBudget:row.token_budget,tokensUsed:row.tokens_used,timeUsedSeconds:row.time_used_seconds,createdAt:row.created_at_ms,updatedAt:row.updated_at_ms} : null;
+}
 let sharedSocket;
 const send=value=>sharedSocket?sharedSocket.send(JSON.stringify(value)):process.stdout.write(JSON.stringify(value)+'\\n');
 setInterval(()=>{if(existsSync(${JSON.stringify(serverRequest)})){const request=JSON.parse(readFileSync(${JSON.stringify(serverRequest)},'utf8'));unlinkSync(${JSON.stringify(serverRequest)});send(request)}},50).unref();
@@ -192,6 +202,21 @@ const handleLine=line=>{
   else if(m.method==='model/list')result={data:${JSON.stringify(models)}||[{id:'gpt-fixture',model:'gpt-fixture',displayName:'GPT Fixture',defaultReasoningEffort:'medium',supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]};
   else if(m.method==='account/read')result={account};
   else if(m.method==='account/logout')account=null;
+  else if(m.method==='thread/goal/get')result={goal:goalResult(p.threadId)};
+  else if(m.method==='thread/goal/set'&&goalDb){
+    if(p.status==='active'&&existsSync(${JSON.stringify(join(dir, "goal-resume-fail"))})){
+      unlinkSync(${JSON.stringify(join(dir, "goal-resume-fail"))});send({id:m.id,error:{message:'Fixture resume failed'}});return;
+    }
+    const old=goalResult(p.threadId);
+    if(!old){send({id:m.id,error:{message:'No goal in fixture'}});return}
+    goalDb.query('UPDATE thread_goals SET status=?,objective=?,updated_at_ms=? WHERE thread_id=?').run(p.status??old.status,p.objective??old.objective,Date.now(),p.threadId);
+    result={goal:goalResult(p.threadId)};
+    send({method:'thread/goal/updated',params:{threadId:p.threadId,turnId:null,goal:result.goal}});
+    if(p.status==='active'&&existsSync(${JSON.stringify(join(dir, "goal-resume-wait"))})){
+      unlinkSync(${JSON.stringify(join(dir, "goal-resume-wait"))});
+      const reply=result;const waiting=setInterval(()=>{if(existsSync(${JSON.stringify(join(dir, "goal-resume-release"))})){clearInterval(waiting);unlinkSync(${JSON.stringify(join(dir, "goal-resume-release"))});send({id:m.id,result:reply})}},20);return;
+    }
+  }
   else if(m.method==='thread/list'){const offset=Number(p.cursor)||0,limit=p.limit||50;result={data:threads.slice(offset,offset+limit),nextCursor:offset+limit<threads.length?String(offset+limit):null}}
   else if(m.method==='thread/start'){
     if(p.model==='fail'){send({id:m.id,error:{message:'Fixture creation failed'}});return}

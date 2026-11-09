@@ -12,7 +12,7 @@ bun run verify
 
 Full checks require Linux, Node.js 22, the tested Codex CLI 0.166.0, Vim and Playwright Chromium. The disposable PostgreSQL tests use local PostgreSQL binaries when installed, otherwise Docker. Normal verification does not need a model account or production credentials.
 
-`verify` checks dependency direction and runtime cycles, locale contracts, TypeScript, interface element declarations, ESLint, formatting, client builds, unit tests, integration tests and the self-contained browser suites. Results and per-suite logs are written to `.artifacts/verification/`. Install Playwright Chromium with `bun x playwright install chromium` before running browser checks. Integration tests use the pinned Codex CLI with disposable local model providers and temporary state.
+`verify` checks dependency direction and runtime cycles, locale contracts, TypeScript, interface element declarations, ESLint, formatting, client builds, unit tests, integration tests and the self-contained browser suites. Results and per-suite logs are written to `.artifacts/verification/`. Install Playwright Chromium and WebKit with `bun x playwright install chromium webkit` before running browser checks. Integration tests use the pinned Codex CLI with disposable local model providers and temporary state.
 
 Source JavaScript is checked with `checkJs` and JSDoc contracts; TypeScript source and static contract tests also pass `noImplicitAny`. The static tests deliberately include invalid calls with `@ts-expect-error` so weakening a contract fails the gate. Keep native provider payloads as `unknown` until a boundary validates them. Comments and commit messages must be in English.
 

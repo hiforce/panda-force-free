@@ -14,6 +14,7 @@ const RPC_TIMEOUT_MS = 45000;
 const RETRYABLE_READS = new Set([
   "thread/list",
   "thread/read",
+  "thread/goal/get",
   "thread/turns/list",
   "thread/items/list",
   "host/thread/history",

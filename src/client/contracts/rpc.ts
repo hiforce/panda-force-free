@@ -39,6 +39,7 @@ export interface RpcResults {
   "thread/queue/delete": unknown;
   "thread/queue/list": { queuedSubmissions: QueuedSubmission[] };
   "thread/goal/set": { goal?: Goal };
+  "thread/goal/get": { goal?: Goal | null };
   "thread/goal/clear": { goal?: Goal };
   "account/logout": unknown;
 }

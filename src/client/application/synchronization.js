@@ -4,7 +4,7 @@ import { createSerialPoller } from "../serial-poller.js";
 import { findElements } from "./../dom.js";
 
 // Owns summary and active-history polling, request generations and snapshot application.
-/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "sessions" | "state" | "workspacePreparation" | "$", "transport" | "status" | "repositories" | "models" | "queue" | "history" | "timing" | "timeline" | "composer" | "viewport", "synchronization">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "sessions" | "state" | "workspacePreparation" | "$", "transport" | "status" | "repositories" | "models" | "queue" | "history" | "timing" | "timeline" | "composer" | "viewport" | "goals", "synchronization">} options */
 export function assembleSynchronization({
   transportPort,
   viewUpdates,
@@ -21,6 +21,7 @@ export function assembleSynchronization({
   timelinePort,
   composerPort,
   viewportPort,
+  goalsPort,
 }) {
   let threadListHasFreshData = false;
   const ACTIVE_THREAD_SYNC_ACTIVE_MS = 800,
@@ -117,6 +118,7 @@ export function assembleSynchronization({
   function resumeSessionSync() {
     if (document.visibilityState === "hidden" || Date.now() - resumeSessionSyncLastAt < 1500) return;
     resumeSessionSyncLastAt = Date.now();
+    if (state.active?.id) void goalsPort.loadGoal(state.active.id);
     queuePort.refreshMessageQueue();
     scheduleThreadListRefresh(0);
     viewUpdates.request("status");
