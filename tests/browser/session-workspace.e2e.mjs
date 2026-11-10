@@ -85,6 +85,41 @@ try {
   );
   assert.equal(await page.evaluate(() => window.__newSessionDocument), true);
   checks.push("New session inspector and live token usage appear without reloading");
+  const generatedTitle = "Review the deployment plan";
+  await page.evaluate(
+    ({ id, name }) =>
+      globalThis.__pandaForceDebug.notify("thread/name/updated", {
+        threadId: id,
+        threadName: name,
+        name: "Legacy title must not override the native title",
+      }),
+    { id: createdId, name: generatedTitle },
+  );
+  await page.waitForFunction((name) => document.querySelector("#threadTitle").textContent === name, generatedTitle);
+  assert.equal(await page.locator(`.thread-item[data-id="${createdId}"] .thread-name`).textContent(), generatedTitle);
+  assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.active.name), generatedTitle);
+  assert.equal(await page.evaluate(() => window.__newSessionDocument), true);
+  await page.evaluate(() =>
+    globalThis.__pandaForceDebug.notify("thread/name/updated", {
+      threadId: "old-alpha",
+      threadName: "Updated background session",
+    }),
+  );
+  await page.waitForFunction(
+    () =>
+      document.querySelector('.thread-item[data-id="old-alpha"] .thread-name')?.textContent ===
+      "Updated background session",
+  );
+  assert.equal(await page.locator("#threadTitle").textContent(), generatedTitle);
+  assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.active.name), generatedTitle);
+  const legacyTitle = "A title from an older engine";
+  await page.evaluate(
+    ({ id, name }) => globalThis.__pandaForceDebug.notify("thread/name/updated", { threadId: id, name }),
+    { id: createdId, name: legacyTitle },
+  );
+  await page.waitForFunction((name) => document.querySelector("#threadTitle").textContent === name, legacyTitle);
+  assert.equal(await page.locator(`.thread-item[data-id="${createdId}"] .thread-name`).textContent(), legacyTitle);
+  checks.push("Native and legacy title events update the new session without reloading or renaming another session");
   await go("old-alpha");
   await page.waitForFunction(
     () =>

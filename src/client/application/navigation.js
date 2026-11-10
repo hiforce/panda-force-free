@@ -37,21 +37,23 @@ export function assembleNavigation({
     if (id) storage.set(STORAGE_KEYS.activeThread, String(id));
     else storage.remove(STORAGE_KEYS.activeThread);
   }
-  function startNewTask({
-    saveCurrentDraft = true,
-    projectId = state.active
+  function defaultNewSessionProject() {
+    const route = parseWorkbenchRoute();
+    if (route.page === "project") return route.id || null;
+    return state.active
       ? projectsPort.businessProjects.projectForSession(state.active.id)?.id || null
-      : state.newSessionProjectId || null,
-  } = {}) {
+      : state.newSessionProjectId || null;
+  }
+  function startNewTask({ saveCurrentDraft = true, projectId = defaultNewSessionProject() } = {}) {
     if (saveCurrentDraft) composerPort.saveComposerDraft();
     mutations.set("newSessionProjectId", projectId);
-    viewUpdates.request("newTask");
     goalsPort.closeGoalDialog();
     composerPort.composerHistory.setReplay([]);
     invalidateNavigation();
     synchronizationPort.resetActiveThreadSync();
     rememberActiveThread(null);
     sessions.replaceActive(null);
+    viewUpdates.request("newTask");
     viewUpdates.request("workspaceContext");
     mutations.set("composerMentions", []);
     mutations.set("composerAttachments", []);

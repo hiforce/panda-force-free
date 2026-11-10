@@ -21,6 +21,7 @@ try {
   await fixture.signIn(context);
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
+  await fixture.rpc("thread/name/set", { threadId: "old-alpha", name: "Workspace review" });
   const history = createConversationHistory({
     readThread: async () => ({
       id: "old-alpha",

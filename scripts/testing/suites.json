@@ -51,6 +51,7 @@
     "browser/review-turn-selection.e2e.mjs",
     "browser/runtime-activity.e2e.mjs",
     "browser/session-list-activity.e2e.mjs",
+    "browser/session-metadata.e2e.mjs",
     "browser/session-status.e2e.mjs",
     "browser/shared-approvals.e2e.mjs",
     "browser/side-utilities.e2e.mjs",

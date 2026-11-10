@@ -58,6 +58,12 @@ export function assembleSynchronization({
   const scheduleThreadListRefresh = (delay) => threadListPoller.schedule(delay);
   const scheduleActiveThreadSync = (delay) => activeThreadPoller.schedule(delay);
   const syncActiveThread = () => activeThreadPoller.run();
+  function applyActiveThreadSnapshot(thread) {
+    const previous = state.active;
+    sessions.replaceActive(thread);
+    // Preview changes do not necessarily emit a native name notification.
+    if (previous?.name !== thread.name || previous?.preview !== thread.preview) viewUpdates.request("header");
+  }
   function threadSummarySignature(threads) {
     return JSON.stringify(
       threads.map((thread) => [
@@ -97,7 +103,7 @@ export function assembleSynchronization({
     const summary = state.active && threads.find((thread) => thread.id === state.active?.id);
     if (summary && state.active) {
       const turns = state.active.turns;
-      sessions.replaceActive({ ...state.active, ...summary, turns });
+      applyActiveThreadSnapshot({ ...state.active, ...summary, turns });
       if (summary.status?.type === "active") scheduleActiveThreadSync(0);
     }
     if (changed) viewUpdates.request("sidebar");
@@ -178,7 +184,7 @@ export function assembleSynchronization({
           getCurrent: () => state.active,
         });
         if (!current() || threadId !== state.active?.id) return;
-        sessions.replaceActive(thread);
+        applyActiveThreadSnapshot(thread);
         viewUpdates.request("contextUsage");
         repositoriesPort.cacheConversation(thread);
         statusPort.syncThreadErrorsFromTurns(threadId, thread.turns || []);

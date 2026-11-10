@@ -153,9 +153,10 @@ export function assembleNotifications({
       sessions.upsertSummary(p.thread);
       viewUpdates.request("sidebar");
     } else if (method === "thread/name/updated") {
+      const name = p.threadName || p.name;
       const t = state.threads.find((x) => x.id === p.threadId);
-      if (t) sessions.upsertSummary({ id: t.id, name: p.name });
-      if (state.active?.id === p.threadId) mutations.edit("active", (record) => (record.name = p.name));
+      if (t) sessions.upsertSummary({ id: t.id, name });
+      if (state.active?.id === p.threadId) mutations.edit("active", (record) => (record.name = name));
       viewUpdates.request("sidebar");
       viewUpdates.request("header");
       if (!$("#summaryPanel").hidden) viewUpdates.request("details");

@@ -521,6 +521,7 @@
   "tests/browser/session-dialogs.e2e.mjs",
   "tests/browser/session-discovery.e2e.mjs",
   "tests/browser/session-list-activity.e2e.mjs",
+  "tests/browser/session-metadata.e2e.mjs",
   "tests/browser/session-status.e2e.mjs",
   "tests/browser/session-usage.e2e.mjs",
   "tests/browser/session-workspace-layout.e2e.mjs",

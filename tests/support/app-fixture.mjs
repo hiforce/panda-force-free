@@ -31,6 +31,7 @@ export async function createAppFixture({
   questionnaireRollout = false,
   sharedApprovals = false,
   usageRollout = false,
+  unnamedSessions = false,
   models = null,
   account = null,
   goals = [],
@@ -220,8 +221,11 @@ const handleLine=line=>{
   else if(m.method==='thread/list'){const offset=Number(p.cursor)||0,limit=p.limit||50;result={data:threads.slice(offset,offset+limit),nextCursor:offset+limit<threads.length?String(offset+limit):null}}
   else if(m.method==='thread/start'){
     if(p.model==='fail'){send({id:m.id,error:{message:'Fixture creation failed'}});return}
-    const thread={id:'new-'+(++count),name:'New session '+count,cwd:p.cwd,status:{type:'idle'},createdAt:Date.now()/1000,updatedAt:Date.now()/1000,turns:[],canAcceptDirectInput:true};
+    const thread={id:'new-'+(++count),name:${unnamedSessions} ? null : 'New session '+count,preview:'',cwd:p.cwd,status:{type:'idle'},createdAt:Date.now()/1000,updatedAt:Date.now()/1000,turns:[],canAcceptDirectInput:true};
     threads.unshift(thread);send({method:'thread/started',params:{thread}});result={thread};
+  }else if(m.method==='thread/name/set'){
+    const thread=threads.find(t=>t.id===p.threadId);
+    if(thread){thread.name=p.name;send({method:'thread/name/updated',params:{threadId:p.threadId,threadName:p.name}})}
   }else if(m.method==='thread/read'||m.method==='thread/resume'){
     const thread=threads.find(t=>t.id===p.threadId);result={thread};
     if(m.method==='thread/resume'){
@@ -229,6 +233,8 @@ const handleLine=line=>{
       if(${sharedApprovals})send({id:'shared-approval',method:'item/commandExecution/requestApproval',params:{threadId:thread.id,turnId:'shared-approval-turn',itemId:'shared-command',command:'printf approval-check',cwd:${JSON.stringify(alpha)},availableDecisions:['accept','decline','acceptForSession']}});
     }
   }else if(m.method==='turn/start'){
+    const thread=threads.find(t=>t.id===p.threadId);
+    if(${unnamedSessions}&&thread&&!thread.preview)thread.preview=(p.input||[]).filter(x=>x.type==='text').map(x=>x.text).join('\\n');
     result={turn:{id:'turn-'+(++count),status:'completed',items:[]}};
     send({method:'thread/status/changed',params:{threadId:p.threadId,status:{type:'idle'}}});
   }else if(m.method==='thread/queue/add'){
