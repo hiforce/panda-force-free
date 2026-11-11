@@ -27,7 +27,8 @@ COPY tests ./tests
 COPY release/community ./release/community
 COPY LICENSES ./LICENSES
 COPY tsconfig*.json eslint.config.mjs prettier.config.mjs Dockerfile .dockerignore LICENSE THIRD_PARTY_NOTICES.md ./
-RUN bun run release:proof
+ARG VERIFICATION_PROFILE=full
+RUN PANDA_FORCE_VERIFICATION_PROFILE=${VERIFICATION_PROFILE} bun run release:proof
 
 FROM toolchain AS production-dependencies
 COPY package.json bun.lock ./

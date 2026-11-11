@@ -2,12 +2,12 @@ export const BRAND_ASSET_VERSION = "redflame-1";
 
 const PANDA_SHAPES = `<g stroke="none"><circle cx="23" cy="27" r="18" fill="#17191f"/><circle cx="77" cy="27" r="18" fill="#17191f"/><path d="M10 60C10 35 27 23 50 23s40 13 40 37c0 24-18 34-40 34S10 84 10 60Z" fill="var(--panda-face,#fff)" stroke="#17191f" stroke-width="5"/><path d="m22 17-7 6 7 6 3-3-4-3 4-3Z" fill="var(--panda-face,#fff)"/><path d="M23 43C26 23 42 20 56 18c9-1 15-5 16-13 10 14 6 24-3 30-7 5-15 6-20 13-1-8 3-13 9-18-17 2-27 5-35 13Z" fill="var(--panda-flame,#ef233c)"/><path d="M26 48c4-2 10 0 13 4M61 52c4-4 9-6 13-4" fill="none" stroke="#17191f" stroke-width="3" stroke-linecap="round"/><ellipse cx="32" cy="64" rx="12" ry="15" transform="rotate(28 32 64)" fill="#17191f"/><ellipse cx="68" cy="64" rx="12" ry="15" transform="rotate(-28 68 64)" fill="#17191f"/><ellipse cx="35" cy="62" rx="6" ry="9" fill="var(--panda-face,#fff)"/><ellipse cx="65" cy="62" rx="6" ry="9" fill="var(--panda-face,#fff)"/><ellipse cx="37" cy="61" rx="4.5" ry="7" fill="#17191f"/><ellipse cx="63" cy="61" rx="4.5" ry="7" fill="#17191f"/><circle cx="38" cy="58" r="2" fill="var(--panda-face,#fff)"/><circle cx="62" cy="58" r="2" fill="var(--panda-face,#fff)"/><path d="M45 75q5-3 10 0-1 6-5 6t-5-6Z" fill="#17191f"/><path d="M40 84q10 8 20-1" fill="none" stroke="#17191f" stroke-width="3" stroke-linecap="round"/></g>`;
 
-const PANDA_THEME = `.panda-force-symbol{--panda-face:#fff;--panda-flame:#ef233c;filter:drop-shadow(0 0 .5px #aeb7c9)}@media(prefers-color-scheme:dark){.panda-force-symbol{--panda-face:#f1f4f8;--panda-flame:#ff4057}}:root[data-theme="light"] .panda-force-symbol{--panda-face:#fff;--panda-flame:#ef233c}:root[data-theme="dark"] .panda-force-symbol{--panda-face:#f1f4f8;--panda-flame:#ff4057}`;
+export const PANDA_THEME = `.panda-force-symbol{--panda-face:#fff;--panda-flame:#ef233c;filter:drop-shadow(0 0 .5px #aeb7c9)}@media(prefers-color-scheme:dark){.panda-force-symbol{--panda-face:#f1f4f8;--panda-flame:#ff4057}}:root[data-theme="light"] .panda-force-symbol{--panda-face:#fff;--panda-flame:#ef233c}:root[data-theme="dark"] .panda-force-symbol{--panda-face:#f1f4f8;--panda-flame:#ff4057}`;
 
 export const PANDA_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="panda-force-symbol"><style>${PANDA_THEME}</style>${PANDA_SHAPES}</svg>`;
 export const PANDA_ICON_DATA_URL = `data:image/svg+xml,${encodeURIComponent(PANDA_ICON_SVG)}`;
 
 export function pandaForceMark(className = "") {
   const classes = className.replace(/[^a-zA-Z0-9 _-]/g, "");
-  return `<span class="panda-interface-mark panda-force-mark ${classes}" data-panda-force-mark>${PANDA_ICON_SVG.replace("<svg xmlns=", '<svg aria-hidden="true" xmlns=')}</span>`;
+  return `<span class="panda-interface-mark panda-force-mark ${classes}" data-panda-force-mark>${PANDA_ICON_SVG.replace(/<style>[\s\S]*?<\/style>/, "").replace("<svg xmlns=", '<svg aria-hidden="true" xmlns=')}</span>`;
 }

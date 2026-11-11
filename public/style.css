@@ -1081,3 +1081,7 @@ code,
 [dir="rtl"] .activity-chevron {
   transform: scaleX(-1);
 }
+
+/* PandaForce brand theme */
+.panda-force-symbol{--panda-face:#fff;--panda-flame:#ef233c;filter:drop-shadow(0 0 .5px #aeb7c9)}@media(prefers-color-scheme:dark){.panda-force-symbol{--panda-face:#f1f4f8;--panda-flame:#ff4057}}:root[data-theme="light"] .panda-force-symbol{--panda-face:#fff;--panda-flame:#ef233c}:root[data-theme="dark"] .panda-force-symbol{--panda-face:#f1f4f8;--panda-flame:#ff4057}
+/* End PandaForce brand theme */

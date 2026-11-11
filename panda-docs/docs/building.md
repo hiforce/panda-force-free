@@ -40,3 +40,13 @@ Use Node.js 22 or newer for the help build. Generated HTML is in `panda-docs/bui
 ## Documentation dependency status
 
 The documentation build currently inherits a low-severity [deepmerge advisory](https://github.com/advisories/GHSA-gcqx-w48m-w2h4) for which no upstream patched version is listed. Build this separate help toolchain from trusted, reviewed configuration and content. Application dependencies are audited separately; a successful HTML build is not a claim that the help toolchain has no advisories.
+
+## Select release verification scope
+
+Container builds default to the complete verification plan. For an icon or brand-asset update, select the related checks explicitly:
+
+```bash
+docker build --build-arg VERIFICATION_PROFILE=brand -t panda-force:brand-review .
+```
+
+The `brand` profile builds the client, checks brand rendering and image-proof contracts, and exercises installation/startup assets in Chromium and WebKit. Its `verification.json` records `verificationProfile: "brand"`, `fullVerification: false` and the suites not run. Use `VERIFICATION_PROFILE=full` for the complete plan. Deployment gates require an explicit matching profile to accept a targeted certificate. Runtime smoke checks and deployment health checks still apply.

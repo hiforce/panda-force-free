@@ -1,10 +1,20 @@
-import { PANDA_ICON_SVG, BRAND_ASSET_VERSION } from "../../src/shared/brand.js";
+import { PANDA_ICON_SVG, BRAND_ASSET_VERSION, PANDA_THEME } from "../../src/shared/brand.js";
 import { LAUNCH_SCREENS } from "../../src/shared/install-assets.js";
 import { readFileSync, writeFileSync } from "node:fs";
 import sharp from "sharp";
 
 // Keep the complete mark inside the maskable icon safe area.
 const mark = Buffer.from(PANDA_ICON_SVG);
+const stylesheet = "public/style.css";
+const themeBlock = `/* PandaForce brand theme */\n${PANDA_THEME}\n/* End PandaForce brand theme */`;
+const css = readFileSync(stylesheet, "utf8");
+writeFileSync(
+  stylesheet,
+  css.includes("/* PandaForce brand theme */")
+    ? css.replace(/\/\* PandaForce brand theme \*\/[\s\S]*?\/\* End PandaForce brand theme \*\//, themeBlock)
+    : css + "\n" + themeBlock + "\n",
+);
+
 for (const path of ["public/assets/panda-mark.svg", "public/favicon.svg", "panda-docs/static/img/panda-mark.svg"])
   writeFileSync(path, mark);
 await sharp(mark).resize(512).png().toFile("public/assets/panda-icon.png");
