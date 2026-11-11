@@ -47,14 +47,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 4409,
-      "sha256": "c7d134a09c1216217b7d1f9751f210be298587c1ddba247843e2fb06f49fe855",
+      "bytes": 4421,
+      "sha256": "ce8ab61e20104668cd011538bd568804d48863098efdb182f636fae17f1fdf12",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 4791,
-      "sha256": "2057060e5d3b2ba4a0b24c1f58f073709de3b0dac7a1d88409eeb04fd27f544e",
+      "bytes": 4803,
+      "sha256": "8a3c9b09ebe755b59a005896863c8c66af3501734976fdc1eb63de08430f28d6",
       "mode": "100644"
     },
     {
@@ -244,6 +244,12 @@
       "mode": "100644"
     },
     {
+      "path": "panda-docs/static/img/panda-force-banner-redflame-v1.jpg",
+      "bytes": 99042,
+      "sha256": "2f0c42a592d4eaa50907b9c19122351333a6766f884ef03d48fa27dd9074a21f",
+      "mode": "100644"
+    },
+    {
       "path": "panda-docs/static/img/panda-force-banner.jpg",
       "bytes": 143748,
       "sha256": "dc01ac0f40bf816073a6b51fc31e272f4846e43a89bf18930bb27c1edb763ff1",
@@ -257,8 +263,8 @@
     },
     {
       "path": "panda-docs/static/img/panda-mark.svg",
-      "bytes": 827,
-      "sha256": "19be446fcd3f57726baf642b7e831c6764e8451e990d2b2670ea9a85ad6b1c55",
+      "bytes": 1774,
+      "sha256": "c87431ff9529d6c6c54b423439bebac0da3c1174cd210b7f6e32a5b9c482d2bd",
       "mode": "100644"
     },
     {
@@ -281,302 +287,302 @@
     },
     {
       "path": "public/assets/panda-app-192.png",
-      "bytes": 5500,
-      "sha256": "1ad76592711e64bf1be89f77a05d0e3af92b76131c87accc6163bf39a46590f6",
+      "bytes": 7717,
+      "sha256": "d1187738cac49b6ac032dbe9882f52e842591505f0cccbac92f0d2aace5b9a6c",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-app-512.png",
-      "bytes": 17372,
-      "sha256": "9bf1f9a94329ab3485bb0fb4801a967c56bdf4a82d16a1e436c8cdc5bb5ebde9",
+      "bytes": 23940,
+      "sha256": "293b5a823ce59885cfcf0c38a514189c31171ce3fdce5f281fb56f108f4d3975",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-icon.png",
-      "bytes": 4144,
-      "sha256": "12df4e2bf6554d095ac4ebc5ce49a5b56c511d1ddacfa16781da48e0cd6ebfc5",
+      "bytes": 30957,
+      "sha256": "1cdb4cf5eee2ddaf55bb54d526af4f1a52108aa59e854981f0efe077d17bdbc4",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1125x2436-dark.png",
-      "bytes": 60945,
-      "sha256": "1b37ed36a59b4d4e6f24bbd40bdfe6e6dbc27c80d5b7d188bd7abae5a893071d",
+      "bytes": 64067,
+      "sha256": "d59ce2499a0a0bd33ad07c4695a670a4673ff98d12d965ec12a43651300b149e",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1125x2436-light.png",
-      "bytes": 60688,
-      "sha256": "34219d98d691cdf098d68d783990e4c3f6787baaec5dc168ea3fa0b5a65dd617",
+      "bytes": 64410,
+      "sha256": "a813f0a569553726aa8430565b9aac2e712734be1bb459850405cb7cb00496ee",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1170x2532-dark.png",
-      "bytes": 61101,
-      "sha256": "0f3466e3e821418a0d9d063a659d5707be1377138c3a3947275fdfb2f40c38af",
+      "bytes": 64720,
+      "sha256": "76fe10202eb0cd8a275fcbea08970086b034efe73bc19e2a50db7ebafb279019",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1170x2532-light.png",
-      "bytes": 60903,
-      "sha256": "2605dcc1a00adee2ebfb0527ab2493f35badfabfdc89dd5c0275cb157d3b50c8",
+      "bytes": 64734,
+      "sha256": "966373e4c823e4033353e001b0695192114502d0c40ed3d8e73951837d01c269",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1179x2556-dark.png",
-      "bytes": 61536,
-      "sha256": "97b557d408f64f507766d53f0fc3877bb9d74f338b9e9b2bd10404ee9813e5be",
+      "bytes": 65307,
+      "sha256": "c46d120cc1aeaa10a56bdb6125e9d0429ce6259cfee653539e80c0fc8061f7a2",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1179x2556-light.png",
-      "bytes": 61352,
-      "sha256": "0e5bcae7e7fe64f5303bdcd887527f7d0490a84c101e703e7681d2becb2173d3",
+      "bytes": 65208,
+      "sha256": "419598755504cf745b2f3fb5c97b315b7e7405ed19fbb9d17851e62dfa438c9a",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1206x2622-dark.png",
-      "bytes": 66281,
-      "sha256": "44fcc0c7a20f25282eb7b8cf18e86c60d1f86023e41308dc70ddae65e59f7805",
+      "bytes": 70794,
+      "sha256": "0ad3ef3146308f503d2dfe1702687e9e942954ea5bc30cad7c5f181c0a5952d2",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1206x2622-light.png",
-      "bytes": 66046,
-      "sha256": "352e22577ac78105a892045137cb07e134e504329b68609628834b457ca59acc",
+      "bytes": 70330,
+      "sha256": "dd9cd2ef66ab89ba6d235ddc6b7f806774220cfac28444cb8c42f09e8fa75732",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1242x2208-dark.png",
-      "bytes": 58912,
-      "sha256": "abf416d0e9d636658825f6c67a34d71f4d9c607ef376e07f4371d5f42db09e43",
+      "bytes": 62528,
+      "sha256": "cf2f23cc3fae10bb8c79be239d8289d881db6111bc7adf3e7af8db79be7a70bc",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1242x2208-light.png",
-      "bytes": 58652,
-      "sha256": "f4113eaf2b8cdf00ff25ec3e7f4e28933bc4cace84b27d80021e2a7261ce81a9",
+      "bytes": 62510,
+      "sha256": "92205f01d7390ed2ecd0f170a64a1e37f8119918695fd49e553ddfde919bb283",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1242x2688-dark.png",
-      "bytes": 67723,
-      "sha256": "7768c4d6389101fb34101d64e1e21f209985c630deeea5d853085ea9afd9a5f2",
+      "bytes": 72458,
+      "sha256": "8142a363063a3dc25b0f3cd8f461e4baffa9e137e4e0e4d02b2fc2125f051b7e",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1242x2688-light.png",
-      "bytes": 67663,
-      "sha256": "05942103450e0ecfeeb9f0ea1831194ffbc6f5c1b974a21bff84f11b190d9fe6",
+      "bytes": 72360,
+      "sha256": "34ba5aca76bda9ab10686bec1d21cfc6c8c7d52b81c364434d78b49f351fb121",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1284x2778-dark.png",
-      "bytes": 68098,
-      "sha256": "40f1b0b5587dd3af5970cadd75a6265c43ec3d7fa6b8d67e4482d32ac774f171",
+      "bytes": 72658,
+      "sha256": "ee3665f7f958657cfc22639fbe4122a119adf32665dec1c769b03b2c24e38fb6",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1284x2778-light.png",
-      "bytes": 68006,
-      "sha256": "244c9ad04c643532217330c5df9ab8cf144bcbbbde30f99384e427a31bf4c2f2",
+      "bytes": 72601,
+      "sha256": "783eb5af9f9f0c6f88e953e361384512b845f1d5118ad10b621b7c51007c51e0",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1290x2796-dark.png",
-      "bytes": 68876,
-      "sha256": "6e7a0a0f6bb7076827b70542d5ed53f78c7bce3a27fbadaf84145a12c5253fb4",
+      "bytes": 73286,
+      "sha256": "09153763d47f28ac84e1ce94a3dee66b752f1d4dee4fde23523c5598616c1c22",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1290x2796-light.png",
-      "bytes": 69094,
-      "sha256": "7e0e1b0b5bbc87c4808a9dd0b9151c2e1dac31f8e515939baa9f40360ea913fe",
+      "bytes": 73228,
+      "sha256": "44312f551dfe9c5468ba1fbfb8334b1f953637563086edb28c9dfe61941197d2",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1320x2868-dark.png",
-      "bytes": 75301,
-      "sha256": "f244edec33decda7471abe1ad5c6da158d824324c6ab2ca11702836fe65bba94",
+      "bytes": 79437,
+      "sha256": "d6b249168c4b903fcb0aa6c99e52b9c4040e1dc652ff2014fe8f3701baad2e65",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1320x2868-light.png",
-      "bytes": 75081,
-      "sha256": "b20ed1154e10f1a25799063c586eac99b42ea93def9f8a65ea69e1eb1e823af2",
+      "bytes": 79356,
+      "sha256": "f5a6ec07fc067d2281a8d4770c6cfd71b91afa6e77779f300f812820186a7d42",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1334x750-dark.png",
-      "bytes": 26199,
-      "sha256": "984f85c97b311b263d5f1a890bc5ae01245edc975edc4d802cdccc0c0db28808",
+      "bytes": 29025,
+      "sha256": "fdb8c22cf368748e2efdfc1b165be891666e379941fcd30e9476cd87d7955d24",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1334x750-light.png",
-      "bytes": 25958,
-      "sha256": "3b0284c200bb0652d98c286ca5e85f132a058b6c23692e4d8bd4b1630e7d5d25",
+      "bytes": 28962,
+      "sha256": "fa22c574e3fbddfc1b8fa1e96bf50fb04eee4b4b57b9d28237b4a563e17626ba",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1792x828-dark.png",
-      "bytes": 32583,
-      "sha256": "5f06afc3ce524ef7d725c381309067359cdad4893decf2bdceae77e349adf2bd",
+      "bytes": 35312,
+      "sha256": "c7d871e615cd96e94ff6b5700447101de5c6808a879b1d79298e31e1b0fb5541",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-1792x828-light.png",
-      "bytes": 32368,
-      "sha256": "255ef0f5e9b6f9bc3880f99c3dad90ca9c8c1332ddd93ef4bdbeaf09a2479e30",
+      "bytes": 35272,
+      "sha256": "72908ed560c047e85e760f1ec07954f919959cc42ef6bd165f23393453c3c816",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2208x1242-dark.png",
-      "bytes": 55435,
-      "sha256": "862c65fd57d96d6191504faeffb0e8762b85e4c0b895bea75c9d49bb7105dc33",
+      "bytes": 59487,
+      "sha256": "535fcf29a828021f044d31444387121492d444146c2588cb82c0b6f2427cf8fc",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2208x1242-light.png",
-      "bytes": 55160,
-      "sha256": "5f6091b98d2b45e4a4b65a37abd7774c31748fbfd353940f830cba1e399eb0c7",
+      "bytes": 59442,
+      "sha256": "358a255b01d623051033f8323c4c0fbcc2529333352709e084b7b6dc798aa56d",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2436x1125-dark.png",
-      "bytes": 55819,
-      "sha256": "dc729e604fd2ce52830c21de827fa5cc2518dcea3c5997fce74f88eb04b30fba",
+      "bytes": 60187,
+      "sha256": "9b4a240f04d851d0ec2ff413a91874c49892254b7804224b437947a1d5dc890d",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2436x1125-light.png",
-      "bytes": 55556,
-      "sha256": "0a98a631d297689628f47458648e74a33259d0bc35f4d485585ab3eb66d1e634",
+      "bytes": 60147,
+      "sha256": "139db0c6716d77770a6851f6384408fb71d1dd65fe2e6b05f525de9c7f97bf97",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2532x1170-dark.png",
-      "bytes": 58707,
-      "sha256": "950230d434e384b0321f9fccd1e4e3711cfc292d32f072bfe710b5b14f84fea5",
+      "bytes": 63267,
+      "sha256": "4a38ae76f01ee298e68ab81a380262600a42b754cec922c2d9d2e2d012cdceae",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2532x1170-light.png",
-      "bytes": 58418,
-      "sha256": "bc20b3fe556cacdb5b835fc78f80d5b3ba6e132911b139e48d1c137f32e02b6b",
+      "bytes": 63225,
+      "sha256": "144d49f36362f0b1115dcff25b4eefbbec27a15c642e1b6faa6fb8e5dfcca828",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2556x1179-dark.png",
-      "bytes": 58610,
-      "sha256": "270c4ea3334a801cf48b3605d3177e02660be15b6d3cf9d90e745ca707188b2d",
+      "bytes": 63109,
+      "sha256": "cc67ae2dbb36756c1e519375a3fcf268219ef807122263f5a5623523f69c9113",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2556x1179-light.png",
-      "bytes": 58328,
-      "sha256": "9cfbf4bd0c24992021e6c74267ce7decd206b75d5e26fdbb67f0ac7927b6c114",
+      "bytes": 63064,
+      "sha256": "bb8647c0a8b4efe402aacc7ad7818a0c7dd1435edebf0c8a430bc27e301ea206",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2622x1206-dark.png",
-      "bytes": 61328,
-      "sha256": "f2fead3920a7f8c8d1ac1dfd8eacea2214da1447487a77ff138606d37d56a111",
+      "bytes": 65972,
+      "sha256": "422ca42907add085eb163596edb4d3986f39a0221f4048609dbe83d635682262",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2622x1206-light.png",
-      "bytes": 60978,
-      "sha256": "a97b51a5961227a13ab0c20357b89c6c82cb2f2d043d6927d44523c3d1eef76f",
+      "bytes": 65948,
+      "sha256": "305f181ab7822bb5c6ae2fde04e378a414bd859bbb19a6bfc61513b316a55bc4",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2688x1242-dark.png",
-      "bytes": 64340,
-      "sha256": "a4f51c473897b3e2e0cd6ea7c7d0302f2c19c582eafd437c6847d5b6c3652ee2",
+      "bytes": 68530,
+      "sha256": "ba2e0842f5a6cab112a70d8fd7e47b23da5003ef4c1ff714ff1de039c5aac3a8",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2688x1242-light.png",
-      "bytes": 64010,
-      "sha256": "b18d44e0ad9ddbb76b2eb8dc336917cc7eb1f3b600b5e5657fe5db96255705a1",
+      "bytes": 68496,
+      "sha256": "669aade482e378510843493323d1156e8d9cf91ec2e9d2078615f1e0a074a604",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2778x1284-dark.png",
-      "bytes": 68036,
-      "sha256": "f36d0c4434fdc49e8cde69f4dbc695e5e6fdb71e5337ada89520166ee0cc9017",
+      "bytes": 72289,
+      "sha256": "29a6da6aa1e47491ef5f6a469e3ebd0f8b15c294096a40f863ec5693818f18f7",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2778x1284-light.png",
-      "bytes": 67813,
-      "sha256": "d3ab86abfa67c614a76c5de792553ded056e814b0800c06d505170561c407411",
+      "bytes": 72272,
+      "sha256": "9f416b8f89c532ce42eb28828169d1eb65dc1a9d893c2db3176614ecbc990fe8",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2796x1290-dark.png",
-      "bytes": 68010,
-      "sha256": "a18b16fa6274dbebac456a3519dc1f99e041b96ab09de7573c9ea98645cfcd19",
+      "bytes": 72241,
+      "sha256": "cdbb03ed3e0cc3239b139d3d0be09678992ef7c855bbfcf3ca60af0476260623",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2796x1290-light.png",
-      "bytes": 67763,
-      "sha256": "f071dbe5aa0c62c60730fa08cdc3bccb2fd1d6ea81c86a0256fd53266593df14",
+      "bytes": 72218,
+      "sha256": "4272df262d0b6968d65375f34bf0c8533e4ae7f1a022a358eac2b23b34636482",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2868x1320-dark.png",
-      "bytes": 70888,
-      "sha256": "b03b2512329ad84e3887624352dfd5e5f243a1750c2ba5a119c5a380803f6ce4",
+      "bytes": 74955,
+      "sha256": "0bdcec7d4619b1250561277e9c75fdda557f58f7d8629a14e3905638c9ba9599",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-2868x1320-light.png",
-      "bytes": 70591,
-      "sha256": "446b0a37a5230d4cead5a5f8310cfc32cf66909ac69f1f1de046673baa5646b7",
+      "bytes": 74884,
+      "sha256": "2fecfeedb1e4a0acc04cfe0083f90a8b6498b6519d279abcbdfb1e597586caae",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-750x1334-dark.png",
-      "bytes": 27618,
-      "sha256": "3104430fed96860ccc322c8b4e767435484a8a3b009f930eef0e317772699a1c",
+      "bytes": 30317,
+      "sha256": "40c355237722ca889f4765061e87090b2d492fc237693cb2c02731574949a071",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-750x1334-light.png",
-      "bytes": 27435,
-      "sha256": "65401f4e074d6f03be72d46b9220a2ce5f663c6422cfb619910608cb0dd708b1",
+      "bytes": 30111,
+      "sha256": "911509bcddcbdcc0d5bdb7c97864b97bd7b540b184f34717cb025f7fe62a7bbc",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-828x1792-dark.png",
-      "bytes": 35466,
-      "sha256": "887b0e6a83da23d2ee84550bcfd8a695e6f837a6d401866a5938a080c76d1ead",
+      "bytes": 38245,
+      "sha256": "fc3fe926dd8bb62a460814136ac680991739e2fb63b8343efcfd9de228b916c1",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-launch-828x1792-light.png",
-      "bytes": 35247,
-      "sha256": "6b6af30e0164d1f43fb2e7841cbc2b5c923309a127e3b4b0af6a12ee3883058f",
+      "bytes": 38350,
+      "sha256": "c4ff94376095f63e738aea91de3405644301d533cab3a8c9217ebaa026a754ee",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-mark.svg",
-      "bytes": 827,
-      "sha256": "19be446fcd3f57726baf642b7e831c6764e8451e990d2b2670ea9a85ad6b1c55",
+      "bytes": 1774,
+      "sha256": "c87431ff9529d6c6c54b423439bebac0da3c1174cd210b7f6e32a5b9c482d2bd",
       "mode": "100644"
     },
     {
       "path": "public/assets/panda-touch-180.png",
-      "bytes": 5085,
-      "sha256": "773356a2a189aae402362c0233644da12a58117dea0ea29e15755941df95cf83",
+      "bytes": 7127,
+      "sha256": "54c8cd39791e13274fa10a23c9da6312d4d6f8452a8680f9b5a6fb264610c11b",
       "mode": "100644"
     },
     {
       "path": "public/favicon.svg",
-      "bytes": 1008,
-      "sha256": "ff71ca9894a8f8572206e2488ec4b8fe1d3c6da90a6cffea3c8e49b3e7edf13a",
+      "bytes": 1774,
+      "sha256": "c87431ff9529d6c6c54b423439bebac0da3c1174cd210b7f6e32a5b9c482d2bd",
       "mode": "100644"
     },
     {
@@ -587,14 +593,14 @@
     },
     {
       "path": "public/index.html",
-      "bytes": 87097,
-      "sha256": "fa98ec6cc3a95f6c0b1b945a1ccfcb746a2b563050c7fc306e7c64861f3344ce",
+      "bytes": 87906,
+      "sha256": "3fed8ae203b3fab0bd112c1013adb20fb2f7008cca0b21e06b0465fba49f171b",
       "mode": "100644"
     },
     {
       "path": "public/manifest.webmanifest",
-      "bytes": 520,
-      "sha256": "8742603867199fbeeca129ba32a2d454e6d4f48ad3c8ac57d067d8e2f3e6c6f4",
+      "bytes": 546,
+      "sha256": "6cd6e6c34cc0788469084d0d637e68d5ed72882076e1863f5bed03174233e372",
       "mode": "100644"
     },
     {
@@ -659,14 +665,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 4409,
-      "sha256": "c7d134a09c1216217b7d1f9751f210be298587c1ddba247843e2fb06f49fe855",
+      "bytes": 4421,
+      "sha256": "ce8ab61e20104668cd011538bd568804d48863098efdb182f636fae17f1fdf12",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 4791,
-      "sha256": "2057060e5d3b2ba4a0b24c1f58f073709de3b0dac7a1d88409eeb04fd27f544e",
+      "bytes": 4803,
+      "sha256": "8a3c9b09ebe755b59a005896863c8c66af3501734976fdc1eb63de08430f28d6",
       "mode": "100644"
     },
     {
@@ -689,14 +695,14 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 27342,
-      "sha256": "781f3e6b575a3e011efd3952ad58b90cd99f5cd45d222733264b20baf8426d2f",
+      "bytes": 27404,
+      "sha256": "c9e66ee2730e6f02b99a6501d75d9b67a111cc0ff669adfd51bf83fa61dadc93",
       "mode": "100644"
     },
     {
       "path": "scripts/assets/generate-app-icons.mjs",
-      "bytes": 2200,
-      "sha256": "2b139ae5cf541ee3f80a1e5eda75f16691cd1c262efe325e1422da5086d1cf93",
+      "bytes": 2795,
+      "sha256": "bbb6a13891f454911754f24347ec60d7e56f373a30b87d56cd26f7408d668425",
       "mode": "100644"
     },
     {
@@ -2429,8 +2435,8 @@
     },
     {
       "path": "src/shared/brand.js",
-      "bytes": 1541,
-      "sha256": "28ba98ee1ee8db530eb3de556adbcee14f3b3ef153af35b99e1ecff168e1340a",
+      "bytes": 2325,
+      "sha256": "628d151604066231221651182e05f1aac338deaa691da521760f97928c540f32",
       "mode": "100644"
     },
     {
@@ -3005,8 +3011,8 @@
     },
     {
       "path": "tests/browser/mobile-install.e2e.mjs",
-      "bytes": 6346,
-      "sha256": "cc7b997057c2353bfbee444833792c0f09d380aa4240cf39d5f56983125fc436",
+      "bytes": 6821,
+      "sha256": "fc49cb978f6068ffa159057454f7b0e1b3a0fc9b3d2e5bfe2dc9c4cb4c685c66",
       "mode": "100644"
     },
     {
@@ -3593,8 +3599,8 @@
     },
     {
       "path": "tests/unit/codex-icons.test.ts",
-      "bytes": 1993,
-      "sha256": "7ca4746d82c9b4eee68f3c4517c3efee719ac4189587f30c8da8c7b0248170e5",
+      "bytes": 1995,
+      "sha256": "c4fc6593a7f7831bf42d914dcd37bc0fdc91b208559bf36eca70e74e99391e6f",
       "mode": "100644"
     },
     {
@@ -4054,5 +4060,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "fea57dc3dce4ff1f75d85905d5295ab3652af953cdce5d0115a677b896230faf"
+  "contentSha256": "4e6ad47b260ffba48639b76a6497f9bc1177ee897416954a7b3e0cc3088479dc"
 }

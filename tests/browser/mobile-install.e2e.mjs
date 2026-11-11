@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import sharp from "sharp";
 import { chromium, webkit } from "playwright";
 import { artifact, launchOptions } from "../support/browser-runtime.mjs";
+import { BRAND_ASSET_VERSION } from "../../src/shared/brand.js";
 import { LAUNCH_SCREENS } from "../../src/shared/install-assets.js";
 import { localAuthFixture } from "../support/local-auth-fixture.mjs";
 
@@ -71,13 +72,19 @@ try {
   assert.equal(await page.locator("#app").isVisible(), false);
   assert.equal(await page.locator("#passwordGate").isVisible(), false);
   assert.equal(await page.locator('meta[name="apple-mobile-web-app-capable"]').getAttribute("content"), "yes");
-  assert.equal(await page.locator('link[rel="apple-touch-icon"]').getAttribute("href"), "/assets/panda-touch-180.png");
+  assert.equal(
+    await page.locator('link[rel="apple-touch-icon"]').getAttribute("href"),
+    `/assets/panda-touch-180.png?v=${BRAND_ASSET_VERSION}`,
+  );
   assert.equal(await page.locator('link[rel="apple-touch-startup-image"]').count(), LAUNCH_SCREENS.length);
   const phoneScreen = LAUNCH_SCREENS.find(
     (screen) => screen.width === 1290 && screen.height === 2796 && screen.theme === "dark",
   );
   assert.ok(phoneScreen, "The reported phone resolution has a dedicated launch image");
-  assert.equal(await page.locator(`link[href="${phoneScreen.path}"]`).getAttribute("media"), phoneScreen.media);
+  assert.equal(
+    await page.locator(`link[href="${phoneScreen.path}?v=${BRAND_ASSET_VERSION}"]`).getAttribute("media"),
+    phoneScreen.media,
+  );
   releaseBootstrap();
   await page.waitForFunction(() =>
     performance.getEntriesByType("resource").some((entry) => entry.name.includes("/auth-bootstrap.js")),
@@ -88,6 +95,14 @@ try {
   assert.ok(statusRequested && localeRequested, "Authentication and localization start independently");
   assert.equal(await page.locator("#startupScreen").isVisible(), true);
   await page.screenshot({ path: artifact("home-screen-startup.png") });
+  await page.emulateMedia({ colorScheme: "dark" });
+  assert.equal(
+    await page.locator("#startupScreen progress").evaluate((node) => getComputedStyle(node).accentColor),
+    "rgb(255, 64, 87)",
+  );
+  await page.screenshot({ path: artifact("home-screen-startup-dark.png") });
+  await page.emulateMedia({ colorScheme: "light" });
+
   releaseStartup();
   await page.locator("#passwordGate").waitFor({ state: "visible" });
   await page.locator("#startupScreen").waitFor({ state: "hidden" });

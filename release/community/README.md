@@ -1,4 +1,4 @@
-![PandaForce — A workspace for getting things done with AI.](./panda-docs/static/img/panda-force-banner.jpg)
+![PandaForce — A workspace for getting things done with AI.](./panda-docs/static/img/panda-force-banner-redflame-v1.jpg)
 
 A workspace for natural-language work, powered by Codex today, with other CLI engines planned.
 

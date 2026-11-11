@@ -15,7 +15,7 @@ describe("Codex icon assets", () => {
   test("the compatible brand entry point renders the PandaForce mark", () => {
     const html = pandaInterfaceMark("assistant-mark");
     expect(html).toContain("data-panda-force-mark");
-    expect(html).toContain('viewBox="0 0 32 32"');
+    expect(html).toContain('viewBox="0 0 100 100"');
     expect(html).toContain("assistant-mark");
     expect(html).not.toContain("data-panda-interface-mark");
     expect(html).not.toContain("img");
