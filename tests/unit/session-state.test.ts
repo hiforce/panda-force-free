@@ -3,6 +3,22 @@ import { createSessionState } from "../../src/client/application/session-state.j
 import { createLatestRequestGate } from "../../src/client/ui-core.js";
 import { createStateFixture } from "../support/state-fixture.js";
 describe("session collection ownership", () => {
+  test("native preview context is hidden without modifying the engine snapshot or loaded history", () => {
+    const preview = "Review the build\n<panda_attachment_workspace>\nInternal paths\n</panda_attachment_workspace>";
+    const thread = { id: "a", preview, turns: [{ id: "t", status: "completed", items: [] }] };
+    const scope = createStateFixture({ active: null, threads: [] }),
+      sessions = createSessionState(scope);
+    sessions.replaceActive(thread);
+    expect(scope.state.active?.preview).toBe("Review the build");
+    expect(scope.state.active?.turns).toEqual(thread.turns);
+    expect(thread.preview).toBe(preview);
+    sessions.replaceThreads([thread]);
+    expect(scope.state.threads[0].preview).toBe("Review the build");
+    sessions.upsertSummary({ id: "a", preview: "Updated\n<panda_attachment_workspace>\nTruncated" });
+    expect(scope.state.threads[0].preview).toBe("Updated");
+    sessions.addSummary({ id: "b", preview });
+    expect(scope.state.threads[0].preview).toBe("Review the build");
+  });
   test("summary updates preserve loaded history and selecting another view preserves background sessions", () => {
     const history = { id: "a", turns: [{ id: "running", status: "inProgress", items: [] }] },
       scope = createStateFixture({ active: history, threads: [{ id: "a", name: "Before" }] }),

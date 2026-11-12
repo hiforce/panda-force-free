@@ -6,6 +6,11 @@ export function stripAttachmentWorkspaceContext(text) {
   );
 }
 
+// Native previews and older sidebar caches may truncate the reserved context block.
+export function stripAttachmentWorkspacePreview(text) {
+  return stripAttachmentWorkspaceContext(text).replace(/(?:^|\n)<panda_attachment_workspace>(?:\n|$)[\s\S]*$/, "");
+}
+
 export function attachmentWorkspaceContext({ input, work, output, marker, markerId }) {
   return `<panda_attachment_workspace>
 PandaForce application context: downloads are served by the PandaForce web service, which may run in a container with a different filesystem from your execution tools. A file existing in your execution environment alone does not make it downloadable. Use these shared attachment directories for this session.

@@ -62,7 +62,8 @@ export function assembleSynchronization({
     const previous = state.active;
     sessions.replaceActive(thread);
     // Preview changes do not necessarily emit a native name notification.
-    if (previous?.name !== thread.name || previous?.preview !== thread.preview) viewUpdates.request("header");
+    if (previous?.name !== state.active?.name || previous?.preview !== state.active?.preview)
+      viewUpdates.request("header");
   }
   function threadSummarySignature(threads) {
     return JSON.stringify(

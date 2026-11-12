@@ -28,6 +28,7 @@ Review source, dependency licenses, English comments and the explicit public inv
 - Keep viewed image previews stable while conversation activity and history update.
 - Preserve the decoded preview when reconnecting or refreshing the same session history.
 - Continue loading thumbnails in the conversation and original image bytes when opening the viewer.
+- Keep reserved attachment workspace instructions out of session previews and cached sidebar titles.
 
 ## 0.0.20
 

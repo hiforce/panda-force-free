@@ -155,8 +155,8 @@
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 16181,
-      "sha256": "581c02faa1a7a90a2d91e6b3c0783adfa14794bc7f9822d8a48c79e9cd0596e6",
+      "bytes": 16282,
+      "sha256": "172a14c705be6cd0a8df5de0198b1979b9717acbc5b372656cc284b360e69cbf",
       "mode": "100644"
     },
     {
@@ -1109,8 +1109,8 @@
     },
     {
       "path": "src/client/application/session-state.ts",
-      "bytes": 2217,
-      "sha256": "6470dff525a835d9c8b514bb28be6e2cc65d49f6ec0678812231d2468fd331f1",
+      "bytes": 2723,
+      "sha256": "ec2a278da4a7b8b5f4dc3c95c624f473dba94c541cc935a51755ecd535248d2b",
       "mode": "100644"
     },
     {
@@ -1175,8 +1175,8 @@
     },
     {
       "path": "src/client/application/synchronization.js",
-      "bytes": 9408,
-      "sha256": "53e99851516bc1df5169645a5f506057cee127409adcf90022799648152416bc",
+      "bytes": 9428,
+      "sha256": "0959dca81606c03d7da3e8e113e80eb6dd373d88546aa76f7d7453c9d5cb9276",
       "mode": "100644"
     },
     {
@@ -1685,8 +1685,8 @@
     },
     {
       "path": "src/client/sidebar-cache.js",
-      "bytes": 3295,
-      "sha256": "dc78054caa3061e3a3cc114ef3107e6ce49cffc22882a93eb4cb5bf454b75e94",
+      "bytes": 3732,
+      "sha256": "8e5c339edb59e549985e61710f2a53efaa0f3cdbe02e7965c5e7efc798cd90a3",
       "mode": "100644"
     },
     {
@@ -2477,8 +2477,8 @@
     },
     {
       "path": "src/shared/attachment-workspace.js",
-      "bytes": 2370,
-      "sha256": "407cebff153d51cc20bdcfb616d6f22ab2248c7597404f50c6ecca446bbbac3e",
+      "bytes": 2630,
+      "sha256": "7370a4b4d64e7754ef79303f2fccf105f9c9dde11f3aa1dfe8b1fa4195634718",
       "mode": "100644"
     },
     {
@@ -4001,8 +4001,8 @@
     },
     {
       "path": "tests/unit/session-state.test.ts",
-      "bytes": 3207,
-      "sha256": "9663356dc097a8d5b96220062d3d887ff039e4b0dcb4280e684aa09e9f595423",
+      "bytes": 4236,
+      "sha256": "e50f94ec9223e64359f3ae249a24b53b19762185bfe6c9cb4f097e2c2285179b",
       "mode": "100644"
     },
     {
@@ -4025,8 +4025,8 @@
     },
     {
       "path": "tests/unit/sidebar-startup.test.ts",
-      "bytes": 4929,
-      "sha256": "b167f5e7e3e8cdd6881a3383b6b4641e3c147d51293cc7b2285f698eeda54957",
+      "bytes": 5649,
+      "sha256": "c431b52739aeb0412f902bc45bdae70873d4f997c012d536080c025e3a581aa2",
       "mode": "100644"
     },
     {
@@ -4138,5 +4138,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "5280f9718b70fe74140bfaa78ffbf599d071bfd4846cf270943fd6b8fe363e5a"
+  "contentSha256": "da3836659236b177cabd5e42f715f15f593f012e189bbde2a609fa7459988546"
 }

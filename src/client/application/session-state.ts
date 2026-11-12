@@ -1,6 +1,12 @@
 import type { StateScope } from "../contracts/ownership.js";
 import type { SessionRepository } from "../contracts/repositories.js";
 import { latestTokenUsage, tokenUsage } from "../../shared/engine/usage.js";
+import { stripAttachmentWorkspacePreview } from "../../shared/attachment-workspace.js";
+function visibleSummary<T extends { preview?: string }>(thread: T): T {
+  if (typeof thread.preview !== "string") return thread;
+  const preview = stripAttachmentWorkspacePreview(thread.preview);
+  return preview === thread.preview ? thread : { ...thread, preview };
+}
 // Session collections and the current selection share one explicit write boundary.
 export function createSessionState({ state, mutations }: StateScope<"sessionStore">): SessionRepository {
   function recordUsage(id: string, value: unknown, receivedAt?: number) {
@@ -19,6 +25,7 @@ export function createSessionState({ state, mutations }: StateScope<"sessionStor
       if (state.active?.id === id && usage) mutations.set("active", { ...state.active, tokenUsage: usage });
     },
     replaceActive(thread) {
+      if (thread) thread = visibleSummary(thread);
       const usage = thread ? recordUsage(thread.id, thread.tokenUsage) : undefined;
       mutations.set(
         "active",
@@ -26,15 +33,17 @@ export function createSessionState({ state, mutations }: StateScope<"sessionStor
       );
     },
     replaceThreads(threads) {
-      mutations.set("threads", threads);
+      mutations.set("threads", threads.map(visibleSummary));
     },
     setTurns(turns) {
       if (state.active) mutations.set("active", { ...state.active, turns });
     },
     addSummary(thread) {
+      thread = visibleSummary(thread);
       if (!state.threads.some((item) => item.id === thread.id)) mutations.set("threads", [thread, ...state.threads]);
     },
     upsertSummary(thread) {
+      thread = visibleSummary(thread);
       const index = state.threads.findIndex((item) => item.id === thread.id);
       if (index < 0) mutations.set("threads", [thread, ...state.threads]);
       else

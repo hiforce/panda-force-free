@@ -24,6 +24,20 @@ function fixture() {
   };
 }
 
+test("sidebar metadata strips reserved context before truncation and when restoring older previews", () => {
+  const f = fixture(),
+    cache = createSidebarCache({ ...f, key });
+  cache.saveVisibility({ revision: 0, hiddenProjects: {} });
+  cache.saveThreads([
+    { id: "a", preview: "Visible title\n<panda_attachment_workspace>\n" + "Private context".repeat(50) },
+  ]);
+  expect(JSON.parse(f.data.get(key)).threads[0].preview).toBe("Visible title");
+  const old = JSON.parse(f.data.get(key));
+  old.threads[0].preview = "Old title\n<panda_attachment_workspace>\nTruncated context";
+  f.data.set(key, JSON.stringify(old));
+  expect(createSidebarCache({ ...f, key }).read().threads[0].preview).toBe("Old title");
+});
+
 test("sidebar cache restores bounded metadata and hidden projects without chat bodies", () => {
   const f = fixture(),
     cache = createSidebarCache({ ...f, key });

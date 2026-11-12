@@ -1,3 +1,4 @@
+import { stripAttachmentWorkspacePreview } from "../shared/attachment-workspace.js";
 const MAX_BYTES = 64 * 1024;
 const TTL_MS = 48 * 60 * 60 * 1000;
 
@@ -34,7 +35,14 @@ export function createSidebarCache({ storage, key, now = Date.now }) {
         typeof value.visibility.hiddenProjects === "object" &&
         !Array.isArray(value.visibility.hiddenProjects)
       )
-        cached = value;
+        cached = {
+          ...value,
+          threads: value.threads.map((thread) =>
+            typeof thread.preview === "string"
+              ? { ...thread, preview: stripAttachmentWorkspacePreview(thread.preview) }
+              : thread,
+          ),
+        };
     }
   } catch {}
   let hasThreads = Boolean(cached);
@@ -58,7 +66,9 @@ export function createSidebarCache({ storage, key, now = Date.now }) {
           const summary = { id: thread.id };
           for (const field of ["name", "preview", "cwd", "model", "modelProvider", "reasoningEffort"])
             if (typeof thread[field] === "string")
-              summary[field] = thread[field].slice(0, field === "cwd" ? 2048 : 240);
+              summary[field] = (
+                field === "preview" ? stripAttachmentWorkspacePreview(thread[field]) : thread[field]
+              ).slice(0, field === "cwd" ? 2048 : 240);
           for (const field of [
             "createdAt",
             "updatedAt",
