@@ -48,13 +48,13 @@
     {
       "path": "README-zh.md",
       "bytes": 4522,
-      "sha256": "8503d6f16cb48c8ca5ad490e55677017bed6813e60546f9485db58585d62418f",
+      "sha256": "58f1e37214f71031ab84906865d918c91cf623ce9beda3278780bf717fbc7d17",
       "mode": "100644"
     },
     {
       "path": "README.md",
       "bytes": 4858,
-      "sha256": "4b3d8947cb3f8ca80c4b5450b142e2e9d37c7532e45ead50b49751de693328b9",
+      "sha256": "72a560eb9e3c1ab65b2e4d1bf6f849c8adae5051850ee5444c916443877860cf",
       "mode": "100644"
     },
     {
@@ -78,7 +78,7 @@
     {
       "path": "docker-compose.yml",
       "bytes": 1666,
-      "sha256": "416a083cd110f44d91e0cdfee9c89c818c2a25c7b89056af6a6475cfd4695ba1",
+      "sha256": "5421821c5f3ec2e874ac5a851361d8935bb87a4c2b3bad4c18a91e78f6856285",
       "mode": "100644"
     },
     {
@@ -90,7 +90,7 @@
     {
       "path": "package.json",
       "bytes": 4632,
-      "sha256": "c311c7e5861bac24fc64f42f350ac442106e3b49b17ae920848c672c0f543b46",
+      "sha256": "9fe7dd69870c425d5c6ef54c9c874f89eae622ef91624a6dd28fee134b674ecb",
       "mode": "100644"
     },
     {
@@ -155,8 +155,8 @@
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 15896,
-      "sha256": "e5b2711d6ea8a1978a6b7c269d8c22d3cf8c92a11c42c5ab1475a6a90c76b362",
+      "bytes": 16181,
+      "sha256": "581c02faa1a7a90a2d91e6b3c0783adfa14794bc7f9822d8a48c79e9cd0596e6",
       "mode": "100644"
     },
     {
@@ -678,13 +678,13 @@
     {
       "path": "release/community/README-zh.md",
       "bytes": 4522,
-      "sha256": "8503d6f16cb48c8ca5ad490e55677017bed6813e60546f9485db58585d62418f",
+      "sha256": "58f1e37214f71031ab84906865d918c91cf623ce9beda3278780bf717fbc7d17",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
       "bytes": 4858,
-      "sha256": "4b3d8947cb3f8ca80c4b5450b142e2e9d37c7532e45ead50b49751de693328b9",
+      "sha256": "72a560eb9e3c1ab65b2e4d1bf6f849c8adae5051850ee5444c916443877860cf",
       "mode": "100644"
     },
     {
@@ -702,13 +702,13 @@
     {
       "path": "release/community/docker-compose.yml",
       "bytes": 1666,
-      "sha256": "416a083cd110f44d91e0cdfee9c89c818c2a25c7b89056af6a6475cfd4695ba1",
+      "sha256": "5421821c5f3ec2e874ac5a851361d8935bb87a4c2b3bad4c18a91e78f6856285",
       "mode": "100644"
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 27908,
-      "sha256": "4709a38f892b88949ac3ed3130b9590a519f35c99af296c5e97a59084906ac5b",
+      "bytes": 27963,
+      "sha256": "5a26e2d191ba2220cc115cf9276ef1a272eb1f7911d27e80c3fe522e85d5f16c",
       "mode": "100644"
     },
     {
@@ -839,8 +839,8 @@
     },
     {
       "path": "scripts/testing/suites.json",
-      "bytes": 5384,
-      "sha256": "cab75d9290a6086c99db2ab9b05154e9b34203fda8a3a9c6d7dc97c458b723ac",
+      "bytes": 5312,
+      "sha256": "526a826ce3eee105dd46994521c148ce9da33d245ef7c3fa6dde8abc1d242a5c",
       "mode": "100644"
     },
     {
@@ -881,8 +881,8 @@
     },
     {
       "path": "src/client/activity-output.js",
-      "bytes": 6318,
-      "sha256": "5b38c6b2383a8e8fe413f5f329de21e6c491aed445531e71055974a5f3768c3b",
+      "bytes": 6404,
+      "sha256": "30d2762edc9951b4da1411ae591deb5581567e0fa7a48be87f46a337a2a8f175",
       "mode": "100644"
     },
     {
@@ -1391,8 +1391,8 @@
     },
     {
       "path": "src/client/conversation-renderers/activity-message.js",
-      "bytes": 1461,
-      "sha256": "5296b02b58aa8a8a74ee66b8cfd0ef1d6b2ce902d9742c8e662358fac3c646a0",
+      "bytes": 1413,
+      "sha256": "82c246b926aa361e60de145049346e9abd32dcd75cc09bf28acf7b228f7c55f9",
       "mode": "100644"
     },
     {
@@ -1415,8 +1415,8 @@
     },
     {
       "path": "src/client/conversation-renderers/index.js",
-      "bytes": 1391,
-      "sha256": "a43eec2d7e65db5c24bac7c71d84cc73e96b9af1929ff0173d0b7aa6f8bb27a0",
+      "bytes": 1519,
+      "sha256": "cec53a7b4b86ea4a32072fdb349c198e1e008b2fd46f0ef3f2ca2a62d27a0adc",
       "mode": "100644"
     },
     {
@@ -1441,6 +1441,12 @@
       "path": "src/client/conversation-renderers/user-message.js",
       "bytes": 6374,
       "sha256": "a57320b3e14122d52aa5cde6fc9aecba02151c1c500366da2af3f389914d5c80",
+      "mode": "100644"
+    },
+    {
+      "path": "src/client/conversation-renderers/viewed-image.js",
+      "bytes": 892,
+      "sha256": "6309afdb6b6f54387e725c37d93f61caae8e9705850c8e39f37673ed441ed8ed",
       "mode": "100644"
     },
     {
@@ -3041,8 +3047,8 @@
     },
     {
       "path": "tests/browser/image-viewer.e2e.mjs",
-      "bytes": 16146,
-      "sha256": "6c2e13273aa1d1e012cf023942a6a51af79086eafdc7337390dd48358616fdb4",
+      "bytes": 19696,
+      "sha256": "b3aca2401bb652cb39937201c6a4b3098d1aeef1fb85259fc92511f5984830e9",
       "mode": "100644"
     },
     {
@@ -4132,5 +4138,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "b2fd8dffa4204c1b6330f9ae9c0922565c20541143f8ba470fa2fa7d8ff0b15e"
+  "contentSha256": "5280f9718b70fe74140bfaa78ffbf599d071bfd4846cf270943fd6b8fe363e5a"
 }

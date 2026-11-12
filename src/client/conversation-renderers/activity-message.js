@@ -14,12 +14,11 @@ export function createActivityMessageRenderer({ activityPort, mutations, reviewP
       "webSearch",
       "reasoning",
       "plan",
-      "imageView",
     ],
     /** @param {import("./types.js").ConversationRenderContext} context */
     render({ item, turnId, root }) {
       const id = activityPort.activityItemId(item);
-      const el = activityPort.ensureActivity(turnId, root, id, item.type === "imageView" || item.type === "reasoning");
+      const el = activityPort.ensureActivity(turnId, root, id, item.type === "reasoning");
       activityPort.addActivity(item, el, id);
       if (item.type === "fileChange") {
         for (const ch of item.changes || []) {

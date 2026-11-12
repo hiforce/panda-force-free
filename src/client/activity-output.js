@@ -5,6 +5,7 @@ import { parseUnifiedDiff, summarizeActivity, unifiedDiffFromFileChanges } from 
 import { codexIcon } from "./codex-icons.js";
 import { renderDiffLine } from "./diff-rendering.js";
 import { renderAssistantMarkdown, renderItemImages } from "./rendering.js";
+import { setConversationContent } from "./conversation-renderers/content.js";
 
 // Output bodies are independent of activity grouping, expansion and session state.
 function joinActivityText(value) {
@@ -107,7 +108,7 @@ export function createActivityOutputRenderer({ escapeHtml, shortPath, imageCwd }
     if (item.type === "imageView") {
       out.dataset.outputKind = "image";
       out.className = "activity-output activity-image-output";
-      setMessageHtml(
+      setConversationContent(
         out,
         renderItemImages(item, {
           cwd: imageCwd(item),

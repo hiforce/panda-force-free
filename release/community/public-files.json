@@ -239,6 +239,7 @@
   "src/client/conversation-renderers/registry.js",
   "src/client/conversation-renderers/types.ts",
   "src/client/conversation-renderers/user-message.js",
+  "src/client/conversation-renderers/viewed-image.js",
   "src/client/conversation-repository.js",
   "src/client/conversation-scroll-anchor.js",
   "src/client/diff-rendering.js",

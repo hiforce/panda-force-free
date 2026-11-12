@@ -15,6 +15,7 @@ const base = runtime.base;
 let browser,
   page,
   stage = "startup";
+let snapshotTurns = [];
 try {
   for (let i = 0; i < 200; i++) {
     try {
@@ -80,7 +81,12 @@ try {
     if (call.method === "host/thread/history")
       result = {
         thread: { id: "image-thread", cwd: directory },
-        history: { mode: "delta", turns: [], revision: "image-test", nextCursor: null },
+        history: {
+          mode: snapshotTurns.length ? "snapshot" : "delta",
+          turns: snapshotTurns,
+          revision: "image-test",
+          nextCursor: null,
+        },
       };
     if (call.method === "thread/goal/get") result = { goal: null };
     await route.fulfill({ json: { type: "rpc/result", id: call.id, result } });
@@ -113,6 +119,65 @@ try {
   );
   if (imageRequests.length !== 2 || imageRequests.some((url) => new URL(url).searchParams.get("thumbnail") !== "1"))
     throw new Error(`Viewed-image activity fetched an original: ${JSON.stringify(imageRequests)}`);
+  stage = "viewed-image live snapshot stability";
+  await page.evaluate(
+    ({ imageA, imageB }) => {
+      const api = globalThis.__pandaForceDebug;
+      window.__imageReceive = api.state.ws.onmessage;
+      api.state.ws.onmessage = null;
+      api.state.events?.close();
+      api.mutations.set("transport", "sse");
+      window.__decodedViewedImages = [...document.querySelectorAll(".activity-image-grid img")];
+      window.__viewedImageReloads = 0;
+      for (const image of window.__decodedViewedImages)
+        image.addEventListener("load", () => window.__viewedImageReloads++);
+      const item = { id: "image-view", type: "imageView", status: "completed", imagePaths: [imageA, imageB] };
+      for (let index = 0; index < 5; index++) {
+        api.notify("item/completed", { turnId: "image-turn", item });
+        api.syncTurnSnapshot({
+          id: "image-turn",
+          status: "inProgress",
+          items: [item, { id: "image-progress", type: "agentMessage", text: "Continuing work " + index }],
+        });
+        const images = [...document.querySelectorAll(".activity-image-grid img")];
+        if (images.some((image, index) => image !== window.__decodedViewedImages[index]))
+          throw new Error("A live update replaced a decoded viewed-image thumbnail");
+      }
+    },
+    { imageA, imageB },
+  );
+  stage = "viewed-image history resynchronization stability";
+  snapshotTurns = [
+    {
+      id: "image-turn",
+      status: "completed",
+      items: [
+        { id: "image-view", type: "imageView", status: "completed", imagePaths: [imageA, imageB] },
+        { id: "image-progress", type: "agentMessage", text: "Viewed image history restored" },
+      ],
+    },
+  ];
+  await page.evaluate(() => window.__imageReceive({ data: JSON.stringify({ type: "bridge/resync" }) }));
+  await page.getByText("Viewed image history restored", { exact: true }).waitFor();
+  await page.evaluate(() => {
+    const images = [...document.querySelectorAll(".activity-image-grid img")];
+    if (images.length !== 2 || images.some((image, index) => image !== window.__decodedViewedImages[index]))
+      throw new Error("History resynchronization replaced a decoded viewed-image thumbnail");
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => globalThis.__pandaForceDebug.setSidebarOpen(false));
+  await page.waitForFunction(() => document.querySelector("#sidebar").getBoundingClientRect().right <= 1);
+  await page.locator(".activity-image-grid").scrollIntoViewIfNeeded();
+  if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth))
+    throw new Error("Viewed images overflow the mobile viewport");
+  await page.screenshot({ path: ".artifacts/viewed-image-stability-390.png" });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.evaluate(() => globalThis.__pandaForceDebug.setSidebarOpen(true));
+  await page.waitForFunction(() => document.querySelector("#sidebar").getBoundingClientRect().left >= 0);
+  await page.screenshot({ path: ".artifacts/viewed-image-stability-1280.png" });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  if (await page.evaluate(() => window.__viewedImageReloads)) throw new Error("A retained viewed image loaded again");
+  if (imageRequests.length !== 2) throw new Error("Viewed-image updates requested the same thumbnails again");
   await page.locator(".activity-image-grid .message-image-button").first().click();
   stage = "activity original image";
   await page.waitForFunction(() => document.querySelector("#imageViewerImage")?.naturalWidth === 2400);
