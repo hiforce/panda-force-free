@@ -13,7 +13,7 @@ rmSync(resultFile, { force: true });
 rmSync(resolve(directory, "verification.json"), { force: true });
 const before = sourceIdentity();
 const profile = process.env.PANDA_FORCE_VERIFICATION_PROFILE || "full";
-if (!["full", "brand"].includes(profile)) throw new Error("Unknown verification profile: " + profile);
+if (!["full", "brand", "cdn"].includes(profile)) throw new Error("Unknown verification profile: " + profile);
 if (profile === "full") {
   const child = Bun.spawn([process.execPath, "scripts/testing/run.mjs", "verify"], {
     stdout: "inherit",
@@ -26,25 +26,36 @@ if (profile === "full") {
 } else {
   const startedAt = new Date().toISOString();
   const suites = [];
-  const plan = [
-    { name: "build-client", args: ["run", "build:client"], env: {} },
-    {
-      name: "brand-unit",
-      args: [
-        "test",
-        "tests/unit/codex-icons.test.ts",
-        "tests/unit/product-brand.test.ts",
-        "tests/unit/build-proof.test.ts",
-      ],
-      env: {},
-    },
-    { name: "mobile-install.e2e.mjs", args: ["tests/browser/mobile-install.e2e.mjs"], env: {} },
-    {
-      name: "mobile-install-webkit.e2e.mjs",
-      args: ["tests/browser/mobile-install.e2e.mjs"],
-      env: { PANDA_FORCE_TEST_BROWSER: "webkit" },
-    },
-  ];
+  const plan =
+    profile === "cdn"
+      ? [
+          { name: "build-client", args: ["run", "build:client"], env: {} },
+          {
+            name: "cdn-unit",
+            args: ["test", "tests/unit/cdn-build.test.ts", "tests/unit/static-assets.test.ts"],
+            env: {},
+          },
+          { name: "cdn-assets.e2e.mjs", args: ["tests/browser/cdn-assets.e2e.mjs"], env: {} },
+        ]
+      : [
+          { name: "build-client", args: ["run", "build:client"], env: {} },
+          {
+            name: "brand-unit",
+            args: [
+              "test",
+              "tests/unit/codex-icons.test.ts",
+              "tests/unit/product-brand.test.ts",
+              "tests/unit/build-proof.test.ts",
+            ],
+            env: {},
+          },
+          { name: "mobile-install.e2e.mjs", args: ["tests/browser/mobile-install.e2e.mjs"], env: {} },
+          {
+            name: "mobile-install-webkit.e2e.mjs",
+            args: ["tests/browser/mobile-install.e2e.mjs"],
+            env: { PANDA_FORCE_TEST_BROWSER: "webkit" },
+          },
+        ];
   for (const suite of plan) {
     const child = Bun.spawn([process.execPath, ...suite.args], {
       stdout: "inherit",
@@ -53,13 +64,13 @@ if (profile === "full") {
     });
     const code = await child.exited;
     suites.push({ name: suite.name, code, timedOut: false });
-    if (code !== 0) throw new Error("Brand verification failed: " + suite.name);
+    if (code !== 0) throw new Error("Targeted verification failed: " + suite.name);
   }
   writeFileSync(
     resultFile,
     JSON.stringify(
       {
-        group: "brand",
+        group: profile,
         passed: true,
         fullVerification: false,
         planned: plan.map((suite) => suite.name),

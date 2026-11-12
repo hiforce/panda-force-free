@@ -54,7 +54,12 @@ export const config = Object.freeze({
   environmentPassword: env.PANDA_FORCE_PASSWORD || null,
   authMode: env.PANDA_FORCE_AUTH_MODE || null,
   appRoot,
-  publicDir: resolve(appRoot, "public"),
+  publicDir: resolve(
+    appRoot,
+    process.env.NODE_ENV === "production" && existsSync(resolve(appRoot, "dist/cdn-public/index.html"))
+      ? "dist/cdn-public"
+      : "public",
+  ),
   homeDir,
   codexHome,
   projectless,

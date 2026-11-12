@@ -50,3 +50,5 @@ docker build --build-arg VERIFICATION_PROFILE=brand -t panda-force:brand-review 
 ```
 
 The `brand` profile builds the client, checks brand rendering and image-proof contracts, and exercises installation/startup assets in Chromium and WebKit. Its `verification.json` records `verificationProfile: "brand"`, `fullVerification: false` and the suites not run. Use `VERIFICATION_PROFILE=full` for the complete plan. Deployment gates require an explicit matching profile to accept a targeted certificate. Runtime smoke checks and deployment health checks still apply.
+
+For optional static resource uploads during compilation and the targeted `cdn` verification profile, see [Build-time static CDN](cdn-build.md).

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM oven/bun:1.4.2@sha256:9114c058aeae42162ee16dd5084b95fe9473970bb6bcb5b232ab1630f0546895 AS bun
 FROM node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da AS toolchain
 COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
@@ -29,6 +30,17 @@ COPY LICENSES ./LICENSES
 COPY tsconfig*.json eslint.config.mjs prettier.config.mjs Dockerfile .dockerignore LICENSE THIRD_PARTY_NOTICES.md ./
 ARG VERIFICATION_PROFILE=full
 RUN PANDA_FORCE_VERIFICATION_PROFILE=${VERIFICATION_PROFILE} bun run release:proof
+ARG PANDA_FORCE_CDN_BASE_URL
+ARG PANDA_FORCE_CDN_BUCKET
+ARG PANDA_FORCE_CDN_PREFIX=pandaforce/static
+ARG PANDA_FORCE_CDN_S3_ENDPOINT
+ARG AWS_REGION
+RUN --mount=type=secret,id=cdn_credentials \
+    if [ -n "$PANDA_FORCE_CDN_BASE_URL" ]; then \
+      test -s /run/secrets/cdn_credentials && \
+      set -a && . /run/secrets/cdn_credentials && set +a && \
+      bun run build:client && cp -a dist/cdn-public/. public/; \
+    fi
 
 FROM toolchain AS production-dependencies
 COPY package.json bun.lock ./

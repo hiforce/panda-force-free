@@ -1,3 +1,4 @@
+import { staticAssetUrl } from "../static-assets.js";
 import { escapeHtml as escapeMessage } from "../../shared/html.js";
 import {
   LOCALE_PREFERENCE_KEY,
@@ -63,7 +64,7 @@ export function createI18n({
         entry.code,
         async () => {
           const version = typeof PANDA_LOCALE_VERSION === "undefined" ? "development" : PANDA_LOCALE_VERSION;
-          const response = await fetch(`/locales/${entry.code}.json?v=${version}`, {
+          const response = await fetch(staticAssetUrl(`/locales/${entry.code}.json?v=${version}`), {
             signal: AbortSignal.timeout(8000),
             cache: "force-cache",
           });

@@ -7,6 +7,6 @@ export default {
       label: "Administration",
       items: ["configuration", "model-providers", "cluster", "storage", "security", "troubleshooting"],
     },
-    { type: "category", label: "Development", items: ["building", "releases", "updates"] },
+    { type: "category", label: "Development", items: ["building", "cdn-build", "releases", "updates"] },
   ],
 };

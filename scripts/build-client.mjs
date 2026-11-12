@@ -1,9 +1,10 @@
 import { syncCatalogModules } from "./i18n/catalog-modules.mjs";
-import { mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { SUPPORTED_LOCALES } from "../src/shared/i18n/locale-policy.js";
 
+rmSync("dist/cdn-public", { recursive: true, force: true });
 syncCatalogModules();
 const revision = createHash("sha256");
 mkdirSync("public/locales", { recursive: true });
@@ -60,4 +61,9 @@ for (const [entry, output] of Object.entries({
     external: ["/app.bundle.js", "/file-preview.bundle.js", "/terminal-runtime.bundle.js"],
   });
   if (!result.success) throw new AggregateError(result.logs, "Client build failed: " + entry);
+}
+
+if (process.env.PANDA_FORCE_CDN_BASE_URL) {
+  const { buildCdn } = await import("./cdn/build.mjs");
+  await buildCdn();
 }
