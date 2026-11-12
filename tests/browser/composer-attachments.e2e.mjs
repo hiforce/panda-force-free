@@ -105,7 +105,7 @@ try {
   const attachments = await page.evaluate(() => globalThis.__pandaForceDebug.state.composerAttachments);
   assert.equal(attachments[0].kind, "image");
   assert.equal(attachments[1].kind, "file");
-  assert.ok(attachments.every((file) => file.path.startsWith(join(runtime.dir, "panda-state", "attachments"))));
+  assert.ok(attachments.every((file) => file.path.startsWith(join(runtime.alpha, "attachments", "input"))));
   assert.deepEqual(readFileSync(attachments[0].path), png);
   await page.waitForFunction(() => document.querySelector(".composer-attachment-preview img")?.naturalWidth > 0);
   assert.equal(
@@ -330,7 +330,7 @@ try {
   // A delayed upload belongs to the original saved draft, never the newly opened task.
   await page.evaluate(() => globalThis.__pandaForceDebug.openThread("upload-owner"));
   let releaseUpload;
-  await page.route("**/api/attachments?name=slow.txt", async (route) => {
+  await page.route("**/api/attachments?name=slow.txt&**", async (route) => {
     await new Promise((resolve) => (releaseUpload = resolve));
     await route.continue();
   });

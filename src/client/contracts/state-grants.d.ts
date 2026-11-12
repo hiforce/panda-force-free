@@ -48,7 +48,7 @@ export interface StateGrants {
   timing: { read: "dividers" | "turnTimings" | "turns"; write: "turnTimings" };
   transport: { read: "connected" | "events" | "pending" | "rpcId" | "transport" | "ws" | "wsFallbackTimer"; write: "connected" | "events" | "pending" | "rpcId" | "transport" | "ws" | "wsFallbackTimer" };
   turnFrames: { read: "dividers" | "turnTimings" | "turns"; write: "turns" | "dividers" };
-  uploads: { read: "composerAttachments"; write: "composerAttachments" };
+  uploads: { read: "active" | "composerAttachments" | "config" | "newSessionProjectId"; write: "composerAttachments" };
   usage: { read: "connected"; write: never };
   viewport: { read: never; write: never };
   workbench: { read: "active" | "config" | "connected" | "newSessionProjectId" | "threads" | "workspaceContext"; write: never };

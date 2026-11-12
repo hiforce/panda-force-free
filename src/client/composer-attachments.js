@@ -1,4 +1,5 @@
 import { attachmentUrlName, canonicalAttachmentUrl } from "../shared/attachment-urls.js";
+import { stripAttachmentWorkspaceContext } from "../shared/attachment-workspace.js";
 
 export const ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
 export const ATTACHMENT_MAX_COUNT = 10;
@@ -79,33 +80,35 @@ export function attachmentsFromInput(input = []) {
 
 /** @param {readonly {type: string; text?: string}[]} input */
 export function composerTextFromInput(input = []) {
-  return input
-    .filter((part) => part.type === "text")
-    .map((part) =>
-      (part.text || "").replace(/^Attached file: (".*")\n([^\n]+)$/gm, (whole, name) => {
-        try {
-          JSON.parse(name);
-          return "";
-        } catch {
-          return whole;
-        }
-      }),
-    )
-    .join("\n")
-    .trim();
+  return stripAttachmentWorkspaceContext(
+    input
+      .filter((part) => part.type === "text")
+      .map((part) =>
+        (part.text || "").replace(/^Attached file: (".*")\n([^\n]+)$/gm, (whole, name) => {
+          try {
+            JSON.parse(name);
+            return "";
+          } catch {
+            return whole;
+          }
+        }),
+      )
+      .join("\n"),
+  ).trim();
 }
 
 /** @param {readonly {type: string; text?: string; path?: string; url?: string}[]} input */
 export function composerInputKey(input = []) {
   return JSON.stringify([
-    input
-      .filter((part) => part.type === "text")
-      .map((part) => part.text)
-      .join("\n")
-      .replace(
-        /^(Attached file: ".*")\n([^\n]+)$/gm,
-        (whole, name, url) => `${name}\n${canonicalAttachmentUrl(url) || url}`,
-      ),
+    stripAttachmentWorkspaceContext(
+      input
+        .filter((part) => part.type === "text")
+        .map((part) => part.text)
+        .join("\n"),
+    ).replace(
+      /^(Attached file: ".*")\n([^\n]+)$/gm,
+      (whole, name, url) => `${name}\n${canonicalAttachmentUrl(url) || url}`,
+    ),
     input
       .filter((part) => /image/i.test(part.type))
       .map((part) => part.path || canonicalAttachmentUrl(part.url) || part.url || ""),

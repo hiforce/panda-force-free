@@ -7,12 +7,21 @@ import type { RuntimeServices } from "./../services.js";
 import { createBrowserDispatch } from "./browser-dispatch.js";
 import { prepareSharedInput, submitPreparedInput } from "./shared-input.js";
 import { ProjectError } from "../projects/catalog.js";
+import { ensureAttachmentWorkspace } from "../workspace/attachment-workspace.js";
+import {
+  attachmentWorkspaceContext,
+  stripAttachmentWorkspaceContext,
+  unavailableAttachmentWorkspaceContext,
+} from "../../shared/attachment-workspace.js";
+import { reportDiagnostic } from "../../shared/diagnostics.js";
+import type { NativeInput } from "../../shared/data-contracts.js";
 
 /** Composes browser RPC handlers without owning the native connection or its storage. */
 export function createBrowserEngine({
   sendRaw,
   attachmentStorage,
   defaultCwd,
+  browseRoots,
   presentBrowserData,
   appServerConnection,
   projectVisibility,
@@ -31,6 +40,7 @@ export function createBrowserEngine({
   | "sendRaw"
   | "attachmentStorage"
   | "defaultCwd"
+  | "browseRoots"
   | "presentBrowserData"
   | "appServerConnection"
   | "projectVisibility"
@@ -69,6 +79,25 @@ export function createBrowserEngine({
   });
   browserDispatch.before(({ method, params }) => {
     if (method === "thread/list" && appServerConnection.mode === "shared") params.useStateDbOnly = true;
+  });
+  browserDispatch.before(async ({ method, params }) => {
+    if (!["turn/start", "turn/steer", "thread/queue/add"].includes(method) || !params.input?.length) return;
+    if (!params.threadId) throw new Error("Invalid attachment session id");
+    let context: string;
+    try {
+      const cwd = params.cwd || (await threadHub.getThreadMetadata(params.threadId)).cwd || defaultCwd;
+      context = attachmentWorkspaceContext(ensureAttachmentWorkspace(cwd, browseRoots, params.threadId));
+    } catch (error) {
+      // A read-only or unmounted workspace must not stop unrelated conversation.
+      reportDiagnostic("attachments.workspace", error);
+      context = unavailableAttachmentWorkspaceContext();
+    }
+    const input = params.input.flatMap<NativeInput>((part) => {
+      if (part.type !== "text") return [part];
+      const text = stripAttachmentWorkspaceContext(part.text);
+      return text === part.text ? [part] : text ? [{ ...part, text }] : [];
+    });
+    params.input = [...input, { type: "text", text: context }];
   });
   // Any explicit turn supersedes a pending automatic recovery and starts a
   // fresh retry budget for this thread.

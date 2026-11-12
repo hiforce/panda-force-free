@@ -4,16 +4,37 @@ title: State, files and backups
 
 PandaForce source installs use `$HOME/.panda-force`; containers use `/var/lib/panda-force`. Configuration, logs and the project database are separate from the workspace. The model engine retains its own account and session state.
 
-Local attachments currently default to `$CODEX_HOME/panda-force-uploads`. Set `PANDA_FORCE_ATTACHMENT_ROOT` for a separate persistent directory. Project association metadata is `data/projects.sqlite` under the application state root.
+Local uploads from the composer are stored under the selected working directory. Uploads from older clients that do not supply a working directory retain their persistent staging location, defaulting to `$CODEX_HOME/panda-force-uploads`, or `PANDA_FORCE_ATTACHMENT_ROOT` when configured. Existing attachment links are preserved. Project association metadata is `data/projects.sqlite` under the application state root.
+
+## Attachment working directories
+
+PandaForce uses one layout within each shared workspace:
+
+```text
+<working-directory>/attachments/
+  input/<upload-id>/<original-filename>
+  work/<session-id>/
+  output/<session-id>/
+```
+
+The composer captures its destination when uploading, including when navigation changes before the upload finishes. A new managed project uses its server-resolved workspace. Input files retain their original names and separate upload IDs prevent collisions. Processing and output directories are isolated by session. Originals, intermediate files and delivered files remain in the workspace volume; PandaForce does not automatically remove them when a conversation ends.
+
+Application context on each submitted turn, steering message and queued message tells the engine where to process files and deliver attachments. This also covers existing loaded conversations without replacing their instructions or restarting the shared daemon. The context is excluded from displayed user messages, composer history and optimistic message matching. Normal repository edits continue to use their intended project files.
+
+The engine and web service must see the workspace at the **same absolute path**, backed by persistent storage. A private marker at `attachments/.panda-attachments.json` identifies the directory prepared by the web service. The application context tells the engine to read and verify that marker before file processing; a missing or different marker indicates a mount mismatch. If the service cannot prepare a writable attachment directory, ordinary conversation continues with an explicit unavailable-workspace context instead of silently choosing another directory.
+
+Container-private directories, host-only `/mnt/data` and `/tmp` are not delivery locations. A `sandbox:` link changes no filesystem mounts. Copy externally generated tool results into the workspace output directory before linking them. Download and image routes continue to enforce their existing file boundaries; symlinked attachment directories and paths outside the configured roots are rejected.
+
+Legacy local attachments and configured OSS uploads remain readable through their existing routes. OSS input storage does not make engine-generated output files available automatically: those outputs still belong in the shared workspace. No automatic search, basename guessing or copying from arbitrary host paths is performed when a link fails.
 
 ## Managed project folders (0.0.15+)
 
 Version 0.0.15 adds managed project workspaces. Earlier images ignore these settings. Use version 0.0.15 or later before relying on directory filtering.
 
-| Setting | Default | Purpose |
-| --- | --- | --- |
-| `PANDA_FORCE_PROJECTS_ROOT` | `<PANDA_FORCE_HOME>/projects`; Compose forwards `/home/codex/workspace/projects` | Parent directory for `<project-code>/` workspaces. |
-| `PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES` | `true` | Allow browsing other configured directories and native conversations. Use exactly `false` to restrict browser directory and session visibility to the project root. |
+| Setting                                  | Default                                                                          | Purpose                                                                                                                                                             |
+| ---------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PANDA_FORCE_PROJECTS_ROOT`              | `<PANDA_FORCE_HOME>/projects`; Compose forwards `/home/codex/workspace/projects` | Parent directory for `<project-code>/` workspaces.                                                                                                                  |
+| `PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES` | `true`                                                                           | Allow browsing other configured directories and native conversations. Use exactly `false` to restrict browser directory and session visibility to the project root. |
 
 The root is a path **inside** the PandaForce container. Back it with a volume or bind mount. The standard Compose root is already under the workspace volume; choosing another container path also requires mounting persistent storage there. Docker and Kubernetes use the same settings. Shared host engines require an explicitly configured root accessible at the same absolute path on the host and in the container; PandaForce cannot make a container-private directory visible to a host service.
 

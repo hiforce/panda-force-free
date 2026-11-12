@@ -205,6 +205,7 @@ const localBrowserMessage = createBrowserEngine({
   sendRaw,
   attachmentStorage,
   defaultCwd,
+  browseRoots,
   presentBrowserData,
   appServerConnection,
   projectVisibility,
@@ -291,6 +292,7 @@ const dispatchApiRoute = createRouter([
     watchPasswordSession: (request, close) => passwordAuth.watch(request, close),
   }),
   ...workspaceRoutes({
+    projectWorkspaces,
     attachmentStorage,
     imageThumbnail,
     homeDir,

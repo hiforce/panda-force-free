@@ -1,6 +1,7 @@
 import { open } from "node:fs/promises";
 import { join } from "node:path";
 import { errorCode } from "./../../shared/errors.js";
+import { stripAttachmentWorkspaceContext } from "../../shared/attachment-workspace.js";
 
 // Read a bounded tail so a large CLI history cannot block the browser or server.
 /** @param {{ maxBytes?: number, limit?: number, includeSession?: (id: string) => Promise<boolean> }} options */
@@ -37,7 +38,8 @@ export async function readComposerHistory(codexHome, options = {}) {
         if (!decisions.has(id)) decisions.set(id, await includeSession(id));
         if (!decisions.get(id)) continue;
       }
-      entries.push({ text: entry.text });
+      const text = stripAttachmentWorkspaceContext(entry.text);
+      if (text) entries.push({ text });
     }
     return entries.slice(-limit);
   } catch (error) {

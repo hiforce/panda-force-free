@@ -208,7 +208,7 @@
       "write": ["activities", "activityItems"]
     },
     "uploads": {
-      "read": ["composerAttachments"],
+      "read": ["active", "composerAttachments", "config", "newSessionProjectId"],
       "write": ["composerAttachments"]
     },
     "usage": {

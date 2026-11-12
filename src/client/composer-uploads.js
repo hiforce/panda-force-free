@@ -90,6 +90,13 @@ export function createComposerUploads({
     onChange();
   }
   async function uploadComposerFiles(files) {
+    // Capture the destination before an upload can outlive navigation to another draft.
+    /** @type {Record<string, string>} */
+    const destination = state.active?.cwd
+      ? { cwd: state.active.cwd }
+      : state.newSessionProjectId
+        ? { projectId: state.newSessionProjectId }
+        : { cwd: $("#projectPath").textContent.replace(/^~/, state.config.home) || state.config.defaultCwd };
     for (const file of Array.from(files || [])) {
       if (state.composerAttachments.length >= ATTACHMENT_MAX_COUNT) {
         addPersistentError(t("composer.youCanAttachUpTo10Files"));
@@ -114,7 +121,8 @@ export function createComposerUploads({
       // Stable attachment identity updates its saved draft without changing another task.
       void (async () => {
         try {
-          const response = await fetch(`/api/attachments?name=${encodeURIComponent(file.name)}`, {
+          const query = new URLSearchParams({ name: file.name, ...destination });
+          const response = await fetch(`/api/attachments?${query}`, {
             method: "POST",
             headers: { "content-type": "application/octet-stream" },
             body: file,

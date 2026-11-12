@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.19`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.20`. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -22,6 +22,12 @@ docker compose logs panda-force
 ```
 
 Review source, dependency licenses, English comments and the explicit public inventory before exporting. Verify the final clean tree, then review staged files. No internal Git history, old help, design records or agent directories belong in the public snapshot. Release changes go to the private repository for review first.
+
+## 0.0.20
+
+Composer uploads now use the selected working directory. File processing and generated deliverables use separate per-session directories under that workspace, with a stable marker to detect mismatched engine and web-service mounts. Existing attachment links and OSS storage remain compatible. This behavior is automatic; shared engines retain the existing requirement to mount workspaces at the same absolute path.
+
+Source builds can optionally upload compiled static resources to an S3-compatible store and load them through an HTTPS CDN. Resources use content hashes, year/month paths and cross-build reuse. Storage credentials are supplied only during builds. The published default image uses local application resources and requires no CDN credentials. See [CDN configuration](cdn-build.md).
 
 ## 0.0.19
 

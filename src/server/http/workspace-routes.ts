@@ -1,6 +1,7 @@
 import { createReadStream, readFileSync } from "node:fs";
 import { reportDiagnostic } from "../../shared/diagnostics.js";
 import { saveAttachment } from "../workspace/attachments.js";
+import { ensureAttachmentWorkspace } from "../workspace/attachment-workspace.js";
 import { readWorkspaceContext } from "../workspace/context.js";
 import { listWorkspaceEntries } from "../workspace/entries.js";
 import { resolveLocalFile } from "../workspace/files.js";
@@ -24,6 +25,7 @@ export function workspaceRoutes({
   imageRoots,
   fileRoots,
   threadHub,
+  projectWorkspaces,
   directoryPolicy,
   encodeContentDispositionFilename,
 }: Pick<
@@ -37,6 +39,7 @@ export function workspaceRoutes({
   | "imageRoots"
   | "fileRoots"
   | "threadHub"
+  | "projectWorkspaces"
   | "directoryPolicy"
   | "encodeContentDispositionFilename"
 >): Route[] {
@@ -71,7 +74,20 @@ export function workspaceRoutes({
       method: "POST",
       handler: async ({ req, res, url }) => {
         try {
-          const attachment = await saveAttachment(req, attachmentRoot, url.searchParams.get("name"), attachmentStorage);
+          let root = attachmentRoot;
+          if (!attachmentStorage) {
+            const threadId = url.searchParams.get("threadId"),
+              projectId = url.searchParams.get("projectId");
+            const cwd = threadId
+              ? (await threadHub.getThreadMetadata(threadId)).cwd
+              : projectId
+                ? (await projectWorkspaces.ensure(projectId)).path
+                : url.searchParams.get("cwd");
+            // Older clients without a destination keep their persistent staging location.
+            if (cwd) root = ensureAttachmentWorkspace(cwd, browseRoots).input;
+            else if (threadId || projectId) throw new Error("Attachment workspace is unavailable");
+          }
+          const attachment = await saveAttachment(req, root, url.searchParams.get("name"), attachmentStorage);
           respondJson(res, 201, { attachment });
         } catch (error) {
           respondJson(res, errorStatus(error) || 400, {
