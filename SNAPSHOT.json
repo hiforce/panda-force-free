@@ -47,14 +47,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 4421,
-      "sha256": "d0942e53ddde76f5ba8c858712c51d5afb2292d51965ba95790d4cb66ac3d862",
+      "bytes": 4522,
+      "sha256": "1868ec62b62c3a7e80bbb1f396cf749b8d84f2b8e60f9c53d7f15be33500a183",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 4803,
-      "sha256": "a8e81c6c5097a2531d14a8d7a09b6fd7d549d8eb2e2286cc4a71df13ea1e36a1",
+      "bytes": 4858,
+      "sha256": "4c15fe0ad7101d62247126c9b10a115986427db4abfee2a1e70d45d3bd41ce4a",
       "mode": "100644"
     },
     {
@@ -113,8 +113,8 @@
     },
     {
       "path": "panda-docs/docs/cdn-build.md",
-      "bytes": 5008,
-      "sha256": "da1b1d7409002a504c21bd62b3965449f8fc1447cf141424cd8ced452a44f1b7",
+      "bytes": 10125,
+      "sha256": "da4abf4c9d14eb8fe6dd7d1e1d2aa7006aeca4d4f628d99089e6bd52e056fcbf",
       "mode": "100644"
     },
     {
@@ -203,8 +203,8 @@
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/cdn-build.md",
-      "bytes": 4683,
-      "sha256": "a95419ea6f80981f5f0baf616a95edb12a4ea1b756fd4140996abc3b82316a83",
+      "bytes": 9228,
+      "sha256": "acbe455fd147ab3fd8e79e25a2d30acc6bef8832e35e3710fe8ca9f543b91475",
       "mode": "100644"
     },
     {
@@ -677,14 +677,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 4421,
-      "sha256": "d0942e53ddde76f5ba8c858712c51d5afb2292d51965ba95790d4cb66ac3d862",
+      "bytes": 4522,
+      "sha256": "1868ec62b62c3a7e80bbb1f396cf749b8d84f2b8e60f9c53d7f15be33500a183",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 4803,
-      "sha256": "a8e81c6c5097a2531d14a8d7a09b6fd7d549d8eb2e2286cc4a71df13ea1e36a1",
+      "bytes": 4858,
+      "sha256": "4c15fe0ad7101d62247126c9b10a115986427db4abfee2a1e70d45d3bd41ce4a",
       "mode": "100644"
     },
     {
@@ -725,14 +725,14 @@
     },
     {
       "path": "scripts/cdn/build.mjs",
-      "bytes": 1856,
-      "sha256": "02f56f6654c64828e0f0311c80a3458c12a68b643e50275510ff84c453c1ba6d",
+      "bytes": 1972,
+      "sha256": "a7a5300a781dfa3f23aaaf83d632df6dc7e41cdc8c5e9454df59e935487b180a",
       "mode": "100644"
     },
     {
       "path": "scripts/cdn/publish.mjs",
-      "bytes": 10158,
-      "sha256": "9ad293f9a062c5fd911bc2f250ec50f799a76902acc87e3f17b80cd28ccb9157",
+      "bytes": 10478,
+      "sha256": "bc735756b45e95ddf62cba174c1ab6a62c3d2d16511d0f47e18aaec0d83446ab",
       "mode": "100644"
     },
     {
@@ -3617,8 +3617,8 @@
     },
     {
       "path": "tests/unit/cdn-build.test.ts",
-      "bytes": 5873,
-      "sha256": "8c9f4e089bd31adaa7576d973e375d2a06cc79c3b0f1694fff863ddddd90ab49",
+      "bytes": 6190,
+      "sha256": "c6463312774dd166436d5e797b12c9bbbb919c216ebe00a68fa5665ffde4ceeb",
       "mode": "100644"
     },
     {
@@ -4108,5 +4108,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "5e794b056749413b262a5b8ecaa72bbeeaa1edc30ebe9783ba9f16b036af6563"
+  "contentSha256": "7e27792b06da6e018848624cc31e14736ffb41f53698387f6713c977ce692d2d"
 }

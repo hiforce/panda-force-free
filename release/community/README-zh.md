@@ -11,7 +11,7 @@
 - 浏览工作目录文件，使用集成终端。
 - 界面支持英文和简体中文，未设置时跟随浏览器，英文兜底；原生 CLI 输出保留原文。
 
-[English](./README.md) · [帮助文档](./panda-docs/docs/overview.md)
+[English](./README.md) · [帮助文档](./panda-docs/docs/overview.md) · [CDN 配置指导](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/cdn-build.md)
 
 ![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en-0.0.10.png)
 

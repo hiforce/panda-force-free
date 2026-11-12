@@ -1,40 +1,54 @@
 ---
-title: Build-time static CDN
+title: Serve application resources through a CDN
 ---
 
-PandaForce can publish its compiled browser resources to Amazon S3 or an S3-compatible service and load them through a separate HTTPS CDN domain. Without `PANDA_FORCE_CDN_BASE_URL`, builds use local resources and do not contact object storage.
+Use this guide to build a PandaForce image whose JavaScript, CSS, images, fonts and language packs load from your CDN. This is an optional deployment setting. Standard images use local resources unless they were built with a CDN configuration.
 
-The upload includes every static file emitted into `public`, including feature bundles, lazy modules, CSS, images, language packs, workers, WebAssembly and vendor fonts. Static dependencies are rewritten before hashing. New objects use `<prefix>/YYYY/MM/<sha256>.<extension>`. A persistent `<prefix>/_index/` content index lets subsequent builds reuse identical files from previous months. Reused files are checked against their actual stored bytes. Cyclic imports between separate output files must be bundled together; a cycle or missing dependency stops the build.
+CDN settings are applied **when building the image**. Adding them to a running container does not change its resource URLs. Each deployment can use its own storage account and CDN domain.
 
-HTML, authentication, API requests and the web-app manifest remain on the application origin. Manifest icons load from the CDN while installation scope and launch routes remain local. Runtime-computed static paths should use `staticAssetUrl()` from `src/client/static-assets.js`; it resolves paths using the verified URL map embedded in the page. API paths and user content must not use this helper.
+## Before you begin
 
-## Storage and CDN
+You need:
 
-Keep the bucket private and use CloudFront Origin Access Control to read it. The build identity needs `s3:GetObject` and `s3:PutObject` on the configured prefix, including `_index/*`. Allow `s3:ListBucket` with an appropriate prefix condition so missing object lookups return 404 instead of an ambiguous access-denied error. No ACL changes or delete permissions are required.
+- The PandaForce source and Docker with BuildKit support.
+- A private S3 bucket, or a compatible S3 storage service.
+- An HTTPS CDN domain connected to that bucket.
+- A build identity with read and write access to the chosen object prefix.
 
-The CDN must return correct MIME types and `Access-Control-Allow-Origin: *` for these public application resources, including requests carrying browser priority headers. CloudFront's managed `CORS-With-Preflight` response headers policy is suitable and can be selected on the free flat-rate plan. Uploads go to S3; browsers use the CDN viewer domain. Set the base URL to the CDN root that maps to the bucket root, without the object prefix.
+Keep bucket public access blocked. With CloudFront, use Origin Access Control to let the distribution read the bucket. On the distribution's relevant cache behavior, select the managed **CORS-With-Preflight** response headers policy. This policy is available on the free flat-rate plan. The public application resources must return `Access-Control-Allow-Origin: *` and their correct content types.
 
-Every build verifies uploaded or reused objects through S3 and the actual CDN, including final byte hashes, MIME types and cross-origin headers. Any failure stops the CDN build. Objects are immutable and use a one-year cache lifetime. Retain previous objects and their index records for rollbacks; do not remove old month directories during publication.
+The build identity needs `s3:GetObject` and `s3:PutObject` for the configured prefix, including its `_index/` directory. Grant `s3:ListBucket` with a matching prefix condition so a missing object can be distinguished from a permission error. Delete permissions and public-read ACLs are unnecessary.
 
-## Local build
+## Build settings
 
-Supply credentials through the build environment or a private environment file excluded from version control:
+| Setting                       | Required                  | Description                                                                                |
+| ----------------------------- | ------------------------- | ------------------------------------------------------------------------------------------ |
+| `PANDA_FORCE_CDN_BASE_URL`    | Yes, to enable CDN        | Public HTTPS CDN root, such as `https://cdn.example.com`. Do not append the object prefix. |
+| `PANDA_FORCE_CDN_BUCKET`      | Yes                       | Destination bucket name, rather than its domain or ARN.                                    |
+| `AWS_REGION`                  | Yes                       | Bucket region, such as `ap-southeast-1`.                                                   |
+| `PANDA_FORCE_CDN_PREFIX`      | No                        | Object prefix. Default: `pandaforce/static`. Separate prefixes can isolate deployments.    |
+| `PANDA_FORCE_CDN_S3_ENDPOINT` | No                        | Storage API endpoint for an S3-compatible service. Leave unset for Amazon S3.              |
+| `AWS_ACCESS_KEY_ID`           | Yes                       | Build identity access key; supply through the build secret file.                           |
+| `AWS_SECRET_ACCESS_KEY`       | Yes                       | Build identity secret key; supply through the build secret file.                           |
+| `AWS_SESSION_TOKEN`           | For temporary credentials | Session token; supply through the same secret file.                                        |
+
+The CDN domain is the browser download address. The S3 endpoint is the upload address. They serve different purposes and should not be interchanged. The CDN root must map to the bucket root; paths below it are generated by the build.
+
+## 1. Prepare the build credentials
+
+Create a file outside your source checkout and Docker build context. Restrict its directory to its owner and set the file permission to `600`. Enter your own values using this format:
 
 ```bash
-export PANDA_FORCE_CDN_BASE_URL=https://cdn.example.com
-export PANDA_FORCE_CDN_BUCKET=example-static-bucket
-export PANDA_FORCE_CDN_PREFIX=pandaforce/static
-export AWS_REGION=ap-southeast-1
-# Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY through your secret manager.
-# Set AWS_SESSION_TOKEN as well when using temporary credentials.
-bun run build:client
+AWS_ACCESS_KEY_ID='YOUR_ACCESS_KEY_ID'
+AWS_SECRET_ACCESS_KEY='YOUR_SECRET_ACCESS_KEY'
+# For temporary credentials, also add AWS_SESSION_TOKEN='YOUR_SESSION_TOKEN'.
 ```
 
-Optional `PANDA_FORCE_CDN_S3_ENDPOINT` selects an S3-compatible endpoint. A successful build writes `dist/cdn-public/index.html`, the local web-app manifest and `cdn-manifest.json` containing only URLs, object keys, hashes and verification counts. Production source startup selects this compiled directory when it exists. A subsequent build without CDN configuration removes the previous CDN output and returns to local resources. Source HTML and CSS are never rewritten in place.
+The examples below use `/secure/panda-cdn.env`. Do not add the file to Git or provide access keys as Docker build arguments. The build mounts this file temporarily; the resulting image does not need these credentials.
 
-## Container build
+## 2. Build the image
 
-Create a private file outside the build context, readable only by its owner, containing shell-compatible assignments for `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and optionally `AWS_SESSION_TOKEN`. Supply it as a BuildKit secret:
+Run from the source checkout, replacing the example domain, bucket, region and secret file path:
 
 ```bash
 docker build \
@@ -43,12 +57,72 @@ docker build \
   --build-arg PANDA_FORCE_CDN_BUCKET=example-static-bucket \
   --build-arg PANDA_FORCE_CDN_PREFIX=pandaforce/static \
   --build-arg AWS_REGION=ap-southeast-1 \
-  --secret id=cdn_credentials,src=/secure/build-cdn.env \
+  --secret id=cdn_credentials,src=/secure/panda-cdn.env \
   -t panda-force:cdn .
 ```
 
-Credentials are mounted only for the upload step and are not copied into image layers or exposed as build arguments. The final image contains the verified CDN references and needs no upload credentials at runtime. Container rollout should happen only after the CDN build succeeds. Changing runtime environment variables cannot change references already compiled into an image; rebuild it instead.
+The `cdn` verification profile checks the affected static-resource behavior in Chromium and WebKit, together with dependency rewriting, hashes, deduplication and failure handling. It records a targeted verification result. For a release that also changes unrelated application behavior, select the appropriate broader checks; `VERIFICATION_PROFILE=full` runs the complete plan and is the default.
 
-The `cdn` verification profile checks CDN dependency rewriting, final hashes, deduplication, error handling, static transfer behavior and complete application loading in Chromium and WebKit. It records a targeted certificate with the unrun suites listed. Use `VERIFICATION_PROFILE=full` when full verification is required.
+The build publishes all compiled application resources, including additional feature bundles and lazy-loaded modules. It then reads resources back through both object storage and the actual CDN to verify their contents, content types and cross-origin headers. Upload or verification failure stops the build.
 
-This option covers public application build resources. Session attachments, generated images, thumbnails, previews and exports retain their current storage and access controls; runtime storage settings are configured independently.
+For CI, store the credential file in your build system's secret store and mount it as `cdn_credentials`. Pass the non-secret settings as build arguments. The builder must support BuildKit secret mounts. A builder such as Kaniko cannot execute this command unchanged; build and verify the image in a compatible builder, then deploy that image through your release pipeline.
+
+## 3. Deploy and verify
+
+With the standard Compose deployment, select the image you just built:
+
+```bash
+PANDA_FORCE_IMAGE=panda-force:cdn docker compose up -d
+```
+
+For deployment on another host or Kubernetes, push the image to your registry and select that image in the deployment configuration. No S3 upload credentials are required in the running application.
+
+Open PandaForce and inspect the browser's Network panel. JavaScript, CSS, images, fonts and language packs should load from your CDN. Page navigation, sign-in, API calls and user files should continue to use the application service.
+
+The image includes `/app/public/cdn-manifest.json`. It records each resource's URL, object key, SHA-256 and size, plus upload and reuse counts. It contains no access keys. The local compiled resource files have the same bytes as their verified CDN objects.
+
+## File layout and reuse
+
+New files use this object layout:
+
+```text
+pandaforce/static/2026/11/<sha256>.js
+pandaforce/static/2026/11/<sha256>.css
+pandaforce/static/2026/11/<sha256>.png
+pandaforce/static/_index/<content-index>.json
+```
+
+The date uses the build's UTC year and month. The hash describes the final published content, including rewritten dependencies. If the same content already exists, the build reuses its earlier URL, even in a later month. A new month does not force another upload. Changing one dependency also updates resources whose final contents reference it.
+
+Resources use immutable URLs and a one-year cache lifetime. Retain old objects and their content indexes for rollback. Do not clear the bucket or old month directories during normal publication.
+
+HTML and the web-app manifest stay on the application origin so navigation and home-screen installation keep the correct scope. Manifest icons load from the CDN. Source maps and hidden files are excluded from publication. Session attachments, generated images, thumbnails, previews and exports keep their existing storage and access controls; this setting applies to application build resources.
+
+## Change or disable the CDN
+
+To change the domain, bucket or prefix, rebuild the image with the new settings, verify it and deploy it. Previously built images retain their original URLs.
+
+To return to local resources, build without `PANDA_FORCE_CDN_BASE_URL` and deploy that image:
+
+```bash
+docker build --build-arg VERIFICATION_PROFILE=cdn -t panda-force:local .
+PANDA_FORCE_IMAGE=panda-force:local docker compose up -d
+```
+
+This does not delete existing CDN objects or persistent application data.
+
+## Troubleshooting
+
+| Symptom                                     | Check                                                                                                                                    |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| S3 returns 403                              | Build identity, region, bucket and prefix permissions. Include `_index/` and prefix-scoped list access.                                  |
+| CDN returns 403 or 404                      | CDN origin domain, origin path, Origin Access Control and bucket policy.                                                                 |
+| Browser reports a CORS error                | Response headers policy on the resource's cache behavior. Test an actual module request; a successful ordinary download is insufficient. |
+| Build reports a MIME mismatch               | The CDN must preserve the uploaded content type, especially for JavaScript, CSS, fonts and WebAssembly.                                  |
+| Identical files appear under an older month | Expected reuse. Existing content retains its original URL.                                                                               |
+| Page still uses an old CDN domain           | Confirm the running image is the newly built image. Runtime environment changes alone do not update compiled URLs.                       |
+| Missing dependency or cyclic-import error   | Use a complete build output. An extension that emits separate cyclic modules must bundle those modules together before CDN publication.  |
+
+## Build without Docker
+
+Load the private credentials into the build process environment, set the non-secret settings from the table, then run `bun run build:client`. The verified output is written to `dist/cdn-public`; production startup uses that directory when present. Source HTML and CSS are preserved. A subsequent build without CDN configuration removes the previous CDN output and restores local resource loading.

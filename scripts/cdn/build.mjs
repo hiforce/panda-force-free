@@ -26,8 +26,14 @@ export async function buildCdn() {
     }
     // Every file emitted into public is collected, including feature-specific chunks.
     const assets = new Map(collectAssets(staging));
-    const manifest = await publishAssets({ assets, storage: s3Storage(config), ...config });
-    writeCdnOutput({ source: staging, output, manifest });
+    const bodies = new Map();
+    const manifest = await publishAssets({
+      assets,
+      storage: s3Storage(config),
+      ...config,
+      onAsset: (path, body) => bodies.set(path, body),
+    });
+    writeCdnOutput({ source: staging, output, manifest, bodies });
     if (!existsSync(join(output, "index.html"))) throw new Error("CDN entry point was not generated");
     console.log(
       `CDN verified: ${Object.keys(manifest.assets).length} assets, ${manifest.uploaded} uploaded, ${manifest.reused} reused`,

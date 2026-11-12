@@ -12,7 +12,7 @@ Built on [Codex WebUI](https://github.com/lezi-fun/codex-webui) by [lezi-fun](ht
 - Browse workspace files and use the integrated terminal.
 - Use English or Simplified Chinese, follow your browser language, and keep native CLI output in its original language.
 
-[简体中文](./README-zh.md) · [Help](./panda-docs/docs/overview.md)
+[简体中文](./README-zh.md) · [Help](./panda-docs/docs/overview.md) · [CDN configuration](./panda-docs/docs/cdn-build.md)
 
 ![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en-0.0.10.png)
 

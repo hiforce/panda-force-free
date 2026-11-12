@@ -7,6 +7,7 @@ import { cdnConfiguration } from "../../scripts/cdn/storage.mjs";
 
 function fixture() {
   const objects = new Map<string, Buffer>();
+  const bodies = new Map<string, Buffer>();
   let writes = 0;
   const storage = {
     get: async (key: string) => objects.get(key) || null,
@@ -32,6 +33,7 @@ function fixture() {
   const options = {
     assets,
     storage,
+    onAsset: (path: string, body: Buffer) => bodies.set(path, body),
     baseUrl: "https://cdn.example.com",
     prefix: "app/static",
     now: new Date("2026-11-12T00:00:00Z"),
@@ -39,7 +41,7 @@ function fixture() {
       expect(objects.get(new URL(url).pathname.slice(1))).toEqual(bytes);
     },
   };
-  return { options, objects, writes: () => writes };
+  return { options, objects, bodies, writes: () => writes };
 }
 
 test("rewrites feature chunks, workers, CSS fonts and images before hashing and reuses objects across months", async () => {
@@ -96,7 +98,10 @@ test("keeps HTML and web-app scope local while exposing only verified static URL
       JSON.stringify({ id: "/", scope: "/", start_url: "/workspace", icons: [{ src: "/icon.svg?v=1" }] }),
     );
     const output = join(root, "output");
-    writeCdnOutput({ source: join(root, "source"), output, manifest });
+    writeCdnOutput({ source: join(root, "source"), output, manifest, bodies: f.bodies });
+    for (const [path, record] of Object.entries(manifest.assets) as [string, any][]) {
+      expect(sha256(readFileSync(join(output, path.slice(1))))).toBe(record.sha256);
+    }
     const html = readFileSync(join(output, "index.html"), "utf8");
     expect(html).toContain('href="/manifest.webmanifest"');
     expect(html).toContain('id="pandaStaticAssets"');

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { extname, join, posix, relative } from "node:path";
+import { dirname, extname, join, posix, relative } from "node:path";
 import { parse, parseExpressionAt } from "acorn";
 
 const types = {
@@ -97,7 +97,15 @@ function references(path, text, assets) {
 }
 
 /** Dependencies are finalized first, so hashes always describe the delivered bytes. */
-export async function publishAssets({ assets, storage, baseUrl, prefix, now = new Date(), verify = verifyCdn }) {
+export async function publishAssets({
+  assets,
+  storage,
+  baseUrl,
+  prefix,
+  now = new Date(),
+  verify = verifyCdn,
+  onAsset = () => {},
+}) {
   const records = {},
     pending = new Map(),
     content = new Map(),
@@ -138,6 +146,7 @@ export async function publishAssets({ assets, storage, baseUrl, prefix, now = ne
     const contentKey = digest + extname(path);
     if (content.has(contentKey)) {
       records[path] = await content.get(contentKey);
+      await onAsset(path, body);
       return records[path];
     }
     const upload = async () => {
@@ -175,6 +184,7 @@ export async function publishAssets({ assets, storage, baseUrl, prefix, now = ne
     };
     content.set(contentKey, upload());
     records[path] = await content.get(contentKey);
+    await onAsset(path, body);
     return records[path];
   };
   const paths = [...assets.keys()].sort();
@@ -207,12 +217,17 @@ export async function verifyCdn(url, expected, type) {
   }
 }
 
-export function writeCdnOutput({ source, output, manifest }) {
+export function writeCdnOutput({ source, output, manifest, bodies = new Map() }) {
   if (![relative(source, output), relative(output, source)].every((path) => path.startsWith("..")))
     throw new Error("CDN output must not overlap source assets");
   rmSync(output, { recursive: true, force: true });
   mkdirSync(output, { recursive: true });
   cpSync(source, output, { recursive: true, filter: (path) => relative(source, path) !== "index.html" });
+  for (const [path, body] of bodies) {
+    const destination = join(output, path.slice(1));
+    mkdirSync(dirname(destination), { recursive: true });
+    writeFileSync(destination, body);
+  }
   const urls = Object.fromEntries(Object.entries(manifest.assets).map(([path, record]) => [path, record.url]));
   let html = readFileSync(join(source, "index.html"), "utf8").replace(
     /\b(src|href)=(['"])([^'"]+)\2/g,
