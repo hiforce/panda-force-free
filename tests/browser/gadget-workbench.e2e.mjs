@@ -12,6 +12,7 @@ try {
     [webkit, 390, "zh-CN", "aurora"],
     [webkit, 320, "zh-TW", "silk"],
     [chromium, 1440, "zh-HK", "aurora"],
+    [webkit, 390, "zh-CN", "dark"],
   ]) {
     const browser = await engine.launch();
     try {
@@ -51,8 +52,28 @@ try {
         ),
       );
       await page.locator("[data-gw=customize]:enabled").waitFor();
+      assert.equal(await page.locator("html").getAttribute("data-appearance"), theme === "dark" ? "graphite" : theme);
+      const actions = page.locator(".gadget-workspace-actions");
+      const titleBounds = await page.locator(".gadget-workspace-heading h1").boundingBox();
+      const actionBounds = await actions.boundingBox();
+      assert(titleBounds.x + titleBounds.width <= actionBounds.x, "Heading and actions must not overlap");
+      for (const action of ["activity", "customize"]) {
+        const control = actions.locator(`[data-gw="${action}"]`),
+          label = await control.getAttribute("aria-label"),
+          bounds = await control.boundingBox();
+        assert(label?.trim());
+        assert.equal(await control.getAttribute("title"), label);
+        const labelVisible = await control.locator("span:not(.icon-slot)").isVisible();
+        assert.equal(labelVisible, width >= 768);
+        if (width < 768) {
+          assert(bounds.width >= 44 && bounds.height >= 44);
+          assert(Math.abs(bounds.width - bounds.height) < 1, "Mobile actions must remain square");
+        }
+      }
+      await page.screenshot({ path: `${out}/heading-${locale}-${width}-${theme}.png` });
       await page.locator('.gadget-instance[data-gadget-type-id="system.recent"] .gadget-row').first().waitFor();
       assert.equal(await page.locator("#workbenchView h1:visible").count(), 1);
+      assert.equal(await page.locator(".gadget-instance .gadget-error").count(), 0);
       assert.equal(await page.locator("#workbenchGlobalTitle").count(), 0);
       assert.equal(await page.locator(".gadget-workspace-heading > div > small").count(), 0);
       const firstContentOffset = await page.evaluate(() => {

@@ -58,11 +58,16 @@ export class RasterCoverRenderer {
 }
 
 /** This response is used only after the authenticated adapter resolves an exact installed package. */
-export function respondRasterCover(req: IncomingMessage, res: ServerResponse, bytes: Buffer) {
+export function respondRasterCover(
+  req: IncomingMessage,
+  res: ServerResponse,
+  bytes: Buffer,
+  options: { immutable?: boolean } = {},
+) {
   const etag = '"' + createHash("sha256").update(bytes).digest("hex") + '"';
   const headers = {
     "content-type": "image/webp",
-    "cache-control": "private, no-cache",
+    "cache-control": options.immutable ? "private, max-age=3600, immutable" : "private, no-cache",
     "x-content-type-options": "nosniff",
     "cross-origin-resource-policy": "same-origin",
     "content-security-policy": "default-src 'none'",

@@ -37,6 +37,8 @@
     "browser/conversation-native.e2e.mjs",
     "browser/composer-skill-picker.e2e.mjs",
     "browser/creation-skill-selection.e2e.mjs",
+    "browser/creation-activity.e2e.mjs",
+    "browser/creation-gadget-layout.e2e.mjs",
     "browser/creative-web-bundle.e2e.mjs",
     "browser/creative-workspace.e2e.mjs",
     "browser/desktop-shell.e2e.mjs",
@@ -168,7 +170,10 @@
     "browser/project-breadcrumb.e2e.mjs",
     "browser/project-directory-recovery.e2e.mjs",
     "browser/project-overview-loading.e2e.mjs",
-    "browser/project-space-ai.e2e.mjs"
+    "browser/project-space-ai.e2e.mjs",
+    "browser/creation-loading.e2e.mjs",
+    "browser/engine-images.e2e.mjs",
+    "browser/h5-creation-recovery.e2e.mjs"
   ],
   "groups": {
     "runtime": [

@@ -9,6 +9,7 @@ import {
   type CreationArtifact,
   type CreationExecution,
   type CreationFailure,
+  type CreationTask,
   type CreationLease,
 } from "../contracts.js";
 import type { CreationQuestionRecord } from "../questions/contracts.js";
@@ -23,6 +24,8 @@ import {
   creationUuidFromDigest,
 } from "../validation.js";
 import { creationSignature, creationTask, type CreationTaskRow } from "./records.js";
+import type { CreationProgress } from "../../../shared/creation/contracts.js";
+import { creationProgress } from "../validation.js";
 
 export function creationLedgerNamespace(value: string) {
   if (typeof value !== "string" || !value || value.length > 256 || value.includes("\0"))
@@ -84,6 +87,26 @@ export class MySQLCreationLedger {
   async get(owner: string, id: string) {
     return creationTask(await this.row(owner, id));
   }
+  readonly progress = {
+    record: async (lease: CreationLease, value: CreationProgress) => {
+      const event = creationProgress(value);
+      await this.transaction(async () => {
+        const task = await this.row(lease.owner, lease.taskId);
+        if (task.generation !== lease.generation || event.generation !== lease.generation) return;
+        const [count] = await this
+          .sql`SELECT COUNT(*) n FROM panda_force_creation_progress WHERE namespace=${this.namespace} AND taskId=${lease.taskId} AND generation=${lease.generation}`;
+        if (mysqlInteger(count.n) >= 64) return;
+        await this
+          .sql`INSERT INTO panda_force_creation_progress(namespace,id,taskId,generation,createdAt,ordinal,event) VALUES(${this.namespace},${randomUUID()},${lease.taskId},${lease.generation},${event.at},${mysqlInteger(count.n)},${JSON.stringify(event)})`;
+      });
+    },
+    list: async (owner: string, id: string, conversation = true): Promise<CreationProgress[]> => {
+      await this.row(owner, id);
+      const rows = await this
+        .sql`SELECT event FROM (SELECT event,generation,ordinal FROM panda_force_creation_progress WHERE namespace=${this.namespace} AND taskId=${id} AND (${conversation ? 1 : 0}=1 OR JSON_UNQUOTE(JSON_EXTRACT(event,'$.stage'))<>'message') ORDER BY generation DESC,ordinal DESC LIMIT 192) recent ORDER BY generation,ordinal`;
+      return rows.map((row: { event: unknown }) => creationProgress(JSON.parse(String(row.event))));
+    },
+  };
   async find(owner: string, id: string) {
     const rows = await this
       .sql`SELECT * FROM panda_force_creation_tasks WHERE namespace=${this.namespace} AND id=${creationUuid(id)}`;
@@ -314,12 +337,15 @@ export class MySQLCreationLedger {
       return this.get(owner, id);
     });
   }
-  async list(owner: string, projectId: string) {
-    creationId(projectId);
-    return (
-      await this
-        .sql`SELECT * FROM panda_force_creation_tasks WHERE namespace=${this.namespace} AND owner=${owner} AND projectId=${projectId} ORDER BY createdAt DESC,id DESC LIMIT 50`
-    ).map((r: any) => creationTask(numbers(r as CreationTaskRow)));
+  async list(owner: string, projectId?: string): Promise<CreationTask[]> {
+    if (projectId !== undefined) creationId(projectId);
+    const rows =
+      projectId === undefined
+        ? await this
+            .sql`SELECT * FROM panda_force_creation_tasks WHERE namespace=${this.namespace} AND owner=${owner} ORDER BY CASE WHEN state IN ('queued','running','committing') THEN 0 ELSE 1 END,createdAt DESC,id DESC LIMIT 50`
+        : await this
+            .sql`SELECT * FROM panda_force_creation_tasks WHERE namespace=${this.namespace} AND owner=${owner} AND projectId=${projectId} ORDER BY createdAt DESC,id DESC LIMIT 20`;
+    return rows.map((r: any) => creationTask(numbers(r as CreationTaskRow)));
   }
   async nextOutput(now: number) {
     creationInteger(now);
@@ -438,5 +464,5 @@ export function personalCreationLedgerNamespace(owner: string): string {
 }
 export function createMySQLCreationStorage(sql: SQL, namespace: string) {
   const tasks = new MySQLCreationLedger(sql, namespace);
-  return { tasks, queue: tasks.scheduling, questions: tasks.questions };
+  return { tasks, queue: tasks.scheduling, questions: tasks.questions, progress: tasks.progress };
 }

@@ -127,11 +127,13 @@ export class CreationSkillBrowser {
       top = this.scroll.scrollTop;
     setMessageHtml(
       this.options,
-      creationSkillOptions(this.t, entries, selected, this.query, loading || this.categories.pending, (entry) =>
-        this.categories.matches(entry),
-      ),
+      failed && !entries.length
+        ? ""
+        : creationSkillOptions(this.t, entries, selected, this.query, loading, (entry) =>
+            this.categories.matches(entry),
+          ),
     );
-    this.options.setAttribute("aria-busy", String(loading || this.categories.pending));
+    this.options.setAttribute("aria-busy", String(loading));
     const error = this.dialog.querySelector<HTMLElement>("[data-skill-browser-error]")!,
       next = this.dialog.querySelector<HTMLButtonElement>('[data-skill-action="more"]')!,
       count = this.dialog.querySelector<HTMLElement>("[data-skill-browser-count]")!;

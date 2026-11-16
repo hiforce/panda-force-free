@@ -14,7 +14,7 @@ test("the authenticated skill catalog persists builtin installation across actua
   const authenticate = async (path: string, body: unknown) => {
     const response = await fetch(app.base + path, {
       method: "POST",
-      headers: { cookie: [...cookies.values()].join("; "), "content-type": "application/json" },
+      headers: { cookie: [...cookies.values()].join("; "), "content-type": "application/json", Origin: app.base },
       body: JSON.stringify(body),
     });
     for (const cookie of response.headers.getSetCookie()) {
@@ -35,6 +35,7 @@ test("the authenticated skill catalog persists builtin installation across actua
     expect(login.status).toBe(200);
     expect((await login.json()).migrationRequired).toBe(true);
     expect((await authenticate("/api/auth/setup", { username: "fixture-owner" })).status).toBe(200);
+    expect((await authenticate("/api/system/database/selection", { driver: "sqlite" })).status).toBe(200);
     const first = await read("/api/skills");
     expect(first.status).toBe(200);
     expect(first.body.skills.length).toBe(20);
@@ -69,7 +70,7 @@ test("the authenticated skill catalog persists builtin installation across actua
       (
         await fetch(app.base + "/api/skills", {
           method: "POST",
-          headers: { cookie: [...cookies.values()].join("; ") },
+          headers: { cookie: [...cookies.values()].join("; "), Origin: app.base },
           body: "{}",
         })
       ).status,

@@ -42,7 +42,22 @@ export const identityMySQLModels: readonly MySQLModel[] = [
     ],
   },
 ];
-export const mysqlIdentityModule = mysqlModelModule("identity", identityMySQLModels, {
+const identity = mysqlModelModule("identity", identityMySQLModels, {
   readWrite: true,
   importFrom: ["sqlite"],
 });
+const accountTables = new Set(["panda_force_identity_settings", "panda_force_identity_users"]),
+  shippedSteps = identity.migrations.mysql![0]!.steps;
+export const mysqlIdentityModule = {
+  ...identity,
+  migrations: {
+    mysql: [
+      {
+        version: 1,
+        steps: shippedSteps.filter((step) => !accountTables.has(step.id)),
+        historicalSteps: [shippedSteps],
+      },
+      { version: 2, steps: shippedSteps.filter((step) => accountTables.has(step.id)) },
+    ],
+  },
+};

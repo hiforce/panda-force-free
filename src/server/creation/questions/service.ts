@@ -87,15 +87,20 @@ export class CreationQuestions {
     return this.store.answer(owner, id, digest, this.now());
   }
   async history(owner: string, taskId: string) {
+    return (await this.historyDetails(owner, taskId)).map(({ questions, answers }) => ({ questions, answers }));
+  }
+  async historyDetails(owner: string, taskId: string) {
     const task = await this.store.task(owner, taskId);
     await this.authorize(owner, task.spec.projectId);
-    const result: CreationClarification[] = [];
+    const result: Array<CreationClarification & { askedAt: number; answeredAt: number | null }> = [];
     for (const record of await this.store.answered(owner, taskId)) {
       const question = await this.content(record),
         answer = await this.files.answer(record.answerDigest!);
       if (answer.questionId !== record.id || answer.taskId !== taskId || answer.owner !== owner)
         throw new CreationError("unavailable");
       result.push({
+        askedAt: record.createdAt,
+        answeredAt: record.answeredAt,
         questions: question.questions,
         answers: creationAnswers(question.questions, { answers: answer.answers }),
       });

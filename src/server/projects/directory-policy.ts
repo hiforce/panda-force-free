@@ -7,8 +7,8 @@ import type { ProjectSnapshot, ProjectVisibility } from "../../shared/engine/typ
 
 /** Browser visibility is independent of engine sandbox permissions and never relocates native history. */
 export class ProjectDirectoryPolicy {
-  private protectedSession: (id: string) => boolean = () => false;
-  protectSessions(predicate: (id: string) => boolean) {
+  private protectedSession: (id: string, session?: unknown) => boolean = () => false;
+  protectSessions(predicate: (id: string, session?: unknown) => boolean) {
     this.protectedSession = predicate;
   }
   private readonly sessions = new Map<string, string>();
@@ -33,7 +33,7 @@ export class ProjectDirectoryPolicy {
     }
   }
   remember(value: unknown): boolean {
-    if (isRecord(value) && typeof value.id === "string" && this.protectedSession(value.id)) return false;
+    if (isRecord(value) && typeof value.id === "string" && this.protectedSession(value.id, value)) return false;
     if (this.allowExternal) return true;
     if (!isRecord(value) || typeof value.id !== "string") return false;
     this.sessions.delete(value.id);
@@ -50,7 +50,19 @@ export class ProjectDirectoryPolicy {
   ): Promise<void> {
     if (typeof params.threadId === "string" && this.protectedSession(params.threadId))
       throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
-    if (this.allowExternal) return;
+    if (this.allowExternal) {
+      if (typeof params.threadId === "string") {
+        let session: unknown;
+        try {
+          session = await getSession(params.threadId);
+        } catch {
+          session = null;
+        }
+        if (this.protectedSession(params.threadId, session))
+          throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
+      }
+      return;
+    }
     if (method === "thread/start" && flags.pandaProjectId !== undefined) return;
     if (typeof params.threadId === "string") {
       let session: unknown;
@@ -71,7 +83,7 @@ export class ProjectDirectoryPolicy {
         ...value,
         data: value.data.filter((entry) => {
           const id = typeof entry === "string" ? entry : isRecord(entry) ? entry.id : null;
-          return typeof id !== "string" || !this.protectedSession(id);
+          return typeof id !== "string" || !this.protectedSession(id, entry);
         }),
       };
     if (
@@ -122,7 +134,7 @@ export class ProjectDirectoryPolicy {
       const params = input.params,
         thread = isRecord(params.thread) ? params.thread : null;
       const id = params.threadId ?? params.conversationId ?? thread?.id;
-      if (typeof id === "string" && this.protectedSession(id)) return false;
+      if (typeof id === "string" && this.protectedSession(id, thread)) return false;
     }
     if (this.allowExternal) return true;
     if (!isRecord(input) || typeof input.method !== "string") return false;

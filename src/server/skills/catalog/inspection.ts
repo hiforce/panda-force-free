@@ -2,9 +2,11 @@ import type { SkillRegistryStore, SkillBundleStore } from "../ports.js";
 import { packageId, version, localId } from "../../../shared/skills/manifest/identity.js";
 import { skillDigest } from "../../../shared/skills/registry-validation.js";
 import { SkillRegistryError } from "../errors.js";
+import { SkillArtworkCache } from "./artwork-cache.js";
 
 /** Inspection and export do not enable a pack or grant its workflow capabilities. */
 export class SkillInspection {
+  private readonly artworkCache = new SkillArtworkCache();
   constructor(
     private registry: SkillRegistryStore,
     private bundles: SkillBundleStore,
@@ -37,11 +39,24 @@ export class SkillInspection {
   }
   async artwork(id: unknown, selectedVersion: unknown, digest: unknown, exportId: unknown) {
     const expected = skillDigest(digest),
-      pack = await this.export(id, selectedVersion);
-    if (pack.digest !== expected) throw new SkillRegistryError("immutableVersion");
-    const skill = pack.manifest.skills.find((item) => item.id === localId(exportId));
+      entryId = localId(exportId),
+      { package: installed } = await this.detail(id, selectedVersion);
+    if (installed.digest !== expected) throw new SkillRegistryError("immutableVersion");
+    const skill = installed.manifest.skills.find((item) => item.id === entryId);
     const path = skill?.cover?.path || skill?.previews?.[0];
     if (!path) throw new SkillRegistryError("notFound");
-    return pack.read(path);
+    // Check current installation metadata before every cache read, including conditional requests.
+    return this.artworkCache.read(JSON.stringify([expected, path]), async () => {
+      const pack = await this.bundles.read(installed.digest),
+        original = pack.manifest.skills.find((item) => item.id === entryId);
+      if (
+        pack.digest !== installed.digest ||
+        pack.manifest.id !== installed.id ||
+        pack.manifest.version !== installed.version ||
+        (original?.cover?.path || original?.previews?.[0]) !== path
+      )
+        throw new SkillRegistryError("unavailable");
+      return pack.read(path);
+    });
   }
 }

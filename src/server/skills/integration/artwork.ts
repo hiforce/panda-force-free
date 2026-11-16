@@ -38,13 +38,20 @@ export function skillArtworkRoutes(
           keys.some((key) => params.getAll(key).length !== 1)
         )
           throw new SkillRegistryError("invalidInput");
-        const bytes = await catalog.artwork(
-          params.get("id"),
-          params.get("version"),
-          params.get("digest"),
-          params.get("exportId"),
+        const started = performance.now(),
+          bytes = await catalog.artwork(
+            params.get("id"),
+            params.get("version"),
+            params.get("digest"),
+            params.get("exportId"),
+          ),
+          loaded = performance.now(),
+          cover = await renderer.render(bytes);
+        res.setHeader(
+          "server-timing",
+          `cover-read;dur=${(loaded - started).toFixed(1)}, cover-render;dur=${(performance.now() - loaded).toFixed(1)}`,
         );
-        respondRasterCover(req, res, await renderer.render(bytes));
+        respondRasterCover(req, res, cover, { immutable: true });
       }),
     },
   ];

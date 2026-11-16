@@ -2300,3 +2300,12 @@
     font-size: 22px;
   }
 }
+
+.message-image-button[data-image-failed="true"] {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+}
+.message-image-button[data-image-failed="true"] > .message-image[hidden] {
+  display: none;
+}

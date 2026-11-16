@@ -1,0 +1,32 @@
+{
+  "id": "system.creations",
+  "apiVersion": 1,
+  "version": "1.0.0",
+  "configVersion": 1,
+  "title": { "en": "Creation activity", "zh-CN": "创作记录", "zh-HK": "創作記錄", "zh-TW": "創作紀錄" },
+  "description": {
+    "en": "Open a creation to follow the conversation, answer questions and continue writing.",
+    "zh-CN": "打开创作查看对话、回答问题，继续完善成果。",
+    "zh-HK": "開啟創作查看對話、回答問題，繼續完善成果。",
+    "zh-TW": "開啟創作查看對話、回答問題，繼續完善成果。"
+  },
+  "icon": "messageSquare",
+  "singleton": true,
+  "source": "system",
+  "layout": { "w": 4, "h": 11, "minW": 4, "minH": 6 },
+  "defaultPlacement": { "x": 8, "y": 0, "order": 1 },
+  "config": {
+    "limit": {
+      "type": "number",
+      "default": 4,
+      "min": 1,
+      "max": 20,
+      "label": { "en": "Items shown", "zh-CN": "显示条数", "zh-HK": "顯示條數", "zh-TW": "顯示筆數" }
+    }
+  },
+  "permissions": ["documents.read"],
+  "services": [],
+  "actions": [],
+  "clientCapabilities": ["panda.creations"],
+  "minRefreshSeconds": 60
+}

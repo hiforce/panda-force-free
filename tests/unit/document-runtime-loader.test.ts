@@ -183,3 +183,21 @@ test("native module retry is bounded and unrelated TypeError initialization is n
     expect(count).toBe(message.startsWith("Importing") ? 2 : 1);
   }
 });
+test("an opted-in entry recovers after two cached browser import failures using distinct URLs", async () => {
+  const entries: number[] = [];
+  const loader = new DocumentRuntimeLoader({
+    prime: async () => {},
+    maxTransferRetries: 3,
+    isTransferFailure: isModuleNetworkError,
+    evaluate: async (entry) => {
+      entries.push(entry);
+      if (entry < 2) throw new TypeError("Importing a module script failed.");
+      return "ready";
+    },
+  });
+  await expect(loader.load()).rejects.toMatchObject({ phase: "transfer", retryable: true });
+  await expect(loader.load()).rejects.toMatchObject({ phase: "transfer", retryable: true });
+  expect(await loader.load()).toBe("ready");
+  expect(await loader.load()).toBe("ready");
+  expect(entries).toEqual([0, 1, 2]);
+});

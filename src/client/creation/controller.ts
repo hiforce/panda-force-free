@@ -23,7 +23,6 @@ export interface CreationContext {
 }
 /** Owns one project panel and its fetch generation. Draft identity, skill fields and task cards have separate owners. */
 export class DocumentCreationPanel {
-  private readonly dialog = document.createElement("dialog");
   private epoch = 0;
   private reads = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -32,6 +31,7 @@ export class DocumentCreationPanel {
   constructor(
     private readonly t: Translate,
     private readonly identity: string,
+    private readonly dialog: HTMLDialogElement = document.createElement("dialog"),
   ) {
     this.dialog.id = document.getElementById("projectDocumentCreation")
       ? "projectDocumentCreation-" + crypto.randomUUID()
@@ -184,7 +184,10 @@ export class DocumentCreationPanel {
       clearTimeout(this.timer);
       const read = ++this.reads;
       try {
-        const result = await creationApi.list(context.projectId);
+        if (direct && !focusedTask) return;
+        const result = direct
+          ? { tasks: [(await creationApi.progress(focusedTask)).task] }
+          : await creationApi.list(context.projectId);
         if (current() && read === this.reads) {
           tasks = result.tasks;
           cards.render(direct ? tasks.filter((value) => value.id === focusedTask) : tasks);
@@ -247,6 +250,7 @@ export class DocumentCreationPanel {
         merge(task);
         notice(this.t("creation.submitted"));
         get(`[data-creation-task="${task.id}"]`).scrollIntoView({ block: "start" });
+        if (direct) void refresh();
       } catch (error) {
         if (current()) {
           form.hidden = false;
@@ -275,7 +279,7 @@ export class DocumentCreationPanel {
       form.hidden = false;
       notice(this.t("creation.unavailable"));
     } else if (saved?.prompt && context.prompt === undefined) notice(this.t("creation.briefRecovered"));
-    void refresh();
+    if (!direct) void refresh();
     if (submission.state.pending) {
       const accepted = await submission.confirm();
       if (current() && accepted) {
@@ -286,6 +290,7 @@ export class DocumentCreationPanel {
         get(".creation-history").hidden = false;
         merge(accepted);
         controls();
+        if (direct) void refresh();
       } else if (current() && direct) await send();
     } else if (direct && options.state === "ready") await send();
     else prompt.focus({ preventScroll: true });

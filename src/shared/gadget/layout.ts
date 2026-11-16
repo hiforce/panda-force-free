@@ -42,7 +42,15 @@ export function defaultGadgetLayout(manifests: readonly GadgetManifest[]): Gadge
     visible: { desktop: true, mobile: true },
   }));
   settleGadgetLayout(items);
-  return { version: 1, revision: 0, preset: "primary", density: "compact", items, mobileOrder: items.map((i) => i.id) };
+  return {
+    version: 1,
+    revision: 0,
+    preset: "primary",
+    density: "compact",
+    items,
+    mobileOrder: items.map((i) => i.id),
+    catalogVersion: 1,
+  };
 }
 export function collides(
   a: Pick<GadgetInstance, "x" | "y" | "w" | "h">,
@@ -76,7 +84,9 @@ export function validateGadgetLayout(
     !["primary", "equal", "full"].includes(String(value.preset)) ||
     !Array.isArray(value.items) ||
     value.items.length > GADGET_LIMITS.instances ||
-    !Array.isArray(value.mobileOrder)
+    !Array.isArray(value.mobileOrder) ||
+    (value.catalogVersion !== undefined &&
+      (!integer(value.catalogVersion, 0, 10000) || Number(value.catalogVersion) < (prior?.catalogVersion ?? 0)))
   )
     throw new GadgetError("invalidInput");
   const ids = new Set<string>(),
@@ -142,5 +152,8 @@ export function validateGadgetLayout(
     preset: value.preset as GadgetLayout["preset"],
     items,
     mobileOrder: value.mobileOrder as string[],
+    ...((value.catalogVersion ?? prior?.catalogVersion) === undefined
+      ? {}
+      : { catalogVersion: Number(value.catalogVersion ?? prior?.catalogVersion) }),
   };
 }

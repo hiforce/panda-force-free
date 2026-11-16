@@ -91,6 +91,7 @@ export function localDownloadUrl(path, cwd = "") {
 function imageSource(source, cwd = "", explicit = false) {
   const value = decodeAttribute(source).trim();
   if (/^https?:\/\//i.test(value)) return attachmentDisplayUrl(value);
+  if (/^\/api\/images\/engine\?token=/.test(value)) return value;
   if (/^blob:/i.test(value) || SAFE_DATA_IMAGE.test(value)) return value;
   const reference = parseFileReference(value);
   if (!reference || (!explicit && !isImageReference(reference.path))) return null;
@@ -98,6 +99,8 @@ function imageSource(source, cwd = "", explicit = false) {
 }
 
 function imageTitle(source = "") {
+  if (/^\/api\/images\/engine\?token=/.test(source))
+    return new URL(source, "http://local").searchParams.get("name") || "Image";
   if (/^https?:\/\//i.test(source)) return attachmentUrlName(source);
   const reference = parseFileReference(source);
   const value = reference?.path || source;
@@ -114,7 +117,12 @@ export function renderImagePreview(source, { cwd = "", title = "", className = "
   if (!src) return "";
   const reference = parseFileReference(source);
   const label = title || imageTitle(source);
-  const displaySrc = thumbnail && reference ? localImageUrl(reference.path, cwd, { thumbnail: true }) : src;
+  const displaySrc =
+    thumbnail && /^\/api\/images\/engine\?token=/.test(src)
+      ? src + "&thumbnail=1"
+      : thumbnail && reference
+        ? localImageUrl(reference.path, cwd, { thumbnail: true })
+        : src;
   return `<button type="button" class="message-image-button${className ? ` ${escapeHtml(className)}` : ""}" data-image-src="${escapeHtml(src)}" data-image-title="${escapeHtml(label)}"${reference ? ` data-image-path="${escapeHtml(reference.path)}"` : ""} aria-label="View image: ${escapeHtml(label)}"><img class="message-image" src="${escapeHtml(displaySrc)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async"></button>`;
 }
 

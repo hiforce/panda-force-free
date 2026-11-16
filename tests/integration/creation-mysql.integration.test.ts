@@ -116,6 +116,20 @@ test.skipIf(!enabled)(
       expect(claims.filter((r) => r.status === "fulfilled")).toHaveLength(1);
       const lease = (claims.find((r) => r.status === "fulfilled") as PromiseFulfilledResult<any>).value,
         execution = await first.bind(lease, "session", "run", 10001);
+      await first.progress.record(lease, { at: 10001, generation: lease.generation, stage: "started" });
+      await second.progress.record(lease, {
+        at: 10002,
+        generation: lease.generation,
+        stage: "message",
+        text: "Writing requirements",
+      });
+      expect(
+        (await new MySQLCreationLedger(f.sql, "application").progress.list("owner", s.id)).map((event) => event.stage),
+      ).toEqual(["started", "message"]);
+      expect((await first.progress.list("owner", s.id, false)).map((event) => event.stage)).toEqual(["started"]);
+      await expect(first.progress.list("other", s.id)).rejects.toThrow("notFound");
+      expect((await second.list("owner")).map((task) => task.spec.id)).toContain(s.id);
+      expect(await second.list("other")).toEqual([]);
       const questions = await Promise.allSettled([
         first.register(execution, "b".repeat(64), 10002),
         second.register(execution, "c".repeat(64), 10002),

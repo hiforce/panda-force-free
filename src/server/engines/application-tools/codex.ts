@@ -5,6 +5,7 @@ import { createCodexBridge } from "../../bridge/codex-process.js";
 import { codexApplicationThread } from "./codex-policy.js";
 import { codexApplicationCalls } from "./codex-calls.js";
 import { ActiveRunBudget } from "../active-budget.js";
+import { rememberApplicationSession } from "./sessions.js";
 
 function identity(value: unknown): string {
   if (typeof value !== "string" || !value || value.length > 128) throw new Error("Invalid application engine identity");
@@ -27,7 +28,7 @@ export function createCodexApplicationEngine(
     async run(value, callbacks) {
       callbacks.signal.throwIfAborted();
       const input = structuredClone(value),
-        timeoutMs = options.timeoutMs ?? 120000;
+        timeoutMs = options.timeoutMs ?? (options.purpose === "creation" ? 600000 : 120000);
       if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 600000)
         throw new Error("Invalid application engine deadline");
       if (
@@ -121,6 +122,18 @@ export function createCodexApplicationEngine(
             void calls(message);
             return;
           }
+          if (
+            scope &&
+            bound &&
+            !stopping &&
+            message.method === "item/completed" &&
+            message.params?.threadId === scope.sessionId &&
+            message.params?.turnId === scope.runId
+          ) {
+            const item: unknown = message.params?.item;
+            if (isRecord(item) && item.type === "agentMessage" && typeof item.text === "string" && item.text.trim())
+              void Promise.resolve(callbacks.message?.(item.text.slice(0, 8000))).catch(() => {});
+          }
           if (scope && message.method === "turn/completed" && message.params?.threadId === scope.sessionId) {
             const turn: unknown = message.params?.turn;
             if (
@@ -135,7 +148,11 @@ export function createCodexApplicationEngine(
           }
         },
       });
-      budget = new ActiveRunBudget(timeoutMs, abort);
+      budget = new ActiveRunBudget(timeoutMs, () => {
+        stopping = true;
+        markReady();
+        fail(Object.assign(new Error("Application engine deadline exceeded"), { code: "APPLICATION_ENGINE_DEADLINE" }));
+      });
       callbacks.signal.addEventListener("abort", abort, { once: true });
       if (callbacks.signal.aborted) abort();
       try {
@@ -157,6 +174,7 @@ export function createCodexApplicationEngine(
         );
         if (!isRecord(started) || !isRecord(started.thread)) throw new Error("Invalid application engine start");
         scope = { sessionId: identity(started.thread.id), runId: "" };
+        rememberApplicationSession(scope.sessionId);
         await callbacks.session?.(scope.sessionId);
         if (stopping) throw new Error("Application engine interrupted");
         const running = await transport.request("turn/start", {

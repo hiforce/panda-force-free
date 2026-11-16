@@ -11,6 +11,7 @@ export interface CreationTaskSpec {
   target: { parentId: string | null; treeVersion: number; locale: string };
   inputDigest: string;
   skillCaptureId: string | null;
+  previousTaskId?: string;
 }
 export interface CreationTask {
   spec: CreationTaskSpec;

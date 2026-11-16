@@ -377,3 +377,26 @@ test("regional category labels upgrade on read without rewriting preferences and
     f.store.close();
   }
 });
+
+test("picker category projection avoids resolving saved navigation pins", async () => {
+  const f = fixture();
+  try {
+    const seed = defaultSkillWorkspace();
+    seed.pins = [
+      {
+        kind: "skill",
+        key: "skills:skill:panda-force.essentials:software-prd:1.0.0:" + "a".repeat(64),
+        label: { name: "Old PRD" },
+        version: "1.0.0",
+      },
+    ];
+    await f.store.save("alice", randomUUID(), "fixture", 0, seed);
+    const snapshot = await f.service.snapshot("alice", true);
+    expect(snapshot.pins).toEqual([]);
+    expect(snapshot.categories).toEqual(seed.categories);
+    expect(f.reads()).toBe(0);
+    expect((await f.store.read("alice")).pins).toHaveLength(1);
+  } finally {
+    f.store.close();
+  }
+});

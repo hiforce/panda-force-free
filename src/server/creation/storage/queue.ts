@@ -116,13 +116,17 @@ export class CreationQueue {
       })
       .immediate();
   }
-  list(owner: string, projectId: string) {
-    creationId(projectId);
+  list(owner: string, projectId?: string) {
+    if (projectId !== undefined) creationId(projectId);
     return this.db
-      .query<CreationTaskRow, [string, string]>(
-        "SELECT * FROM creation_tasks WHERE owner=? AND projectId=? ORDER BY createdAt DESC,id DESC LIMIT 50",
+      .query<CreationTaskRow, string[]>(
+        "SELECT * FROM creation_tasks WHERE owner=?" +
+          (projectId === undefined ? "" : " AND projectId=?") +
+          (projectId === undefined
+            ? " ORDER BY CASE WHEN state IN ('queued','running','committing') THEN 0 ELSE 1 END,createdAt DESC,id DESC LIMIT 50"
+            : " ORDER BY createdAt DESC,id DESC LIMIT 20"),
       )
-      .all(owner, projectId)
+      .all(...(projectId === undefined ? [owner] : [owner, projectId]))
       .map(creationTask);
   }
   nextOutput(now: number) {

@@ -107,5 +107,7 @@
   "destinationUnavailable": "This project is unavailable. Choose another destination.",
   "destinationForbidden": "You cannot create documents here. Choose another destination.",
   "destinationMissing": "Unavailable project",
-  "briefPlaceholder": "Describe your goal or what you want to create…"
+  "briefPlaceholder": "Describe your goal or what you want to create…",
+  "toolsLoading": "Loading creation tools. Your input is saved.",
+  "toolsUnavailable": "Creation tools could not load. Your draft is kept; retry to use skills."
 }

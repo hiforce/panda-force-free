@@ -107,5 +107,7 @@
   "destinationUnavailable": "当前项目已不可用，请选择其他保存位置。",
   "destinationForbidden": "你没有在此创建文档的权限，请选择其他保存位置。",
   "destinationMissing": "项目不可用",
-  "briefPlaceholder": "描述你的目标或想创作的内容…"
+  "briefPlaceholder": "描述你的目标或想创作的内容…",
+  "toolsLoading": "正在加载创作工具，输入内容会保留。",
+  "toolsUnavailable": "创作工具加载失败，输入已保留。重试后可使用技能。"
 }

@@ -60,7 +60,10 @@ for (const [entry, output] of Object.entries(CLIENT_ENTRYPOINTS)) {
     outdir: "public",
     naming: output,
     plugins: ["i18n.js", "http-client.js"].includes(entry) ? [] : [sharedRuntime],
-    external: [...CLIENT_BUNDLES, ...CLIENT_BUNDLES.map((path) => path + "?retry=1")],
+    external: [
+      ...CLIENT_BUNDLES,
+      ...CLIENT_BUNDLES.flatMap((path) => [1, 2, 3].map((entry) => path + "?retry=" + entry)),
+    ],
   });
   if (!result.success) throw new AggregateError(result.logs, "Client build failed: " + entry);
 }

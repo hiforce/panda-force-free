@@ -31,7 +31,7 @@ test("the public gadget API and SDK preserve owner boundaries, revisions, replay
     const transport = ((url: RequestInfo | URL, init?: RequestInit) =>
         fetch(url, { ...init, headers: { ...init?.headers, "x-test-owner": "one", Origin: base } })) as typeof fetch,
       client = new GadgetClient(base, transport);
-    expect((await client.catalog()).gadgets).toHaveLength(6);
+    expect((await client.catalog()).gadgets).toHaveLength(7);
     const layout = await client.layout(),
       id = randomUUID();
     layout.items[0]!.title = "Private composer";

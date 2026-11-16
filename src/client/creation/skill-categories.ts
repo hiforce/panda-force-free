@@ -32,8 +32,9 @@ export function creationSkillInCategory(
 
 /** Category metadata loads independently; it never blocks discovery or changes selected skills. */
 export class CreationSkillCategories {
-  private readonly client = new SkillWorkspaceClient();
+  private readonly client = new SkillWorkspaceClient(true);
   private selected = "";
+  private fallback = false;
   private predicate: ReturnType<typeof skillCategoryPredicate> | null = null;
   private readonly unsubscribe: () => void;
   constructor(
@@ -52,6 +53,7 @@ export class CreationSkillCategories {
       );
       if (!target || target.disabled) return;
       if (target.hasAttribute("data-skill-category-retry")) return this.refresh();
+      this.fallback = false;
       if (target.dataset.skillCategory === this.selected) return;
       this.selected = target.dataset.skillCategory!;
       this.render();
@@ -61,6 +63,7 @@ export class CreationSkillCategories {
   }
   matches(entry: CreationSkillEntry) {
     return (
+      !this.client.snapshot ||
       this.selected === "all" ||
       !!this.predicate?.(
         templateLineageKey(creationSkillReference(entry.reference)),
@@ -72,9 +75,6 @@ export class CreationSkillCategories {
     this.selected = "";
     this.render();
   }
-  get pending() {
-    return !this.client.snapshot && this.client.loading;
-  }
   refresh() {
     void this.client.load();
   }
@@ -84,6 +84,14 @@ export class CreationSkillCategories {
       ? (document.activeElement as HTMLElement)?.dataset.skillCategory
       : null;
     const categories = this.client.snapshot?.categories || [];
+    if (!this.client.snapshot && this.client.error && !this.selected) {
+      this.selected = "all";
+      this.fallback = true;
+    }
+    if (this.client.snapshot && this.fallback) {
+      this.selected = "";
+      this.fallback = false;
+    }
     if (
       this.client.snapshot &&
       this.selected !== "all" &&

@@ -28,6 +28,8 @@ export interface SchemaStep {
 export interface SchemaMigration {
   version: number;
   steps: readonly SchemaStep[];
+  // Exact plans shipped under this version remain resumable without rewriting their journal.
+  historicalSteps?: readonly (readonly SchemaStep[])[];
 }
 export interface DatabaseModule {
   id: string;
@@ -96,6 +98,14 @@ export const migrationChecksum = (module: string, migration: SchemaMigration) =>
     )
     .digest("hex");
 
+function recordedPlan(module: string, migration: SchemaMigration, checksum: string) {
+  for (const steps of [migration.steps, ...(migration.historicalSteps ?? [])]) {
+    const plan = { version: migration.version, steps };
+    if (migrationChecksum(module, plan) === checksum) return plan;
+  }
+  return undefined;
+}
+
 /** Registrations are explicit. An unavailable module backend blocks a whole-application cutover. */
 export class DatabaseRegistry {
   private modules = new Map<string, DatabaseModule>();
@@ -104,23 +114,22 @@ export class DatabaseRegistry {
       throw new SchemaError("duplicateModule", module.id);
     for (const migrations of Object.values(module.migrations)) {
       for (const [index, migration] of migrations.entries()) {
-        if (
-          migration.version !== index + 1 ||
-          !migration.steps.length ||
-          new Set(migration.steps.map((s) => s.id)).size !== migration.steps.length
-        )
-          throw new SchemaError("invalidMigration", module.id);
-        for (const step of migration.steps) {
-          // Automatic upgrades accept additive DDL only. Data rewrites use separately reviewed migration jobs.
-          const sql = step.sql.replace(/--[^\n]*/g, "").trim();
-          if (
-            !/^(?:CREATE TABLE|CREATE (?:UNIQUE )?INDEX|ALTER TABLE\s+[`\w]+\s+ADD (?:COLUMN|INDEX|KEY|UNIQUE))\b/i.test(
-              sql,
-            ) ||
-            /\b(?:DROP|TRUNCATE|RENAME|DELETE|REPLACE)\b/i.test(sql) ||
-            sql.replace(/;\s*$/, "").includes(";")
-          )
-            throw new SchemaError("unsafeStatement", module.id);
+        if (migration.version !== index + 1) throw new SchemaError("invalidMigration", module.id);
+        for (const steps of [migration.steps, ...(migration.historicalSteps ?? [])]) {
+          if (!steps.length || new Set(steps.map((s) => s.id)).size !== steps.length)
+            throw new SchemaError("invalidMigration", module.id);
+          for (const step of steps) {
+            // Automatic upgrades accept additive DDL only. Data rewrites use separately reviewed migration jobs.
+            const sql = step.sql.replace(/--[^\n]*/g, "").trim();
+            if (
+              !/^(?:CREATE TABLE|CREATE (?:UNIQUE )?INDEX|ALTER TABLE\s+[`\w]+\s+ADD (?:COLUMN|INDEX|KEY|UNIQUE))\b/i.test(
+                sql,
+              ) ||
+              /\b(?:DROP|TRUNCATE|RENAME|DELETE|REPLACE)\b/i.test(sql) ||
+              sql.replace(/;\s*$/, "").includes(";")
+            )
+              throw new SchemaError("unsafeStatement", module.id);
+          }
         }
       }
     }
@@ -129,12 +138,18 @@ export class DatabaseRegistry {
       migrations[dialect as DatabaseDialect] = versions.map((version) => ({
         version: version.version,
         steps: version.steps.map((step) => ({ ...step })),
+        ...(version.historicalSteps
+          ? { historicalSteps: version.historicalSteps.map((steps) => steps.map((step) => ({ ...step }))) }
+          : {}),
       }));
     }
     for (const versions of Object.values(migrations)) {
       for (const version of versions) {
-        for (const step of version.steps) Object.freeze(step);
-        Object.freeze(version.steps);
+        for (const steps of [version.steps, ...(version.historicalSteps ?? [])]) {
+          for (const step of steps) Object.freeze(step);
+          Object.freeze(steps);
+        }
+        if (version.historicalSteps) Object.freeze(version.historicalSteps);
         Object.freeze(version);
       }
       Object.freeze(versions);
@@ -205,7 +220,7 @@ export class DatabaseRegistry {
           issues.push({ module: module.id, object: "version", code: "unsupportedVersion" });
         for (const migration of migrations) {
           const saved = await connection.history(module.id, migration.version);
-          if (saved && saved.checksum !== migrationChecksum(module.id, migration))
+          if (saved && !recordedPlan(module.id, migration, saved.checksum))
             issues.push({ module: module.id, object: String(migration.version), code: "changedMigration" });
           if (!saved || saved.state !== "complete")
             issues.push({ module: module.id, object: String(migration.version), code: "migrationIncomplete" });
@@ -228,20 +243,21 @@ export class DatabaseRegistry {
         const latest = await connection.history(module.id, 0);
         if (latest && latest.version > migrations.length) throw new SchemaError("unsupportedVersion", module.id);
         for (const migration of migrations) {
-          const checksum = migrationChecksum(module.id, migration),
-            previous = await connection.history(module.id, migration.version);
-          if (previous && previous.checksum !== checksum) throw new SchemaError("changedMigration", module.id);
+          const previous = await connection.history(module.id, migration.version),
+            plan = previous ? recordedPlan(module.id, migration, previous.checksum) : migration;
+          if (!plan) throw new SchemaError("changedMigration", module.id);
+          const checksum = migrationChecksum(module.id, plan);
           if (
             previous &&
-            (!Number.isSafeInteger(previous.step) || previous.step < 0 || previous.step > migration.steps.length)
+            (!Number.isSafeInteger(previous.step) || previous.step < 0 || previous.step > plan.steps.length)
           )
             throw new SchemaError("invalidMigration", module.id);
           if (previous?.state === "complete") continue;
           let step = previous?.step ?? 0;
           try {
             await connection.record(module.id, { version: migration.version, checksum, step, state: "running" });
-            for (; step < migration.steps.length; step++) {
-              const entry = migration.steps[step]!;
+            for (; step < plan.steps.length; step++) {
+              const entry = plan.steps[step]!;
               if (!(await entry.satisfied(connection))) await connection.execute(entry.sql);
               if (!(await entry.satisfied(connection))) throw new SchemaError("schemaDrift", module.id);
               await connection.record(module.id, {
@@ -254,7 +270,7 @@ export class DatabaseRegistry {
                 module: module.id,
                 version: migration.version,
                 step: step + 1,
-                total: migration.steps.length,
+                total: plan.steps.length,
               });
             }
             await connection.record(module.id, { version: migration.version, checksum, step, state: "complete" });

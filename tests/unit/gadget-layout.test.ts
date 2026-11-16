@@ -9,6 +9,7 @@ import {
 } from "../../src/shared/gadget/layout.js";
 import { GadgetWorkspaceService } from "../../src/server/gadget/service.js";
 import { GadgetStore } from "../../src/server/gadget/store.js";
+import { upgradeSystemGadgetLayout } from "../../src/gadget/system/layout.js";
 import type { SystemGadgetPorts } from "../../src/gadget/system/ports.js";
 import type { GadgetModule } from "../../src/server/gadget/registry.js";
 const ports: SystemGadgetPorts = {
@@ -27,7 +28,7 @@ function registry() {
 test("the default layout is derived from registered placement metadata and rejects overlaps, duplicate singletons and unknown instances", () => {
   const catalog = registry().catalog(),
     layout = defaultGadgetLayout(catalog);
-  expect(layout.items).toHaveLength(4);
+  expect(layout.items).toHaveLength(5);
   expect(layout.items.some((item) => item.gadget === "system.attention")).toBe(false);
   expect(validateGadgetLayout(layout, catalog)).toMatchObject({ version: 1, revision: 0 });
   const overlap = structuredClone(layout);
@@ -66,6 +67,53 @@ test("layout transactions isolate owners, replay an uncertain save, reject confl
   } finally {
     store.close();
   }
+});
+
+test("creation history is a registered movable gadget beside the composer and directly after it on mobile", () => {
+  const catalog = registry().catalog(),
+    layout = defaultGadgetLayout(catalog),
+    composer = layout.items.find((item) => item.gadget === "system.composer")!,
+    history = layout.items.find((item) => item.gadget === "system.creations")!;
+  expect(history.y).toBe(composer.y);
+  expect(history.x).toBe(composer.x + composer.w);
+  expect(layout.mobileOrder.slice(0, 2)).toEqual([composer.id, history.id]);
+  history.x = 0;
+  history.y = 32;
+  history.w = 12;
+  history.h = 7;
+  expect(validateGadgetLayout(layout, catalog).items.find((item) => item.id === history.id)).toMatchObject({
+    x: 0,
+    y: 32,
+    w: 12,
+    h: 7,
+  });
+});
+
+test("the legacy preset upgrades once without resetting custom positions, titles, filters or intentional removal", () => {
+  const catalog = registry().catalog(),
+    legacy = defaultGadgetLayout(catalog);
+  legacy.catalogVersion = undefined;
+  legacy.items = legacy.items.filter((item) => item.gadget !== "system.creations");
+  legacy.mobileOrder = legacy.mobileOrder.filter((id) => id !== "system.creations");
+  legacy.items.find((item) => item.gadget === "system.projects")!.y = 0;
+  legacy.items.find((item) => item.gadget === "system.skills")!.y = 7;
+  legacy.revision = 3;
+  const restored = upgradeSystemGadgetLayout(legacy, catalog);
+  expect(restored).toEqual({ ...defaultGadgetLayout(catalog), revision: 3 });
+  const custom = structuredClone(legacy);
+  custom.items[0]!.title = "My writing desk";
+  custom.items[0]!.y = 40;
+  const upgraded = upgradeSystemGadgetLayout(custom, catalog);
+  expect(upgraded.items.slice(0, custom.items.length)).toEqual(custom.items);
+  expect(upgradeSystemGadgetLayout(upgraded, catalog)).toEqual(upgraded);
+  upgraded.items = upgraded.items.filter((item) => item.gadget !== "system.creations");
+  upgraded.mobileOrder = upgraded.mobileOrder.filter((id) => id !== "system.creations");
+  expect(upgradeSystemGadgetLayout(upgraded, catalog).items).toHaveLength(4);
+  const settings = structuredClone(legacy);
+  settings.items.find((item) => item.gadget === "system.recent")!.config.limit = 9;
+  expect(
+    upgradeSystemGadgetLayout(settings, catalog).items.find((item) => item.gadget === "system.recent")!.config.limit,
+  ).toBe(9);
 });
 test("registered extension services reauthorize every call and migrate config without resetting the user layout", async () => {
   const r = registry(),

@@ -11,6 +11,17 @@ export function createLocalImagePresenter(options) {
       return result.some((child, index) => child !== value[index]) ? result : value;
     }
     let result = value;
+    if (value.type === "imageView" && Array.isArray(value.imagePaths) && options.engineReference) {
+      const imagePaths = value.imagePaths.map((path) => {
+        try {
+          resolveLocalImage(path, options);
+          return path;
+        } catch {
+          return options.engineReference(path, value.id) || path;
+        }
+      });
+      if (imagePaths.some((path, index) => path !== value.imagePaths[index])) result = { ...value, imagePaths };
+    }
     if (value.type === "imageGeneration" && typeof value.savedPath === "string" && typeof value.result === "string") {
       try {
         resolveLocalImage(value.savedPath, options);

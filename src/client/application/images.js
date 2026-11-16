@@ -1,4 +1,4 @@
-import { setOpaqueText } from "../i18n.js";
+import { setOpaqueText, localizeText } from "../i18n.js";
 // Owns image-dialog focus, source lifetime and dismissal.
 /** @param {import("./ports.js").FeatureOptions<"$", never, "images">} options */
 export function assembleImages({ $ }) {
@@ -27,6 +27,30 @@ export function assembleImages({ $ }) {
     requestAnimationFrame(() => $("#closeImageViewer").focus());
   }
   function bind() {
+    document.addEventListener(
+      "error",
+      (event) => {
+        const image = event.target;
+        if (!(image instanceof HTMLImageElement) || !image.classList.contains("message-image")) return;
+        const button = image.closest(".message-image-button");
+        if (!(button instanceof HTMLElement)) return;
+        const original = button.dataset.imageSrc;
+        if (original && image.getAttribute("src") !== original && !image.dataset.originalTried) {
+          image.dataset.originalTried = "true";
+          image.src = original;
+          return;
+        }
+        image.hidden = true;
+        button.dataset.imageFailed = "true";
+        if (!button.querySelector(".message-image-unavailable")) {
+          const notice = document.createElement("span");
+          notice.className = "message-image-unavailable";
+          localizeText(notice, "common.imageUnavailable");
+          button.append(notice);
+        }
+      },
+      true,
+    );
     $("#closeImageViewer").onclick = /** @param {Parameters<typeof closeImageViewer>} args */ (...args) =>
       closeImageViewer(...args);
     $("#imageViewerImage").onload = () => {

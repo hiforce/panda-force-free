@@ -12,12 +12,13 @@ export async function createGadgetFeature(options: {
   register(registry: GadgetRegistry): void;
   store?: GadgetRepository;
   modules?: readonly string[];
+  upgradeLayout?: ConstructorParameters<typeof GadgetWorkspaceService>[2];
 }) {
   const registry = new GadgetRegistry();
   options.register(registry);
   for (const path of options.modules ?? []) await registerDeploymentGadgets(path, registry);
   const store = options.store ?? new GadgetStore(join(options.stateRoot, "data", "gadgets.sqlite"));
-  const service = new GadgetWorkspaceService(registry, store);
+  const service = new GadgetWorkspaceService(registry, store, options.upgradeLayout);
   return {
     registry,
     service,

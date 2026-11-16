@@ -1,3 +1,5 @@
+import { CreationActivityDetail } from "./creation/activity-detail.js";
+import { createCreationHome } from "./creation/home.js";
 import { captureRenderFocus, restoreRenderFocus } from "./render-focus.js";
 import { systemGadgetCapabilities, gadgetApplicationNavigation } from "../gadget/system/bindings.js";
 import { systemGadgetRegistry } from "../gadget/system/client.js";
@@ -105,14 +107,14 @@ export function createWorkbench({
       },
     }),
   });
-  const creative = createLazyContentWorkspace(
+  const creationLibrary = createLazyContentWorkspace(
     "create",
     t,
     identityKey,
     () => catalog.projects(),
     (path) => navigate(path),
     undefined,
-    (host, project, closed) => composerMount(host, project, closed),
+    (host, project, closed, options) => composerMount(host, project, closed, options),
   );
   const projectDocuments = createLazyContentWorkspace("directory", t, identityKey, () => catalog.projects(), navigate);
   const projectContent = createLazyContentWorkspace(
@@ -122,7 +124,7 @@ export function createWorkbench({
     () => catalog.projects(),
     (path) => navigate(path),
     undefined,
-    (host, project, closed) => composerMount(host, project, closed),
+    (host, project, closed, options) => composerMount(host, project, closed, options),
   );
   const templateManager = createLazyTemplateManager(t, identityKey);
   const skills = createLazyContentWorkspace(
@@ -230,6 +232,7 @@ export function createWorkbench({
     connections: "common.connections",
     documents: "documents.title",
     create: "creative.create",
+    creation: "creation.details",
     skills: "creative.skills",
     publish: "creative.publish",
     new: "common.newSession",
@@ -285,6 +288,7 @@ export function createWorkbench({
       },
     },
   });
+  const creationDetail = new CreationActivityDetail(t, identityKey, navigate);
   const gadgetRegistry = systemGadgetRegistry();
   const gadgetCapabilities = systemGadgetCapabilities({
     identity: identityKey,
@@ -308,6 +312,7 @@ export function createWorkbench({
     status,
   });
   const composerMount = systemComposerMount(gadgetRegistry, gadgetCapabilities, t, () => i18n.locale);
+  const creative = createCreationHome(t, composerMount, creationLibrary, navigate);
   const gadgetHome = new GadgetWorkspace(
     t,
     () => i18n.locale,
@@ -337,6 +342,7 @@ export function createWorkbench({
   }
   function hideInactiveWorkspaces() {
     if (route.page !== "workspace") gadgetHome.hide();
+    if (route.page !== "creation") creationDetail.hide();
     if (route.page !== "documents") documents.hide();
     if (route.page !== "create") creative.hide();
     if (
@@ -395,6 +401,12 @@ export function createWorkbench({
             route.documentId,
             new URL(location.href).searchParams.get("knowledge") || "",
           );
+        else if (route.page === "creation")
+          creationDetail.show(
+            content,
+            route.id,
+            new URL(location.href).searchParams.get("creationScope") === "personal" ? "personal" : "application",
+          );
         else if (route.page === "create") creative.show(content);
         else if (route.page === "skills")
           skills.show(content, route.id || "all", new URL(location.href).searchParams.get("engine") || "");
@@ -420,9 +432,11 @@ export function createWorkbench({
     const activePage =
       ["project", "documents"].includes(route.page) || (route.page === "publish" && route.projectId)
         ? "projects"
-        : route.page === "task"
-          ? "tasks"
-          : route.page;
+        : route.page === "creation"
+          ? "create"
+          : route.page === "task"
+            ? "tasks"
+            : route.page;
     setMessageHtml(
       navigation,
       nav

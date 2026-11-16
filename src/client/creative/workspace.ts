@@ -396,9 +396,14 @@ export function createCreativeWorkspace(
             : `<header class="resource-heading"><div><h1 data-creative-heading>${messageHtml("creative.myWork", {}, t)}</h1><p>${messageHtml("creative.createHint", {}, t)}</p></div><div class="creative-heading-actions"><button type="button" class="wb-button" data-creative-new>${codexIcon("plus")}${messageHtml("creative.new", {}, t)}</button></div></header>`
         }<div data-system-composer></div>${scope === "personal" ? `<div class="creative-list-heading"><h2 data-creative-library>${messageHtml("creative.recent", {}, t)}</h2><label class="resource-search">${codexIcon("search")}<input type="search" data-creative-search ${messageAttributes("placeholder", "creative.search", {}, t)} ${messageAttributes("aria-label", "creative.search", {}, t)}></label></div>` : `<div class="project-content-toolbar wb-form"><div data-project-filters></div><label class="wb-field"><span class="project-content-search-caption">${messageHtml("creative.search", {}, t)}</span><span class="wb-control-with-icon">${codexIcon("search")}<input type="search" data-creative-search ${messageAttributes("placeholder", "creative.search", {}, t)}></span></label><h2 class="sr-only" data-creative-library>${messageHtml("creative.content", {}, t)}</h2></div>`}<p role="status" data-creative-status></p><div class="creative-grid" data-creative-grid></div><button type="button" class="wb-button" data-creative-more hidden>${messageHtml("templates.loadMore", {}, t)}</button></section>`,
       );
-      composer = mountComposer(host.querySelector<HTMLElement>("[data-system-composer]")!, scope, () => {
-        if (host === target && scope === project) void refresh();
-      });
+      composer = mountComposer(
+        host.querySelector<HTMLElement>("[data-system-composer]")!,
+        scope,
+        () => {
+          if (host === target && scope === project) void refresh();
+        },
+        { activity: context === "personal" },
+      );
       const importButton = document.createElement("button");
       importButton.type = "button";
       importButton.className = "wb-button";

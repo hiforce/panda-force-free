@@ -6,6 +6,7 @@ import { CreationError, type CreationTaskSpec } from "../contracts.js";
 import type { CreationEngineProfile, CreationInputs, CreationInputSnapshot } from "../input.js";
 import { creationDigest, creationId, creationRecord, creationText, creationUuid } from "../validation.js";
 import { creationRunInput } from "../run-input.js";
+import { richDocumentInput } from "../../documents/rich-codec.js";
 
 export function creationEngineProfile(value: unknown): CreationEngineProfile {
   const row = creationRecord(value, ["id", "engineId", "model"]);
@@ -30,6 +31,7 @@ function snapshot(value: unknown): CreationInputSnapshot {
       "prompt",
       "profile",
       "skills",
+      "previous",
     ]),
     skills = decodeSkillCapture(row.skills),
     taskId = creationUuid(row.taskId),
@@ -53,7 +55,21 @@ function snapshot(value: unknown): CreationInputSnapshot {
     prompt: creationPrompt(row.prompt),
     profile: creationEngineProfile(row.profile),
     skills,
+    ...(row.previous === undefined ? {} : { previous: previousInput(row.previous) }),
   };
+}
+function previousInput(value: unknown): NonNullable<CreationInputSnapshot["previous"]> {
+  const row = creationRecord(value, ["prompt", "document"]),
+    document = creationRecord(row.document, ["title", "body"]);
+  const result = {
+    prompt: creationPrompt(row.prompt),
+    document: {
+      title: creationText(document.title, 200),
+      body: richDocumentInput(document.body).body,
+    },
+  };
+  if (Buffer.byteLength(stableJson(result)) > 196608) throw new CreationError("invalidInput");
+  return result;
 }
 const digest = (value: CreationInputSnapshot) => createHash("sha256").update(stableJson(value)).digest("hex");
 /** Prompts, ordered instructions and parameters are immutable files; the task ledger stores only their digest. */

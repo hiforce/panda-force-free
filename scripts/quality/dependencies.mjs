@@ -512,6 +512,8 @@ export function inspectDependencies(sourceRoot = resolve("src")) {
       "/template-settings.bundle.js?retry=1": "client/templates/settings-runtime.ts",
       "/gadget-document.bundle.js": "client/gadget/document-runtime.ts",
       "/gadget-document.bundle.js?retry=1": "client/gadget/document-runtime.ts",
+      "/gadget-document.bundle.js?retry=2": "client/gadget/document-runtime.ts",
+      "/gadget-document.bundle.js?retry=3": "client/gadget/document-runtime.ts",
       "/document-creation.bundle.js": "client/creation/controller.ts",
       "/document-creation.bundle.js?retry=1": "client/creation/controller.ts",
       "/document-code-runtime.bundle.js": "client/documents/code-block/reader-runtime.ts",

@@ -107,5 +107,7 @@
   "destinationUnavailable": "目前項目已不可用，請選擇其他儲存位置。",
   "destinationForbidden": "你沒有在此建立文件的權限，請選擇其他儲存位置。",
   "destinationMissing": "項目不可用",
-  "briefPlaceholder": "描述你的目標或想創作的內容…"
+  "briefPlaceholder": "描述你的目標或想創作的內容…",
+  "toolsLoading": "正在載入創作工具，輸入內容會保留。",
+  "toolsUnavailable": "創作工具載入失敗，輸入已保留。重試後可使用技能。"
 }

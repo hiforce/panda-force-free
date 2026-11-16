@@ -1,3 +1,4 @@
+import { composerFrame } from "./view.js";
 import type { ComposerCapability } from "../bindings.js";
 import type { GadgetContext } from "../../../client/gadget/contracts.js";
 import { CreationSkills } from "../../../client/creation/skills.js";
@@ -153,10 +154,7 @@ export function createDocumentComposer(root: HTMLElement, initial: GadgetContext
     skills?.close();
     skills = null;
     const saved = draft();
-    setMessageHtml(
-      root,
-      `<form class="gadget-document-form"><div data-gd-selected class="creative-selected-skills"></div><textarea id="gadgetDocumentPrompt" aria-label="${e(context.t("creation.prompt"))}" placeholder="${e(gt(context.t, "briefPlaceholder"))}" rows="5">${e(saved.prompt)}</textarea><div class="gadget-document-suggestions" data-gd-suggestions hidden>${(["article", "plan", "notes"] as const).map((key) => `<button type="button" data-gd-suggestion="${key}">${e(context.t(`projects.idea${key === "article" ? "Article" : key === "plan" ? "Plan" : "Notes"}`))}${codexIcon("arrowUpRight")}</button>`).join("")}</div><footer><button type="button" class="gadget-document-skill" data-gd-skills>${codexIcon("plus")}<span data-gd-skill-label>${e(context.t("creation.addSkill"))}</span></button><button type="button" class="gadget-document-destination" data-gd-project aria-haspopup="menu" aria-expanded="false">${codexIcon("folderOpen")}<span data-gd-project-title></span>${codexIcon("chevronDown")}</button><div data-gd-project-menu class="gadget-document-destinations" hidden></div><button type="submit" class="gadget-document-send" data-gd-start aria-label="${e(context.t("common.sendMessage"))}">${codexIcon("arrowUp")}</button></footer><div class="gadget-document-status" data-gd-status hidden><p data-gd-notice role="status"></p><button type="button" data-gd-retry hidden>${e(gt(context.t, "retry"))}</button></div></form>`,
-    );
+    setMessageHtml(root, composerFrame(context, saved.prompt));
     destinationList = root.querySelector<HTMLElement>("[data-gd-project-menu]")!;
     const textarea = root.querySelector<HTMLTextAreaElement>("textarea")!;
     textarea.oninput = () => {
@@ -217,6 +215,7 @@ export function createDocumentComposer(root: HTMLElement, initial: GadgetContext
     const project = scope,
       ticket = epoch;
     failure = null;
+    let cancelled = false;
     try {
       if (!value.pending && !value.selections.length) {
         context.capability<ComposerCapability>("panda.composer").startTask(value.prompt, project);
@@ -225,13 +224,19 @@ export function createDocumentComposer(root: HTMLElement, initial: GadgetContext
         return;
       }
       notice(context.t("creation.creating"));
-      const signal = AbortSignal.any([request.signal, AbortSignal.timeout(15000)]);
+      const preparation = new AbortController();
+      const preparing = panel.prepare(() => {
+        cancelled = true;
+        preparation.abort();
+      });
+      const signal = AbortSignal.any([request.signal, preparation.signal, AbortSignal.timeout(15000)]);
       const [tree, capability] = await Promise.all([
         documentTreeApi.read(project, signal),
         creativeAssetsApi.capabilities(project, signal),
       ]);
-      if (!live || project !== scope || ticket !== epoch) return;
+      if (!live || project !== scope || ticket !== epoch || !preparing()) return;
       if (!capability.contribute || capability.originals === false) {
+        panel.close();
         showFailure(new DocumentApiError(403, { messageId: "gadget.destinationForbidden" }));
         return;
       }
@@ -276,7 +281,8 @@ export function createDocumentComposer(root: HTMLElement, initial: GadgetContext
       });
       notice("");
     } catch (error) {
-      if (live && project === scope && ticket === epoch) showFailure(error);
+      panel.close();
+      if (!cancelled && live && project === scope && ticket === epoch) showFailure(error);
     } finally {
       busy = false;
       if (live) updateControls();

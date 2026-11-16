@@ -49,6 +49,7 @@ export interface GadgetLayout {
   preset: "primary" | "equal" | "full";
   items: GadgetInstance[];
   mobileOrder: string[];
+  catalogVersion?: number;
 }
 export class GadgetError extends Error {
   constructor(

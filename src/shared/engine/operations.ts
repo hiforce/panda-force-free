@@ -31,6 +31,8 @@ export const ENGINE_OPERATIONS = {
   "queue.list": { rpc: "thread/queue/list", capability: "queue" },
   "queue.add": { rpc: "thread/queue/add", capability: "queue" },
   "queue.delete": { rpc: "thread/queue/delete", capability: "queue" },
+  "media.metadata": { rpc: "fs/getMetadata", capability: "media" },
+  "media.read": { rpc: "fs/readFile", capability: "media" },
   "review.start": { rpc: "review/start", capability: "review" },
 } as const satisfies Record<EngineOperation, { rpc: string; capability: EngineCapability }>;
 

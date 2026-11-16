@@ -1,7 +1,7 @@
 import type { CreationTaskView, CreationTaskState, CreationFailure } from "../../shared/creation/contracts.js";
 import type { MessageId, Translate } from "../../shared/i18n/messages.js";
 import { escapeHtml as e } from "../../shared/html.js";
-import { setMessageHtml, errorText } from "../i18n.js";
+import { setMessageHtml, errorText, messageHtml } from "../i18n.js";
 
 import { createUserInputCard } from "../user-input.js";
 import { creationApi, CreationApiError } from "./api.js";
@@ -16,6 +16,7 @@ const states: Record<CreationTaskState, MessageId> = {
 };
 const failures: Record<CreationFailure, MessageId> = {
   interrupted: "creation.failedInterrupted",
+  timedOut: "creation.failedTimedOut",
   invalidOutput: "creation.failedInvalidOutput",
   targetChanged: "creation.failedTargetChanged",
   writeUnavailable: "creation.failedWriteUnavailable",
@@ -32,6 +33,7 @@ export class CreationCards {
     private readonly open: (id: string) => void,
     private readonly report: (reason: unknown) => void,
     private readonly api: typeof creationApi = creationApi,
+    private readonly options: { brief?: boolean; openAction?: boolean } = {},
   ) {}
   render(tasks: readonly CreationTaskView[]) {
     for (const [id, card] of this.cards)
@@ -63,6 +65,10 @@ export class CreationCards {
       }
       const before = this.host.children[index] ?? null;
       if (before !== node) this.host.insertBefore(node, before);
+      node.querySelector("header small")!.textContent = new Intl.DateTimeFormat(document.documentElement.lang || "en", {
+        dateStyle: "short",
+        timeStyle: "short",
+      }).format(task.createdAt);
     });
   }
   private card(task: CreationTaskView) {
@@ -72,10 +78,10 @@ export class CreationCards {
     node.dataset.state = task.state;
     const t = this.t,
       button = (label: MessageId, action: string, extra = "") =>
-        `<button type="button" class="wb-button ${extra}" data-creation-action="${action}">${e(t(label))}</button>`;
+        `<button type="button" class="wb-button ${extra}" data-creation-action="${action}">${messageHtml(label, {}, t)}</button>`;
     setMessageHtml(
       node,
-      `<header><strong data-creation-state>${e(t(task.question ? "creation.waiting" : states[task.state]))}</strong><small>${e(new Intl.DateTimeFormat(document.documentElement.lang || "en", { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</small></header><p class="creation-task-brief">${e(task.prompt)}</p>${task.failure ? `<p class="creation-task-failure">${e(t(failures[task.failure]))}</p>` : ""}<div data-creation-question></div><footer>${task.artifact ? button("creation.openDocument", "open", "primary") : ""}${["queued", "running", "committing"].includes(task.state) && !task.cancelRequested ? button("creation.cancel", "cancel", "danger") : ""}${!task.artifact && (["failed", "cancelled"].includes(task.state) || (task.state === "committing" && task.failure)) ? button("creation.retry", "retry") : ""}<p data-task-error role="alert" hidden></p></footer>`,
+      `<header><strong data-creation-state>${messageHtml(task.question ? "creation.waiting" : states[task.state], {}, t)}</strong><small>${e(new Intl.DateTimeFormat(document.documentElement.lang || "en", { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</small></header>${this.options.brief === false ? "" : `<p class="creation-task-brief">${e(task.prompt)}</p>`}${task.failure ? `<p class="creation-task-failure">${messageHtml(failures[task.failure], {}, t)}</p>` : ""}<div data-creation-question></div><footer>${task.artifact && this.options.openAction !== false ? button("creation.openDocument", "open", "primary") : ""}${["queued", "running", "committing"].includes(task.state) && !task.cancelRequested ? button("creation.cancel", "cancel", "danger") : ""}${!task.artifact && (["failed", "cancelled"].includes(task.state) || (task.state === "committing" && task.failure)) ? button("creation.retry", "retry") : ""}<p data-task-error role="alert" hidden></p></footer>`,
     );
     node.onclick = (event) => {
       const trigger = (event.target as Element).closest<HTMLButtonElement>("[data-creation-action]");

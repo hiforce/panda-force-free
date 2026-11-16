@@ -8,7 +8,7 @@ const input = {
   instructions: "Use only the declared application tool.",
   tools: [{ name: "panda_documents_create", description: "Save the document", inputSchema: { type: "object" } }],
 };
-function fixture() {
+function fixture(overrides: { timeoutMs?: number; purpose?: "creation" | "knowledge" | "bots" } = {}) {
   let wire!: CodexTransportOptions,
     closed = false,
     turns = 0;
@@ -20,6 +20,7 @@ function fixture() {
       connection: { mode: "shared", socketPath: "/isolated/test.sock" },
       scratchDirectory: "/isolated/empty",
       version: "test",
+      ...overrides,
     },
     (options) => {
       wire = options;
@@ -87,6 +88,12 @@ function fixture() {
       wire.onMessage({
         method: "turn/completed",
         params: { threadId: "owned-session", turn },
+      });
+    },
+    message(item: { type: string; text: string }, threadId = "owned-session") {
+      wire.onMessage({
+        method: "item/completed",
+        params: { threadId, turnId: "owned-run", item: { id: "message", ...item } },
       });
     },
     disconnect() {
@@ -296,4 +303,32 @@ test("application image tool results use native image content instead of URL tex
   });
   f.complete();
   await running;
+});
+
+test("progress exposes only bounded visible assistant text from the bound execution", async () => {
+  const f = fixture(),
+    messages: string[] = [];
+  f.callbacks.message = (text) => {
+    messages.push(text);
+  };
+  const run = f.run();
+  await until(() => f.requests.some((request) => request.method === "turn/start"));
+  await Bun.sleep(1);
+  f.message({ type: "agentMessage", text: "The outline is ready." });
+  f.message({ type: "reasoning", text: "Private reasoning" });
+  f.message({ type: "agentMessage", text: "Foreign text" }, "another-session");
+  f.message({ type: "agentMessage", text: "x".repeat(9000) });
+  f.complete();
+  await run;
+  f.message({ type: "agentMessage", text: "Late text" });
+  expect(messages).toEqual(["The outline is ready.", "x".repeat(8000)]);
+});
+
+test("an exhausted active deadline has a typed failure and interrupts only its owned run", async () => {
+  const f = fixture({ timeoutMs: 1000, purpose: "creation" });
+  await expect(f.run()).rejects.toMatchObject({ code: "APPLICATION_ENGINE_DEADLINE" });
+  expect(f.requests.filter((request) => request.method === "turn/interrupt")).toEqual([
+    { method: "turn/interrupt", params: { threadId: "owned-session", turnId: "owned-run" } },
+  ]);
+  expect(f.closed()).toBe(true);
 });

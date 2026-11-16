@@ -1,3 +1,7 @@
+import { EngineImages } from "./workspace/engine-images.js";
+import { engineImageRoutes } from "./http/engine-image-routes.js";
+import { isApplicationSession } from "./engines/application-tools/sessions.js";
+import { upgradeSystemGadgetLayout } from "../gadget/system/layout.js";
 import { createApplicationContent } from "./application/content.js";
 import { createApplicationAuthentication } from "./application/authentication.js";
 import { createApplicationProjects } from "./application/projects.js";
@@ -120,15 +124,28 @@ const {
   fileRoots,
   reviewRoots,
 } = config;
-const presentLocalImages = createLocalImagePresenter({ cwd: defaultCwd, home: homeDir, allowedRoots: imageRoots });
-function presentBrowserData<T>(value: T): T {
-  return presentLocalImages(attachmentStorage ? attachmentStorage.present(value) : value);
-}
 const { authState, localAccountFeature, passwordAuth, resolveOwner } = await createApplicationAuthentication(
   config,
   runtimeStores,
   assertStartupAuth,
 );
+const engineImages = new EngineImages(
+  join(config.stateRoot, "cache", "viewed-images"),
+  [...imageRoots, ...(config.allowExternalDirectories ? ["/dev/shm"] : [])],
+  (method, params) => request(method, params),
+  Date.now,
+  authState.secret ?? undefined,
+);
+const presentLocalImages = createLocalImagePresenter({
+  cwd: defaultCwd,
+  home: homeDir,
+  allowedRoots: imageRoots,
+  engineReference: (path: unknown, id: unknown) => engineImages.reference(path, id),
+});
+function presentBrowserData<T>(value: T): T {
+  return presentLocalImages(attachmentStorage ? attachmentStorage.present(value) : value);
+}
+
 // Keep the selected backend across reconnects; silently switching to another
 // writer after a daemon disconnect would break shared sessions.
 const appServerConnection = resolveAppServerConnection(process.env, homeDir);
@@ -241,6 +258,7 @@ const botFeature = runtimeStores
   : await createConfiguredBotFeature(botOptions);
 const gadgetFeature = await createGadgetFeature({
   stateRoot: config.stateRoot,
+  upgradeLayout: upgradeSystemGadgetLayout,
   store: runtimeStores?.gadgets,
   owner: resolveOwner,
   modules: process.env.PANDA_FORCE_GADGET_MODULES ? JSON.parse(process.env.PANDA_FORCE_GADGET_MODULES) : [],
@@ -275,7 +293,7 @@ const databaseManagement = createDatabaseManagementFeature({
         }
       : undefined,
 });
-directoryPolicy.protectSessions((id) => botFeature.isSession(id));
+directoryPolicy.protectSessions((id, session) => botFeature.isSession(id) || isApplicationSession(id, session));
 const cliFeature = createCliFeature({
   database: runtimeStores?.cli,
   stateRoot: config.stateRoot,
@@ -571,6 +589,7 @@ const dispatchApiRoute = createRouter([
     cluster,
     watchPasswordSession: (request, close) => passwordAuth.watch(request, close),
   }),
+  ...engineImageRoutes(engineImages),
   ...workspaceRoutes({
     projectWorkspaces,
     attachmentStorage,
@@ -633,7 +652,7 @@ const server = createServer(
       const appRoute =
         req.method === "GET" &&
         (["/", "/invite", "/verify-email", "/reset-password", "/reset-password/new"].includes(url.pathname) ||
-          /^\/(?:settings(?:\/[^/]+)?|workspace|bots|tasks|projects|project|documents|deliverables|connections|create|skills(?:\/[^/]+)?|publish(?:\/[^/]+)?|new|task\/[^/]+)\/?$/.test(
+          /^\/(?:settings(?:\/[^/]+)?|workspace|bots|tasks|projects|project|documents|deliverables|connections|create|creation\/[^/]+|skills(?:\/[^/]+)?|publish(?:\/[^/]+)?|new|task\/[^/]+)\/?$/.test(
             url.pathname,
           ));
       const loginAssets = new Set([

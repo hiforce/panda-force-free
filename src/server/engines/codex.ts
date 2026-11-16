@@ -49,6 +49,7 @@ export function createCodexDriver(
       "goals",
       "queue",
       "review",
+      "media",
     ] as const),
   });
   const bridge = transportFactory({

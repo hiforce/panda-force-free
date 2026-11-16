@@ -94,3 +94,9 @@ declare module "*/gadget-document.bundle.js" {
 declare module "*/gadget-document.bundle.js?retry=1" {
   export const createDocumentComposer: typeof import("../gadget/system/composer/document.js").createDocumentComposer;
 }
+declare module "*/gadget-document.bundle.js?retry=2" {
+  export const createDocumentComposer: typeof import("../gadget/system/composer/document.js").createDocumentComposer;
+}
+declare module "*/gadget-document.bundle.js?retry=3" {
+  export const createDocumentComposer: typeof import("../gadget/system/composer/document.js").createDocumentComposer;
+}

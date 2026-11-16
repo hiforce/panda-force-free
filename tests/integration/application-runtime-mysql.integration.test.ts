@@ -14,6 +14,9 @@ import {
   databaseTargetHash,
 } from "../../src/server/database/migration/activation.js";
 import { MySQLSchemaConnection } from "../../src/server/database/mysql-schema.js";
+import { mysqlModelModule } from "../../src/server/database/mysql-model.js";
+import { identityMySQLModels } from "../../src/server/database/modules/identity.js";
+import { creationMySQLModels } from "../../src/server/database/modules/creation.js";
 import { applicationMySQLRuntimeBindings } from "../../src/server/database/runtime-stores.js";
 import { createAppFixture } from "../support/app-fixture.mjs";
 import { isolatedMySQLDatabase } from "../support/mysql-database.js";
@@ -57,7 +60,7 @@ test("default main keeps SQLite project reservations and browser metadata respon
 }, 120000);
 
 guarded(
-  "activated native main uses the complete trusted bindings and creates no business SQLite ledger",
+  "activated native main upgrades original identity and creation schemas while preserving history and trusted bindings",
   async () => {
     const database = await isolatedMySQLDatabase("runtime");
     let app: Awaited<ReturnType<typeof createAppFixture>> | undefined;
@@ -66,8 +69,25 @@ guarded(
       const registry = createApplicationDatabaseRegistry(),
         schema = new MySQLSchemaConnection(database.sql);
       registry.assertCutoverReady("mysql", "sqlite");
-      await registry.upgrade(schema);
-      expect(await registry.inspect(schema)).toEqual([]);
+      const ready = { readWrite: true, importFrom: ["sqlite"] as const },
+        previous = createApplicationDatabaseRegistry([
+          mysqlModelModule(
+            "identity",
+            identityMySQLModels.filter(
+              (model) => !["panda_force_identity_settings", "panda_force_identity_users"].includes(model.name),
+            ),
+            ready,
+          ),
+          mysqlModelModule(
+            "creation",
+            creationMySQLModels.filter((model) => model.name !== "panda_force_creation_progress"),
+            ready,
+          ),
+        ]);
+      await previous.upgrade(schema);
+      expect(await previous.inspect(schema)).toEqual([]);
+      const originalIdentity = await schema.history("identity", 1),
+        originalCreation = await schema.history("creation", 1);
       const input = await Bun.file(process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE!).json(),
         target = String((await database.sql.unsafe("SELECT DATABASE() selected"))[0].selected),
         config = databaseConfiguration({
@@ -79,10 +99,17 @@ guarded(
             database: target,
             username: input.username,
             password: input.password,
-            tls: {
-              mode: "verify",
-              caFile: join(dirname(process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE!), "mysql-tls", "server-cert.pem"),
-            },
+            tls:
+              input.tls === false
+                ? { mode: "disabled" }
+                : {
+                    mode: "verify",
+                    caFile: join(
+                      dirname(process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE!),
+                      "mysql-tls",
+                      "server-cert.pem",
+                    ),
+                  },
             max: 8,
             connectionTimeout: 5,
             idleTimeout: 5,
@@ -104,6 +131,11 @@ guarded(
           await activateApplicationDatabase({ sql: database.sql, state, activation, config });
         },
       });
+      expect(await registry.inspect(schema)).toEqual([]);
+      expect(await schema.history("identity", 1)).toEqual(originalIdentity);
+      expect(await schema.history("creation", 1)).toEqual(originalCreation);
+      expect((await schema.history("identity", 2))?.state).toBe("complete");
+      expect((await schema.history("creation", 2))?.state).toBe("complete");
       const call = async (path: string, body?: unknown) => {
         const response = await fetch(app!.base + path, {
           method: body === undefined ? "GET" : "POST",

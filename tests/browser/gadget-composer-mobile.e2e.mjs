@@ -44,7 +44,7 @@ try {
       page.on("pageerror", (error) => errors.push(error.message));
       await page.goto(app.base + "/workspace");
       await page.locator("[data-gw=customize]:enabled").waitFor();
-      assert.equal(await page.locator(".gadget-canvas > .gadget-instance").count(), 4);
+      assert.equal(await page.locator('.gadget-canvas [data-gadget-type-id="system.creations"]').count(), 1);
       assert.equal(await page.locator('.gadget-canvas [data-gadget-type-id="system.attention"]').count(), 0);
       const prompt = page.locator("#gadgetDocumentPrompt");
       await prompt.fill("Create a launch plan with a clear timeline.");

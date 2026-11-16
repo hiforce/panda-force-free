@@ -1,4 +1,4 @@
-export type RuntimeEntry = 0 | 1;
+export type RuntimeEntry = number;
 class RuntimeWaitTimeout extends Error {}
 export class RuntimeLoadError extends Error {
   constructor(
@@ -22,6 +22,7 @@ export class DocumentRuntimeLoader<T> {
       prime(entry: RuntimeEntry): Promise<void>;
       evaluate(entry: RuntimeEntry): Promise<T>;
       evaluationTimeoutMs?: number;
+      maxTransferRetries?: number;
       isTransferFailure?(cause: unknown): boolean;
     },
   ) {}
@@ -37,7 +38,7 @@ export class DocumentRuntimeLoader<T> {
       })
       .catch((cause) => {
         this.transfer = null;
-        this.entry = 1;
+        this.entry = Math.max(1, this.entry);
         this.failure = new RuntimeLoadError("transfer", true, cause);
         throw this.failure;
       });
@@ -62,10 +63,10 @@ export class DocumentRuntimeLoader<T> {
             if (timer !== undefined) clearTimeout(timer);
           }
         } catch (cause) {
-          if (entry === 0 && this.port.isTransferFailure?.(cause)) {
+          if (entry < (this.port.maxTransferRetries ?? 1) && this.port.isTransferFailure?.(cause)) {
             this.transfer = null;
             this.evaluation = null;
-            this.entry = 1;
+            this.entry = entry + 1;
             this.failure = new RuntimeLoadError("transfer", true, cause);
             throw this.failure;
           }

@@ -18,9 +18,10 @@ import { migrateSkillsSnapshot } from "../../src/server/skills/storage/migrate.j
 import { verifySkillResources } from "../../src/shared/skills/resources.js";
 import { SKILL_CAPABILITIES } from "../../src/shared/skills/contracts.js";
 import { isolatedMySQLDatabase } from "../support/mysql-database.js";
-async function pack() {
+async function pack(version?: string) {
   const root = new URL("../fixtures/skill-packs/writing-kit/", import.meta.url),
     manifest = JSON.parse(readFileSync(new URL("panda-skills.json", root), "utf8"));
+  if (version) manifest.version = version;
   return verifySkillResources(
     new TextEncoder().encode(JSON.stringify(manifest)),
     manifest.files.map((p: string) => ({ path: p, bytes: new Uint8Array(readFileSync(new URL(p, root))) })),
@@ -84,6 +85,7 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
         catalog = new SkillCatalog(native, bundles, "0.0.21"),
         other = new SkillCatalog(new MySQLSkillRegistry(f.sql), bundles, "0.0.21");
       expect(await catalog.list()).toEqual(await legacy.list());
+      expect(await catalog.list(undefined, 1, true)).toEqual(await legacy.list(undefined, 1, true));
       expect(await catalog.audit()).toEqual(await legacy.audit());
       expect(await catalog.detail(installed.id, installed.version)).toEqual(
         await legacy.detail(installed.id, installed.version),
@@ -102,11 +104,34 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
       expect(results.filter((v) => v.status === "fulfilled")).toHaveLength(1);
       expect(results.filter((v) => v.status === "rejected")).toHaveLength(1);
       expect(await native.revision()).toBe(2);
+      expect((await catalog.list(undefined, 100, true)).packages).toEqual([]);
+      expect((await catalog.list()).packages).toHaveLength(1);
       expect(await catalog.getCapture(capture.id, "owner")).toEqual(capture);
       expect((await catalog.audit()).map((v) => v.revision)).toEqual([1, 2]);
       const changed = await pack();
       expect((await catalog.export(changed.manifest.id, changed.manifest.version)).digest).toBe(value.digest);
       await expect(catalog.list("invalid-cursor")).rejects.toThrow("invalidInput");
+      for (const version of ["1.0.1", "1.0.2"]) {
+        const upgrade = await pack(version),
+          source = { ...origin, sha256: upgrade.digest },
+          review = await catalog.review(upgrade, source, ["blog-outline"]);
+        await catalog.install(
+          upgrade,
+          source,
+          {
+            id: randomUUID(),
+            expectedRevision: review.revision,
+            reviewHash: review.reviewHash,
+            selected: review.selected,
+            capabilities: review.capabilities,
+          },
+          "reviewer",
+        );
+      }
+      const current = await catalog.list(undefined, 1, true);
+      expect(current.packages.map((p) => p.version)).toEqual(["1.0.2"]);
+      expect(current.nextCursor).toBeNull();
+      expect((await catalog.list(undefined, 100)).packages).toHaveLength(3);
       expect(await schemas.inspect(new MySQLSchemaConnection(f.sql))).toEqual([]);
     } finally {
       source.close();

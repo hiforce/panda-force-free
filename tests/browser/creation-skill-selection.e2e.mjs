@@ -93,7 +93,7 @@ for (const [engine, width, locale, theme] of [
     );
     await page.goto(app.base + "/create");
     let denyCategories = true;
-    await page.route("**/api/skill-workspace", async (route) => {
+    await page.route(/\/api\/skill-workspace(?:\?view=categories)?$/, async (route) => {
       if (denyCategories) return route.fulfill({ status: 503, json: { messageId: "skillWorkspace.unavailable" } });
       await route.continue();
     });

@@ -44,6 +44,7 @@ export function creationRequest(value: unknown): CreationRequest {
       "prompt",
       "profileId",
       "selections",
+      "previousTaskId",
     ]),
     locale = creationText(row.locale, 35),
     prompt = row.prompt;
@@ -65,6 +66,7 @@ export function creationRequest(value: unknown): CreationRequest {
     locale,
     prompt,
     profileId: creationId(row.profileId),
+    ...(row.previousTaskId === undefined ? {} : { previousTaskId: creationUuid(row.previousTaskId) }),
     selections: row.selections.map((value) => {
       const skill = creationRecord(value, ["packageId", "version", "digest", "id", "parameters"]);
       return {

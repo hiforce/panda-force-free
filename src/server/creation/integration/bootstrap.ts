@@ -80,6 +80,7 @@ export function createNativeCreationFeature(
             capabilities: [],
           }),
           submit: unavailable,
+          followUp: unavailable,
           list: unavailable,
           detail: unavailable,
           cancel: unavailable,

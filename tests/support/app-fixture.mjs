@@ -39,6 +39,7 @@ export async function createAppFixture({
   applicationCreation = false,
   applicationKnowledge = false,
   account = null,
+  engineFiles = {},
   goals = [],
   workspaceDirectory = /** @type {string | null} */ (null),
   prepareState = /** @type {(context: {dir: string; stateRoot: string}) => Promise<void>} */ (async () => {}),
@@ -85,6 +86,14 @@ export async function createAppFixture({
     },
     { id: "tasks", name: "Task without a project", projectless: true, status: { type: "idle" }, turns: [] },
   ];
+  if (Object.keys(engineFiles).length)
+    initial[0].turns = [
+      {
+        id: "engine-image-turn",
+        status: "completed",
+        items: [{ id: "engine-viewed-image", type: "imageView", imagePaths: Object.keys(engineFiles) }],
+      },
+    ];
   if (sessionPresentation)
     for (const [index, thread] of initial.entries()) {
       thread.name = sessionPresentation.titles[index] || thread.name;
@@ -195,6 +204,7 @@ import { WebSocketServer } from 'ws';
 import { appendFileSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 let count=0;
 let account=${JSON.stringify(account)};
+const engineFiles=${JSON.stringify(engineFiles)};
 const threads=${JSON.stringify(initial)};
 const queues=new Map();
 const applicationThreads=new Set(), applicationCalls=new Map();
@@ -246,7 +256,9 @@ const handleLine=line=>{
   appendFileSync(${JSON.stringify(trace)},JSON.stringify({method:m.method,params:p})+'\\n');
   if('pandaProjectless' in p)throw new Error('PandaForce metadata leaked into native RPC');
   let result={};
-  if(m.method==='initialize')result={codexHome:${JSON.stringify(dir)}};
+  if(m.method==='fs/getMetadata') result={isFile:typeof engineFiles[p.path]==='string',isDirectory:false,isSymlink:false,createdAtMs:0,modifiedAtMs:1};
+  else if(m.method==='fs/readFile') result={dataBase64:engineFiles[p.path]||''};
+  else if(m.method==='initialize')result={codexHome:${JSON.stringify(dir)}};
   else if(m.method==='model/list')result={data:${JSON.stringify(models)}||[{id:'gpt-fixture',model:'gpt-fixture',displayName:'GPT Fixture',defaultReasoningEffort:'medium',supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]};
   else if(m.method==='account/read')result={account};
   else if(m.method==='account/logout')account=null;

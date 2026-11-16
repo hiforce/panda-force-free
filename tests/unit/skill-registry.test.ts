@@ -367,3 +367,42 @@ test("builtin writing initializes once and removal survives restarts without rei
   await seedBuiltinWriting(registry, catalog);
   expect(registry.revision()).toBe(3);
 });
+
+test("available registry pages filter historical, removed and disabled packages before pagination", async () => {
+  const f = await fixture();
+  for (const id of ["example.alpha", "example.beta", "example.gamma", "example.removed", "example.disabled"]) {
+    for (let n = 0; n < 4; n++)
+      await install(
+        f,
+        await pack((m) => {
+          m.id = id;
+          m.version = `1.0.${n}`;
+        }),
+      );
+  }
+  const removed = await pack((m) => {
+    m.id = "example.removed";
+    m.version = "1.0.3";
+  });
+  await f.catalog.remove(operation(f, removed), "reviewer:test");
+  const disabled = await pack((m) => {
+    m.id = "example.disabled";
+    m.version = "1.0.3";
+  });
+  const current = f.registry.active(disabled.manifest.id)!;
+  await f.catalog.setExports(
+    { ...operation(f, disabled), exports: current.exports.map((e) => ({ ...e, enabled: false })) },
+    "reviewer:test",
+  );
+  const first = await f.catalog.list(undefined, 2, true);
+  expect(first.packages.map((p) => [p.id, p.version])).toEqual([
+    ["example.alpha", "1.0.3"],
+    ["example.beta", "1.0.3"],
+  ]);
+  const second = await f.catalog.list(first.nextCursor!, 2, true);
+  expect(second.packages.map((p) => p.id)).toEqual(["example.gamma"]);
+  expect(second.nextCursor).toBeNull();
+  expect((await f.catalog.list(undefined, 100)).packages).toHaveLength(20);
+  expect((await f.catalog.detail("example.alpha", "1.0.0")).package?.active).toBe(false);
+  await expect(f.catalog.list("invalid-cursor", 2, true)).rejects.toThrow("invalidInput");
+});

@@ -28,7 +28,7 @@ export interface SkillRegistryStore {
   detail(id: string, version: string): Awaitable<SkillPackDetail>;
   active(id: string): Awaitable<InstalledSkillPack | null>;
   known(id: string): Awaitable<boolean>;
-  list(cursor?: string, limit?: number): Awaitable<SkillRegistryPage>;
+  list(cursor?: string, limit?: number, activeOnly?: boolean): Awaitable<SkillRegistryPage>;
   audit(after?: number, limit?: number): Awaitable<SkillRegistryAudit[]>;
   replay(actor: string, id: string, request: string): Awaitable<InstalledSkillPack | null>;
   apply(command: SkillRegistryCommand, mutation: SkillMutation): Awaitable<InstalledSkillPack>;

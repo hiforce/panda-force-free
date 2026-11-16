@@ -55,8 +55,13 @@ export function skillWorkspaceRoutes(
       path: "/api/skill-workspace",
       method: "GET",
       handler: protect(async ({ url, res }, actor) => {
-        if (url.search) throw new SkillWorkspaceError("invalidInput");
-        respondJson(res, 200, await service.snapshot(actor));
+        if (
+          [...url.searchParams.keys()].some((key) => key !== "view") ||
+          url.searchParams.getAll("view").length > 1 ||
+          (url.searchParams.has("view") && url.searchParams.get("view") !== "categories")
+        )
+          throw new SkillWorkspaceError("invalidInput");
+        respondJson(res, 200, await service.snapshot(actor, url.searchParams.get("view") === "categories"));
       }),
     },
     {

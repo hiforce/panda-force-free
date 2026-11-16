@@ -139,6 +139,8 @@ export class CreationSkills {
     return skillText(text) || fallback;
   }
   private async initialize() {
+    // Catalog discovery must not wait for recovered selections to resolve.
+    const catalog = this.load();
     try {
       const distinct = new Map(this.selected.map((value) => [JSON.stringify([value.packageId, value.version]), value]));
       const packs = await Promise.allSettled(
@@ -154,7 +156,8 @@ export class CreationSkills {
       if (this.live) this.error(reason);
     }
     this.loadingSelected = false;
-    await this.load();
+    if (this.live) this.render();
+    await catalog;
   }
   private async load() {
     if (this.loading || !this.live) return;
@@ -166,7 +169,6 @@ export class CreationSkills {
       if (!this.live) return;
       for (const pack of page.packages) this.collect(pack);
       this.cursor = page.nextCursor;
-      this.render();
     } catch {
       if (this.live) this.failed = true;
     } finally {
@@ -289,7 +291,7 @@ export class CreationSkills {
     this.browser.update({
       entries: this.entries,
       selected: this.selected,
-      loading: this.loading || this.loadingSelected,
+      loading: this.loading,
       failed: this.failed,
       more: Boolean(this.cursor),
     });

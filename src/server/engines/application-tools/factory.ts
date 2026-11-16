@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, lstat, rm } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import type { CodexConnection, CodexTransportFactory } from "../codex-transport.js";
 import { createCodexApplicationEngine } from "./codex.js";
+import { trackApplicationDirectory, registerApplicationRoot } from "./sessions.js";
 
 export interface ApplicationEngineProfile {
   engineId: string;
@@ -21,6 +22,7 @@ export function isolatedApplicationEngines(
   factory?: CodexTransportFactory,
 ) {
   if (!isAbsolute(options.scratchRoot)) throw new Error("Application scratch directory must be absolute");
+  registerApplicationRoot(options.scratchRoot);
   return {
     select(profile: ApplicationEngineProfile) {
       if (profile.engineId !== "codex" || options.engineId !== "codex")
@@ -35,6 +37,7 @@ export function isolatedApplicationEngines(
           if (!info.isDirectory() || info.isSymbolicLink())
             throw new Error("Application scratch directory unavailable");
           const scratch = await mkdtemp(join(options.scratchRoot, "run-"));
+          const untrack = trackApplicationDirectory(scratch);
           try {
             callbacks.signal.throwIfAborted();
             return await createCodexApplicationEngine(
@@ -49,6 +52,7 @@ export function isolatedApplicationEngines(
               factory,
             ).run(input, callbacks);
           } finally {
+            untrack();
             await rm(scratch, { recursive: true, force: true });
           }
         },

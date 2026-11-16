@@ -1,7 +1,7 @@
 import { portableFixture, editPortableFixture } from "../support/portable-templates.js";
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 import { chromium, webkit } from "playwright";
 import { createAppFixture } from "../support/app-fixture.mjs";
@@ -24,7 +24,7 @@ try {
         const response =
           data === undefined
             ? await context.request.get(fixture.base + path)
-            : await context.request.post(fixture.base + path, { data });
+            : await context.request.post(fixture.base + path, { data, headers: { Origin: fixture.base } });
         assert.ok(response.ok(), path + ": " + (await response.text()));
         return response.json();
       };
@@ -129,6 +129,7 @@ try {
         invalidResources,
       );
       const invalidReview = await context.request.post(fixture.base + "/api/skill-packs/review", {
+        headers: { Origin: fixture.base },
         data: {
           content: new TextDecoder().decode(encodeSkillBundle(invalidPack)),
           name: "invalid-cover.skill.json",
@@ -168,11 +169,45 @@ try {
       const response = await context.request.get(url);
       assert.equal(response.status(), 200);
       assert.match(response.headers()["content-type"], /image\/webp/);
+      assert.equal(response.headers()["cache-control"], "private, max-age=3600, immutable");
+      assert.match(response.headers()["server-timing"], /cover-read;dur=[0-9.]+, cover-render;dur=[0-9.]+/);
       assert.equal((await sharp(await response.body()).metadata()).width, 960);
       assert.equal(
         (await context.request.get(url, { headers: { "if-none-match": response.headers().etag } })).status(),
         304,
       );
+      const cachePage = await context.newPage();
+      await cachePage.goto(fixture.base + "/api/auth/status");
+      const cachedLoads = await cachePage.evaluate(async (url) => {
+        const loads = [];
+        for (let i = 0; i < 2; i++) {
+          performance.clearResourceTimings();
+          const image = new Image();
+          image.src = url;
+          document.body.append(image);
+          await image.decode();
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          loads.push(
+            performance.getEntriesByName(url).map((entry) => ({
+              transferSize: entry.transferSize,
+              duration: entry.duration,
+            })),
+          );
+          image.remove();
+        }
+        return loads;
+      }, url);
+      assert.ok(cachedLoads[0].length >= 1);
+      // Memory-cache reuse may omit a duplicate resource entry entirely.
+      assert.ok(
+        cachedLoads[1].every((entry) => entry.transferSize === 0),
+        "Reopening a cover should use the private browser cache",
+      );
+      await writeFile(
+        `.artifacts/skill-covers/cache-${width}.json`,
+        JSON.stringify({ first: cachedLoads[0], repeat: cachedLoads[1], headers: response.headers() }, null, 2),
+      );
+      await cachePage.close();
       const stranger = await browser.newContext();
       assert.equal((await stranger.request.get(url, { maxRedirects: 0 })).status(), 401);
       await stranger.close();

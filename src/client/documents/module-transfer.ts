@@ -4,7 +4,7 @@ import { request } from "../http-client.js";
 export async function prepareDocumentModule(url: string): Promise<void> {
   const response = await request(url, {
     credentials: "same-origin",
-    cache: "no-cache",
+    cache: new URL(url, location.href).origin === location.origin ? "no-cache" : "force-cache",
     signal: AbortSignal.timeout(30000),
   });
   const mime = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();

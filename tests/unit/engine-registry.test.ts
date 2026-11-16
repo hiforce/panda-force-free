@@ -58,6 +58,10 @@ test("canonical session and command interfaces adapt native sessions without cha
   const rpc = createEngineRpc(driver);
   await rpc("thread/queue/start", { threadId: "one" });
   expect(requests.at(-1)?.method).toBe("thread/queue/start");
+  await rpc("fs/getMetadata", { path: "/work/preview.png" });
+  expect(requests.at(-1)?.method).toBe("fs/getMetadata");
+  await rpc("fs/readFile", { path: "/work/preview.png" });
+  expect(requests.at(-1)?.method).toBe("fs/readFile");
   expect(() => rpc("unregistered/method")).toThrow("Unsupported");
 });
 

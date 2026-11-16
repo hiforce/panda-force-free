@@ -31,8 +31,10 @@ export class SkillWorkspaceService {
     private store: SkillWorkspaceRepository,
     private catalog: TemplateCatalog,
   ) {}
-  async snapshot(owner: string) {
-    return skillWorkspaceProjection(await this.store.read(owner), this.catalog, owner);
+  async snapshot(owner: string, categoriesOnly = false) {
+    const stored = await this.store.read(owner);
+    // Pickers need category assignments, not catalog resolution of navigation pins.
+    return skillWorkspaceProjection(categoriesOnly ? { ...stored, pins: [] } : stored, this.catalog, owner);
   }
   async collection(owner: string, value: string) {
     return configuredCollection(await this.store.read(owner), value);

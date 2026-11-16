@@ -34,8 +34,8 @@ export class SqliteSkillRegistry implements SkillRegistryStore {
   known(id: string) {
     return this.reads.known(id);
   }
-  list(cursor?: string, limit?: number) {
-    return this.reads.list(cursor, limit);
+  list(cursor?: string, limit?: number, activeOnly = false) {
+    return this.reads.list(cursor, limit, activeOnly);
   }
   audit(after?: number, limit?: number) {
     return this.reads.audit(after, limit);

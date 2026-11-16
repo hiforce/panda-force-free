@@ -27,6 +27,11 @@ export interface ProjectionCapability {
   ready(): boolean;
   rows(): GadgetRow[];
 }
+export interface CreationActivityCapability {
+  identity: string;
+  navigate(path: string): void;
+  projects(): { id: string; name: string }[];
+}
 /** Application adapters belong to system gadgets, never to the generic layout host. */
 export function systemGadgetCapabilities(options: {
   identity: string;
@@ -71,5 +76,13 @@ export function systemGadgetCapabilities(options: {
     ["panda.composer", composer],
     ["panda.sessions", sessions],
     ["panda.projects", { ready: options.ready, rows: projects } satisfies ProjectionCapability],
+    [
+      "panda.creations",
+      {
+        identity: options.identity,
+        navigate: options.navigate,
+        projects: () => options.projects().map(({ id, name }) => ({ id, name })),
+      } satisfies CreationActivityCapability,
+    ],
   ]);
 }

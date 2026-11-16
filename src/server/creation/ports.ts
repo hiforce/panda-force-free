@@ -1,3 +1,4 @@
+import type { CreationProgress } from "../../shared/creation/contracts.js";
 import type {
   CreationArtifact,
   CreationExecution,
@@ -34,4 +35,9 @@ export interface CreationExecutionTasks {
 export interface CreationArtifactWriter {
   /** Repeating an admitted operation must return its real receipt without modifying the saved artifact. */
   commit(task: CreationTaskSpec, outputDigest: string): Promise<CreationArtifact>;
+}
+
+export interface CreationProgressStore {
+  record(lease: CreationLease, event: CreationProgress): void | Promise<void>;
+  list(owner: string, id: string, conversation?: boolean): CreationProgress[] | Promise<CreationProgress[]>;
 }

@@ -16,6 +16,10 @@ export interface CreationInputSnapshot {
   prompt: string;
   profile: CreationEngineProfile;
   skills: SkillCapture;
+  previous?: {
+    prompt: string;
+    document: { title: string; body: import("../../shared/documents/rich-body.js").RichDocumentBody };
+  };
 }
 export interface CreationInputs {
   put(input: CreationInputSnapshot): Promise<string>;

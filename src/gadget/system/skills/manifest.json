@@ -43,7 +43,7 @@
   "minRefreshSeconds": 60,
   "defaultPlacement": {
     "x": 8,
-    "y": 7,
+    "y": 18,
     "order": 4
   },
   "events": {

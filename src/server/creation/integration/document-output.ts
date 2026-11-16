@@ -47,6 +47,9 @@ export class FileCreationDocumentOutput implements CreationOutputContent, Creati
     await this.files.put(output);
     return codec.digest(output);
   }
+  read(digest: string) {
+    return this.files.read(digest);
+  }
   async commit(task: CreationTaskSpec, digest: string) {
     try {
       return await this.save(task, digest);

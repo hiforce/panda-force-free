@@ -28,6 +28,9 @@ export function memberApiAllowed(path: string, method: string) {
       "/api/creative-assets/capabilities",
       "/api/skills",
       "/api/skill-packs",
+      "/api/skill-packs/detail",
+      "/api/skill-packs/cover",
+      "/api/skill-workspace",
       "/api/template-catalog",
     ].includes(path)
   )

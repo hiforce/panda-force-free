@@ -32,7 +32,7 @@ export class SkillRegistryReads {
   known(id: string): boolean {
     return !!this.db.query("SELECT 1 FROM skill_versions WHERE id=? LIMIT 1").get(id);
   }
-  list(cursor?: string, limit = 50): SkillRegistryPage {
+  list(cursor?: string, limit = 50, activeOnly = false): SkillRegistryPage {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new SkillRegistryError("invalidInput");
     let id = "",
       version = "";
@@ -50,7 +50,11 @@ export class SkillRegistryReads {
     return this.db.transaction(() => {
       const rows = this.db
           .query<Row, [string, string, string, number]>(
-            select + " WHERE (v.id>? OR (v.id=? AND v.version>?)) ORDER BY v.id,v.version LIMIT ?",
+            select +
+              (activeOnly
+                ? " WHERE h.version=v.version AND v.removed=0 AND EXISTS(SELECT 1 FROM skill_exports e WHERE e.packageId=v.id AND e.version=v.version AND e.enabled=1) AND"
+                : " WHERE") +
+              " (v.id>? OR (v.id=? AND v.version>?)) ORDER BY v.id,v.version LIMIT ?",
           )
           .all(id, id, version, limit + 1),
         visible = rows.slice(0, limit),

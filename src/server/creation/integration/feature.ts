@@ -25,6 +25,8 @@ import { CreationRunner } from "../runtime/runner.js";
 import { CreationService } from "../service.js";
 import { creationAuthority } from "./authority.js";
 import { creationRoutes } from "./routes.js";
+import { SQLiteCreationProgress } from "../storage/progress.js";
+import type { CreationProgressStore } from "../ports.js";
 
 /** This composition owns its database and files. Documents, skills, auth and engine adapters keep their own lifetimes. */
 export function createCreationFeature(options: {
@@ -40,6 +42,7 @@ export function createCreationFeature(options: {
     tasks: CreationSubmissionTasks & CreationOutputTasks & CreationManagement & CreationRunTasks;
     queue: CreationScheduling & CreationHistory;
     questions: CreationQuestionStore;
+    progress?: CreationProgressStore;
     close?(): void | Promise<void>;
   };
 }) {
@@ -56,6 +59,7 @@ export function createCreationFeature(options: {
         options.authorize,
       ),
       documents = new FileCreationDocumentOutput(join(root, "outputs"), options.documents, true),
+      progress = options.storage?.progress ?? (db ? new SQLiteCreationProgress(db) : undefined),
       outputs = new CreationOutputs(tasks, documents, documents),
       worker = new CreationWorker(
         tasks,
@@ -68,6 +72,7 @@ export function createCreationFeature(options: {
         Date.now,
         30000,
         (error) => reportDiagnostic("creation-engine", error),
+        progress,
       ),
       runner = new CreationRunner(
         queue,
@@ -79,7 +84,7 @@ export function createCreationFeature(options: {
         () => options.profiles.settings.enabled,
       ),
       access = creationAuthority(options),
-      submissions = new CreationSubmissions(tasks, inputs, access.authority),
+      submissions = new CreationSubmissions(tasks, inputs, access.authority, Date.now, documents),
       service = new CreationService(
         tasks,
         queue,
@@ -89,6 +94,8 @@ export function createCreationFeature(options: {
         options.authorize,
         access.availability,
         runner,
+        Date.now,
+        progress,
       );
     let closing: Promise<void> | null = null;
     return {

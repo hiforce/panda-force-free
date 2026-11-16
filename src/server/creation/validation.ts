@@ -1,3 +1,4 @@
+import type { CreationProgress } from "../../shared/creation/contracts.js";
 import { isRecord } from "../../shared/records.js";
 import { CreationError, type CreationArtifact, type CreationTaskSpec } from "./contracts.js";
 
@@ -59,6 +60,7 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
       "target",
       "inputDigest",
       "skillCaptureId",
+      "previousTaskId",
     ]),
     target = creationRecord(v.target, ["parentId", "treeVersion", "locale"]),
     locale = creationText(target.locale, 35);
@@ -78,6 +80,7 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
     },
     inputDigest: creationDigest(v.inputDigest),
     skillCaptureId: v.skillCaptureId === null ? null : creationUuid(v.skillCaptureId),
+    ...(v.previousTaskId === undefined ? {} : { previousTaskId: creationUuid(v.previousTaskId) }),
   };
 }
 export function creationArtifact(value: unknown, task: CreationTaskSpec): CreationArtifact {
@@ -96,5 +99,24 @@ export function creationArtifact(value: unknown, task: CreationTaskSpec): Creati
     operationId: task.operationId,
     documentId: creationId(v.documentId),
     treeVersion: creationInteger(v.treeVersion),
+  };
+}
+
+/** Progress contains application stages and visible assistant messages, never reasoning or transport payloads. */
+export function creationProgress(event: CreationProgress): CreationProgress {
+  if (
+    !Number.isSafeInteger(event.at) ||
+    event.at < 0 ||
+    !Number.isSafeInteger(event.generation) ||
+    event.generation < 0 ||
+    !["started", "saving", "waiting", "answered", "message"].includes(event.stage) ||
+    (event.text !== undefined && (typeof event.text !== "string" || event.text.length > 8000))
+  )
+    throw new Error("Invalid creation progress");
+  return {
+    at: event.at,
+    generation: event.generation,
+    stage: event.stage,
+    ...(event.text ? { text: event.text } : {}),
   };
 }

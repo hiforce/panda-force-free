@@ -18,8 +18,19 @@ export function skillCatalogRoutes(catalog: SkillCatalog, owner: (context: Route
         }
         const { url } = context,
           limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : 10,
-          page = await catalog.list(url.searchParams.get("cursor") ?? undefined, limit);
-        if (!activeOnly) return respondJson(context.res, 200, page);
+          view = url.searchParams.get("view");
+        if (view !== null && view !== "available") throw new SkillRegistryError("invalidInput");
+        const availableOnly = activeOnly || view === "available",
+          page = await catalog.list(url.searchParams.get("cursor") ?? undefined, limit, availableOnly);
+        if (!activeOnly)
+          return respondJson(context.res, 200, {
+            ...page,
+            packages: availableOnly
+              ? page.packages.filter((pack) =>
+                  pack.manifest.skills.some((skill) => availableInstalledSkill(pack, skill)),
+                )
+              : page.packages,
+          });
         const skills = page.packages.flatMap((pack) =>
           pack.manifest.skills
             .filter((skill) => availableInstalledSkill(pack, skill))

@@ -12,7 +12,7 @@ export function openCreationDatabase(path: string): Database {
     db.exec("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;");
     db.transaction(() => {
       const version = db.query<{ user_version: number }, []>("PRAGMA user_version").get()!.user_version;
-      if (version > 2) throw new CreationError("unavailable");
+      if (version > 3) throw new CreationError("unavailable");
       if (!version)
         db.exec(`
           CREATE TABLE creation_tasks (
@@ -48,6 +48,16 @@ export function openCreationDatabase(path: string): Database {
       `);
       if (!db.query("SELECT 1 FROM sqlite_master WHERE name='creation_tasks' AND type='table'").get())
         throw new CreationError("unavailable");
+      if (version < 3)
+        db.exec(`
+        CREATE TABLE creation_progress (
+          id TEXT PRIMARY KEY, taskId TEXT NOT NULL REFERENCES creation_tasks(id), generation INTEGER NOT NULL,
+          createdAt INTEGER NOT NULL, ordinal INTEGER NOT NULL, event TEXT NOT NULL,
+          UNIQUE(taskId,generation,ordinal)
+        );
+        CREATE INDEX creation_progress_task ON creation_progress(taskId,createdAt,id);
+        PRAGMA user_version=3;
+      `);
     }).immediate();
     return db;
   } catch (error) {

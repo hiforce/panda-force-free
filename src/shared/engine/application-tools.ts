@@ -26,6 +26,7 @@ export interface ApplicationRunCallbacks {
   started(scope: ApplicationRunScope): void | Promise<void>;
   call(value: ApplicationToolCall): Promise<ApplicationToolResult>;
   question?(scope: ApplicationRunScope, questions: readonly EngineQuestion[]): Promise<ApplicationQuestionAnswers>;
+  message?(text: string): void | Promise<void>;
 }
 export interface ApplicationToolEngine {
   readonly id: string;

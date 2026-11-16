@@ -3,6 +3,7 @@ import type {
   SkillWorkspaceMutation,
   SkillWorkspaceSnapshot,
 } from "../../shared/skill-workspace.js";
+import { storage, STORAGE_KEYS } from "../storage.js";
 import { templateJson } from "../templates/api.js";
 import { PluginApiError } from "../plugins/api.js";
 
@@ -22,6 +23,13 @@ export class SkillWorkspaceClient {
   loading = false;
   error: unknown = null;
   pending: SkillWorkspaceMutation | null = null;
+  private readonly cacheKey: string | null;
+  constructor(private readonly categoriesOnly = false) {
+    const identity = (globalThis as typeof globalThis & { __pandaForceIdentityKey?: string }).__pandaForceIdentityKey;
+    this.cacheKey = categoriesOnly && identity ? STORAGE_KEYS.skillCategoriesFor(identity) : null;
+    const cached = this.cacheKey && storage.getSessionJson(this.cacheKey, null);
+    if (cached && Date.now() - cached.at < 300000) this.snapshot = cached.value;
+  }
   private listeners = new Set<() => void>();
   private read: Promise<void> | null = null;
   private write: Promise<void> | null = null;
@@ -42,15 +50,25 @@ export class SkillWorkspaceClient {
     this.loading = true;
     this.notify();
     this.read = timed((signal) =>
-      templateJson<SkillWorkspaceSnapshot>("/api/skill-workspace", "GET", undefined, signal),
+      templateJson<SkillWorkspaceSnapshot>(
+        "/api/skill-workspace" + (this.categoriesOnly ? "?view=categories" : ""),
+        "GET",
+        undefined,
+        signal,
+      ),
     )
       .then(
         (value) => {
           this.accept(value);
+          if (this.cacheKey) storage.setSessionJson(this.cacheKey, { at: Date.now(), value });
           if (!this.pending) this.error = null;
         },
         (error) => {
           this.error = error;
+          if (this.cacheKey && error instanceof PluginApiError && [401, 403, 404].includes(error.status)) {
+            storage.removeSession(this.cacheKey);
+            this.snapshot = null;
+          }
         },
       )
       .finally(() => {

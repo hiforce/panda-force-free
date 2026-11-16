@@ -3,14 +3,20 @@ import { GadgetError } from "../../shared/gadget/contracts.js";
 import { defaultGadgetLayout, validateGadgetLayout } from "../../shared/gadget/layout.js";
 import type { GadgetRepository } from "./ports.js";
 import type { GadgetRegistry } from "./registry.js";
+import type { GadgetLayout, GadgetManifest } from "../../shared/gadget/contracts.js";
 export class GadgetWorkspaceService {
   constructor(
     readonly registry: GadgetRegistry,
     readonly store: GadgetRepository,
+    private readonly upgrade: (layout: GadgetLayout, catalog: readonly GadgetManifest[]) => GadgetLayout = (layout) =>
+      layout,
   ) {}
   async layout(owner: string) {
     const saved = await this.store.read(owner);
-    return this.registry.migrate(saved.revision ? saved : defaultGadgetLayout(this.registry.catalog()));
+    return this.upgrade(
+      this.registry.migrate(saved.revision ? saved : defaultGadgetLayout(this.registry.catalog())),
+      this.registry.catalog(),
+    );
   }
   async save(owner: string, input: unknown, expected: string | undefined) {
     if (

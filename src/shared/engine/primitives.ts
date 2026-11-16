@@ -10,7 +10,8 @@ export type EngineCapability =
   | "permissions"
   | "goals"
   | "queue"
-  | "review";
+  | "review"
+  | "media";
 export type EngineOperation =
   | `session.${"list" | "loaded" | "read" | "create" | "resume" | "fork" | "delete" | "rename" | "turns" | "items" | "subscribe" | "unsubscribe" | "compact"}`
   | `input.${"start" | "steer" | "interrupt"}`
@@ -21,7 +22,8 @@ export type EngineOperation =
   | "usage.read"
   | `goal.${"read" | "set" | "clear"}`
   | `queue.${"list" | "add" | "delete" | "start"}`
-  | "review.start";
+  | "review.start"
+  | `media.${"metadata" | "read"}`;
 
 export interface EngineDescriptor {
   readonly id: string;

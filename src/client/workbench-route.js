@@ -8,6 +8,7 @@ const routes = new Set([
   "connections",
   "documents",
   "create",
+  "creation",
   "skills",
   "publish",
   "new",
@@ -51,7 +52,14 @@ export function workbenchLinkPath(anchor, event, base = location.href) {
 
 export function parseWorkbenchRoute(url = new URL(location.href)) {
   const parts = url.pathname.split("/").filter(Boolean);
-  const page = parts[0] === "settings" ? "settings" : routes.has(parts[0]) ? parts[0] : "workspace";
+  const page =
+    ["create", "workspace"].includes(parts[0]) && url.searchParams.has("creation")
+      ? "creation"
+      : parts[0] === "settings"
+        ? "settings"
+        : routes.has(parts[0])
+          ? parts[0]
+          : "workspace";
   let id = "";
   try {
     id = decodeURIComponent(parts[1] || "");
@@ -60,7 +68,12 @@ export function parseWorkbenchRoute(url = new URL(location.href)) {
   }
   return {
     page,
-    id: page === "project" ? url.searchParams.get("id") || "" : id,
+    id:
+      page === "project"
+        ? url.searchParams.get("id") || ""
+        : page === "creation"
+          ? url.searchParams.get("creation") || id
+          : id,
     projectId: url.searchParams.get("project") || "",
     documentId: url.searchParams.get("document") || "",
   };

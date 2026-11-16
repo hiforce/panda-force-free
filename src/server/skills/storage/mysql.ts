@@ -97,7 +97,7 @@ export class MySQLSkillRegistry implements SkillRegistryStore {
       async () => !!(await this.sql`SELECT id FROM panda_force_skill_versions WHERE id=${id} LIMIT 1`).length,
     );
   }
-  async list(cursor?: string, limit = 50): Promise<SkillRegistryPage> {
+  async list(cursor?: string, limit = 50, activeOnly = false): Promise<SkillRegistryPage> {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new SkillRegistryError("invalidInput");
     let id = "",
       version = "";
@@ -113,7 +113,11 @@ export class MySQLSkillRegistry implements SkillRegistryStore {
     }
     return this.transaction(false, async () => {
       const rows: Row[] = await this.sql.unsafe(
-          select + " WHERE (v.id>? OR (v.id=? AND v.version>?)) ORDER BY v.id,v.version LIMIT ?",
+          select +
+            (activeOnly
+              ? " WHERE h.version=v.version AND v.removed=0 AND EXISTS(SELECT 1 FROM panda_force_skill_exports e WHERE e.packageId=v.id AND e.version=v.version AND e.enabled=1) AND"
+              : " WHERE") +
+            " (v.id>? OR (v.id=? AND v.version>?)) ORDER BY v.id,v.version LIMIT ?",
           [id, id, version, limit + 1],
         ),
         visible = rows.slice(0, limit),

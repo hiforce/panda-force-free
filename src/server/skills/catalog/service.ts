@@ -26,8 +26,8 @@ export class SkillCatalog {
     this.captures = new InstalledSkillCapture(registry, bundles, applicationVersion, now);
     this.inspection = new SkillInspection(registry, bundles);
   }
-  async list(cursor?: string, limit?: number) {
-    return this.registry.list(cursor, limit);
+  async list(cursor?: string, limit?: number, activeOnly = false) {
+    return this.registry.list(cursor, limit, activeOnly);
   }
   async audit(after?: number, limit?: number) {
     return this.registry.audit(after, limit);

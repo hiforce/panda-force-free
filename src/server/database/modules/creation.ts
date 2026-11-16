@@ -15,6 +15,23 @@ const pk = (...columns: string[]) => ({ name: "PRIMARY", unique: true, columns }
 export const creationMySQLModels: readonly MySQLModel[] = [
   { name: "panda_force_creation_ledgers", columns: [t("namespace", 256)], indexes: [pk("namespace")] },
   {
+    name: "panda_force_creation_progress",
+    columns: [
+      t("namespace", 256),
+      t("id", 128),
+      t("taskId", 128),
+      n("generation"),
+      n("createdAt"),
+      n("ordinal"),
+      t("event"),
+    ],
+    indexes: [
+      pk("namespace", "id"),
+      { name: "creation_progress_order", unique: true, columns: ["namespace", "taskId", "generation", "ordinal"] },
+      { name: "creation_progress_task", unique: false, columns: ["namespace", "taskId", "createdAt", "id"] },
+    ],
+  },
+  {
     name: "panda_force_creation_tasks",
     columns: [
       t("namespace", 256),
@@ -86,7 +103,21 @@ export const creationMySQLModels: readonly MySQLModel[] = [
     ],
   },
 ];
-export const mysqlCreationModule = mysqlModelModule("creation", creationMySQLModels, {
+const creation = mysqlModelModule("creation", creationMySQLModels, {
   readWrite: true,
   importFrom: ["sqlite"],
 });
+const shippedSteps = creation.migrations.mysql![0]!.steps;
+export const mysqlCreationModule = {
+  ...creation,
+  migrations: {
+    mysql: [
+      {
+        version: 1,
+        steps: shippedSteps.filter((step) => step.id !== "panda_force_creation_progress"),
+        historicalSteps: [shippedSteps],
+      },
+      { version: 2, steps: shippedSteps.filter((step) => step.id === "panda_force_creation_progress") },
+    ],
+  },
+};

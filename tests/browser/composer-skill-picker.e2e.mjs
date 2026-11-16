@@ -54,6 +54,12 @@ try {
           assert(installation.ok(), await installation.text());
         }
       }
+      const availablePage = await (
+        await context.request.get(app.base + "/api/skill-packs?view=available&limit=1")
+      ).json();
+      assert.ok(availablePage.packages.every((pack) => pack.active && !pack.removed));
+      assert.equal(availablePage.packages[0].version, "1.0.2");
+      assert.equal((await context.request.get(app.base + "/api/skill-packs?view=invalid")).status(), 400);
       const available = await (await context.request.get(app.base + "/api/skills?limit=100")).json(),
         useEntries = available.skills.filter((skill) => skill.packageId === availabilityPackage),
         history = await (
@@ -87,6 +93,8 @@ try {
         fail = false;
       page.on("request", (request) => {
         if (request.url().includes("/document-creations/options")) optionsReads++;
+        if (new URL(request.url()).pathname === "/api/skill-packs")
+          assert.equal(new URL(request.url()).searchParams.get("view"), "available");
         if (request.method() === "POST" && /\/document-creations$/.test(new URL(request.url()).pathname)) submissions++;
       });
       const gate = new Promise((resolve) => {
@@ -97,7 +105,7 @@ try {
         if (fail) return route.fulfill({ status: 503, json: { messageId: "plugins.packageUnavailable" } });
         await route.continue();
       });
-      await page.goto(app.base + "/create");
+      await page.goto(app.base + "/");
       await page.locator("[data-gd-skills]:enabled").waitFor();
       const prompt = "Write a clear product requirements brief.";
       await page.locator("#gadgetDocumentPrompt").fill(prompt);
@@ -171,7 +179,7 @@ try {
           `${out}/prototype-data.json`,
           JSON.stringify(
             {
-              composer: await page.locator("[data-system-composer]").evaluate((node) => node.outerHTML),
+              composer: await page.locator("#gadgetDocumentPrompt").evaluate((node) => node.closest("form").outerHTML),
               picker: await page.locator(".creation-skill-browser").evaluate((node) => node.outerHTML),
               options: await page.locator(".creation-skill-option").evaluateAll((nodes) =>
                 nodes.map((node) => ({
@@ -201,7 +209,25 @@ try {
       await page.locator("[data-gd-skills]").click();
       assert.equal(await picker.locator("[data-skill-search]").inputValue(), "PRD");
       await page.keyboard.press("Escape");
+      let releaseDetails = () => {};
+      const detailsGate = new Promise((resolve) => {
+        releaseDetails = resolve;
+      });
+      let detailsStarted = false;
+      await page.route("**/api/skill-packs/detail?*", async (route) => {
+        detailsStarted = true;
+        await detailsGate;
+        await route.continue();
+      });
       await page.reload();
+      await page.locator("[data-gd-skills]:enabled").waitFor();
+      await page.locator("[data-gd-skills]").click();
+      await picker.locator('[data-skill-id="software-prd"]:enabled').waitFor();
+      assert.equal(detailsStarted, true);
+      assert.equal(await picker.locator(".creation-skill-availability").count(), 0);
+      releaseDetails();
+      await page.unroute("**/api/skill-packs/detail?*");
+      await page.keyboard.press("Escape");
       await page.locator('[data-selected-skill="software-prd"] .creative-skill-preview:enabled').waitFor();
       assert.equal(await page.locator("#gadgetDocumentPrompt").inputValue(), prompt);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);

@@ -54,7 +54,7 @@ export class GadgetWorkspace {
     readonly locale: () => string,
     readonly registry: ClientGadgetRegistry,
     capabilities: ReadonlyMap<string, unknown>,
-    navigate: (path: string) => void,
+    private readonly navigate: (path: string) => void,
   ) {
     this.mounts = new GadgetMounts({
       t,
@@ -297,6 +297,10 @@ export class GadgetWorkspace {
     const action = el.dataset.gw,
       id = el.dataset.id;
     if (action === "customize") this.start();
+    if (action === "activity") {
+      event.preventDefault();
+      this.navigate("/create?view=activity");
+    }
     if (action === "save") void this.save();
     if (action === "cancel" && !this.pending) {
       if (this.changed) this.confirmAction("cancel");
@@ -355,7 +359,7 @@ export class GadgetWorkspace {
       this.header,
       this.editing
         ? `<div><h1>${gt(this.t, "customize")}</h1><small>${gt(this.t, "gridHelp")}</small></div><div class="gadget-heading-actions"><div class="gadget-device">${this.button("device", "pc", "monitor", false, false, 'data-value="desktop"')}${this.button("device", "mobile", "smartphone", false, false, 'data-value="mobile"')}</div>${this.button("library", "addWidget", "plus", false, !!this.pending)}${this.button("undo", "undo", "undo2", false, !this.history.length || !!this.pending)}${this.button("preview", this.preview ? "edit" : "preview", "eye", false, !!this.pending)}${this.button("cancel", "cancel", "", false, !!this.pending)}${this.button("save", this.saving ? "saving" : this.pending ? "retry" : innerWidth < 768 ? "done" : "save", "", true, this.saving)}</div>`
-        : `<div><h1>${gt(this.t, "headline")}</h1></div>${this.button("customize", "customize", "slidersHorizontal", false, !this.ready)}`,
+        : `<div><h1>${gt(this.t, "headline")}</h1></div><div class="gadget-heading-actions gadget-workspace-actions"><a class="wb-button" href="/create?view=activity" data-gw="activity" aria-label="${e(this.t("creation.activityTitle"))}" title="${e(this.t("creation.activityTitle"))}">${codexIcon("clock")}<span>${e(this.t("creation.activityTitle"))}</span></a>${this.button("customize", "customize", "layout", false, !this.ready)}</div>`,
     );
     if (this.error) {
       setMessageHtml(

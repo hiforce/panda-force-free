@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import { Database } from "bun:sqlite";
-import { DatabaseRegistry, type DatabaseModule } from "../../src/server/database/registry.js";
+import { DatabaseRegistry, migrationChecksum, type DatabaseModule } from "../../src/server/database/registry.js";
 import { SQLiteSchemaConnection } from "../../src/server/database/sqlite-schema.js";
 import { inspectTable } from "../../src/server/database/schema-inspection.js";
 import { mysqlDocumentsModule } from "../../src/server/database/modules/documents.js";
@@ -111,6 +111,54 @@ test("schema availability cannot authorize a whole-application storage cutover",
   expect(() => {
     registry.ordered()[0]!.migrations.sqlite![0]!.steps[0]!.sql = "DROP TABLE business";
   }).toThrow();
+});
+
+test("historical plans retain additive validation and immutable registered definitions", () => {
+  const fixture = module(),
+    version = fixture.migrations.sqlite![0]!,
+    historical = version.steps.map((step) => ({ ...step }));
+  version.historicalSteps = [historical];
+  const registry = new DatabaseRegistry().register(fixture),
+    registered = registry.ordered()[0]!.migrations.sqlite![0]!;
+  historical[0]!.sql = "DROP TABLE business";
+  expect(registered.historicalSteps![0]![0]!.sql).toStartWith("CREATE TABLE");
+  expect(() => {
+    registered.historicalSteps![0]![0]!.sql = "DROP TABLE business";
+  }).toThrow();
+  expect(() => new DatabaseRegistry().register(fixture)).toThrow("unsafeStatement");
+  version.historicalSteps = [[]];
+  expect(() => new DatabaseRegistry().register(fixture)).toThrow("invalidMigration");
+});
+
+test("a historical checksum never bypasses current schema inspection", async () => {
+  const db = new Database(":memory:"),
+    connection = new SQLiteSchemaConnection(db),
+    fixture = module(),
+    version = fixture.migrations.sqlite![0]!;
+  version.historicalSteps = [
+    [
+      ...version.steps,
+      {
+        id: "extra",
+        sql: "CREATE TABLE panda_force_extra(id TEXT PRIMARY KEY)",
+        satisfied: (c) => c.table("panda_force_extra"),
+      },
+    ],
+  ];
+  const historical = { version: 1, steps: version.historicalSteps[0]! };
+  try {
+    await new DatabaseRegistry().register({ ...fixture, migrations: { sqlite: [historical] } }).upgrade(connection);
+    const saved = await connection.history("sample", 1);
+    expect(saved?.checksum).toBe(migrationChecksum("sample", historical));
+    const registry = new DatabaseRegistry().register(fixture);
+    expect(await registry.upgrade(connection)).toEqual([]);
+    expect(await connection.history("sample", 1)).toEqual(saved);
+    db.exec("DROP INDEX panda_force_sample_value");
+    await expect(registry.upgrade(connection)).rejects.toThrow("schemaDrift");
+    expect((await registry.inspect(connection)).some((issue) => issue.code === "missingIndex")).toBe(true);
+  } finally {
+    db.close();
+  }
 });
 
 test("application cutover checks every business domain instead of activating a partially supported backend", () => {

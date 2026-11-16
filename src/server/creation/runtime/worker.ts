@@ -12,6 +12,8 @@ import type {
 import { CreationError } from "../contracts.js";
 import { creationRunInput } from "../run-input.js";
 import { documentCreationTools } from "../document-tools.js";
+import type { CreationProgressStore } from "../ports.js";
+import type { CreationProgress } from "../../../shared/creation/contracts.js";
 
 /** One leased execution joins immutable input, scoped tools and an engine; durable state owns the outcome. */
 export class CreationWorker {
@@ -26,6 +28,7 @@ export class CreationWorker {
     private readonly now: () => number = Date.now,
     private readonly leaseMs = 30000,
     private readonly diagnostic: (error: unknown) => void = () => {},
+    private readonly progress?: CreationProgressStore,
   ) {}
   async run(claim: CreationClaim, shutdown: AbortSignal, permit: CreationRunPermit) {
     const lease = { ...claim.lease },
@@ -34,6 +37,19 @@ export class CreationWorker {
     let execution: CreationExecution | null = null,
       waiting = 0;
     let maintenance: Promise<void> | null = null;
+    let messages = Promise.resolve();
+    const record = async (stage: CreationProgress["stage"], text?: string) => {
+      try {
+        await this.progress?.record(lease, {
+          at: this.now(),
+          generation: lease.generation,
+          stage,
+          ...(text ? { text } : {}),
+        });
+      } catch (error) {
+        this.diagnostic(error);
+      }
+    };
     const abort = () => controller.abort(shutdown.reason),
       maintain = async () => {
         try {
@@ -73,10 +89,16 @@ export class CreationWorker {
           signal,
           started: async (scope) => {
             execution = await tools.started(scope);
+            await record("started");
+          },
+          message: (text) => {
+            messages = messages.then(() => record("message", text));
+            return messages;
           },
           call: async (call) => {
             await this.authorize(lease.owner, claim.task.spec.projectId);
             signal.throwIfAborted();
+            await record("saving");
             return tools.call(call);
           },
           question: async (scope, values) => {
@@ -85,7 +107,10 @@ export class CreationWorker {
               throw new CreationError("leaseLost");
             if (!waiting++) permit.suspend();
             try {
-              return await this.questions.ask(bound, values, signal);
+              await record("waiting");
+              const answer = await this.questions.ask(bound, values, signal);
+              await record("answered");
+              return answer;
             } finally {
               if (!--waiting && !signal.aborted) await permit.resume(signal);
             }
@@ -102,12 +127,17 @@ export class CreationWorker {
       else
         await this.queue.fail(
           lease,
-          error instanceof CreationError && error.code === "notFound" ? "targetChanged" : "interrupted",
+          error instanceof CreationError && error.code === "notFound"
+            ? "targetChanged"
+            : error instanceof Error && "code" in error && error.code === "APPLICATION_ENGINE_DEADLINE"
+              ? "timedOut"
+              : "interrupted",
           this.now(),
         );
     } finally {
       clearInterval(heartbeat);
       await maintenance;
+      await messages;
       shutdown.removeEventListener("abort", abort);
       controller.abort(new Error("Creation execution closed"));
       permit.close();

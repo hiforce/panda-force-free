@@ -7,7 +7,7 @@ import { creationRecord, creationText } from "../validation.js";
 import { creationProtection } from "./protect.js";
 
 export function creationRoutes(
-  service: Pick<CreationService, "options" | "list" | "detail" | "submit" | "cancel" | "retry" | "answer">,
+  service: Pick<CreationService, "options" | "list" | "detail" | "submit" | "cancel" | "retry" | "answer" | "followUp">,
   owner: (context: RouteContext) => string,
 ): Route[] {
   const protect = creationProtection(owner),
@@ -36,10 +36,35 @@ export function creationRoutes(
       }),
     },
     {
+      path: "/api/document-creations/follow-up",
+      method: "POST",
+      handler: protect(async ({ req, url, res }, actor) => {
+        if (url.search) throw new CreationError("invalidInput");
+        const input = creationRecord(await readJsonBody(req, 128 * 1024), ["taskId", "id", "prompt"]);
+        respondJson(res, 202, {
+          task: await service.followUp(actor, creationText(input.taskId), { id: input.id, prompt: input.prompt }),
+        });
+      }),
+    },
+    {
       path: "/api/document-creations/detail",
       method: "GET",
       handler: protect(async ({ url, res }, actor) => {
-        respondJson(res, 200, { task: await service.detail(actor, query(url, "id")) });
+        if (
+          [...url.searchParams.keys()].some((key) => !["id", "view"].includes(key)) ||
+          url.searchParams.getAll("id").length !== 1 ||
+          url.searchParams.getAll("view").length > 1 ||
+          (url.searchParams.has("view") && url.searchParams.get("view") !== "progress")
+        )
+          throw new CreationError("invalidInput");
+        const started = performance.now(),
+          task = await service.detail(
+            actor,
+            creationText(url.searchParams.get("id")),
+            url.searchParams.get("view") !== "progress",
+          );
+        res.setHeader("server-timing", `creation-read;dur=${(performance.now() - started).toFixed(1)}`);
+        respondJson(res, 200, { task });
       }),
     },
     ...["cancel", "retry", "answer"].map((action): Route => ({

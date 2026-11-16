@@ -3,7 +3,7 @@ import type { CreationInputs, CreationEngineProfile, CreationRequest } from "./i
 import type { SkillCapture } from "../../shared/skills/registry.js";
 import type { CreationTask } from "./contracts.js";
 import { CreationError } from "./contracts.js";
-import { creationText } from "./validation.js";
+import { creationText, creationRecord, creationUuid } from "./validation.js";
 import { creationOperation, creationRequest, creationRequestDigest } from "./requests.js";
 
 export interface CreationSubmissionTasks {
@@ -24,7 +24,34 @@ export class CreationSubmissions {
     private readonly inputs: CreationInputs,
     private readonly authority: CreationSubmissionAuthority,
     private readonly now: () => number = Date.now,
+    private readonly output?: {
+      read(digest: string): Promise<NonNullable<import("./input.js").CreationInputSnapshot["previous"]>["document"]>;
+    },
   ) {}
+  async followUp(owner: string, id: string, value: unknown) {
+    const request = creationRecord(value, ["id", "prompt"]),
+      task = await this.tasks.find(owner, creationUuid(id));
+    if (!task) throw new CreationError("notFound");
+    await this.authority.authorize(owner, task.spec.projectId);
+    const input = await this.inputs.read(task.spec);
+    return this.submit(owner, {
+      id: request.id,
+      prompt: request.prompt,
+      previousTaskId: task.spec.id,
+      projectId: task.spec.projectId,
+      treeVersion: task.spec.target.treeVersion,
+      parentId: task.spec.target.parentId,
+      locale: task.spec.target.locale,
+      profileId: input.profile.id,
+      selections: input.skills.composition.skills.map(({ packageId, version, digest, id, parameters }) => ({
+        packageId,
+        version,
+        digest,
+        id,
+        parameters,
+      })),
+    });
+  }
   async submit(actor: string, value: unknown) {
     const owner = creationText(actor, 200),
       request = creationRequest(value),
@@ -38,6 +65,16 @@ export class CreationSubmissions {
       return prior;
     }
     await this.authority.target(owner, request);
+    let previous: import("./input.js").CreationInputSnapshot["previous"];
+    if (request.previousTaskId) {
+      const task = await this.tasks.find(owner, request.previousTaskId);
+      if (!task || task.spec.projectId !== request.projectId) throw new CreationError("notFound");
+      await this.authority.authorize(owner, task.spec.projectId);
+      if (task.state !== "succeeded" || !task.artifact || !task.outputDigest || !this.output)
+        throw new CreationError("conflict");
+      const input = await this.inputs.read(task.spec);
+      previous = { prompt: input.prompt, document: await this.output.read(task.outputDigest) };
+    }
     const profile = structuredClone(await this.authority.profile(request.profileId));
     if (profile.id !== request.profileId) throw new CreationError("unavailable");
     const skills = await this.authority.capture(owner, request, signature);
@@ -50,6 +87,7 @@ export class CreationSubmissions {
       prompt: request.prompt,
       profile,
       skills,
+      ...(previous ? { previous } : {}),
     });
     await this.authority.authorize(owner, request.projectId);
     try {
@@ -68,6 +106,7 @@ export class CreationSubmissions {
           },
           inputDigest,
           skillCaptureId: skills.id,
+          ...(request.previousTaskId ? { previousTaskId: request.previousTaskId } : {}),
         },
         this.now(),
       );

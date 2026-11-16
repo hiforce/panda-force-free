@@ -43,7 +43,7 @@
   "minRefreshSeconds": 60,
   "defaultPlacement": {
     "x": 8,
-    "y": 0,
+    "y": 11,
     "order": 3
   },
   "permissions": ["projects.read"],

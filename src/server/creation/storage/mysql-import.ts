@@ -53,10 +53,11 @@ export function consolidateCreationSnapshots(
         const source = new Database(ledger.snapshotPath, { readonly: true, strict: true });
         try {
           source.transaction(() => {
-            if (source.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version !== 2)
-              throw Error("unsupportedCreationMigrationSchema");
+            const version = source.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version;
+            if (version !== 2 && version !== 3) throw Error("unsupportedCreationMigrationSchema");
             target.query("INSERT INTO creation_ledgers VALUES(?)").run(ledger.namespace);
             for (const model of tables) {
+              if (version === 2 && model.name === "panda_force_creation_progress") continue;
               const columns = model.columns
                   .filter((c) => !["namespace", "pendingTaskId"].includes(c.name))
                   .map((c) => c.name),
@@ -91,5 +92,5 @@ export function importCreationSQLite(options: {
   migrationId: string;
   progress?: (value: MigrationProgress) => void | Promise<void>;
 }) {
-  return migrateSQLiteModule({ ...options, module: "creation", converterVersion: 1, tables: creationSQLiteMappings });
+  return migrateSQLiteModule({ ...options, module: "creation", converterVersion: 2, tables: creationSQLiteMappings });
 }
