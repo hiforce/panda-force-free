@@ -1,0 +1,86 @@
+{
+  "simulatedEngine": true,
+  "productionData": false,
+  "captures": [
+    {
+      "file": "workspace-en.webp",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "locale": "en",
+      "theme": "silk",
+      "demoContent": true
+    },
+    {
+      "file": "documents-en.webp",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "locale": "en",
+      "theme": "silk",
+      "demoContent": true
+    },
+    {
+      "file": "skills-en.webp",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "locale": "en",
+      "theme": "silk",
+      "demoContent": true
+    },
+    {
+      "file": "mobile-en.webp",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "locale": "en",
+      "theme": "silk",
+      "demoContent": true
+    },
+    {
+      "file": "workspace-zh-CN.webp",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "locale": "zh-CN",
+      "theme": "aurora",
+      "demoContent": true
+    },
+    {
+      "file": "documents-zh-CN.webp",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "locale": "zh-CN",
+      "theme": "aurora",
+      "demoContent": true
+    },
+    {
+      "file": "skills-zh-CN.webp",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "locale": "zh-CN",
+      "theme": "aurora",
+      "demoContent": true
+    },
+    {
+      "file": "mobile-zh-CN.webp",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "locale": "zh-CN",
+      "theme": "aurora",
+      "demoContent": true
+    }
+  ]
+}

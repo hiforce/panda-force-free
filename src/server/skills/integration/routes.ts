@@ -4,6 +4,7 @@ import { errorPayload } from "../../i18n/error-payload.js";
 import { reportDiagnostic } from "../../../shared/diagnostics.js";
 import type { SkillCatalog } from "../catalog/service.js";
 import { SkillRegistryError } from "../errors.js";
+import { availableInstalledSkill } from "../../../shared/skills/availability.js";
 
 export function skillCatalogRoutes(catalog: SkillCatalog, owner: (context: RouteContext) => string): Route[] {
   const handler =
@@ -19,19 +20,17 @@ export function skillCatalogRoutes(catalog: SkillCatalog, owner: (context: Route
           limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : 10,
           page = await catalog.list(url.searchParams.get("cursor") ?? undefined, limit);
         if (!activeOnly) return respondJson(context.res, 200, page);
-        const skills = page.packages
-          .filter((pack) => pack.active && !pack.removed)
-          .flatMap((pack) =>
-            pack.manifest.skills
-              .filter((skill) => pack.exports.find((value) => value.id === skill.id)?.enabled)
-              .map((skill) => ({
-                packageId: pack.id,
-                version: pack.version,
-                digest: pack.digest,
-                origin: pack.origin,
-                ...skill,
-              })),
-          );
+        const skills = page.packages.flatMap((pack) =>
+          pack.manifest.skills
+            .filter((skill) => availableInstalledSkill(pack, skill))
+            .map((skill) => ({
+              packageId: pack.id,
+              version: pack.version,
+              digest: pack.digest,
+              origin: pack.origin,
+              ...skill,
+            })),
+        );
         respondJson(context.res, 200, { revision: page.revision, skills, nextCursor: page.nextCursor });
       } catch (error) {
         if (error instanceof SkillRegistryError && error.code === "invalidInput")

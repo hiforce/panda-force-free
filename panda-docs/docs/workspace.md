@@ -12,11 +12,17 @@ Read command/file approvals before responding. Requests also appear in the pendi
 
 The preparation screen reports actual reads. Retry a failed step instead of repeatedly reopening large histories. Only public reasoning summaries supplied by the engine can be shown.
 
-The file browser and terminal use the server's OS privileges. Review currently applies Undo/Reapply to the aggregated diff, not individual hunks. Treat the workspace as shared with every admitted user.
+The file browser, terminal and shared Codex conversations are administrator-only and use the server's OS/engine privileges. Ordinary members use their authorized business content. Review currently applies Undo/Reapply to the aggregated diff, not individual hunks. A shared engine is an administrative trust boundary, not a separate coding sandbox for each member.
+
+## Find your work
+
+The main navigation contains Workspace, Bots, Sessions, Create, Projects, Skills and Publish. The home board combines a creation composer with configurable Gadgets for recent work, frequent projects and skills. Personal creation content can be copied into projects as independent work. See the [feature catalog](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/features.md) for document, knowledge and publishing capabilities and prerequisites.
 
 ## Customize your workspace
 
 The top navigation contains global search, **Language**, **Appearance**, **Layout**, browser full screen and your profile. On a phone, open **Workspace preferences** for language, appearance, layout and profile settings. Global preferences are separate from the current session's title and actions.
+
+The interface supports English, Simplified Chinese, Hong Kong Traditional Chinese and Taiwan Traditional Chinese. User-authored and engine content is not automatically translated.
 
 Choose **Light** for white surfaces, **Graphite** for a neutral dark workspace, **Silk** for warm surfaces or **Aurora** for cool dark surfaces. **System default** follows your device. The top navigation and the Appearance settings page share the same preference.
 
@@ -43,7 +49,6 @@ On a phone, use the compact permission and model icons beside attachment, queue 
 Expand **Unassigned sessions** in the sidebar. **Recent** shows at most the latest ten. Switch to **Folders**, then expand a working folder to browse its older conversations. Click the same folder to collapse it; the arrow keys also move between folders and expand or collapse them. The folder name is followed by its path; hover to see the complete path when it is shortened. The directory entry stays available even when all recently loaded conversations have already been assigned to projects.
 
 A project's conversation list supports text search combined with a working-directory filter. **Link existing sessions** provides the same combination across native history, with pagination. Selected conversations remain selected when you change the search or directory, until you submit or close the dialog. Associating a conversation updates the unassigned directory count and does not move its working files.
-
 
 ## Follow the latest messages
 

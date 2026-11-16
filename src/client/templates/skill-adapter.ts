@@ -5,6 +5,7 @@ import { downloadTemplate, skillManagerApi as api } from "./api.js";
 import type { TemplateManagerAdapter, TemplateDetailPreviewRuntime } from "./ports.js";
 import { localizedText } from "../../shared/presentation/localized.js";
 import { skillDisplayDefinition } from "../../shared/presentation/skill-display.js";
+import { availableInstalledSkill } from "../../shared/skills/availability.js";
 
 export function skillManagerAdapter(
   t: Translate,
@@ -28,7 +29,10 @@ export function skillManagerAdapter(
         detail.package.manifest.skills.find((item) => item.id === ref.exportId)!,
       );
       return {
-        ...(apply && definition.outputTypes.includes("document") && !definition.entitlement
+        ...(apply &&
+        availableInstalledSkill(detail.package, definition) &&
+        definition.outputTypes.includes("document") &&
+        definition.composition.appliesTo.includes("document")
           ? {
               apply: () =>
                 apply({

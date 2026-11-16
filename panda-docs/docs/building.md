@@ -52,3 +52,11 @@ docker build --build-arg VERIFICATION_PROFILE=brand -t panda-force:brand-review 
 The `brand` profile builds the client, checks brand rendering and image-proof contracts, and exercises installation/startup assets in Chromium and WebKit. Its `verification.json` records `verificationProfile: "brand"`, `fullVerification: false` and the suites not run. Use `VERIFICATION_PROFILE=full` for the complete plan. Deployment gates require an explicit matching profile to accept a targeted certificate. Runtime smoke checks and deployment health checks still apply.
 
 For optional static resource uploads during compilation and the targeted `cdn` verification profile, see [Build-time static CDN](cdn-build.md).
+
+## Refresh README screenshots
+
+After building the client assets, run `bun scripts/release/capture-readme.mjs` from the repository root. The script starts a disposable local application with a simulated engine and fictional English/Chinese content, then captures desktop Chromium and mobile WebKit views. It does not use an installed model account or a production workspace. `PANDA_FORCE_README_SCREENSHOTS` can select an output directory; the default is `panda-docs/static/img`. Review the images before publishing them.
+
+## Build the help website
+
+The optional help website in `panda-docs` requires Node.js 20 or later. Install its own locked dependencies and build from that directory with `bun install --frozen-lockfile` followed by `bun run build`. Keep its dependency directory and generated `.docusaurus` cache separate from another checkout. The main application source build uses the repository-root Docker/Compose instructions.

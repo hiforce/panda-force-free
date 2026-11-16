@@ -34,6 +34,7 @@ export async function createAppFixture({
   sharedApprovals = false,
   usageRollout = false,
   unnamedSessions = false,
+  sessionPresentation = /** @type {{titles: string[]; timestamp: number} | null} */ (null),
   models = null,
   applicationCreation = false,
   applicationKnowledge = false,
@@ -84,6 +85,12 @@ export async function createAppFixture({
     },
     { id: "tasks", name: "Task without a project", projectless: true, status: { type: "idle" }, turns: [] },
   ];
+  if (sessionPresentation)
+    for (const [index, thread] of initial.entries()) {
+      thread.name = sessionPresentation.titles[index] || thread.name;
+      thread.createdAt = sessionPresentation.timestamp;
+      thread.updatedAt = sessionPresentation.timestamp;
+    }
   if (usageRollout) {
     const sessions = join(dir, "sessions");
     mkdirSync(sessions);

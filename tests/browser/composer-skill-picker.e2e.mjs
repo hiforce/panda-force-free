@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
 import { createAppFixture } from "../support/app-fixture.mjs";
+import { nativeSkillPackage } from "../support/native-skill-package.js";
+import { randomUUID } from "node:crypto";
 
 const out = ".artifacts/composer-skill-picker";
 await mkdir(out, { recursive: true });
 const app = await createAppFixture({ applicationCreation: true });
 const records = [];
+const availabilityPackage = "availability.review-kit";
 try {
   for (const [engine, width, locale, theme] of [
     [chromium, 1440, "en", "silk"],
@@ -23,6 +26,48 @@ try {
         headers: { Origin: app.base },
       });
       assert(database.ok());
+      if (!records.length) {
+        for (const version of ["1.0.0", "1.0.1", "1.0.2"]) {
+          const pack = await nativeSkillPackage(availabilityPackage, version),
+            selected = version === "1.0.2" ? ["blog-outline"] : ["blog-outline", "brand-voice"],
+            body = { content: pack.content, name: "availability.skill.json", selected },
+            reviewResponse = await context.request.post(app.base + "/api/skill-packs/review", {
+              data: body,
+              headers: { Origin: app.base },
+            });
+          assert(reviewResponse.ok(), await reviewResponse.text());
+          const review = await reviewResponse.json(),
+            installation = await context.request.post(app.base + "/api/skill-packs/install", {
+              headers: { Origin: app.base },
+              data: {
+                content: pack.content,
+                name: "availability.skill.json",
+                approval: {
+                  id: randomUUID(),
+                  expectedRevision: review.revision,
+                  reviewHash: review.reviewHash,
+                  capabilities: review.capabilities,
+                  selected: review.selected,
+                },
+              },
+            });
+          assert(installation.ok(), await installation.text());
+        }
+      }
+      const available = await (await context.request.get(app.base + "/api/skills?limit=100")).json(),
+        useEntries = available.skills.filter((skill) => skill.packageId === availabilityPackage),
+        history = await (
+          await context.request.get(
+            app.base +
+              "/api/template-catalog?" +
+              new URLSearchParams({ registry: "skills", view: "versions", search: availabilityPackage, limit: "100" }),
+          )
+        ).json();
+      assert.deepEqual(
+        useEntries.map((skill) => [skill.id, skill.version]),
+        [["blog-outline", "1.0.2"]],
+      );
+      assert.equal(history.templates.filter((item) => item.reference.packageId === availabilityPackage).length, 9);
       await context.addInitScript(
         ({ locale, theme }) => {
           if (window === window.top && /^https?:$/.test(location.protocol)) {
@@ -80,6 +125,19 @@ try {
         await picker.locator("[data-skill-categories] nav > button").first().getAttribute("data-skill-category"),
         "all",
       );
+      await picker.locator("[data-skill-search]").fill(availabilityPackage);
+      const candidates = picker.locator(".creation-skill-option");
+      assert.equal(await candidates.count(), 1);
+      assert.equal(await candidates.locator("[data-skill-action=add]").getAttribute("data-skill-id"), "blog-outline");
+      assert.match(await candidates.locator("footer").innerText(), /v1\.0\.2/);
+      assert.equal(await picker.locator(".creation-skill-availability").count(), 0);
+      await picker.locator('[data-skill-category="research"]').click();
+      assert.equal(await candidates.count(), 0);
+      await picker.locator('[data-skill-category="all"]').click();
+      assert.equal(await candidates.count(), 1);
+      await page.screenshot({ path: `${out}/available-only-${locale}-${width}.png` });
+      await picker.locator('[data-skill-category="writing"]').click();
+      await picker.locator("[data-skill-search]").fill("");
       await prd.click();
       await picker.locator('[data-skill-id="meeting-notes"]').click();
       await page.screenshot({ path: `${out}/picker-${locale}-${width}.png` });
@@ -150,6 +208,18 @@ try {
       assert.equal(optionsReads, 0);
       assert.equal(await page.locator("[data-gc-mode],[data-gc-more],[data-gc-menu]").count(), 0);
       assert.equal(submissions, 0);
+      await page.goto(app.base + "/skills/writing");
+      await page.locator(`[data-template-key*="${availabilityPackage}:blog-outline:"]`).click();
+      const managed = page.locator(".template-detail-dialog[open]");
+      await managed.locator('[data-template-detail="apply"]:visible').waitFor();
+      await managed.locator('[data-template-detail="versions"]').click();
+      const versions = managed.locator("[data-template-version]");
+      await versions.first().waitFor();
+      assert.equal(await versions.count(), 3);
+      await versions.filter({ hasText: "1.0.0" }).click();
+      await managed.locator('[data-template-detail="activate"]:visible').waitFor();
+      assert.equal(await managed.locator('[data-template-detail="apply"]').isVisible(), false);
+      await page.screenshot({ path: `${out}/history-only-${locale}-${width}.png` });
       assert.deepEqual(errors, []);
       records.push({
         width,
@@ -160,6 +230,8 @@ try {
         inputAndSelectionPreserved: true,
         keyboardAndRetry: true,
         noOverflow: true,
+        availableCandidatesOnly: true,
+        managementAndHistoryPreserved: true,
       });
       await context.close();
     } finally {

@@ -8,12 +8,10 @@ import { latestTokenUsage, tokenUsage } from "../../shared/engine/usage.js";
 import { resolveSafeRegularFile } from "../path-utils.js";
 import { nativeThread, nativeTurn, resultPage, threadFromResult, type NativeThread } from "../protocol/native.js";
 import type { ReviewRecorder } from "../engines/runtime-contract.js";
-import { errorCode } from "./../../shared/errors.js";
 import { createConversationHistory } from "./history.js";
 import { LiveSessionStore } from "./live-session.js";
 import { createPagedConversationHistory, readNativeItemPage } from "./paged-history.js";
 
-const LARGE_JOURNAL_BYTES = 8 * 1024 * 1024;
 const LARGE_ROLLOUT_BYTES = 2 * 1024 * 1024;
 const THREAD_METADATA_LIMIT = 1000;
 const METADATA_SCAN_PAGES = 10;
@@ -116,6 +114,16 @@ export function createThreadHub({
     throw new Error("Thread not found; refresh the session list");
   }
 
+  function fingerprint(threadId: string) {
+    try {
+      const path = threadPaths.get(threadId);
+      if (!path) return null;
+      const stat = statSync(path);
+      return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+    } catch {
+      return null;
+    }
+  }
   const conversationHistory = createConversationHistory({
     readThread: async (threadId: string) => {
       const result = await request("thread/read", { threadId, includeTurns: true });
@@ -148,32 +156,23 @@ export function createThreadHub({
       }
       return thread;
     },
-    fingerprint: (threadId: string) => {
-      try {
-        const path = threadPaths.get(threadId);
-        if (!path) return null;
-        const stat = statSync(path);
-        return `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
-      } catch {
-        return null;
-      }
-    },
+    fingerprint,
   });
-  const pagedConversationHistory = createPagedConversationHistory({ request, getThread: getThreadMetadata });
+  const pagedConversationHistory = createPagedConversationHistory({
+    request,
+    getThread: getThreadMetadata,
+    fingerprint,
+  });
 
   async function readNativeConversationHistory(params: HistoryQuery) {
     if (typeof params?.threadId !== "string" || !params.threadId) throw new Error("Invalid thread id");
     if (sharedMode) {
-      const thread = await getThreadMetadata(params.threadId);
-      // Native thread/read scans the full journal even when turns are excluded.
-      // Item pagination reads the state DB without scanning multi-GB CLI logs.
-      try {
-        if (!thread.path || statSync(thread.path).size > LARGE_JOURNAL_BYTES)
-          return pagedConversationHistory.read(params);
-      } catch (error) {
-        if (errorCode(error) !== "ENOENT") throw error;
-        return pagedConversationHistory.read(params);
-      }
+      // Even a small journal can be expensive on a busy disk. Read only the
+      // visible page from the native state DB; cache it until history changes.
+      await getThreadMetadata(params.threadId);
+      const result = await pagedConversationHistory.read(params);
+      recordReviewDiffsFromRpc("thread/turns/list", params, { data: result.history.turns });
+      return result;
     }
     return conversationHistory.read(params);
   }
@@ -291,8 +290,14 @@ export function createThreadHub({
     readBrowserTurns,
     readLiveThread,
     subscribeSharedThread,
-    invalidateHistory: (threadId: string) => conversationHistory.invalidate(threadId),
-    clearHistory: () => conversationHistory.clear(),
+    invalidateHistory(threadId: string) {
+      conversationHistory.invalidate(threadId);
+      pagedConversationHistory.invalidate(threadId);
+    },
+    clearHistory() {
+      conversationHistory.clear();
+      pagedConversationHistory.clear();
+    },
     dropSubscription: (threadId: string) => sharedThreadSubscriptions.delete(threadId),
     markSubscribed: (threadId: string) => sharedThreadSubscriptions.set(threadId, Promise.resolve()),
     clearSubscriptions: () => sharedThreadSubscriptions.clear(),

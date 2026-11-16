@@ -85,6 +85,7 @@ export function creationSkillOptions(
     .filter(
       ({ entry }) =>
         entry.visible &&
+        entry.enabled &&
         (!accept || accept(entry)) &&
         (!query ||
           [

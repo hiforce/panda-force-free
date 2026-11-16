@@ -4,6 +4,43 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createThreadHub } from "../../src/server/conversation/thread-hub.ts";
 import { mergeConversationHistory } from "../../src/client/ui-core.js";
+import { ReviewDiffStore } from "../../src/server/review/state.js";
+
+test("native history pages retain server-owned review patches without full journal reads", async () => {
+  const reviews = new ReviewDiffStore();
+  const hub = createThreadHub({
+    sharedMode: true,
+    defaultSessionsRoot: tmpdir(),
+    reviewDiffs: reviews,
+    request: async (method) => {
+      if (method === "thread/list") return { data: [{ id: "review", cwd: tmpdir() }] };
+      if (method === "thread/turns/list") return { data: [{ id: "turn", status: "completed", items: [] }] };
+      if (method === "thread/items/list")
+        return {
+          data: [
+            {
+              turnId: "turn",
+              item: {
+                id: "patch",
+                type: "fileChange",
+                status: "completed",
+                changes: [{ path: "example.txt", kind: { type: "update" }, diff: "@@ -1 +1 @@\n-before\n+after" }],
+              },
+            },
+          ],
+          nextCursor: null,
+        };
+      throw Error("Unbounded history read: " + method);
+    },
+  });
+  await hub.readConversationHistory({ threadId: "review" });
+  const entry = reviews.begin("review", "turn", "undo");
+  expect(entry.diff).toContain("--- a/example.txt\n+++ b/example.txt\n@@ -1 +1 @@\n-before\n+after");
+  reviews.finish("review", "turn", "undo", true);
+  await hub.readConversationHistory({ threadId: "review" });
+  expect(() => reviews.begin("review", "turn", "undo")).toThrow("Undo is not available");
+  expect(reviews.begin("review", "turn", "reapply").diff).toBe(entry.diff);
+});
 
 test("completed host questionnaires survive native history omissions, pagination and reader restart", async () => {
   for (const large of [false, true]) {
@@ -121,6 +158,52 @@ test("large thread/read and metadata requests never read the full native journal
         .filter((call) => call.method === "thread/turns/list")
         .every((call) => call.params.itemsView === "notLoaded"),
     ).toBe(true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("small shared journals use bounded native pages and reuse unchanged reads", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "small-history-"));
+  const path = join(directory, "rollout.jsonl");
+  const fd = openSync(path, "w");
+  ftruncateSync(fd, 4 * 1024 * 1024);
+  closeSync(fd);
+  const calls: string[] = [];
+  const hub = createThreadHub({
+    sharedMode: true,
+    defaultSessionsRoot: directory,
+    reviewDiffs: { record: () => {} },
+    request: async (method) => {
+      calls.push(method);
+      if (method === "thread/list") return { data: [{ id: "small", path, cwd: directory }] };
+      if (method === "thread/items/list")
+        return {
+          data: [{ turnId: "turn", item: { id: "answer", type: "agentMessage", text: "Recent answer" } }],
+          nextCursor: null,
+        };
+      if (method === "thread/turns/list") return { data: [{ id: "turn", status: "completed", items: [] }] };
+      throw Error("Unbounded history read: " + method);
+    },
+  });
+  try {
+    const first = await hub.readConversationHistory({ threadId: "small", limit: 20 });
+    expect(first.history.turns[0].items[0].text).toBe("Recent answer");
+    expect(first.history.nativePages).toBe(true);
+    const refresh = await hub.readConversationHistory({
+      threadId: "small",
+      limit: 100,
+      revision: first.history.revision,
+      oldestItemId: first.history.oldestItemId,
+    });
+    expect(refresh.history.turns).toEqual([]);
+    expect(calls.filter((method) => method === "thread/items/list")).toHaveLength(1);
+    hub.invalidateHistory("small");
+    await hub.readConversationHistory({ threadId: "small", limit: 20 });
+    expect(calls.filter((method) => method === "thread/items/list")).toHaveLength(2);
+    hub.clearHistory();
+    await hub.readConversationHistory({ threadId: "small", limit: 20 });
+    expect(calls.filter((method) => method === "thread/items/list")).toHaveLength(3);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

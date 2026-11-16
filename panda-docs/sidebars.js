@@ -1,6 +1,7 @@
 export default {
   guides: [
     "overview",
+    "features",
     { type: "category", label: "Getting started", items: ["installation", "kubernetes", "workspace"] },
     {
       type: "category",

@@ -1,56 +1,92 @@
 ![PandaForce — A workspace for getting things done with AI.](./panda-docs/static/img/panda-force-banner-redflame-v1.jpg)
 
-A workspace for natural-language work, powered by Codex today, with other CLI engines planned.
+# PandaForce
+
+A self-hosted AI workspace for conversations, coding, documents, reusable skills, knowledge and publishing. Powered by Codex app-server today.
 
 Built on [Codex WebUI](https://github.com/lezi-fun/codex-webui) by [lezi-fun](https://github.com/lezi-fun). Thank you to the upstream author and contributors.
 
-- Give each new project a real workspace folder named by its project code.
-- Organize conversations into projects and attach files or images.
-- Review approvals, answer questions and follow task progress.
-- Keep session usage, settings and tools together in a responsive side panel.
-- Customize language, appearance and reading width from the top navigation.
-- Browse workspace files and use the integrated terminal.
-- Use English or Simplified Chinese, follow your browser language, and keep native CLI output in its original language.
+[简体中文](./README-zh.md) · **[Complete feature catalog](./panda-docs/docs/features.md)** · [功能清单（中文）](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md) · [Installation](./panda-docs/docs/installation.md) · [CDN configuration](./panda-docs/docs/cdn-build.md)
 
-[简体中文](./README-zh.md) · [Help](./panda-docs/docs/overview.md) · [CDN configuration](./panda-docs/docs/cdn-build.md)
+> This README describes the **develop source**. Published images such as `hiforceai/panda-force:0.0.21` do not automatically contain develop changes. Build from this branch to try the interface and functions shown below.
 
-![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en-0.0.10.png)
+## What you can do
 
-## Quick start
+- **Talk and code with AI:** stream replies, inspect tools and file changes, handle approvals and questions, queue messages and follow session usage.
+- **Organize real work:** keep project folders, conversations, documents and generated assets together; browse permitted files and use the integrated terminal as an administrator.
+- **Write and refine documents:** use a document tree, rich-text editing, tables, images and code blocks; autosave, recover drafts and review AI suggestions before applying them.
+- **Reuse skills and templates:** browse by category, inspect versions and permissions, install compatible packages and combine currently usable skills with parameters.
+- **Create and publish:** keep personal works, copy them into projects, prepare website builds and supported channel variants, or export content and assets.
+- **Automate with Bots:** accept external tasks with access keys, inspect the durable queue and decision evidence, review results and retry failed callbacks.
+- **Search and build knowledge:** search project content, optionally add keyword/vector backends and run source-backed knowledge workflows.
+- **Manage local accounts:** invite members by email, let them set their own passwords, and recover passwords using six-digit email codes after SMTP is configured.
+- **Work on desktop or mobile:** responsive layouts, adjustable navigation, themes and English, Simplified Chinese, Hong Kong Traditional Chinese and Taiwan Traditional Chinese.
 
-Requires Docker with Compose and Git on Linux amd64. The published image includes Codex CLI; no host Codex installation or host authentication files are required. By default, PandaForce starts its own Codex service inside the container (**isolated mode**).
+See the [complete feature catalog](./panda-docs/docs/features.md) for all 18 areas, service prerequisites and current limits. Optional publishing adapters have different coverage; enterprise member sandboxes, model-gateway quotas/billing and generic SSO are not shipped features.
+
+## Current interface
+
+The current source rendered with fictional demonstration data; no production accounts, tasks or credentials are shown.
+
+**Workspace — a direct starting point for projects and creation**
+
+![PandaForce workspace with the current navigation and creation composer](./panda-docs/static/img/workspace-en.webp)
+
+**Project documents — outline, rich-text content and editing tools**
+
+![PandaForce project document editor](./panda-docs/static/img/documents-en.webp)
+
+<details>
+<summary>Skills and the mobile interface</summary>
+
+![PandaForce skill library](./panda-docs/static/img/skills-en.webp)
+
+<img src="./panda-docs/static/img/mobile-en.webp" width="320" alt="PandaForce document reading on a narrow mobile viewport" />
+
+</details>
+
+## Run this branch from source
+
+Requires Git and Docker with Compose. The documented image platform is Linux amd64. Codex CLI is included in the build/runtime images; no host Codex installation or host authentication-file mount is required.
 
 ```bash
-git clone https://github.com/hiforce/panda-force-free.git
+git clone --branch develop https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 docker compose logs panda-force
 ```
 
-Open **http://localhost:8899** and create your PandaForce administrator. Choose a password with at least six characters, including uppercase and lowercase letters and a number. If asked for an installation code, find it in the startup logs.
+Open **http://localhost:8899** and create your PandaForce administrator. Email is optional at initialization. Choose a password with at least six characters, including uppercase and lowercase letters and a number. If an installation code is requested, find it in the startup logs.
 
-Sign in to your model account separately:
+Sign in to the model account separately:
 
 ```bash
 docker compose exec -it panda-force codex login --device-auth
 docker compose restart panda-force
 ```
 
-Follow the sign-in link shown in the terminal, then refresh PandaForce and start a conversation. Your PandaForce administrator is separate from your model account; provider access and charges follow your provider's terms.
+Follow the terminal link, refresh PandaForce and start a conversation. API-key and other model-provider configuration is described in the [model-provider guide](./panda-docs/docs/model-providers.md). PandaForce accounts and provider credentials are separate; provider charges follow the provider's terms.
 
-The default image is **`hiforceai/panda-force:0.0.21`**. State, model credentials, attachments and workspace files persist in Docker volumes across container restarts. `docker compose down` keeps these volumes. The default port is accessible only from the local machine.
+Configure SMTP in administration before binding an email, inviting members or using email recovery. Members set their own passwords. Administrators retain access to the shared host workspace and engine; ordinary members use their authorized business content. This shared-engine installation is not an untrusted multi-user coding sandbox.
 
-## Project folders
+Source packaging defaults to compilation and packaging checks. Run `bun run check` and the affected behavior checks independently during development; a completed image build is not a full product regression result.
 
-New conversations inside a project use its workspace folder. Historical conversations keep their original folders when linked to a project. `PANDA_FORCE_PROJECTS_ROOT` chooses the persistent project root. `PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES` defaults to `true`; set it to `false` to limit web directory and session browsing to that root. See [storage and configuration](./panda-docs/docs/storage.md) for mounts and examples.
+## Use a published image
 
-## Already use Codex on the host?
+For the existing published release, clone the default branch and run `docker compose up -d`; its current template selects **`hiforceai/panda-force:0.0.21`**. Consult that release's documentation rather than assuming feature parity with develop.
 
-PandaForce can stay in its container and send tasks to Codex already running on your machine (**shared mode**), reusing that service's login. PandaForce does not start a separate Codex service in the container in this mode. Mount the service socket and workspace; mounting authentication files alone does not share sessions. Follow the [Linux host setup](./panda-docs/docs/installation.md#use-codex-already-installed-on-the-host).
+State, model credentials, attachments and workspace files persist in Docker volumes across container restarts. `docker compose down` keeps those volumes. The default port is accessible only from the local machine. See [installation](./panda-docs/docs/installation.md) for remote access and [storage](./panda-docs/docs/storage.md) for mounts and backups.
 
-See the [installation guide](./panda-docs/docs/installation.md) for remote access and source builds, and [storage guide](./panda-docs/docs/storage.md) for backups.
+## Optional services and configuration
 
-Download [Kubernetes deployment templates](./panda-docs/docs/kubernetes.md) for either arrangement.
+| Need                                        | Where to start                                                                                                                                                                                                                                     |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Existing Codex on the host                  | [Shared-mode installation](./panda-docs/docs/installation.md#use-codex-already-installed-on-the-host); mount the service socket and workspace, not just authentication files.                                                                      |
+| Persistent project folders                  | [Storage](./panda-docs/docs/storage.md); `PANDA_FORCE_PROJECTS_ROOT` sets the root, and `PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES=false` limits directory/session browsing to it.                                                                    |
+| Website builds, document previews or search | Use the relevant `docker-compose.documents.yml`, `docker-compose.previews.yml` and `docker-compose.search.yml` overlays and configure the corresponding services.                                                                                  |
+| Your own registry                           | Override images/pull policies; supply separately managed credentials with `docker-compose.documents.registry.yml` when required.                                                                                                                   |
+| Your own S3-compatible CDN                  | [CDN build guide](./panda-docs/docs/cdn-build.md); preserve your bucket, prefix, region, optional endpoint, viewer URL and separate credential file. Static assets default to this application; APIs/authentication stay here when CDN is enabled. |
+| Kubernetes or multiple instances            | [Kubernetes templates](./panda-docs/docs/kubernetes.md) and [cluster configuration](./panda-docs/docs/cluster.md). Kubernetes is optional.                                                                                                         |
 
 ## Support
 
@@ -58,30 +94,8 @@ Download [Kubernetes deployment templates](./panda-docs/docs/kubernetes.md) for 
 
 If PandaForce helps you, consider supporting Rocky's work. Contributions are voluntary and do not include an SLA, priority support, or a guaranteed response or fix deadline.
 
-## License
+## License and acknowledgements
 
-[MIT](./LICENSE), free for personal and commercial use, modifications and forks. Maintenance is best effort, with no SLA or guaranteed response/fix deadline. [Third-party notices](./THIRD_PARTY_NOTICES.md).
+[MIT](./LICENSE), free for personal and commercial use, modifications and forks. Hosting, models, storage and external platforms may charge separately. Maintenance is best effort. [Third-party notices](./THIRD_PARTY_NOTICES.md).
 
-## Acknowledgements
-
-PandaForce Free is derived from [lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui), originally released under the MIT license. We thank lezi-fun and all upstream contributors for the foundation their work provides.
-
-The original copyright notice and MIT license are preserved in [LICENSE](./LICENSE) and [LICENSES/upstream-MIT.txt](./LICENSES/upstream-MIT.txt). Additional component attribution is recorded in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md). PandaForce is developed independently; upstream attribution does not imply endorsement.
-
-## Other model providers
-
-[Codex CLI: Zhipu GLM, Ollama and DeepSeek](panda-docs/docs/model-providers.md)
-
-## Development branch
-
-The `develop` branch contains the current public application source. Published container image tags are released separately. Build this branch from its checkout:
-
-```sh
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-```
-
-The default build performs compilation and packaging. Run source checks and regression suites separately with `bun run check` and the relevant test command. Administrators can select compatible build and runtime bases through `PANDA_FORCE_BUILD_BASE` and `PANDA_FORCE_RUNTIME_BASE`, including images in their own registry.
-
-### Local member accounts
-
-Create the initial administrator in the browser. An email address is optional at initialization. Configure SMTP in administration settings before binding an email address or inviting members. Administrators invite members by email; members set their own passwords. Password recovery uses an email verification code with a resend cooldown. Application accounts and Codex/model-provider authentication are separate.
+PandaForce Free is derived from the MIT-licensed [lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui). Thank you to lezi-fun and all upstream contributors. The original copyright and MIT license are preserved in [LICENSE](./LICENSE) and [LICENSES/upstream-MIT.txt](./LICENSES/upstream-MIT.txt). PandaForce is developed independently; upstream attribution does not imply endorsement.

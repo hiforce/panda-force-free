@@ -40,10 +40,52 @@ export async function readNativeItemPage(
 
 // Adapt native item pagination to the browser's history contract. No rollout
 // scans or full thread/read calls: a long-running CLI journal can exceed 20 GB.
-export function createPagedConversationHistory({ request, getThread }) {
+export function createPagedConversationHistory({
+  request,
+  getThread,
+  fingerprint = /** @type {(id: string) => string | null} */ (() => null),
+}) {
   const epoch = randomBytes(8).toString("hex"),
     threads = new Map();
+  async function readPage(threadId, stored, limit, cursor) {
+    const load = async () => {
+      const [page, summaries] = await Promise.all([
+        readNativeItemPage(request, { threadId, limit, ...(cursor ? { cursor } : {}) }),
+        request("thread/turns/list", { threadId, limit: 100, sortDirection: "desc", itemsView: "notLoaded" }),
+      ]);
+      return { page, summaries };
+    };
+    // Older pages are explicit reads. Only the latest window participates in
+    // background polling and needs a bounded cache and in-flight coalescing.
+    if (cursor) return load();
+    const mark = fingerprint(threadId),
+      key = JSON.stringify([mark, Math.min(limit, MAX_NATIVE_PAGE_ITEMS)]);
+    if (mark !== null && stored.page?.key === key) return stored.page.value;
+    if (stored.pending?.key === key) return stored.pending.work;
+    const pending = { key, work: load() };
+    stored.pending = pending;
+    try {
+      const value = await pending.work;
+      if (
+        mark !== null &&
+        stored.pending === pending &&
+        threads.get(threadId) === stored &&
+        fingerprint(threadId) === mark
+      )
+        stored.page = { key, value };
+      return value;
+    } finally {
+      if (stored.pending === pending) stored.pending = null;
+    }
+  }
   return {
+    invalidate(threadId) {
+      const stored = threads.get(threadId);
+      if (stored) {
+        stored.page = null;
+        stored.pending = null;
+      }
+    },
     /** @param {import("../../shared/data-contracts.js").HistoryQuery} options */
     async read({ threadId, cursor, revision, oldestItemId, limit = 100 } = {}) {
       if (typeof threadId !== "string" || !threadId) throw new Error("Invalid thread id");
@@ -58,6 +100,8 @@ export function createPagedConversationHistory({ request, getThread }) {
           maxOrder: -1,
           seen: 0,
           latest: new Map(),
+          page: null,
+          pending: null,
         };
       const revisionPrefix = `${epoch}:${stored.generation}:`;
       let anchor = null;
@@ -83,10 +127,9 @@ export function createPagedConversationHistory({ request, getThread }) {
         threads.delete(threads.keys().next().value);
         logEviction("thread page state");
       }
-      const [thread, page, summaries] = await Promise.all([
+      const [thread, { page, summaries }] = await Promise.all([
         getThread(threadId),
-        readNativeItemPage(request, { threadId, limit, ...(anchor ? { cursor: anchor.cursor } : {}) }),
-        request("thread/turns/list", { threadId, limit: 100, sortDirection: "desc", itemsView: "notLoaded" }),
+        readPage(threadId, stored, limit, anchor?.cursor),
       ]);
       const records = [...page.data].reverse(),
         knownIndex = records.findIndex((record) => stored.orders.has(`${record.turnId}:${record.item.id}`));

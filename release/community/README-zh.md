@@ -1,32 +1,62 @@
-![PandaForce — A workspace for getting things done with AI.](./panda-docs/static/img/panda-force-banner-redflame-v1.jpg)
+![PandaForce — 用 AI 推进工作的工作台。](./panda-docs/static/img/panda-force-banner-redflame-v1.jpg)
 
-用自然语言开展工作的工作台。当前支持 Codex，其他 CLI 引擎尚未接入。
+# PandaForce
+
+可自行部署的 AI 工作台，集中管理会话、编程、文档、可复用技能、知识和发布。当前执行引擎为 Codex app-server。
 
 基于 [lezi-fun](https://github.com/lezi-fun) 的 [Codex WebUI](https://github.com/lezi-fun/codex-webui) 开发，感谢上游作者及所有贡献者。
 
-- 用项目组织会话，上传文件与图片。
-- 在顶部导航统一设置语言、外观和阅读宽度。
-- 处理审批、回答问题、查看任务进度。
-- 在响应式侧栏中集中查看会话用量、设置和工具。
-- 浏览工作目录文件，使用集成终端。
-- 界面支持英文和简体中文，未设置时跟随浏览器，英文兜底；原生 CLI 输出保留原文。
+[English](./README.md) · **[完整功能清单](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md)** · [Feature catalog](./panda-docs/docs/features.md) · [安装指南](./panda-docs/docs/installation.md) · [CDN 配置](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/cdn-build.md)
 
-[English](./README.md) · [帮助文档](./panda-docs/docs/overview.md) · [CDN 配置指导](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/cdn-build.md)
+> 本 README 描述 **develop 分支源码**。`hiforceai/panda-force:0.0.21` 等已发布镜像不会自动包含 develop 的变更。体验下方界面及功能，请从此分支构建。
 
-![PandaForce workspace after sign-in — English interface](./panda-docs/static/img/panda-force-workspace-en-0.0.10.png)
+## 可以做什么
 
-## 快速开始
+- **AI 对话与编程：**流式接收回复、检查工具和文件变更、处理审批与问题、排队输入，并查看会话用量。
+- **组织实际工作：**集中管理项目目录、会话、文档和产物；管理员可浏览允许的文件目录并使用集成终端。
+- **撰写和完善文档：**使用文档树与富文本编辑、表格、图片和代码块，自动保存及恢复草稿，审阅后再应用 AI 建议。
+- **复用技能和模板：**按分类浏览、检查版本及权限、安装兼容包，并组合当前可用技能与参数。
+- **创作与发布：**保存个人作品、复制到项目、准备网站构建及受支持渠道版本，或直接导出内容与素材。
+- **助理自动任务：**通过访问密钥接收外部任务，查看持久队列和判断依据，人工复核并重试失败回调。
+- **搜索与知识：**检索项目内容，按需接入关键词或向量后端，执行基于来源依据的知识工作流。
+- **本地账号管理：**配置 SMTP 后通过邮箱邀请成员，由成员自行设密，并使用六位邮件验证码找回密码。
+- **桌面和手机：**响应式布局、可调导航、主题，以及英文、简体中文、香港繁体和台湾繁体界面。
 
-需要 Linux amd64、Docker Compose 和 Git。镜像已包含 Codex CLI，无需在宿主机安装 Codex，也无需挂载宿主机认证文件。默认由 PandaForce 在容器内启动自己的 Codex 服务（**isolated 模式**）。
+[完整功能清单](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md) 覆盖 18 个功能领域、服务前提和当前限制。不同发布适配器的覆盖范围不同；企业成员沙箱、模型网关配额计费及通用 SSO 尚未交付。
+
+## 当前界面
+
+以下为当前源码的真实界面渲染，使用虚构演示数据，不含生产账号、业务任务或凭据。
+
+**工作台：直接进入项目与创作**
+
+![PandaForce 当前工作台、导航与创作输入区](./panda-docs/static/img/workspace-zh-CN.webp)
+
+**项目文档：目录、富文本内容与编辑工具**
+
+![PandaForce 项目文档编辑器](./panda-docs/static/img/documents-zh-CN.webp)
+
+<details>
+<summary>查看技能库和手机界面</summary>
+
+![PandaForce 技能库](./panda-docs/static/img/skills-zh-CN.webp)
+
+<img src="./panda-docs/static/img/mobile-zh-CN.webp" width="320" alt="PandaForce 手机窄屏文档阅读界面" />
+
+</details>
+
+## 从当前分支构建运行
+
+需要 Git、Docker 和 Compose。文档镜像平台为 Linux amd64。构建和运行镜像已包含 Codex CLI，无需提前在宿主机安装 Codex，也无需挂载宿主机认证文件。
 
 ```bash
-git clone https://github.com/hiforce/panda-force-free.git
+git clone --branch develop https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
-docker compose up -d
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 docker compose logs panda-force
 ```
 
-打开 **http://localhost:8899**，创建 PandaForce 管理员。密码至少六位，包含大小写字母和数字。如需安装验证码，请在启动日志中查看。
+打开 **http://localhost:8899**，创建 PandaForce 管理员。初始化时邮箱可选，密码至少六位，包含大小写字母和数字。如果要求安装验证码，请在启动日志中查看。
 
 模型账号需要单独登录：
 
@@ -35,21 +65,28 @@ docker compose exec -it panda-force codex login --device-auth
 docker compose restart panda-force
 ```
 
-按终端显示的链接完成登录，然后刷新 PandaForce，即可开始会话。PandaForce 管理员与模型账号相互独立；模型服务的权限和费用遵循服务商规则。
+按终端链接完成登录，刷新 PandaForce 后即可开始会话。API Key 和其他模型配置见[模型服务商指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md)。PandaForce 账号与模型凭据相互独立，模型费用遵循服务商规则。
 
-默认镜像为 **`hiforceai/panda-force:0.0.21`**。管理员、模型认证、附件及工作文件保存在 Docker 卷中，重启容器不会丢失。`docker compose down` 保留数据卷。默认端口仅本机可访问。
+管理员先配置 SMTP，再绑定邮箱、邀请成员或使用邮件找回。成员自行设置密码。管理员可以访问共享宿主机工作区和引擎，普通成员使用其有权限的业务内容。共享引擎安装模式不提供不受信任用户的编程沙箱。
 
-## 项目目录
+源码打包默认执行编译与打包检查。开发时独立运行 `bun run check` 和受影响行为检查，镜像构建完成不等于全产品回归通过。
 
-新建项目会按项目 code 建立实际工作目录，项目内的新会话默认使用该目录；关联的历史会话保留原目录。通过 `PANDA_FORCE_PROJECTS_ROOT` 配置持久根目录。`PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES` 默认 `true`，设为 `false` 可将网页目录及会话浏览范围限制在该根目录内。挂载与配置说明见[存储指南](./panda-docs/docs/storage.md)。
+## 使用已发布镜像
 
-## 宿主机已有 Codex？
+如需现有已发布版本，克隆默认分支后运行 `docker compose up -d`；其当前模板选择 **`hiforceai/panda-force:0.0.21`**。请按该版本文档使用，不要假定它与 develop 功能一致。
 
-PandaForce 仍然运行在容器里，也可以把任务交给机器上已有的 Codex 服务执行（**shared 模式**），复用该服务的登录状态。这时不会在容器内另起 Codex 服务，也不用在容器内重新登录。需要挂载服务 socket 与工作目录；仅挂载认证文件无法共享会话。具体操作见 [Linux 宿主机接入指南](./panda-docs/docs/installation.md#use-codex-already-installed-on-the-host)。
+状态、模型认证、附件和工作文件通过 Docker 卷持久保存，重启容器不会丢失；`docker compose down` 保留这些卷。默认端口仅本机可访问。远程访问见[安装指南](./panda-docs/docs/installation.md)，挂载和备份见[存储指南](./panda-docs/docs/storage.md)。
 
-远程访问和源码构建见 [安装指南](./panda-docs/docs/installation.md)，备份见 [存储指南](./panda-docs/docs/storage.md)。
+## 可选服务与配置
 
-K8s 部署可下载 [两种方式的 YAML 模板](./panda-docs/docs/kubernetes.md)，按指南填写自己的节点和目录配置。
+| 需求                     | 入口                                                                                                                                                                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 使用宿主机已有的 Codex   | [共享模式安装](./panda-docs/docs/installation.md#use-codex-already-installed-on-the-host)；挂载服务 socket 与工作目录，仅挂载认证文件不能共享会话。                                                                        |
+| 持久项目目录             | [存储指南](./panda-docs/docs/storage.md)；`PANDA_FORCE_PROJECTS_ROOT` 设置根目录，`PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES=false` 把目录及会话浏览限制在该根目录。                                                          |
+| 网站构建、文档预览或搜索 | 按需使用 `docker-compose.documents.yml`、`docker-compose.previews.yml`、`docker-compose.search.yml`，并配置对应服务。                                                                                                      |
+| 使用自己的镜像仓库       | 可覆盖镜像和拉取策略；需要时通过 `docker-compose.documents.registry.yml` 接入独立管理的仓库凭据。                                                                                                                          |
+| 使用自己的 S3 兼容 CDN   | [CDN 构建指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/cdn-build.md)；使用自有 bucket、前缀、区域、可选 endpoint、访问 URL 和独立凭据文件。默认静态资源来自本站，启用 CDN 后 API 和认证仍在本站。 |
+| Kubernetes 或多实例      | [Kubernetes 模板](./panda-docs/docs/kubernetes.md)与[集群配置](./panda-docs/docs/cluster.md)，普通安装不需要 Kubernetes。                                                                                                  |
 
 ## 支持开发
 
@@ -57,30 +94,8 @@ K8s 部署可下载 [两种方式的 YAML 模板](./panda-docs/docs/kubernetes.m
 
 如果 PandaForce 对你有帮助，欢迎请 Rocky 喝杯咖啡。赞助完全自愿，不包含 SLA、优先支持或承诺的响应与修复期限。
 
-## 许可证
+## 许可证与致谢
 
-采用 [MIT 许可证](./LICENSE)，个人及商业使用、修改和 fork 均免费。尽力维护，不承诺 SLA、响应时间或修复期限。[第三方声明](./THIRD_PARTY_NOTICES.md)。
+采用 [MIT 许可证](./LICENSE)，个人及商业使用、修改和 fork 均免费。托管、模型、存储及外部平台可能单独收费。项目尽力维护。[第三方声明](./THIRD_PARTY_NOTICES.md)。
 
-## 上游与致谢
-
-PandaForce Free 衍生自 MIT 许可的 [lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui)。感谢 lezi-fun 及上游贡献者提供的基础与开源贡献。
-
-原始版权声明与 MIT 许可保留在 [LICENSE](./LICENSE) 和 [LICENSES/upstream-MIT.txt](./LICENSES/upstream-MIT.txt) 中；其他组件的出处见 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)。PandaForce 独立开发维护，上游署名不代表上游对本项目背书。
-
-## 其他模型配置
-
-[Codex CLI：智谱 GLM、Ollama 和 DeepSeek](panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md)
-
-## 开发分支
-
-`develop` 分支包含当前公开应用源码，容器镜像标签单独发布。使用该分支时，从源码构建：
-
-```sh
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-```
-
-默认构建执行编译和打包。源码检查与回归测试单独执行：使用 `bun run check` 及对应测试命令。管理员可通过 `PANDA_FORCE_BUILD_BASE` 和 `PANDA_FORCE_RUNTIME_BASE` 选择兼容的构建和运行基础镜像，包括自己的镜像仓库。
-
-### 本地成员账号
-
-首次在浏览器中创建管理员，邮箱可以稍后补充。先在管理设置中配置 SMTP，再绑定邮箱或邀请成员。管理员填写成员邮箱发送邀请，成员自行设置密码。找回密码使用邮件验证码，并提供重新发送倒计时。应用账号与 Codex／模型供应商认证分别管理。
+PandaForce Free 衍生自 MIT 许可的 [lezi-fun/codex-webui](https://github.com/lezi-fun/codex-webui)。感谢 lezi-fun 及所有上游贡献者。原始版权声明和 MIT 许可保留在 [LICENSE](./LICENSE) 与 [LICENSES/upstream-MIT.txt](./LICENSES/upstream-MIT.txt) 中。PandaForce 独立开发维护，上游署名不代表上游对本项目背书。

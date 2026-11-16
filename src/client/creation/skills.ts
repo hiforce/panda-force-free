@@ -2,6 +2,7 @@ import { skillDisplayDefinition, skillDisplayPackName } from "../../shared/prese
 import { CreationSkillBrowser } from "./skill-browser.js";
 import { openCreationSkillDetails } from "./skill-details.js";
 import { internalExecutionSkill } from "../../shared/skills/presentation.js";
+import { availableInstalledSkill } from "../../shared/skills/availability.js";
 import { coverFailed } from "../templates/covers.js";
 import {
   creationSkillKey as key,
@@ -195,11 +196,8 @@ export class CreationSkills {
         license: pack.manifest.license.expression,
         visible: !internalExecutionSkill(pack, definition),
         enabled:
-          !pack.removed &&
-          pack.active &&
-          !!pack.exports.find((item) => item.id === definition.id)?.enabled &&
-          !definition.entitlement &&
-          definition.capabilities.every((value) => this.capabilities.includes(value) && pack.grants.includes(value)),
+          availableInstalledSkill(pack, definition) &&
+          definition.capabilities.every((value) => this.capabilities.includes(value)),
       });
     }
   }

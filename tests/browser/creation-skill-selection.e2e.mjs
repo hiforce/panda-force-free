@@ -35,7 +35,7 @@ for (const [engine, width, locale, theme] of [
     await app.signIn(context);
     const pack = await nativeSkillPackage("selection.review-kit");
     const post = async (path, data) => {
-      const r = await context.request.post(app.base + path, { data });
+      const r = await context.request.post(app.base + path, { data, headers: { Origin: app.base } });
       assert.ok(r.ok(), await r.text());
       return r.json();
     };
@@ -139,7 +139,10 @@ for (const [engine, width, locale, theme] of [
     await picker.locator("[data-skill-search]").fill("");
     await picker.locator(`[data-skill-package="${pack.pack.manifest.id}"][data-skill-id="blog-outline"]`).waitFor();
     assert.equal(await picker.locator("[data-skill-browser-error]").isVisible(), false);
-    assert.equal(await dialog.locator("[data-creation-notice]").isVisible(), false);
+    const parentNotice = dialog.locator("[data-creation-notice]");
+    assert.notEqual(await parentNotice.getAttribute("data-error"), "true");
+    if (await parentNotice.isVisible())
+      assert.match(await parentNotice.innerText(), locale === "en" ? /unfinished brief has been restored/ : /已恢复/);
     assert.equal(await dialog.locator(".creation-skill-options").count(), 0);
     const browserBox = await picker.boundingBox(),
       parentBox = await dialog.boundingBox();
