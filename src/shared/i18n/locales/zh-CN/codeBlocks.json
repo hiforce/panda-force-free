@@ -1,0 +1,15 @@
+{
+  "title": "代码块",
+  "language": "代码语言",
+  "search": "搜索语言",
+  "plainText": "纯文本",
+  "noLanguages": "没有匹配的语言",
+  "currentLanguage": "代码语言：{language}",
+  "copy": "复制代码",
+  "copied": "代码已复制",
+  "enableWrap": "开启自动换行",
+  "disableWrap": "取消自动换行",
+  "content": "代码编辑器",
+  "fold": "折叠代码",
+  "unfold": "展开代码"
+}

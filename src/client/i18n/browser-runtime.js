@@ -111,7 +111,12 @@ export function getBrowserI18n() {
   let runtime = globalThis[SLOT];
   // An older login bundle can initialize this slot before an upgraded workspace loads.
   // Validate each owner once; checking every message on every render would be wasteful.
-  if (runtime && !compatibleOwners.has(runtime) && !requiredMessages.every((id) => runtime.has?.(id))) {
+  if (
+    runtime &&
+    !compatibleOwners.has(runtime) &&
+    (!requiredMessages.every((id) => runtime.has?.(id)) ||
+      !SUPPORTED_LOCALES.every((entry) => runtime.locales?.some((locale) => locale.code === entry.code)))
+  ) {
     runtime.dispose?.();
     runtime = null;
   }

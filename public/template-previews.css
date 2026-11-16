@@ -1,0 +1,72 @@
+/* Website screenshots reuse template covers and shared tabs; these rules only own their stage layout. */
+.template-screenshots > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.template-screenshots h3 {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+.template-screenshots header p,
+.template-screenshots > p {
+  color: var(--pf-muted);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 6px 0 14px;
+}
+.template-screenshots header button {
+  flex: 0 0 auto;
+}
+.template-screenshot-stage {
+  background: var(--pf-soft);
+  border: 1px solid var(--pf-line);
+  border-radius: 10px;
+  min-height: 180px;
+  max-height: 600px;
+  overflow: auto;
+  margin: 12px 0;
+}
+.template-screenshot-stage > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.template-screenshot-stage[data-view="mobile"] > img {
+  max-width: 390px;
+  margin: auto;
+}
+.template-screenshots > footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--pf-muted);
+}
+.template-static-sample {
+  margin-top: 22px;
+  border-top: 1px solid var(--pf-line);
+  padding-top: 12px;
+}
+.template-static-sample > summary {
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--pf-muted);
+}
+@media (max-width: 700px) {
+  .template-screenshots > header {
+    flex-direction: column;
+    gap: 6px;
+  }
+  .template-screenshots header button {
+    width: 100%;
+    min-height: var(--pf-touch-target, 44px);
+  }
+  .template-screenshots .styles-tabs > button {
+    min-height: var(--pf-touch-target, 44px);
+  }
+}

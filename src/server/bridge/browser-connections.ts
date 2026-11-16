@@ -1,9 +1,12 @@
 import type { Server } from "node:http";
 import { WebSocket, WebSocketServer } from "ws";
+import type { RawData } from "ws";
+import type { ProjectVisibility } from "../../shared/engine/types.js";
 import { errorStatus } from "../../shared/errors.js";
 import type { PasswordAuth } from "../auth/contracts.js";
 import type { RuntimeServices } from "../services.js";
 import { createTerminalSession, normalizeTerminalResize, resolveTerminalCwd } from "../terminal/session.js";
+import { sharedWorkspaceAllowed } from "../auth/users/access.js";
 
 /** Owns authenticated browser sockets, terminal workers and SSE keepalives. */
 export function installBrowserConnections({
@@ -48,6 +51,7 @@ export function installBrowserConnections({
     perMessageDeflate: { threshold: 1024, serverNoContextTakeover: true, clientNoContextTakeover: true },
   });
   const terminalWss = new WebSocketServer({ noServer: true });
+  const initialVisibility = new WeakMap<WebSocket, ProjectVisibility>();
   server.on("upgrade", async (req, socket, head) => {
     let pathname: string;
     try {
@@ -59,9 +63,15 @@ export function installBrowserConnections({
     let idaasSession: { id: string } | null = null;
     let status = 401;
     let verified = false;
+    let passwordVerified = false;
     try {
       await cluster?.verify(req, true);
       if (idaasAuth) idaasSession = await idaasAuth.authenticate(req);
+      else passwordVerified = await passwordAuth.isAuthorized(req);
+      if (passwordVerified && !sharedWorkspaceAllowed(req)) {
+        status = 403;
+        passwordVerified = false;
+      }
       verified = true;
     } catch (error) {
       status = errorStatus(error, 503);
@@ -69,7 +79,7 @@ export function installBrowserConnections({
     if (
       !verified ||
       (pathname !== "/ws" && pathname !== "/terminal") ||
-      (idaasAuth ? !idaasSession : !passwordAuth.isAuthorized(req))
+      (idaasAuth ? !idaasSession : !passwordVerified)
     ) {
       const body = JSON.stringify({ error: "Authentication required" });
       // Reconnect failures must not trigger browser-native Basic authentication prompts.
@@ -89,21 +99,50 @@ export function installBrowserConnections({
     if (socket.destroyed) return;
     const target = pathname === "/terminal" ? terminalWss : wss;
     target.handleUpgrade(req, socket, head, (client) => {
-      if (idaasAuth && idaasSession) {
-        const unwatch = idaasAuth.watch(idaasSession.id, () => client.terminate());
-        client.once("close", unwatch);
-      }
-      if (!idaasAuth) {
-        const unwatch = passwordAuth.watch(req, () => client.terminate());
-        client.once("close", unwatch);
-      }
-      target.emit("connection", client, req);
+      const buffered: { data: RawData; binary: boolean }[] = [];
+      let bufferedBytes = 0;
+      const pendingMessage = (data: RawData, binary: boolean) => {
+        bufferedBytes += Array.isArray(data) ? data.reduce((n, p) => n + p.byteLength, 0) : data.byteLength;
+        if (buffered.length >= 64 || bufferedBytes > 1024 * 1024) {
+          client.terminate();
+          return;
+        }
+        buffered.push({ data, binary });
+      };
+      client.on("message", pendingMessage);
+      void (async () => {
+        if (idaasAuth && idaasSession) {
+          const unwatch = idaasAuth.watch(idaasSession.id, () => client.terminate());
+          client.once("close", unwatch);
+        }
+        if (!idaasAuth) {
+          const unwatch = await passwordAuth.watch(req, () => client.terminate());
+          if (client.readyState !== WebSocket.OPEN) {
+            unwatch();
+            return;
+          }
+          client.once("close", unwatch);
+        }
+        if (pathname === "/ws") initialVisibility.set(client, await projectVisibility.snapshot());
+        if (client.readyState !== WebSocket.OPEN) return;
+        client.off("message", pendingMessage);
+        target.emit("connection", client, req);
+        for (const message of buffered) {
+          if (client.readyState !== WebSocket.OPEN) break;
+          client.emit("message", message.data, message.binary);
+        }
+      })()
+        .catch(() => client.terminate())
+        .finally(() => {
+          client.off("message", pendingMessage);
+          buffered.length = 0;
+        });
     });
   });
   wss.on("connection", (client) => {
     browserWire.register(client, client.protocol === "panda-engine-v1");
     clients.add(client);
-    client.send(JSON.stringify({ type: "projects/visibility", ...projectVisibility.snapshot() }));
+    client.send(JSON.stringify({ type: "projects/visibility", ...initialVisibility.get(client)! }));
     client.send(JSON.stringify({ type: "bridge/status", status: engineDriver.connected ? "connected" : "connecting" }));
     for (const payload of pendingEngineRequests.values())
       client.send(browserWire.stringify(client, { type: "engine/request", payload }));

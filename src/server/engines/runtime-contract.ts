@@ -37,7 +37,9 @@ export interface EngineGoals {
 }
 export interface EngineRecovery {
   onNotification(message: EngineEnvelope): void;
-  onExplicitInput(id: unknown): void;
+  onExplicitInput(id: unknown): number | undefined;
+  onSubmitted(id: unknown, turnId: unknown, claim: number): void;
+  reset(): void;
 }
 export interface InstalledEngine {
   driver: EngineDriver;

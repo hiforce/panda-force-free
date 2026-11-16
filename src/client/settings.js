@@ -17,27 +17,39 @@ export function createSettingsPanel({
   openUsageSummary,
   toggleAccountMenu,
   syncPermissionSettings,
+  pageViews = /** @type {Record<string, { show(host: HTMLElement): void; hide(): void }>} */ ({}),
 }) {
-  let settingsMobileLayout = matchMedia("(max-width:480px)").matches;
+  let settingsMobileLayout = matchMedia("(max-width:767px)").matches;
 
-  const settingsPageAliases = { general: "general-settings", account: "profile", keyboard: "keyboard-shortcuts" };
+  const settingsPageAliases = {
+    "bot-tasks": "bots",
+    general: "general-settings",
+    account: "profile",
+    keyboard: "keyboard-shortcuts",
+  };
   const settingsPages = {
-    "general-settings": { title: "common.general" },
+    users: { title: "users.title" },
+    "general-settings": { title: "settings.preferences" },
     appearance: {
-      title: "common.appearance",
+      title: "creative.appearance",
       rows: [
         ["common.theme", "common.system"],
         ["common.language", "common.systemDefault"],
         ["common.interfaceScale", "common.default"],
       ],
     },
-    agent: { title: "common.configuration" },
+    "publishing-styles": { title: "plugins.stylesTitle" },
+    templates: { title: "templates.title" },
+    agent: { title: "creative.connections" },
     profile: { title: "common.profile" },
     usage: { title: "common.usage" },
-    storage: { title: "common.storageAndLogs" },
+    storage: { title: "creative.storage" },
+    "search-settings": { title: "search.settingsTitle" },
+    bots: { title: "cli.botSettingsTitle" },
+    "client-access": { title: "cli.title" },
     "keyboard-shortcuts": { title: "common.keyboardShortcuts" },
     "plugins-settings": {
-      title: "common.plugins",
+      title: "creative.extensions",
       rows: [
         ["common.installedPlugins", "common.none"],
         ["common.pluginSources", "common.notConfigured"],
@@ -102,16 +114,34 @@ export function createSettingsPanel({
     }
   }
   function setSettingsPage(page = "general-settings", { updateRoute = true } = {}) {
+    if (
+      globalThis.__pandaForceIdentity?.role === "member" &&
+      !["general-settings", "appearance", "users", "keyboard-shortcuts"].includes(page)
+    )
+      page = "users";
     const selected = normalizeSettingsPage(page),
-      contentPage = ["general-settings", "profile", "keyboard-shortcuts", "appearance", "storage"].includes(selected)
-        ? selected
+      preferenceSection = { appearance: "appearance", "keyboard-shortcuts": "shortcuts" }[selected],
+      visiblePage = preferenceSection ? "general-settings" : selected,
+      contentPage = [
+        "general-settings",
+        "profile",
+        "keyboard-shortcuts",
+        "appearance",
+        "storage",
+        ...Object.keys(pageViews),
+      ].includes(visiblePage)
+        ? visiblePage
         : "placeholder";
     for (const button of findElements("[data-settings-page]"))
-      button.classList.toggle("active", button.dataset.settingsPage === selected);
+      button.classList.toggle("active", button.dataset.settingsPage === visiblePage);
     for (const content of findElements("[data-settings-content]"))
       content.hidden = content.dataset.settingsContent !== contentPage;
     if (contentPage === "placeholder") renderSettingsPlaceholder(selected);
-    const currentButton = requireElement(`[data-settings-page="${selected}"]`);
+    for (const [name, view] of Object.entries(pageViews)) {
+      if (name === selected) view.show(requireElement(`[data-settings-view="${name}"]`));
+      else view.hide();
+    }
+    const currentButton = findElement(`[data-settings-page="${visiblePage}"]`);
     const currentGroup = closestElement("details", currentButton);
     if (currentGroup) currentGroup.open = true;
     setOpaqueText(
@@ -121,25 +151,48 @@ export function createSettingsPanel({
         t("settings.authenticatedPandaforceAccount"),
     );
     applyThemePreference();
-    localizeText($("#settingsPageTitle"), settingsPages[selected].title, undefined, t);
+    localizeText($("#settingsPageTitle"), settingsPages[visiblePage].title, undefined, t);
     $("#settingsContent")?.scrollTo({ top: 0 });
-    if ($("#settingsDialog").open && matchMedia("(max-width:480px)").matches)
+    if ($("#settingsDialog").open && matchMedia("(max-width:767px)").matches)
       $("#settingsDialog").dataset.mobilePage = "true";
     if (updateRoute && settingsRoutePage())
       history.replaceState({ ...history.state, pandaForceSettings: true }, "", `/settings/${selected}`);
+    if (preferenceSection) requestAnimationFrame(() => jumpToPreference(preferenceSection));
+  }
+  function jumpToPreference(section) {
+    const target = findElement(`[data-preference-section="${section}"]`);
+    if (!target) return;
+    target.scrollIntoView({ block: "start" });
+    findElement("h2", target)?.focus({ preventScroll: true });
+    for (const button of findElements("[data-preferences-jump]")) {
+      if (button.dataset.preferencesJump === section) button.setAttribute("aria-current", "location");
+      else button.removeAttribute("aria-current");
+    }
   }
   function filterSettingsNavigation(query = "") {
     const normalized = query.trim().toLocaleLowerCase(),
       clear = $("#clearSettingsSearch");
     let visible = 0;
     if (clear) clear.hidden = !normalized;
-    for (const group of findElements("details[data-settings-group]")) {
+    for (const group of [$("#settingsNavScroll"), ...findElements("details[data-settings-group]")]) {
       let groupVisible = 0;
-      for (const button of findElements("[data-settings-page]", group)) {
-        const available = button.dataset.settingsAvailable !== "false",
+      for (const button of findElements(":scope > [data-settings-page]", group)) {
+        const available =
+            button.dataset.settingsAvailable !== "false" &&
+            (globalThis.__pandaForceIdentity?.role !== "member" ||
+              ["general-settings", "users"].includes(button.dataset.settingsPage ?? "")),
           keywords =
             {
-              appearance: ["common.theme", "common.language", "common.light", "common.dark"],
+              "general-settings": [
+                "common.theme",
+                "common.language",
+                "common.light",
+                "common.dark",
+                "common.permissions",
+                "common.notifications",
+                "common.keyboardShortcuts",
+                "common.workingFolder",
+              ],
               profile: ["common.pandaforceAccount", "common.accountAndSecurity"],
               storage: ["Logs", "Storage", "common.logRetention"],
             }[button.dataset.settingsPage] || [],
@@ -160,8 +213,29 @@ export function createSettingsPanel({
           visible++;
         }
       }
-      group.hidden = groupVisible === 0;
-      if (normalized && groupVisible) group.open = true;
+      if (group instanceof HTMLDetailsElement) {
+        group.hidden = groupVisible === 0;
+        if (normalized && groupVisible) group.open = true;
+      }
+    }
+    const results = $("#settingsSearchResults");
+    results.replaceChildren();
+    if (normalized) {
+      for (const section of findElements("[data-preference-section]")) {
+        if (!section.textContent.toLocaleLowerCase().includes(normalized)) continue;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.preferencesResult = section.dataset.preferenceSection;
+        const heading = findElement("h2", section);
+        if (heading?.dataset.pfMessage) localizeText(button, heading.dataset.pfMessage, undefined, t);
+        else button.textContent = heading?.textContent || "";
+        results.append(button);
+      }
+    }
+    results.hidden = !results.childElementCount;
+    if (results.childElementCount) {
+      $("#settingsNavScroll > [data-settings-page=general-settings]").hidden = false;
+      visible++;
     }
     $("#settingsNavEmpty").hidden = visible !== 0;
   }
@@ -177,13 +251,14 @@ export function createSettingsPanel({
     requestAnimationFrame(() => $("#settingsSearch").focus());
   }
   function syncSettingsResponsiveLayout() {
-    const mobile = matchMedia("(max-width:480px)").matches;
+    const mobile = matchMedia("(max-width:767px)").matches;
     if (mobile === settingsMobileLayout) return;
     settingsMobileLayout = mobile;
     const dialog = $("#settingsDialog");
     if (dialog.open) dialog.dataset.mobilePage = String(mobile);
   }
   function hideSettings() {
+    for (const view of Object.values(pageViews)) view.hide();
     const dialog = $("#settingsDialog");
     if (dialog.open) dialog.close();
     document.body.classList.remove("settings-open");
@@ -214,6 +289,12 @@ export function createSettingsPanel({
       clearSettingsSearch();
     }
   };
+  $("#settingsDialog").addEventListener("click", (event) => {
+    const button = closestElement("[data-preferences-jump],[data-preferences-result]", event.target);
+    if (!button) return;
+    if (button.dataset.preferencesResult) setSettingsPage("general-settings");
+    jumpToPreference(button.dataset.preferencesResult || button.dataset.preferencesJump);
+  });
   addEventListener("resize", syncSettingsResponsiveLayout);
   addEventListener("popstate", () => {
     const page = settingsRoutePage();
@@ -224,6 +305,18 @@ export function createSettingsPanel({
     hideSettings();
   });
   function showSettings(page = "general-settings", { updateRoute = true } = {}) {
+    const redirect = {
+      templates: "/skills/writing",
+      "skills-settings": "/skills/writing",
+      "publishing-styles": "/publish",
+      connections: "/connections",
+    }[page];
+    if (redirect) {
+      hideSettings();
+      history.replaceState({}, "", redirect);
+      queueMicrotask(() => dispatchEvent(new PopStateEvent("popstate")));
+      return;
+    }
     if (page === "usage") {
       openUsageSummary();
       return;
@@ -239,7 +332,7 @@ export function createSettingsPanel({
     filterSettingsNavigation();
     setSettingsPage(page, { updateRoute });
     const dialog = $("#settingsDialog"),
-      mobile = matchMedia("(max-width:480px)").matches;
+      mobile = matchMedia("(max-width:767px)").matches;
     settingsMobileLayout = mobile;
     dialog.dataset.mobilePage = String(mobile && page !== "general-settings");
     if (!dialog.open) dialog.showModal();

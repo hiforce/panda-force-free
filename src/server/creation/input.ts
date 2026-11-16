@@ -1,0 +1,23 @@
+import type { SkillCapture } from "../../shared/skills/registry.js";
+import type { CreationTaskSpec } from "./contracts.js";
+
+import type { CreationEngineProfile } from "../../shared/creation/contracts.js";
+export type {
+  CreationEngineProfile,
+  CreationRequest,
+  CreationSkillSelection,
+} from "../../shared/creation/contracts.js";
+export interface CreationInputSnapshot {
+  schema: 1;
+  taskId: string;
+  owner: string;
+  projectId: string;
+  requestDigest: string;
+  prompt: string;
+  profile: CreationEngineProfile;
+  skills: SkillCapture;
+}
+export interface CreationInputs {
+  put(input: CreationInputSnapshot): Promise<string>;
+  read(task: CreationTaskSpec): Promise<CreationInputSnapshot>;
+}

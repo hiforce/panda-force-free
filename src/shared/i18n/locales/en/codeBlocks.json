@@ -1,0 +1,15 @@
+{
+  "title": "Code block",
+  "language": "Code language",
+  "search": "Search languages",
+  "plainText": "Plain text",
+  "noLanguages": "No matching language",
+  "currentLanguage": "Code language: {language}",
+  "copy": "Copy code",
+  "copied": "Code copied",
+  "enableWrap": "Enable line wrap",
+  "disableWrap": "Disable line wrap",
+  "content": "Code editor",
+  "fold": "Fold code",
+  "unfold": "Unfold code"
+}

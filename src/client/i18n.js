@@ -16,3 +16,5 @@ export {
   setOpaqueText,
 } from "./i18n/browser-runtime.js";
 export { errorText } from "./i18n/errors.js";
+
+export { isMessageId } from "../shared/i18n/message-id.js";

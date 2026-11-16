@@ -1,0 +1,17 @@
+{
+  "noProject": "無專案",
+  "authenticatedPandaforceAccount": "已登入的 PandaForce 帳號",
+  "preferences": "偏好設定",
+  "preferencesHint": "集中管理介面、對話操作與提醒。",
+  "appearanceHint": "選擇適合你的主題與介面語言。",
+  "conversation": "對話與權限",
+  "conversationHint": "設定新對話的預設行為與可用操作。",
+  "notificationsHint": "任務完成時，及時收到提醒。",
+  "shortcutsHint": "用鍵盤快速完成常用操作。",
+  "jumpTo": "快速定位設定分割槽",
+  "conversationShort": "對話",
+  "shortcuts": "快速鍵",
+  "pageLoading": "正在載入設定…",
+  "pageLoadFailed": "設定暫時無法載入，請重試。",
+  "pageReloadRequired": "請重新載入工作區以開啟設定。"
+}

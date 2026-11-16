@@ -1,9 +1,18 @@
 export const DEFAULT_LOCALE = "en";
 export const LOCALE_PREFERENCE_KEY = "panda-force-locale";
+/** @type {readonly import("./contracts.js").SupportedLocale[]} */
+export const REQUIRED_LOCALE_CODES = Object.freeze(["en", "zh-CN", "zh-HK", "zh-TW"]);
 export const SUPPORTED_LOCALES = Object.freeze([
   Object.freeze({ code: "en", name: "English", direction: "ltr", formatLocale: "en" }),
   Object.freeze({ code: "zh-CN", name: "简体中文", direction: "ltr", formatLocale: "zh-CN" }),
+  Object.freeze({ code: "zh-HK", name: "繁體中文（香港）", direction: "ltr", formatLocale: "zh-HK" }),
+  Object.freeze({ code: "zh-TW", name: "繁體中文（台灣）", direction: "ltr", formatLocale: "zh-TW" }),
 ]);
+
+/** @param {unknown} value @returns {value is import("./contracts.js").SupportedLocale} */
+export function isSupportedLocale(value) {
+  return SUPPORTED_LOCALES.some((entry) => entry.code === value);
+}
 
 export function canonicalLocale(value) {
   try {

@@ -1,3 +1,33 @@
+import { createApplicationContent } from "./application/content.js";
+import { createApplicationAuthentication } from "./application/authentication.js";
+import { createApplicationProjects } from "./application/projects.js";
+import { createApplicationExtensions } from "./application/extensions.js";
+import { createApplicationDocuments } from "./application/documents.js";
+import { createApplicationPublication } from "./application/publication.js";
+import {
+  startApplicationBackground,
+  startApplicationIngress,
+  drainApplicationBackground,
+  closeApplicationStorage,
+} from "./application/lifecycle.js";
+import { registerSystemGadgets } from "../gadget/system/server.js";
+import { createGadgetFeature } from "./gadget/feature.js";
+import { systemGadgetPorts } from "../gadget/system/integration.js";
+import { databaseConfigurationSummary } from "./database/config.js";
+import { drainCatalogUpdates } from "./projects/publish.js";
+import { createConfiguredBotFeature } from "./bots/configured-feature.js";
+import { createBotFeature } from "./bots/feature.js";
+import { bootstrapApplicationDatabase } from "./database/bootstrap.js";
+import { createDatabaseReadiness } from "./database/health.js";
+import { createDatabaseManagementFeature, databaseAdministratorAllowlist } from "./database/management/feature.js";
+import { createMySQLRuntimeStores } from "./database/runtime-stores.js";
+import { createCliFeature } from "./cli/integration/feature.js";
+import { cliContentCommands } from "./cli/integration/content.js";
+import { createInterfaceAssets } from "./http/interface-assets.js";
+import { creativeAssetRoutes } from "./creative/assets/routes.js";
+import { contentSourceRoutes } from "./content-sources/routes.js";
+import { closeCreativeText } from "./creative/assets/projection.js";
+import { personalCopyRoute } from "./creative/copy.js";
 import { INSTALL_ASSETS } from "../shared/install-assets.js";
 import { createBrowserWire } from "./bridge/browser-wire.js";
 import { readClusterConfig } from "./cluster/config.js";
@@ -15,6 +45,16 @@ import { withRequestErrors } from "./http/request-handler.js";
 import { workspaceRoutes } from "./http/workspace-routes.js";
 import type { EngineEnvelope } from "../shared/engine/contracts.js";
 import { createInstalledEngine } from "./engines/installed.js";
+import { CREATION_STYLES } from "../shared/template-previews/assets.js";
+import {
+  KNOWLEDGE_STYLES,
+  CLI_STYLES,
+  BOT_STYLES,
+  DATABASE_STYLES,
+  GADGET_STYLES,
+  GADGET_RUNTIME_ASSETS,
+} from "../shared/interface-assets.js";
+
 /**
  * HTTP/WS composition root. Authenticate before routing workspace operations.
  * Shared mode attaches to the host daemon without owning its process lifetime;
@@ -23,16 +63,13 @@ import { createInstalledEngine } from "./engines/installed.js";
  * storage owners; do not clear one as a shortcut for resetting another.
  */
 import { existsSync } from "node:fs";
-import { createServer, type ServerResponse } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { networkInterfaces } from "node:os";
-import { extname, resolve } from "node:path";
+import { extname, resolve, join } from "node:path";
 import { WebSocket } from "ws";
-import { sessionLoginUrl } from "../shared/auth-return-path.js";
 import { rpcErrorPayload } from "../shared/bridge-errors.js";
-import { AuthError, createIdaasAuth, readIdaasConfig } from "./auth/idaas.js";
-import { createPasswordAuth } from "./auth/routes.js";
+import { sharedWorkspaceAllowed, memberApiAllowed } from "./auth/users/access.js";
 import { resolvePublicAsset, unauthorizedResponse } from "./auth/security.js";
-import { createAuthState } from "./auth/state.js";
 import { resolveAppServerConnection } from "./bridge/app-server-connection.js";
 import { assertStartupAuth, config } from "./config.js";
 import { respondJson } from "./http/respond.js";
@@ -40,16 +77,32 @@ import { createRouter } from "./http/router.js";
 import { serveStaticAsset } from "./http/static-assets.js";
 import { createAccountIdentityLoader, resolveAccountIdentity } from "./misc/profile.js";
 import { ProjectVisibilityStore } from "./misc/project-visibility.js";
-import { ProjectCatalog } from "./projects/catalog.js";
-import { ProjectWorkspaceService } from "./projects/workspaces/service.js";
+import { projectDocumentPreviewRoutes } from "./documents/preview/routes.js";
+import { documentTemplateCreationRoutes } from "./templates/integration/document-creation-routes.js";
+import { sourceThemeRoutes } from "./plugins/integration/source-theme-routes.js";
+import { servePublicationCallback } from "./connections/integration/callback-page.js";
+import { publicationOwner } from "./connections/integration/identity.js";
+import { DocumentError } from "./documents/errors.js";
 import { ProjectDirectoryPolicy } from "./projects/directory-policy.js";
 import { ReviewDiffStore } from "./review/state.js";
 import { createLocalImagePresenter } from "./workspace/image-presentation.js";
 import { createImageThumbnailCache } from "./workspace/image-thumbnails.js";
 import { createOssAttachmentStorage, readOssAttachmentConfig } from "./workspace/oss-attachments.js";
 
-const idaasConfig = readIdaasConfig();
-const idaasAuth = idaasConfig ? createIdaasAuth(idaasConfig) : null;
+const initialDatabaseChoice =
+  !existsSync(config.projectCatalogPath) &&
+  !existsSync(join(config.stateRoot, "data", "documents.sqlite")) &&
+  !existsSync(join(config.stateRoot, "data", "bot-tasks.sqlite"));
+const applicationDatabase = await bootstrapApplicationDatabase(config.stateRoot, {
+  host: config.host,
+  port: config.port,
+  publicDir: config.publicDir,
+  projectVisibilityPath: config.projectVisibilityPath,
+});
+const runtimeStores = applicationDatabase.sql
+  ? await createMySQLRuntimeStores(applicationDatabase.sql, { stateRoot: config.stateRoot, homeDir: config.homeDir })
+  : null;
+const databaseReady = createDatabaseReadiness(applicationDatabase.sql);
 const attachmentStorage = createOssAttachmentStorage(readOssAttachmentConfig());
 const imageThumbnail = createImageThumbnailCache();
 const {
@@ -71,13 +124,11 @@ const presentLocalImages = createLocalImagePresenter({ cwd: defaultCwd, home: ho
 function presentBrowserData<T>(value: T): T {
   return presentLocalImages(attachmentStorage ? attachmentStorage.present(value) : value);
 }
-const authState = createAuthState({
-  environmentPassword: config.environmentPassword,
-  accessToken: config.accessToken,
-  managedPasswordDisabled: Boolean(idaasAuth || config.authMode === "none"),
-});
-assertStartupAuth({ idaasEnabled: Boolean(idaasAuth) });
-const passwordAuth = createPasswordAuth({ authState });
+const { authState, localAccountFeature, passwordAuth, resolveOwner } = await createApplicationAuthentication(
+  config,
+  runtimeStores,
+  assertStartupAuth,
+);
 // Keep the selected backend across reconnects; silently switching to another
 // writer after a daemon disconnect would break shared sessions.
 const appServerConnection = resolveAppServerConnection(process.env, homeDir);
@@ -93,26 +144,54 @@ console.info(
   "[PandaForce] Native engine connection",
   JSON.stringify({ mode: appServerConnection.mode, cwd: defaultCwd }),
 );
-const projectVisibility = new ProjectVisibilityStore(config.projectVisibilityPath, homeDir);
-const projectCatalog = new ProjectCatalog(config.projectCatalogPath);
-const projectWorkspaces = new ProjectWorkspaceService(
-  projectCatalog,
-  config.projectWorkspaceRoot,
-  appServerConnection.mode !== "shared" || config.projectWorkspaceRootConfigured,
-);
-if (!config.allowExternalDirectories) await projectWorkspaces.initialize();
+const projectVisibility =
+  runtimeStores?.visibility ?? new ProjectVisibilityStore(config.projectVisibilityPath, homeDir);
+const projects = createApplicationProjects(config, applicationDatabase.sql, runtimeStores);
+const projectCatalog = projects.catalog,
+  documentStorage = projects.storage;
 const directoryPolicy = new ProjectDirectoryPolicy(config.projectWorkspaceRoot, config.allowExternalDirectories);
+const extensions = await createApplicationExtensions(config, runtimeStores, resolveOwner);
+const {
+  pluginFeature,
+  skillFeature,
+  packageSourceFeature,
+  portableTemplateFeature,
+  nativeThemeFeature,
+  nativeSlidesFeature,
+  skillWorkspaceFeature,
+  templateCatalogFeature,
+  nativeSampleFeature,
+  templatePreviewFeature,
+} = extensions;
+let searchChanged: (project: string, owner?: string) => void = () => {};
+const documents = await createApplicationDocuments(
+  config,
+  projects,
+  extensions,
+  resolveOwner,
+  appServerConnection.mode === "shared",
+  () => (authState.administrator ? publicationOwner(authState, {}) : null),
+  (project, owner) => searchChanged(project, owner),
+);
+const { documentFeature, fileDocuments, contentAccess, projectWorkspaces, scopedDocuments, requireDocumentProject } =
+  documents;
+const { editorialFeature, publishingFeature, siteBuildFeature, sitePublicationFeature, startDelivery } =
+  await createApplicationPublication(config, projects, documents, extensions, resolveOwner);
 const browserWire = createBrowserWire();
 const clients = new Set<WebSocket>();
 const sseClients = new Set<ServerResponse>();
 const pendingEngineRequests = new Map<number | string, EngineEnvelope>();
 let shuttingDown = false;
+let shutdownExitCode = 0;
 let httpClosed = false;
 let finishingShutdown = false;
+let backgroundStopped = false;
+let activeHttpRequests = 0;
 const reviewDiffs = new ReviewDiffStore();
 const installedEngine = createInstalledEngine({
   id: config.engineId,
   connection: appServerConnection,
+  autoContinueAfterOverload: config.autoContinueAfterOverload,
   defaultCwd,
   home: homeDir,
   version: config.version,
@@ -129,6 +208,97 @@ const {
   recovery: autoContinueRecovery,
   recoverQueue: recoverMessageQueue,
 } = installedEngine;
+const { creationFeature, personalContent, readOriginalSources, knowledgeFeature, searchFeature } =
+  await createApplicationContent(
+    config,
+    runtimeStores,
+    documents,
+    projects,
+    extensions,
+    resolveOwner,
+    appServerConnection,
+    () => installedEngine.request("model/list", {}),
+    (context, allowlist) =>
+      sharedWorkspaceAllowed(context.req) &&
+      (!!authState.administrator || allowlist.includes(publicationOwner(authState, context))),
+    (project, owner) => searchChanged(project, owner),
+  );
+const authorizeCliProject = async (owner: string, project: string) => {
+  if (owner !== publicationOwner(authState, {})) throw new DocumentError("notFound", 404);
+  await contentAccess.require(owner, project, "read");
+};
+const botOptions = {
+  stateRoot: config.stateRoot,
+  version: config.version,
+  connection: appServerConnection,
+  owner: resolveOwner,
+};
+const botFeature = runtimeStores
+  ? {
+      ...createBotFeature({ ...botOptions, store: runtimeStores.bots }),
+      storageSummary: databaseConfigurationSummary(applicationDatabase.config),
+    }
+  : await createConfiguredBotFeature(botOptions);
+const gadgetFeature = await createGadgetFeature({
+  stateRoot: config.stateRoot,
+  store: runtimeStores?.gadgets,
+  owner: resolveOwner,
+  modules: process.env.PANDA_FORCE_GADGET_MODULES ? JSON.parse(process.env.PANDA_FORCE_GADGET_MODULES) : [],
+  register: (registry) =>
+    registerSystemGadgets(
+      registry,
+      systemGadgetPorts({
+        snapshot: () => projectCatalog.snapshot(),
+        sessions: () => request("thread/list", { limit: 20 }),
+        visible: (session) => directoryPolicy.remember(session),
+        projectAccess: (owner, id) => contentAccess.require(owner, id, "read").then(() => {}),
+        skills: templateCatalogFeature.catalog,
+        bots: (owner) => botFeature.gadgetSummary(owner),
+      }),
+    ),
+});
+const databaseAdministrators = databaseAdministratorAllowlist();
+const databaseManagement = createDatabaseManagementFeature({
+  stateRoot: config.stateRoot,
+  current: applicationDatabase.config,
+  bot: botFeature.storageSummary,
+  initialChoiceRequired: initialDatabaseChoice,
+  owner: resolveOwner,
+  administrator: (context) =>
+    sharedWorkspaceAllowed(context.req) &&
+    (!!authState.administrator || databaseAdministrators.has(publicationOwner(authState, context))),
+  requestRestart:
+    process.env.PANDA_FORCE_MANAGED_RESTART === "1" && !clusterConfig
+      ? () => {
+          shutdownExitCode = 75;
+          shutdown();
+        }
+      : undefined,
+});
+directoryPolicy.protectSessions((id) => botFeature.isSession(id));
+const cliFeature = createCliFeature({
+  database: runtimeStores?.cli,
+  stateRoot: config.stateRoot,
+  owner: resolveOwner,
+  authorize: authorizeCliProject,
+  commands: cliContentCommands({
+    authorize: authorizeCliProject,
+    originals: readOriginalSources,
+    documents: async (owner, project) =>
+      project === "personal" ? (await personalContent.forOwner(owner)).documents : scopedDocuments(owner, "read"),
+    knowledge: knowledgeFeature.service,
+    records: knowledgeFeature.records,
+    search: (owner, input, signal) => searchFeature.query(owner, input, signal),
+    searchStatus: (owner, project) => searchFeature.status(owner, project),
+  }),
+  report: () => console.warn("[cli] Client authentication is unavailable"),
+});
+searchChanged = (project, owner) =>
+  queueMicrotask(() => {
+    void searchFeature
+      .changed(project, owner)
+      .catch(() => console.warn("[search] A content change will be recovered by reconciliation"));
+  });
 const accountLoader = createAccountIdentityLoader(async (refresh) => {
   const account = await request("account/read", { refreshToken: refresh });
   return resolveAccountIdentity(account);
@@ -174,15 +344,46 @@ function sendRaw(message: object) {
 }
 
 function maybeFinishShutdown() {
-  if (shuttingDown && httpClosed && engineDriver.fullyStopped() && !finishingShutdown) {
+  if (
+    shuttingDown &&
+    httpClosed &&
+    backgroundStopped &&
+    activeHttpRequests === 0 &&
+    engineDriver.fullyStopped() &&
+    !finishingShutdown
+  ) {
     finishingShutdown = true;
-    if (cluster)
-      void cluster
-        .close(true)
-        .then(() => process.exit(0))
-        .catch(() => process.exit(1));
-    else process.exit(0);
+    void (async () => {
+      await closeApplicationStorage({
+        drainCatalog: drainCatalogUpdates,
+        plugins: pluginFeature,
+        skills: skillFeature,
+        skillWorkspace: skillWorkspaceFeature,
+        gadgets: gadgetFeature,
+        portable: portableTemplateFeature,
+        documents: documentFeature,
+        catalog: projectCatalog,
+        accounts: localAccountFeature,
+        database: applicationDatabase,
+        cluster,
+      });
+      process.exit(shutdownExitCode);
+    })().catch((error) => {
+      console.warn("[PandaForce] Shutdown could not complete", error instanceof Error ? error.name : "unknown");
+      process.exit(1);
+    });
   }
+}
+function trackHttpRequests(handler: Parameters<typeof withRequestErrors>[0]) {
+  return async (req: IncomingMessage, res: ServerResponse) => {
+    activeHttpRequests++;
+    try {
+      await handler(req, res);
+    } finally {
+      activeHttpRequests--;
+      maybeFinishShutdown();
+    }
+  };
 }
 
 function broadcast(data: object) {
@@ -267,13 +468,92 @@ const mime: Record<string, string> = {
 };
 
 const dispatchApiRoute = createRouter([
+  ...(localAccountFeature?.routes ?? []),
+  ...gadgetFeature.routes,
+  ...contentAccess.routes,
+  ...databaseManagement.routes,
+  ...botFeature.routes,
+  ...cliFeature.routes,
+  ...searchFeature.routes,
+  ...knowledgeFeature.routes,
+  ...contentSourceRoutes({ owner: resolveOwner, originals: readOriginalSources }),
+  personalCopyRoute({
+    personal: personalContent,
+    projects: fileDocuments,
+    owner: resolveOwner,
+  }),
+  ...personalContent.routes(),
+  ...creationFeature.routes,
+  ...templatePreviewFeature.routes,
+  ...pluginFeature.routes,
+  ...skillFeature.routes,
+  ...templateCatalogFeature.routes,
+  ...skillWorkspaceFeature.routes(templateCatalogFeature.catalog),
+  ...portableTemplateFeature.routes,
+  ...nativeThemeFeature.routes,
+  ...nativeSlidesFeature.routes,
+  ...nativeSampleFeature.routes,
+  ...packageSourceFeature.routes,
+  ...sourceThemeRoutes(documentFeature.service, resolveOwner),
+  ...creativeAssetRoutes({
+    owner: resolveOwner,
+    canWrite: async (owner, project) => {
+      try {
+        await contentAccess.require(owner, project, "contribute");
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    read: async (owner, project) => {
+      await contentAccess.require(owner, project, "read");
+      return project === "personal" ? personalContent.readCreations(owner) : scopedDocuments(owner, "read").creations;
+    },
+    write: async (owner, project) => {
+      await contentAccess.require(owner, project, "contribute");
+      return project === "personal"
+        ? (await personalContent.forOwner(owner)).documents.creations
+        : scopedDocuments(owner, "contribute").creations;
+    },
+  }),
+  ...projectDocumentPreviewRoutes({
+    fileRoutes: fileDocuments.routes,
+    fileRoutesFor: (context) => {
+      const documents = scopedDocuments(
+        publicationOwner(authState, context),
+        context.req.method === "GET" ? "read" : "contribute",
+      );
+      return [
+        ...documents.routes,
+        ...documentTemplateCreationRoutes(
+          portableTemplateFeature.documents,
+          documents.navigation,
+          (current) => "local:" + resolveOwner(current),
+        ),
+      ];
+    },
+    authorizeProject: async (context, project) => {
+      const owner = publicationOwner(authState, context),
+        action = context.req.method === "GET" ? "read" : "contribute";
+      if (await documentStorage.files(project)) await contentAccess.require(owner, project, action);
+      else await contentAccess.requireLegacy(owner, project, action);
+    },
+    legacyRoutes: documentFeature.routes,
+    usesFiles: (id) => documentStorage.files(id),
+    requireProject: requireDocumentProject,
+  }),
+  ...publishingFeature.routes,
+  ...editorialFeature.routes,
+  ...siteBuildFeature.routes,
+  ...sitePublicationFeature.routes,
   ...bridgeRoutes({
+    projectOwner: (context) => (authState.administrator ? publicationOwner(authState, context) : undefined),
     browserWire,
     projectless,
     defaultCwd,
     browseRoots,
     request,
-    idaasAuth,
+    idaasAuth: null,
     attachmentStorage,
     homeDir,
     reviewRoots,
@@ -309,117 +589,151 @@ const dispatchApiRoute = createRouter([
   ...assetsRoutes({ appRoot, mime }),
 ]);
 
+const interfaceAssets = createInterfaceAssets(publicDir);
 const server = createServer(
-  withRequestErrors(async (req, res) => {
-    let url: URL;
-    try {
-      url = new URL(req.url || "/", "http://localhost");
-    } catch {
-      respondJson(res, 400, { error: "Invalid request URL" });
-
-      return;
-    }
-    if (["/health/startup", "/health/liveness", "/health/readiness"].includes(url.pathname)) {
-      if (req.method !== "GET" && req.method !== "HEAD") {
-        sendAuthError(res, 405, "Method not allowed", { allow: "GET, HEAD" });
-        return;
-      }
-      let ownsWorkspace = true;
+  withRequestErrors(
+    trackHttpRequests(async (req, res) => {
+      let url: URL;
       try {
-        cluster?.assertOwner();
+        url = new URL(req.url || "/", "http://localhost");
       } catch {
-        ownsWorkspace = false;
-      }
-      const healthy =
-        !shuttingDown && ownsWorkspace && (url.pathname !== "/health/readiness" || engineDriver.connected);
-      respondJson(res, healthy ? 200 : 503, { ok: healthy });
-      return;
-    }
-    if (cluster) {
-      try {
-        await cluster.verify(req);
-      } catch (error) {
-        respondJson(res, errorStatus(error), { error: errorMessage(error), code: "cluster_request_rejected" });
+        respondJson(res, 400, { error: "Invalid request URL" });
+
         return;
       }
-    }
-    const appRoute =
-      req.method === "GET" &&
-      (url.pathname === "/" ||
-        /^\/(?:settings(?:\/[^/]+)?|workspace|tasks|projects|project|deliverables|connections|new|task\/[^/]+)\/?$/.test(
-          url.pathname,
-        ));
-    const loginAssets = new Set([
-      ...SUPPORTED_LOCALES.map((locale) => `/locales/${locale.code}.json`),
-      "/",
-      "/index.html",
-      "/style.css",
-      "/workbench.css",
-      "/session-workspace.css",
-      "/workbench-chrome.css",
-      "/workbench-layout.css",
-      "/appearance.css",
-      "/favicon.svg",
-      "/auth-bootstrap.js",
-      "/i18n.js",
-      "/http-client.js",
-      "/panda-brand.js",
-      "/assets/panda-mark.svg",
-      ...INSTALL_ASSETS,
-    ]);
-    let idaasSession: { id: string; identity: unknown; expiresAt: number } | null = null;
-    if (url.pathname === "/api/auth/status" && directoryPolicy.browserScope)
-      res.setHeader("x-panda-directory-scope", directoryPolicy.browserScope);
-    if (idaasAuth) {
-      if (await idaasAuth.handle(req, res, url)) return;
-      try {
-        idaasSession = await idaasAuth.authenticate(req);
-      } catch (error) {
-        if (
-          (errorStatus(error) === 401 ||
-            (errorStatus(error) === 403 && req.headers["sec-fetch-mode"] === "navigate" && !req.headers.origin)) &&
-          (appRoute || url.pathname === "/index.html")
-        ) {
-          res.writeHead(302, { location: sessionLoginUrl(url.pathname + url.search), "cache-control": "no-store" });
-          res.end();
+      if (["/health/startup", "/health/liveness", "/health/readiness"].includes(url.pathname)) {
+        if (req.method !== "GET" && req.method !== "HEAD") {
+          sendAuthError(res, 405, "Method not allowed", { allow: "GET, HEAD" });
           return;
         }
-        if (errorStatus(error) === 401 && req.method === "GET" && loginAssets.has(url.pathname)) {
-          const file = resolvePublicAsset(url.pathname, publicDir);
+        let ownsWorkspace = true;
+        try {
+          cluster?.assertOwner();
+        } catch {
+          ownsWorkspace = false;
+        }
+        const healthy =
+          !shuttingDown &&
+          ownsWorkspace &&
+          (url.pathname !== "/health/readiness" || (engineDriver.connected && (await databaseReady())));
+        respondJson(res, healthy ? 200 : 503, { ok: healthy });
+        return;
+      }
+      if (cluster) {
+        try {
+          await cluster.verify(req);
+        } catch (error) {
+          respondJson(res, errorStatus(error), { error: errorMessage(error), code: "cluster_request_rejected" });
+          return;
+        }
+      }
+      if (servePublicationCallback(req, res, url)) return;
+      if (await botFeature.handle({ req, res, url })) return;
+      if (await cliFeature.handle({ req, res, url })) return;
+      const appRoute =
+        req.method === "GET" &&
+        (["/", "/invite", "/verify-email", "/reset-password", "/reset-password/new"].includes(url.pathname) ||
+          /^\/(?:settings(?:\/[^/]+)?|workspace|bots|tasks|projects|project|documents|deliverables|connections|create|skills(?:\/[^/]+)?|publish(?:\/[^/]+)?|new|task\/[^/]+)\/?$/.test(
+            url.pathname,
+          ));
+      const loginAssets = new Set([
+        ...CREATION_STYLES,
+        ...SUPPORTED_LOCALES.map((locale) => `/locales/${locale.code}.json`),
+        "/",
+        "/index.html",
+        "/style.css",
+        "/workbench.css",
+        "/documents.css",
+        "/creative.css",
+        "/document-authoring.css",
+        "/document-workspace.css",
+        "/document-code.css",
+        "/document-publication.css",
+        "/workbench-forms.css",
+        ...KNOWLEDGE_STYLES,
+        ...CLI_STYLES,
+        ...BOT_STYLES,
+        ...DATABASE_STYLES,
+        ...GADGET_STYLES,
+        ...GADGET_RUNTIME_ASSETS,
+        "/database-maintenance.bundle.js",
+        "/source-import.css",
+        "/publishing.css",
+        "/builds.css",
+        "/delivery.css",
+        "/social.css",
+        "/session-workspace.css",
+        "/settings-workspace.css",
+        "/workbench-chrome.css",
+        "/workbench-layout.css",
+        "/appearance.css",
+        "/favicon.svg",
+        "/auth-bootstrap.js",
+        "/i18n.js",
+        "/http-client.js",
+        "/panda-brand.js",
+        "/assets/panda-mark.svg",
+        ...INSTALL_ASSETS,
+      ]);
+      if (await localAccountFeature?.publicHandle(req, res, url)) return;
+      if (await passwordAuth.handle(req, res, url)) return;
+      if (!(await passwordAuth.isAuthorized(req))) {
+        if (appRoute || loginAssets.has(url.pathname)) {
+          const file = resolvePublicAsset(appRoute ? "/" : url.pathname, publicDir);
           if (file) {
-            serveStaticAsset(req, res, file, mime[extname(file)] || "application/octet-stream");
+            serveStaticAsset(
+              req,
+              res,
+              file,
+              mime[extname(file)] || "application/octet-stream",
+              interfaceAssets.get(file),
+            );
             return;
           }
         }
-        sendAuthError(
+        unauthorizedResponse(res);
+        return;
+      }
+      if (!sharedWorkspaceAllowed(req) && !memberApiAllowed(url.pathname, req.method ?? "")) {
+        respondJson(res, 403, { error: "users.workspaceRestricted" });
+        return;
+      }
+      if (url.pathname === "/api/system/database/maintenance" && req.method === "GET") {
+        const activation = await databaseManagement.state.read<{ operationId: string }>("", "activation");
+        respondJson(
           res,
-          error instanceof AuthError ? errorStatus(error) : 503,
-          error instanceof AuthError ? errorMessage(error) : "Authentication unavailable",
+          200,
+          { operationId: activation?.operationId ?? "", status: "complete" },
+          { "cache-control": "no-store" },
         );
         return;
       }
-    }
-    if (!idaasAuth && (await passwordAuth.handle(req, res, url))) return;
-    if (!idaasAuth && !passwordAuth.isAuthorized(req)) {
-      if (appRoute || loginAssets.has(url.pathname)) {
-        const file = resolvePublicAsset(appRoute ? "/" : url.pathname, publicDir);
-        if (file) {
-          serveStaticAsset(req, res, file, mime[extname(file)] || "application/octet-stream");
-          return;
-        }
+      if (!sharedWorkspaceAllowed(req) && url.pathname === "/api/projects") {
+        const access = await contentAccess.service.view(resolveOwner({ req }));
+        const allowed = new Set(access.projects.map((project) => project.id));
+        const snapshot = await projectCatalog.snapshot();
+        respondJson(res, 200, {
+          revision: snapshot.revision,
+          projects: snapshot.projects
+            .filter((project) => allowed.has(project.id))
+            .map(({ workspace, ...project }) => {
+              void workspace;
+              return project;
+            }),
+          assignments: [],
+        });
+        return;
       }
-      unauthorizedResponse(res);
-      return;
-    }
-    if (await dispatchApiRoute({ req, res, url, idaasSession })) return;
-    const file = resolvePublicAsset(appRoute ? "/" : url.pathname, publicDir);
-    if (!file) {
-      res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-      res.end("Not found");
-      return;
-    }
-    serveStaticAsset(req, res, file, mime[extname(file)] || "application/octet-stream");
-  }),
+      if (await dispatchApiRoute({ req, res, url })) return;
+      const file = resolvePublicAsset(appRoute ? "/" : url.pathname, publicDir);
+      if (!file) {
+        res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+        res.end("Not found");
+        return;
+      }
+      serveStaticAsset(req, res, file, mime[extname(file)] || "application/octet-stream", interfaceAssets.get(file));
+    }),
+  ),
 );
 
 // Bun's default keep-alive timer can close a response while it is still
@@ -430,7 +744,7 @@ server.keepAliveTimeout = 0;
 const browserConnections = installBrowserConnections({
   browserWire,
   server,
-  idaasAuth,
+  idaasAuth: null,
   passwordAuth,
   clients,
   sseClients,
@@ -456,11 +770,26 @@ if (process.env.NODE_ENV === "production") {
   if (frontendBuild.exitCode !== 0) throw new Error("Frontend build failed; see build:client output");
 }
 
+localAccountFeature?.start();
 engineDriver.start();
-goalStore.start();
+startDelivery();
+startApplicationBackground({
+  search: searchFeature,
+  editorial: editorialFeature,
+  creation: creationFeature,
+  knowledge: knowledgeFeature,
+  previews: templatePreviewFeature,
+  goals: goalStore,
+});
 server.listen(port, host, () => {
+  startApplicationIngress({
+    sources: packageSourceFeature,
+    themes: nativeThemeFeature,
+    slides: nativeSlidesFeature,
+    samples: nativeSampleFeature,
+  });
   console.log(`PandaForce listening on http://${host}:${port}`);
-  if (!idaasAuth && passwordAuth.passwordSetupRequired()) {
+  if (passwordAuth.passwordSetupRequired()) {
     console.warn(
       `[panda-force] Create your administrator account in the browser. No password startup options are required.`,
     );
@@ -474,11 +803,40 @@ server.listen(port, host, () => {
   }
 });
 
+botFeature.start();
+
 function shutdown() {
   if (shuttingDown) return;
   goalStore.stop();
+  siteBuildFeature.stop();
+  pluginFeature.stop();
   shuttingDown = true;
-  idaasAuth?.close();
+  // Drain registered-client operations before closing the domain ports they use.
+  void drainApplicationBackground({
+    cli: cliFeature,
+    bots: botFeature,
+    search: searchFeature,
+    closeCreativeText,
+    knowledge: knowledgeFeature,
+    creation: creationFeature,
+    personal: personalContent,
+    publication: sitePublicationFeature,
+    editorial: editorialFeature,
+    previews: templatePreviewFeature,
+    samples: nativeSampleFeature,
+    builds: siteBuildFeature,
+    themes: nativeThemeFeature,
+    slides: nativeSlidesFeature,
+    sources: packageSourceFeature,
+  })
+    .then(() => {
+      backgroundStopped = true;
+      maybeFinishShutdown();
+    })
+    .catch((error: unknown) => {
+      shutdownExitCode = 1;
+      console.error("[PandaForce] Background shutdown failed", error instanceof Error ? error.name : "Error");
+    });
   engineDriver.cancelRestart();
   engineDriver.rejectPending(new Error("PandaForce is shutting down"));
   browserConnections.close();
@@ -491,7 +849,7 @@ function shutdown() {
   server.closeAllConnections?.();
   const forceExit = setTimeout(() => {
     engineDriver.stop("SIGKILL");
-    process.exit(0);
+    process.exit(shutdownExitCode);
   }, 5000);
   forceExit.unref();
 }

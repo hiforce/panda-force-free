@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { localAuthFixture } from "../support/local-auth-fixture.mjs";
 
 const supervisor = new URL("../../src/server/logging/supervisor.js", import.meta.url).pathname;
-function content(dir) {
+function content(dir: string) {
   return readdirSync(dir)
     .filter((n) => /^panda-force-.*\.log$/.test(n))
     .map((n) => readFileSync(join(dir, n), "utf8"))
@@ -36,6 +36,35 @@ test("the launcher preserves stdout/stderr, captures fatal errors and retains a 
     expect(logs.length).toBeLessThanOrEqual(3);
     expect(logs.every((n) => statSync(join(dir, n)).size <= 2048)).toBe(true);
     expect(content(dir)).toContain("fatal-marker");
+    expect(content(dir)).toContain("Service exited with code 1");
+    expect(content(dir)).not.toContain("�");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}, 15000);
+
+test("a failure diagnostic survives stdout drained after stderr under a single-segment budget", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "panda-late-stdout-"));
+  try {
+    const worker = join(dir, "worker.mjs");
+    writeFileSync(
+      worker,
+      'process.stderr.write("early-failure-marker😀\\n");setTimeout(()=>{for(let i=0;i<100;i++)console.log("日志😀".repeat(100));process.exitCode=1;},30);',
+    );
+    const script = `import {runLoggedProcess} from ${JSON.stringify(supervisor)};process.exitCode=await runLoggedProcess({command:[process.execPath,${JSON.stringify(worker)}],logging:{enabled:true,directory:${JSON.stringify(dir)},maxFileBytes:2048,maxFiles:1}});`;
+    const child = Bun.spawn([process.execPath, "--eval", script], { stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr, code] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
+    expect(code).toBe(1);
+    expect(stdout).toContain("日志😀");
+    expect(stderr).toBe("early-failure-marker😀\n");
+    const files = readdirSync(dir).filter((name) => /^panda-force-.*\.log$/.test(name));
+    expect(files).toHaveLength(1);
+    expect(statSync(join(dir, files[0]!)).size).toBeLessThanOrEqual(2048);
+    expect(content(dir)).toContain("early-failure-marker😀");
     expect(content(dir)).toContain("Service exited with code 1");
     expect(content(dir)).not.toContain("�");
   } finally {

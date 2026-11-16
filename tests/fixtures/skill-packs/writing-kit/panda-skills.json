@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "kind": "panda-force.skill-pack",
+  "id": "example.writing-kit",
+  "version": "1.0.0",
+  "name": {
+    "en": "Writing kit",
+    "zh-CN": "写作组合示例"
+  },
+  "description": {
+    "en": "Draft examples for a writing workflow, article structure and writing style.",
+    "zh-CN": "写作流程、文章结构和表达风格的协议草案示例。"
+  },
+  "publisher": {
+    "name": "PandaForce example contributors"
+  },
+  "license": {
+    "expression": "MIT",
+    "file": "LICENSE"
+  },
+  "requires": {
+    "skillApi": 1
+  },
+  "files": [
+    "LICENSE",
+    "skills/blog-outline/instructions.md",
+    "skills/brand-voice/instructions.md",
+    "skills/writing/instructions.md",
+    "templates/blog-outline.md"
+  ],
+  "skills": [
+    {
+      "id": "writing",
+      "category": "writing",
+      "role": "workflow",
+      "name": {
+        "en": "Writing",
+        "zh-CN": "通用写作"
+      },
+      "description": {
+        "en": "Create a real editable project document from the user brief."
+      },
+      "instructions": "skills/writing/instructions.md",
+      "inputs": [
+        {
+          "id": "brief",
+          "kind": "text",
+          "required": true
+        }
+      ],
+      "parameters": [],
+      "capabilities": ["project.documents.read", "project.documents.create", "project.documents.propose-update"],
+      "outputTypes": ["document"],
+      "composition": {
+        "appliesTo": ["document"],
+        "conflictsWith": [],
+        "constraints": {}
+      }
+    },
+    {
+      "id": "blog-outline",
+      "category": "writing",
+      "role": "template",
+      "name": {
+        "en": "Blog outline",
+        "zh-CN": "博客结构"
+      },
+      "description": {
+        "en": "Give a writing task a clear article structure."
+      },
+      "instructions": "skills/blog-outline/instructions.md",
+      "inputs": [
+        {
+          "id": "brief",
+          "kind": "text",
+          "required": true
+        }
+      ],
+      "parameters": [
+        {
+          "id": "audience",
+          "type": "text",
+          "label": {
+            "en": "Audience",
+            "zh-CN": "目标读者"
+          },
+          "required": false,
+          "maxLength": 200
+        }
+      ],
+      "capabilities": [],
+      "outputTypes": ["document"],
+      "composition": {
+        "appliesTo": ["document"],
+        "conflictsWith": [],
+        "constraints": {}
+      },
+      "template": "templates/blog-outline.md"
+    },
+    {
+      "id": "brand-voice",
+      "category": "writing",
+      "role": "style",
+      "name": {
+        "en": "Clear brand voice",
+        "zh-CN": "清晰表达"
+      },
+      "description": {
+        "en": "Use concise, concrete writing without changing supported facts."
+      },
+      "instructions": "skills/brand-voice/instructions.md",
+      "inputs": [
+        {
+          "id": "brief",
+          "kind": "text",
+          "required": true
+        }
+      ],
+      "parameters": [],
+      "capabilities": [],
+      "outputTypes": ["document"],
+      "composition": {
+        "appliesTo": ["document"],
+        "conflictsWith": [],
+        "constraints": {}
+      }
+    }
+  ]
+}

@@ -1,20 +1,20 @@
-import { isRecord } from "../../shared/records.js";
-import { isAllowedBrowserRpcMethod } from "../auth/security.js";
-import { publishCatalogUpdate } from "../projects/publish.js";
-import { browserEnvelope } from "../protocol/browser.js";
-import { threadFromResult } from "../protocol/native.js";
-import type { RuntimeServices } from "./../services.js";
-import { createBrowserDispatch } from "./browser-dispatch.js";
-import { prepareSharedInput, submitPreparedInput } from "./shared-input.js";
-import { ProjectError } from "../projects/catalog.js";
-import { ensureAttachmentWorkspace } from "../workspace/attachment-workspace.js";
 import {
   attachmentWorkspaceContext,
   stripAttachmentWorkspaceContext,
   unavailableAttachmentWorkspaceContext,
 } from "../../shared/attachment-workspace.js";
-import { reportDiagnostic } from "../../shared/diagnostics.js";
 import type { NativeInput } from "../../shared/data-contracts.js";
+import { reportDiagnostic } from "../../shared/diagnostics.js";
+import { isRecord } from "../../shared/records.js";
+import { isAllowedBrowserRpcMethod } from "../auth/security.js";
+import { ProjectError } from "../projects/catalog.js";
+import { publishCatalogUpdate } from "../projects/publish.js";
+import { browserEnvelope } from "../protocol/browser.js";
+import { threadFromResult } from "../protocol/native.js";
+import { ensureAttachmentWorkspace } from "../workspace/attachment-workspace.js";
+import type { RuntimeServices } from "./../services.js";
+import { createBrowserDispatch } from "./browser-dispatch.js";
+import { prepareSharedInput, submitPreparedInput } from "./shared-input.js";
 
 /** Composes browser RPC handlers without owning the native connection or its storage. */
 export function createBrowserEngine({
@@ -64,6 +64,7 @@ export function createBrowserEngine({
     sendRaw,
     broadcast,
   });
+  const recoveryClaims = new WeakMap<object, number>();
   browserDispatch.before(({ method, params, flags }) =>
     directoryPolicy.allowExternal
       ? undefined
@@ -101,8 +102,27 @@ export function createBrowserEngine({
   });
   // Any explicit turn supersedes a pending automatic recovery and starts a
   // fresh retry budget for this thread.
-  browserDispatch.before(({ method, params }) => {
-    if (["turn/start", "turn/steer"].includes(method)) autoContinueRecovery.onExplicitInput(params.threadId);
+  browserDispatch.before((context) => {
+    const { method, params } = context;
+    if (
+      ["turn/start", "turn/steer", "turn/interrupt"].includes(method) ||
+      (method === "thread/goal/set" && params.status !== undefined && params.status !== "active") ||
+      method === "thread/goal/clear"
+    ) {
+      const claim = autoContinueRecovery.onExplicitInput(params.threadId);
+      if (["turn/start", "turn/steer"].includes(method) && claim !== undefined) recoveryClaims.set(context, claim);
+    }
+  });
+  browserDispatch.after((context) => {
+    const claim = recoveryClaims.get(context);
+    if (claim === undefined) return;
+    const result = context.result;
+    if (isRecord(result))
+      autoContinueRecovery.onSubmitted(
+        context.params.threadId,
+        isRecord(result.turn) ? result.turn.id : result.turnId,
+        claim,
+      );
   });
   browserDispatch.handle("thread/goal/set", async ({ params }) => {
     if (typeof params.threadId !== "string" || !params.threadId) throw new Error("Invalid goal thread id");
@@ -162,16 +182,16 @@ export function createBrowserEngine({
     if (thread) directoryPolicy.remember(thread);
     threadHub.recordThreadPathsFromRpc(result);
   });
-  browserDispatch.after(({ method, flags, result }) => {
+  browserDispatch.after(async ({ method, flags, result }) => {
     if (method !== "thread/start" || typeof flags.pandaProjectId !== "string") return;
     const thread = threadFromResult(result);
     if (!thread) return;
     // A native creation is already committed. Metadata failure must never look like a retryable creation failure.
-    publishCatalogUpdate(projectCatalog, broadcast, () => {
-      const snapshot = projectCatalog.assign(
+    await publishCatalogUpdate(projectCatalog, broadcast, async () => {
+      const snapshot = await projectCatalog.assign(
         flags.pandaProjectId as string,
         [thread],
-        projectCatalog.snapshot().revision,
+        (await projectCatalog.snapshot()).revision,
       );
       if (isRecord(result)) {
         result.pandaProjectId = flags.pandaProjectId;
@@ -180,16 +200,15 @@ export function createBrowserEngine({
       return snapshot;
     });
   });
-  browserDispatch.after(({ method, params, result }) => {
-    publishCatalogUpdate(projectCatalog, broadcast, () => {
-      const snapshot =
-        method === "thread/delete" && typeof params.threadId === "string"
-          ? projectCatalog.forgetSession(params.threadId)
-          : method === "thread/name/set" && typeof params.threadId === "string"
-            ? projectCatalog.refreshSessions([{ id: params.threadId, name: params.name }])
-            : isRecord(result) && Array.isArray(result.data) && method === "thread/list"
-              ? projectCatalog.refreshSessions(result.data)
-              : null;
+  browserDispatch.after(async ({ method, params, result }) => {
+    await publishCatalogUpdate(projectCatalog, broadcast, async () => {
+      const snapshot = await (method === "thread/delete" && typeof params.threadId === "string"
+        ? projectCatalog.forgetSession(params.threadId)
+        : method === "thread/name/set" && typeof params.threadId === "string"
+          ? projectCatalog.refreshSessions([{ id: params.threadId, name: params.name }])
+          : isRecord(result) && Array.isArray(result.data) && method === "thread/list"
+            ? projectCatalog.refreshSessions(result.data)
+            : null);
       return snapshot;
     });
   });
@@ -215,20 +234,20 @@ export function createBrowserEngine({
     )
       threadHub.markSubscribed(thread.id);
   });
-  browserDispatch.after(({ method, params, flags, result, replyExtras }) => {
+  browserDispatch.after(async ({ method, params, flags, result, replyExtras }) => {
     if (method !== "thread/start") return;
     const thread = threadFromResult(result);
-    if (thread && !flags.pandaProjectless) {
-      try {
-        if (projectVisibility.setHidden(thread.cwd || params.cwd || defaultCwd, false)) {
-          broadcast({ type: "projects/visibility", ...projectVisibility.snapshot() });
+    try {
+      if (thread && !flags.pandaProjectless) {
+        if (await projectVisibility.setHidden(thread.cwd || params.cwd || defaultCwd, false)) {
+          broadcast({ type: "projects/visibility", ...(await projectVisibility.snapshot()) });
         }
-      } catch (error) {
-        // A completed creation must not look like a failed RPC and be retried.
-        console.error("[panda-force] could not restore project visibility:", error);
       }
+      replyExtras.projectVisibility = directoryPolicy.visibility(await projectVisibility.snapshot());
+    } catch (error) {
+      // A completed creation must not look like a failed RPC and be retried.
+      console.error("[panda-force] could not restore project visibility:", error);
     }
-    replyExtras.projectVisibility = directoryPolicy.visibility(projectVisibility.snapshot());
   });
   browserDispatch.after(({ method, params }) => {
     if (["thread/resume", "thread/queue/add", "thread/queue/list"].includes(method))

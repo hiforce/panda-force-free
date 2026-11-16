@@ -1,0 +1,25 @@
+{
+  "name": "panda-document-build-toolchain",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "hexo": "8.1.1",
+    "hexo-cli": "4.3.2",
+    "hexo-renderer-marked": "7.0.1",
+    "hexo-renderer-ejs": "2.0.0",
+    "hexo-renderer-stylus": "3.0.1",
+    "hexo-generator-index": "4.0.0",
+    "hexo-generator-archive": "2.0.0",
+    "hexo-generator-tag": "2.0.0",
+    "hexo-generator-category": "2.0.0",
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/preset-classic": "3.10.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "@mdx-js/react": "3.1.1",
+    "cheerio": "1.2.0",
+    "hexo-util": "4.0.0",
+    "hexo-generator-feed": "4.0.0",
+    "hexo-generator-sitemap": "3.0.1"
+  }
+}

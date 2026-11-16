@@ -8,6 +8,7 @@ import { respondJson } from "./respond.js";
 export function projectRoutes({
   catalog,
   workspaces,
+  projectOwner,
   directoryPolicy,
   request: nativeRequest,
   getSession: nativeGetSession,
@@ -70,7 +71,7 @@ export function projectRoutes({
         const body = await readJsonBody(req);
         if (typeof body.projectId !== "string") throw new ProjectError(400, "projects.errorInvalidProjectDetails");
         const workspace = await workspaces.ensure(body.projectId);
-        const snapshot = directoryPolicy.snapshot(catalog.snapshot());
+        const snapshot = directoryPolicy.snapshot(await catalog.snapshot());
         broadcast({ type: "project-catalog/changed", ...snapshot });
         respondJson(res, 200, { ...snapshot, workspace });
       }),
@@ -84,7 +85,7 @@ export function projectRoutes({
           200,
           await discovery.directories(
             queryCursor(url),
-            new Set(catalog.snapshot().assignments.map((entry) => entry.id)),
+            new Set((await catalog.snapshot()).assignments.map((entry) => entry.id)),
           ),
         ),
       ),
@@ -92,8 +93,9 @@ export function projectRoutes({
     {
       path: "/api/projects",
       method: ["GET", "POST", "PATCH"],
-      handler: protect(async ({ req, res }) => {
-        if (req.method === "GET") return respondJson(res, 200, directoryPolicy.snapshot(catalog.snapshot()));
+      handler: protect(async (context) => {
+        const { req, res } = context;
+        if (req.method === "GET") return respondJson(res, 200, directoryPolicy.snapshot(await catalog.snapshot()));
         const body = await readJsonBody(req);
         if (req.method === "PATCH" && typeof body.id !== "string")
           throw new ProjectError(400, "projects.errorProjectNotFound");
@@ -101,8 +103,8 @@ export function projectRoutes({
           throw new ProjectError(400, "projects.errorInvalidProjectDetails");
         const snapshot =
           req.method === "POST"
-            ? await workspaces.create(body, body.revision, body.operationId)
-            : catalog.save(body, body.revision);
+            ? await workspaces.create(body, body.revision, body.operationId, projectOwner(context))
+            : await catalog.save(body, body.revision);
         changed(res, snapshot, req.method === "POST" ? 201 : 200);
       }),
     },
@@ -113,7 +115,7 @@ export function projectRoutes({
         const { projectId, sessionIds, revision } = await readJsonBody(req);
         if (projectId !== null && typeof projectId !== "string")
           throw new ProjectError(400, "projects.errorProjectNotFound");
-        if (projectId !== null) catalog.project(projectId);
+        if (projectId !== null) await catalog.project(projectId);
         if (
           !Array.isArray(sessionIds) ||
           !sessionIds.length ||
@@ -135,7 +137,7 @@ export function projectRoutes({
             throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
           }
         }
-        changed(res, catalog.assign(projectId, sessions, revision));
+        changed(res, await catalog.assign(projectId, sessions, revision));
       }),
     },
     {

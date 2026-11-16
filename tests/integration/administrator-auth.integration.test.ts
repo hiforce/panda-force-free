@@ -25,7 +25,7 @@ function rejectedUpgrade(url: string) {
 }
 
 test("zero-option startup protects the workspace, creates one administrator and preserves it across restart", async () => {
-  const f = await localAuthFixture();
+  const f = await localAuthFixture({ defaultPaths: true });
   try {
     expect(await status(f)).toMatchObject({
       setupRequired: true,
@@ -72,6 +72,9 @@ test("zero-option startup protects the workspace, creates one administrator and 
     expect(logout.status).toBe(200);
     expect(logout.headers.get("set-cookie")).toContain("Max-Age=0");
     expect(existsSync(join(f.env.PANDA_FORCE_HOME, "data", "auth-sessions.sqlite"))).toBe(true);
+    await f.restart();
+    expect(await status(f, { cookie: cookie(login) })).toMatchObject({ authenticated: false, setupRequired: false });
+    expect(existsSync(join(f.env.CODEX_HOME, "panda-force-admin.json"))).toBe(false);
   } finally {
     await f.dispose();
   }
@@ -138,7 +141,7 @@ test("existing managed passwords, environment passwords and API tokens can migra
       await f.dispose();
     }
   }
-}, 25000);
+}, 45000);
 
 test("new administrator passwords enforce length and every required character class before creating an account", async () => {
   const f = await localAuthFixture();
@@ -195,6 +198,29 @@ test("repeated incorrect credentials are rate limited without exposing the admin
     expect(limited.status).toBe(429);
     expect(limited.headers.get("retry-after")).toBe("300");
     expect((await status(f)).authenticated).toBe(false);
+  } finally {
+    await f.dispose();
+  }
+}, 15000);
+
+test("revoked browser sessions cannot be revived by an unrelated authorization header", async () => {
+  const f = await localAuthFixture({ accessToken: "explicit-service-credential" });
+  try {
+    const login = await f.post("/api/auth/login", { password: "explicit-service-credential" });
+    expect(login.status).toBe(200);
+    const session = cookie(login);
+    expect((await f.post("/api/auth/logout", {}, { cookie: session })).status).toBe(200);
+    for (const authorization of ["Bearer unrelated", "Basic Y29kZXg6d3Jvbmc=", "invalid"]) {
+      const response = await fetch(f.base + "/api/config", { headers: { cookie: session, authorization } });
+      expect(response.status).toBe(401);
+    }
+    expect(
+      (
+        await fetch(f.base + "/api/config", {
+          headers: { cookie: session, authorization: "Bearer explicit-service-credential" },
+        })
+      ).status,
+    ).toBe(200);
   } finally {
     await f.dispose();
   }

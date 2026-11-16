@@ -123,7 +123,8 @@ try {
     await page.locator('.workbench-mobile-nav [data-route="tasks"]').tap();
     await page.waitForURL("**/tasks");
     await aligned();
-    await page.locator('.workbench-mobile-nav [data-route="workspace"]').tap();
+    await page.locator("#workspaceNavigationToggle").tap();
+    await page.locator('.workbench-navigation [data-route="workspace"]').tap();
     await page.waitForURL("**/workspace");
     await aligned();
     assert.equal(await page.locator("#prompt").inputValue(), "保留首页草稿与光标");

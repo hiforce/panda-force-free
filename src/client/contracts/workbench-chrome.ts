@@ -14,11 +14,11 @@ export interface WorkbenchChromeOptions {
   onError: (message: string) => void;
 }
 
-export type ReadingWidth = "comfortable" | "wide" | "fill";
+export type WorkspaceWidth = "comfortable" | "wide" | "fill";
 export type ChromeMenu = "preferences" | "language" | "appearance" | "layout" | "profile";
 
 export interface WorkbenchLayout {
-  readWidth: () => ReadingWidth;
+  readWidth: () => WorkspaceWidth;
   setWidth: (value: string) => void;
   isFocused: () => boolean;
   setFocus: (focused: boolean) => void;

@@ -156,3 +156,47 @@ test("restricted browser visibility filters roots, history, replies and native a
     await f.close();
   }
 });
+
+test("creator membership and storage reservations roll back with failed project creation", async () => {
+  const { ContentAccessStore } = await import("../../src/server/content-access/storage/grants.js");
+  const { ProjectDocumentStorage } = await import("../../src/server/projects/document-storage.js");
+  const f = await fixture(),
+    owner = "a".repeat(64),
+    other = "b".repeat(64);
+  try {
+    const memberships = new ContentAccessStore(f.catalog.db),
+      storage = new ProjectDocumentStorage(f.catalog.db);
+    const service = new ProjectWorkspaceService(f.catalog, f.workspaces, true, (project, creator) => {
+      storage.bindFiles(project.id);
+      memberships.set(creator!, project.id, creator!, "contributor", memberships.revision(), 1000);
+    });
+    f.catalog.db.exec(
+      "CREATE TRIGGER reject_creator_membership BEFORE INSERT ON content_access_grants BEGIN SELECT RAISE(ABORT,'Injected membership failure'); END;",
+    );
+    await expect(service.create(details, 0, "creator-reservation", owner)).rejects.toMatchObject({ status: 503 });
+    expect(f.catalog.snapshot().projects).toEqual([]);
+    expect(f.catalog.revision()).toBe(0);
+    expect(memberships.revision()).toBe(0);
+    for (const table of [
+      "project_document_storage",
+      "project_workspaces",
+      "project_workspace_creations",
+      "content_access_grants",
+      "content_access_changes",
+    ])
+      expect(f.catalog.db.query("SELECT COUNT(*) n FROM " + table).get()).toEqual({ n: 0 });
+    await expect(stat(join(f.workspaces, details.code))).rejects.toMatchObject({ code: "ENOENT" });
+    f.catalog.db.exec("DROP TRIGGER reject_creator_membership");
+    const result = await service.create(details, 0, "creator-reservation", owner),
+      project = result.projects[0]!;
+    expect(storage.files(project.id)).toBe(true);
+    expect(memberships.role(owner, project.id)).toBe("contributor");
+    expect(memberships.role(other, project.id)).toBeNull();
+    await service.create(details, 0, "creator-reservation", owner);
+    expect(memberships.revision()).toBe(1);
+    await expect(service.create(details, 0, "creator-reservation", other)).rejects.toMatchObject({ status: 409 });
+    expect(memberships.role(other, project.id)).toBeNull();
+  } finally {
+    await f.close();
+  }
+});

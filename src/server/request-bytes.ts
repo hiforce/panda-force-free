@@ -12,6 +12,13 @@ export function verifyRequestBody(request: IncomingMessage, verify: (bytes: Buff
   verifiers.set(request, verify);
 }
 const buffers = new WeakMap<IncomingMessage, Promise<Buffer>>();
+export function requestBodyNeedsBuffering(request: IncomingMessage): boolean {
+  return verifiers.has(request) || buffers.has(request);
+}
+/** A streaming route releases its one-use verified buffer after the final chunk. */
+export function releaseRequestBytes(request: IncomingMessage): void {
+  buffers.delete(request);
+}
 /** A verified internal request and its route share one bounded body read. */
 export async function readRequestBytes(request: IncomingMessage, maxBytes: number): Promise<Buffer> {
   let pending = buffers.get(request);

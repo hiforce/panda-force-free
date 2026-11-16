@@ -1,4 +1,3 @@
-import { createReadStream, readFileSync } from "node:fs";
 import { reportDiagnostic } from "../../shared/diagnostics.js";
 import { saveAttachment } from "../workspace/attachments.js";
 import { ensureAttachmentWorkspace } from "../workspace/attachment-workspace.js";
@@ -13,6 +12,7 @@ import { errorCode, errorMessage, errorStatus } from "./../../shared/errors.js";
 import type { RuntimeServices } from "./../services.js";
 import { respondError, respondJson } from "./respond.js";
 import type { Route } from "./router.js";
+import { streamResponseFile } from "./file-stream.js";
 
 /** Owns workspace routes. Dependencies are supplied by the composition root. */
 export function workspaceRoutes({
@@ -177,7 +177,7 @@ export function workspaceRoutes({
     {
       path: "/api/files/download",
       method: "GET",
-      handler: ({ req, res, url }) => {
+      handler: async ({ req, res, url }) => {
         try {
           const file = resolveLocalFile(url.searchParams.get("path"), {
             cwd: url.searchParams.get("cwd") || defaultCwd,
@@ -185,7 +185,7 @@ export function workspaceRoutes({
             // Uploaded files remain downloadable without exposing their directory in the browser.
             allowedRoots: [...fileRoots, attachmentRoot],
           });
-          res.writeHead(200, {
+          await streamResponseFile(req, res, file.path, {
             "content-type": "application/octet-stream",
             "content-length": String(file.size),
             "content-disposition": `attachment; filename="download"; filename*=UTF-8''${encodeContentDispositionFilename(file.filename)}`,
@@ -193,10 +193,6 @@ export function workspaceRoutes({
             "cross-origin-resource-policy": "same-origin",
             "x-content-type-options": "nosniff",
           });
-          const stream = createReadStream(file.path);
-          stream.on("error", () => res.destroy());
-          req.on("aborted", () => stream.destroy());
-          stream.pipe(res);
         } catch (error) {
           reportDiagnostic("files.download", error);
           respondJson(res, 404, { error: "File unavailable" });
@@ -206,7 +202,7 @@ export function workspaceRoutes({
     {
       path: "/api/images/local",
       method: "GET",
-      handler: async ({ res, url }) => {
+      handler: async ({ req, res, url }) => {
         try {
           const image = resolveLocalImage(url.searchParams.get("path"), {
             cwd: url.searchParams.get("cwd") || defaultCwd,
@@ -214,16 +210,18 @@ export function workspaceRoutes({
             allowedRoots: imageRoots,
           });
           const thumbnail = url.searchParams.get("thumbnail") === "1";
-          const bytes = thumbnail ? await imageThumbnail(image) : readFileSync(image.path);
-          res.writeHead(200, {
+          const headers = {
             "content-type": thumbnail ? "image/webp" : image.contentType,
-            "content-length": String(bytes.length),
             "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(thumbnail ? `${image.filename}.webp` : image.filename)}`,
             "cache-control": thumbnail ? "private, no-cache" : "private, max-age=60",
             "cross-origin-resource-policy": "same-origin",
             "x-content-type-options": "nosniff",
-          });
-          res.end(bytes);
+          };
+          if (thumbnail) {
+            const bytes = await imageThumbnail(image);
+            res.writeHead(200, { ...headers, "content-length": String(bytes.length) });
+            res.end(bytes);
+          } else await streamResponseFile(req, res, image.path, headers);
         } catch (error) {
           respondJson(res, errorStatus(error) === 503 ? 503 : 404, { error: "Image unavailable" });
         }

@@ -1,3 +1,4 @@
+import { copyPlainText as copyMessageText } from "../clipboard-text.js";
 import { localizeAttribute, setMessageHtml } from "../i18n.js";
 import { closestElement, findElement, findElements } from "./../dom.js";
 
@@ -6,36 +7,6 @@ import { codexIcon } from "../codex-icons.js";
 // Owns clipboard formatting and file-reference copy behavior.
 /** @param {import("./ports.js").FeatureOptions<"t", "notices", "clipboard">} options */
 export function assembleClipboard({ t, noticesPort }) {
-  async function copyMessageText(text) {
-    if (navigator.clipboard?.writeText) {
-      try {
-        await navigator.clipboard.writeText(text);
-        return;
-      } catch {}
-    }
-    // LAN HTTP pages may not expose the Clipboard API.
-    const active = document.activeElement,
-      selection = document.getSelection(),
-      ranges = [];
-    if (selection)
-      for (let index = 0; index < selection.rangeCount; index++) ranges.push(selection.getRangeAt(index).cloneRange());
-    const field = document.createElement("textarea");
-    field.value = text;
-    field.readOnly = true;
-    field.style.cssText = "position:fixed;top:0;left:-9999px;opacity:0";
-    document.body.append(field);
-    try {
-      field.select();
-      if (!document.execCommand("copy")) throw new Error("Copy failed");
-    } finally {
-      field.remove();
-      if (active instanceof HTMLElement && active.isConnected) active.focus({ preventScroll: true });
-      if (selection) {
-        selection.removeAllRanges();
-        for (const range of ranges) selection.addRange(range);
-      }
-    }
-  }
   async function copyUserMessage(button) {
     const text = findElement(".user-message", closestElement(".user-turn", button))?.textContent;
     if (!text || button.copyPending) return;

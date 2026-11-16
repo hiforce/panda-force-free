@@ -5,7 +5,7 @@ import { storage, STORAGE_KEYS } from "../storage.js";
 export function createWorkbenchLayout(options) {
   /** @type {{navigation: boolean; details: boolean} | null} */
   let beforeFocus = null;
-  /** @param {string | null} value @returns {import('../contracts/workbench-chrome.js').ReadingWidth} */
+  /** @param {string | null} value @returns {import('../contracts/workbench-chrome.js').WorkspaceWidth} */
   const normalized = (value) => (value === "wide" || value === "fill" ? value : "comfortable");
   function readWidth() {
     return normalized(document.documentElement.dataset.workbenchWidth || storage.get(STORAGE_KEYS.layout));

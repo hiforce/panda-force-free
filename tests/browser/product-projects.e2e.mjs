@@ -66,7 +66,7 @@ try {
   checks.push(
     "Names/descriptions remain editable, bound codes are read-only, and creation preserves case-insensitive uniqueness with inline validation",
   );
-  await go("/project?id=" + a.id);
+  await go("/project?id=" + a.id + "&tab=sessions");
   await page.locator('[data-wb="project-link"]').click();
   await page.locator('#associationSessions input[value="old-alpha"]').check();
   await page.locator('#associationSessions input[value="old-beta"]').check();
@@ -98,7 +98,7 @@ try {
     false,
   );
   checks.push("Move and unlink change only metadata while native session IDs and directories remain intact");
-  await go("/project?id=" + a.id);
+  await go("/project?id=" + a.id + "&tab=sessions");
   await page.locator('[data-wb="project-new"]').first().click();
   await page.locator("#prompt").fill("Draft for Alpha");
   await page.locator("#sessionProjectSelect").selectOption(b.id);
@@ -123,7 +123,7 @@ try {
     "Managed project folder controls, isolated project drafts, server-owned native cwd and immediate new-session association",
   );
   // If association fails, the native session already created must be reused on retry.
-  await go("/project?id=" + b.id);
+  await go("/project?id=" + b.id + "&tab=sessions");
   await page.locator('[data-wb="project-new"]').first().click();
   await page.locator("#prompt").fill("Retry association without duplicate session");
   projectDatabase = new Database(join(fixture.dir, "panda-state", "data", "projects.sqlite"));

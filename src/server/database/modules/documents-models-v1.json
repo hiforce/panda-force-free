@@ -1,0 +1,853 @@
+[
+  {
+    "name": "panda_force_document_mutex",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_spaces",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "projectId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "code",
+        "type": "varchar(128)",
+        "nullable": false,
+        "collation": "utf8mb4_general_ci"
+      },
+      {
+        "name": "name",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "engine",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "theme",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "sourceMode",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "sourceRoot",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "locale",
+        "type": "varchar(35)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 1
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "space_code",
+        "unique": true,
+        "columns": ["projectId", "code"]
+      },
+      {
+        "name": "space_project",
+        "unique": false,
+        "columns": ["projectId", "createdAt", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_documents",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "path",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "locale",
+        "type": "varchar(35)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "revisionId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "contentHash",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "importedHash",
+        "type": "varchar(64)",
+        "nullable": true
+      },
+      {
+        "name": "importedRevision",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "pathHash",
+        "type": "varchar(64)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "document_path",
+        "unique": true,
+        "columns": ["spaceId", "pathHash"]
+      },
+      {
+        "name": "documents_by_space",
+        "unique": false,
+        "columns": ["spaceId", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_revisions",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "number",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "locale",
+        "type": "varchar(35)",
+        "nullable": false
+      },
+      {
+        "name": "content",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "contentHash",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "revisions_by_document",
+        "unique": true,
+        "columns": ["documentId", "number"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_assets",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "mime",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "size",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "width",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "height",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "alt",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "assets_by_document",
+        "unique": false,
+        "columns": ["documentId", "createdAt", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_languages",
+    "columns": [
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "groupId",
+        "type": "varchar(128)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["documentId"]
+      },
+      {
+        "name": "languages_by_group",
+        "unique": false,
+        "columns": ["groupId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_revision_assets",
+    "columns": [
+      {
+        "name": "revisionId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "source",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "assetId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "sourcePath",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "sourceHash",
+        "type": "varchar(64)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["revisionId", "sourceHash"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_site_profiles",
+    "columns": [
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "profile",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["spaceId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_project_document_libraries",
+    "columns": [
+      {
+        "name": "projectId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["projectId"]
+      },
+      {
+        "name": "project_library_space",
+        "unique": true,
+        "columns": ["spaceId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_folders",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "path",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 1
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "pathHash",
+        "type": "varchar(64)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "folder_path",
+        "unique": true,
+        "columns": ["spaceId", "pathHash"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_trash",
+    "columns": [
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "deletedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["documentId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_rich_revisions",
+    "columns": [
+      {
+        "name": "revisionId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "body",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["revisionId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_placements",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "projectId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "path",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "pathKey",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "locale",
+        "type": "varchar(35)",
+        "nullable": false
+      },
+      {
+        "name": "revisionId",
+        "type": "varchar(128)",
+        "nullable": true
+      },
+      {
+        "name": "metadata",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "deletedAt",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "activePathHash",
+        "type": "varchar(64)",
+        "nullable": true
+      },
+      {
+        "name": "activeLocale",
+        "type": "varchar(35)",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "placement_target_path",
+        "unique": true,
+        "columns": ["spaceId", "activePathHash"]
+      },
+      {
+        "name": "placement_source_edition",
+        "unique": true,
+        "columns": ["documentId", "spaceId", "activeLocale"]
+      },
+      {
+        "name": "placements_by_document",
+        "unique": false,
+        "columns": ["documentId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_placement_events",
+    "columns": [
+      {
+        "name": "placementId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "operation",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "snapshot",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["placementId", "version"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_tree_versions",
+    "columns": [
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["spaceId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_tree_nodes",
+    "columns": [
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "parentId",
+        "type": "varchar(128)",
+        "nullable": true
+      },
+      {
+        "name": "position",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["documentId"]
+      },
+      {
+        "name": "document_tree_identity",
+        "unique": true,
+        "columns": ["documentId", "spaceId"]
+      },
+      {
+        "name": "document_tree_children",
+        "unique": false,
+        "columns": ["spaceId", "parentId", "position", "documentId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_tree_operations",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "result",
+        "type": "longtext",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "tree_operations_space",
+        "unique": false,
+        "columns": ["spaceId", "createdAt", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_tree_trash",
+    "columns": [
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "parentId",
+        "type": "varchar(128)",
+        "nullable": true
+      },
+      {
+        "name": "position",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "varchar(128)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["documentId"]
+      },
+      {
+        "name": "document_tree_trash_children",
+        "unique": false,
+        "columns": ["spaceId", "operationId", "parentId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_document_tree_folder_origins",
+    "columns": [
+      {
+        "name": "spaceId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "path",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "pathHash",
+        "type": "varchar(64)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["spaceId", "pathHash"]
+      }
+    ]
+  }
+]

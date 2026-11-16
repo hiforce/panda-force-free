@@ -81,9 +81,9 @@ const configuration = await page.evaluate(() => ({
     node.textContent.trim(),
   ),
 }));
-await page.fill("#settingsSearch", "browser");
+await page.fill("#settingsSearch", "storage");
 const settingsSearch = await page.evaluate(() => ({
-  visible: [...document.querySelectorAll("[data-settings-page]")]
+  visible: [...document.querySelectorAll(".settings-nav [data-settings-page]")]
     .filter((node) => !node.hidden)
     .map((node) => node.textContent.trim()),
   groups: [...document.querySelectorAll("[data-settings-group]")]
@@ -92,7 +92,7 @@ const settingsSearch = await page.evaluate(() => ({
   clearVisible: !document.querySelector("#clearSettingsSearch").hidden,
 }));
 await page.locator("[data-settings-group]").evaluateAll((groups) => groups.forEach((group) => (group.open = true)));
-await page.click('[data-settings-page="browser-use"]');
+await page.click('[data-settings-page="storage"]');
 await page.screenshot({ path: "/tmp/panda-force-settings-shell.png" });
 await page.click("#clearSettingsSearch");
 await page.locator("[data-settings-group]").evaluateAll((groups) => groups.forEach((group) => (group.open = true)));
@@ -277,15 +277,11 @@ await browser.close();
   qualityAssert.ok(!chatgpt.profileHidden, "Condition: chatgpt.profileHidden");
   qualityAssert.ok(!chatgpt.usageHidden, "Condition: chatgpt.usageHidden");
   qualityAssert.ok(!chatgpt.logoutHidden, "Condition: chatgpt.logoutHidden");
-  qualityAssert.equal(settingsShell.groups.length, 5, "Condition: settingsShell.groups.length!==5");
-  qualityAssert.ok(
-    settingsShell.pages.includes("Configuration"),
-    "Condition: !settingsShell.pages.includes('Configuration')",
-  );
-  qualityAssert.ok(
-    settingsShell.pages.includes("Cloud preferences"),
-    "Condition: !settingsShell.pages.includes('Cloud preferences')",
-  );
+  qualityAssert.deepEqual(settingsShell.groups, ["System & services", "Account"]);
+  qualityAssert.ok(settingsShell.pages.includes("Preferences"));
+  qualityAssert.ok(settingsShell.pages.includes("Models & connections"));
+  qualityAssert.ok(settingsShell.pages.includes("Extensions & skills"));
+  qualityAssert.equal(settingsShell.pages.includes("Publishing styles"), false);
   qualityAssert.ok(settingsShell.fullPage, "Condition: !settingsShell.fullPage");
   qualityAssert.equal(settingsShell.back, "Back to app", "Condition: settingsShell.back!=='Back to app'");
   qualityAssert.equal(
@@ -294,8 +290,8 @@ await browser.close();
     "Condition: settingsShell.route!=='/settings/general-settings'",
   );
   qualityAssert.ok(settingsShell.modal, "Condition: !settingsShell.modal");
-  qualityAssert.equal(settingsShell.navSpacer, 46, "Condition: settingsShell.navSpacer!==46");
-  qualityAssert.equal(configuration.title, "Configuration", "Condition: configuration.title!=='Configuration'");
+  qualityAssert.equal(settingsShell.navSpacer, 20, "Settings navigation uses the compact desktop inset");
+  qualityAssert.equal(configuration.title, "Models & connections");
   qualityAssert.equal(configuration.route, "/settings/agent", "Condition: configuration.route!=='/settings/agent'");
   qualityAssert.ok(
     configuration.values.some((value) => value.startsWith("Model")),
@@ -303,18 +299,14 @@ await browser.close();
   );
   qualityAssert.equal(
     settingsSearch.visible.join("|"),
-    "Browser",
-    "Condition: settingsSearch.visible.join('|')!=='Browser'",
+    "Storage & diagnostics",
+    "Storage search matches the actual storage entry",
   );
-  qualityAssert.equal(
-    settingsSearch.groups.join("|"),
-    "Engines and tools",
-    "Condition: settingsSearch.groups.join('|')!=='Engines and tools'",
-  );
+  qualityAssert.equal(settingsSearch.groups.join("|"), "System & services", "Search keeps the matching group");
   qualityAssert.ok(settingsSearch.clearVisible, "Condition: !settingsSearch.clearVisible");
   qualityAssert.ok(settings.open, "Condition: !settings.open");
   qualityAssert.equal(settings.title, "Settings", "Condition: settings.title!=='Settings'");
-  qualityAssert.equal(settings.page, "General", "Condition: settings.page!=='General'");
+  qualityAssert.equal(settings.page, "Preferences");
   qualityAssert.equal(settings.permission, "Ask for approval", "Condition: settings.permission!=='Ask for approval'");
   qualityAssert.ok(settings.autoReviewHidden, "Condition: !settings.autoReviewHidden");
   qualityAssert.ok(settings.autoReviewChecked, "Condition: !settings.autoReviewChecked");

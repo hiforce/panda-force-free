@@ -1,0 +1,55 @@
+ARG BUN_IMAGE=oven/bun:1.4.2@sha256:9114c058aeae42162ee16dd5084b95fe9473970bb6bcb5b232ab1630f0546895
+ARG NODE_IMAGE=node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da
+FROM ${BUN_IMAGE} AS bun
+FROM ${NODE_IMAGE} AS toolchain
+ARG APT_MIRROR=http://mirrors.tuna.tsinghua.edu.cn
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+RUN sed -i "s|http://deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources \
+    && printf '%s\n' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' 'Acquire::Retries "2";' 'Acquire::http::Pipeline-Depth "0";' > /etc/apt/apt.conf.d/99spark-network \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates build-essential python3 git \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g --registry="${NPM_REGISTRY}" --fetch-timeout=60000 --fetch-retries=2 @openai/codex@0.166.0
+WORKDIR /app
+
+FROM toolchain AS build-base
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+COPY package.json bun.lock ./
+COPY patches ./patches
+RUN bun install --registry="${NPM_REGISTRY}" --frozen-lockfile
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends postgresql vim \
+    && rm -rf /var/lib/apt/lists/* \
+    && bun node_modules/playwright/cli.js install --with-deps chromium webkit \
+    && npm rebuild node-pty --build-from-source \
+    && vim --version > /dev/null \
+    && sha256sum package.json bun.lock patches/* > /opt/panda-force-dependencies.sha256
+
+FROM toolchain AS production-dependencies
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+COPY package.json bun.lock ./
+COPY patches ./patches
+RUN bun install --registry="${NPM_REGISTRY}" --frozen-lockfile --production --omit=peer \
+    && npm rebuild node-pty --build-from-source \
+    && node -e "require('node-pty'); for (const name of ['jsdom', 'typescript', 'eslint', 'prettier', 'playwright']) { let found = false; try { require.resolve(name); found = true; } catch {} if (found) throw new Error('Development dependency in runtime: ' + name); }"
+
+FROM ${NODE_IMAGE} AS runtime-base
+ARG APT_MIRROR=http://mirrors.tuna.tsinghua.edu.cn
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=toolchain /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN sed -i "s|http://deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources \
+    && printf '%s\n' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' 'Acquire::Retries "2";' 'Acquire::http::Pipeline-Depth "0";' > /etc/apt/apt.conf.d/99spark-network \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates bubblewrap git openssh-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/local/lib/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex
+WORKDIR /app
+COPY --from=production-dependencies /app/node_modules ./node_modules
+COPY package.json bun.lock ./
+COPY patches ./patches
+RUN sha256sum package.json bun.lock patches/* > /opt/panda-force-dependencies.sha256 \
+    && mkdir -p /home/codex/.codex /home/codex/workspace /var/lib/panda-force \
+    && chmod 700 /var/lib/panda-force \
+    && chown -R 1000:1000 /home/codex /var/lib/panda-force

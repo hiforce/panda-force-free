@@ -177,6 +177,9 @@ try {
   assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.active.id), "A");
   assert.equal(await page.locator("#prompt").inputValue(), "Keep A draft");
   await page.evaluate(() => globalThis.__pandaForceDebug.openThread("C"));
+  // Route recovery can supersede an uncached read; assert the visible destination after it settles.
+  await page.waitForFunction(() => globalThis.__pandaForceDebug.state.active?.id === "C");
+  await page.locator('.user-turn[data-delivery="sent"]').waitFor();
   assert.equal(await page.locator("#prompt").inputValue(), "");
   assert.equal(
     await page.locator(".user-turn[data-delivery=sent] .user-message").textContent(),

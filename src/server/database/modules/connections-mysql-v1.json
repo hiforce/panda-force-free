@@ -1,0 +1,371 @@
+[
+  {
+    "name": "panda_force_publication_account_schema",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_accounts",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "ownerId",
+        "type": "varchar(256)",
+        "nullable": false
+      },
+      {
+        "name": "projectId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "configurationId",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "configuration",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "secret",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "record",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "credentialRevision",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "rowSequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "publication_accounts_owner",
+        "unique": false,
+        "columns": ["ownerId", "projectId"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "publication_accounts_sequence",
+        "unique": true,
+        "columns": ["rowSequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_connection_schema",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_connections",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "ownerId",
+        "type": "varchar(256)",
+        "nullable": false
+      },
+      {
+        "name": "projectId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "targetPath",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "record",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "targetPathHash",
+        "type": "char(64)",
+        "nullable": false
+      },
+      {
+        "name": "rowSequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "connections_by_owner",
+        "unique": false,
+        "columns": ["ownerId", "projectId"]
+      },
+      {
+        "name": "publication_connections_2",
+        "unique": true,
+        "columns": ["targetPathHash"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "publication_connections_sequence",
+        "unique": true,
+        "columns": ["rowSequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_credential_schema",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_credentials",
+    "columns": [
+      {
+        "name": "connectionId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "connectorId",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "ownerId",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "envelope",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "leaseOwner",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "leaseFence",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "refreshDispatched",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["connectionId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_oauth_attempts",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "stateHash",
+        "type": "varchar(200)",
+        "nullable": true
+      },
+      {
+        "name": "ownerId",
+        "type": "varchar(256)",
+        "nullable": false
+      },
+      {
+        "name": "connectionId",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "record",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "phase",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "secret",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "expiresAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "publication_oauth_owner",
+        "unique": false,
+        "columns": ["ownerId"]
+      },
+      {
+        "name": "publication_oauth_attempts_2",
+        "unique": true,
+        "columns": ["stateHash"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_oauth_schema",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_mutex",
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  }
+]

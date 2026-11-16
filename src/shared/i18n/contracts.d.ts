@@ -1,3 +1,4 @@
+export type SupportedLocale = "en" | "zh-CN" | "zh-HK" | "zh-TW";
 export interface LocaleDescriptor {
   code: string;
   name: string;

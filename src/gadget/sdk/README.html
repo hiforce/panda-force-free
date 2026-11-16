@@ -1,0 +1,28 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PandaForce Gadget SDK</title><style>body{max-width:960px;margin:40px auto;padding:24px;font:15px/1.8 system-ui;color:#26363c}pre{padding:18px;background:#f2f4f2;white-space:pre-wrap;overflow-wrap:anywhere}code{font-size:13px}h1,h2{line-height:1.4}</style><h1>PandaForce Gadget SDK</h1><p>The workbench is a registered composition. System modules live in <code>src/gadget/system</code>. The host contains no component-ID or service-name dispatch. Installed extensions use the same manifest and backend service registry; their UI runs in a sandbox.</p><h2>Build and install</h2><pre>bun run build:gadget-sdk
+npm install /path/to/dist/panda-gadget-sdk-0.1.0.tgz</pre><p>The SDK is built locally; this command does not publish to a registry. It exports client, server and frame entry points with TypeScript declarations. Review the example at <code>examples/gadget/batch-summary</code>.</p><h2>Register a module</h2><pre>import { GadgetRegistry } from '@hiforceai/panda-gadget-sdk/server';
+export function registerGadgets(registry) {
+  registry.register({ manifest, frontend: bundledUi,
+    services: { summary: {
+      authorize: context =&gt; permissions.canRead(context.owner),
+      handle: (context, input) =&gt; provider.summary(context.owner, context.config, context.signal)
+    }}
+  });
+}</pre><p>Set <code>PANDA_FORCE_GADGET_MODULES</code> to an administrator-owned JSON array of absolute module entry paths, for example <code>["/opt/panda/gadgets/batch-summary/server.js"]</code>, then restart. Server modules are trusted administrative code. UI is isolated, with network access and parent DOM access denied. The layout cannot nominate arbitrary script URLs.</p><h2>Manifest</h2><p>Declare a namespaced ID, API/config versions, four-locale titles and descriptions, singleton policy, desktop size constraints, schema-like bounded config fields, services, actions, refresh budget and optional default placement. Duplicate IDs and invalid registrations fail startup. A failed frontend or an unavailable package affects only its instance. Config migrations are registered by source version and preserve the original configuration on failure.</p><h2>Frontend</h2><pre>import { defineGadget } from '@hiforceai/panda-gadget-sdk/frame';
+defineGadget((root, initial) =&gt; ({
+  async update(context) {
+    const summary = await context.data('summary');
+    if (context.signal.aborted) return;
+    root.textContent = String(summary.total);
+  },
+  dispose() { root.replaceChildren(); }
+}));</pre><p>Bundle the frontend into one classic JavaScript entry, then provide its text as <code>frontend</code>. Use context.locale and context.theme, not application globals. Handle all four locales: en, zh-CN, zh-HK and zh-TW. Updates carry a new AbortSignal; release listeners, timers and observers in dispose. Do not start private polling loops; the host schedules visible widgets, coalesces reads and limits request concurrency.</p><h2>HTTP client</h2><pre>import { GadgetClient } from '@hiforceai/panda-gadget-sdk/client';
+const client = new GadgetClient(baseUrl, authenticatedFetch);
+const catalog = await client.catalog();
+const layout = await client.layout();
+await client.save(layout, operationId); // retry identical input with this ID after an uncertain response
+await client.invoke(gadgetId, instanceId, config, 'summary');</pre><p>Browser calls use the existing same-origin authenticated session. Server integrations supply an authenticated fetch transport and the correct Origin header where required. The SDK introduces no universal API key or authentication bypass.</p><h2>API</h2><pre>GET  /api/gadgets/catalog
+GET  /api/gadgets/layout                 # private layout; ETag = revision
+PUT  /api/gadgets/layout                 # If-Match + operationId + layout
+POST /api/gadgets/data                   # registered service invocation
+POST /api/gadgets/actions                # registered action invocation
+GET  /api/gadgets/frontend/:gadgetId     # package-owned bundled UI</pre><p>Data/actions reauthorize the current identity on every call. Input/output sizes and concurrency are bounded. Services must respect context.signal; business mutations must use their own durable idempotency protocol. The host does not automatically retry actions. Registered navigation results are limited to application routes. Credentials remain on the server.</p><h2>Persistence and upgrades</h2><p>Layouts and replay receipts use SQLite by default or the application's selected MySQL pool. The gadgets DDL module participates in the existing schema registry, inspection and application-wide migration. Saves use revisions and transactions, keep receipts across restart and never overwrite another user. Existing user layouts do not receive new default widgets automatically. Missing/disabled/incompatible instances preserve their position and configuration.</p><h2>Acceptance</h2><p>Check add/remove, singleton handling, drag/resize and keyboard controls, separate mobile order, save/cancel/undo/reset, uncertain replay and conflicts, owner isolation, revoked service access, schema migration, missing widgets and single-widget recovery. Review real PC/H5 rendering and language/theme updates. Do not use production records or engine tasks for development tests.</p></html>

@@ -1,0 +1,32 @@
+{
+  "id": "system.bots",
+  "apiVersion": 1,
+  "version": "1.0.0",
+  "configVersion": 1,
+  "title": {
+    "zh-CN": "Bot 任务概览",
+    "en": "Bot queue",
+    "zh-HK": "Bot 任務概覽",
+    "zh-TW": "Bot 任務概覽"
+  },
+  "description": {
+    "zh-CN": "有界汇总与队列入口，不加载所有任务。",
+    "en": "Bounded summaries with links to the queue.",
+    "zh-HK": "有限摘要與佇列入口，不載入全部任務。",
+    "zh-TW": "有限摘要與佇列入口，不載入全部任務。"
+  },
+  "icon": "bot",
+  "singleton": true,
+  "source": "system",
+  "layout": {
+    "w": 4,
+    "h": 7,
+    "minW": 4,
+    "minH": 4
+  },
+  "config": {},
+  "services": ["summary"],
+  "actions": ["open"],
+  "minRefreshSeconds": 60,
+  "permissions": ["bots.read"]
+}

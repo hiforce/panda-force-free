@@ -1,0 +1,37 @@
+import type {
+  CreationArtifact,
+  CreationExecution,
+  CreationFailure,
+  CreationLease,
+  CreationTask,
+  CreationTaskSpec,
+} from "./contracts.js";
+
+export type CreationResult<T> = T | Promise<T>;
+
+/** Task metadata contains hashes and references; document source stays in files. */
+export interface CreationOutputTasks {
+  get(owner: string, id: string): CreationResult<CreationTask>;
+  assertExecution(scope: CreationExecution, now: number): CreationResult<CreationTask>;
+  admit(scope: CreationExecution, digest: string, now: number): CreationResult<CreationTask>;
+  complete(
+    owner: string,
+    id: string,
+    digest: string,
+    artifact: CreationArtifact,
+    now: number,
+  ): CreationResult<CreationTask>;
+  outputFailure(owner: string, id: string, digest: string, failure: CreationFailure, now: number): CreationResult<void>;
+}
+export interface CreationOutputContent {
+  /** Validation and durable staging finish before application authority admits an output. */
+  stage(value: unknown): Promise<string>;
+}
+export interface CreationExecutionTasks {
+  get(owner: string, id: string): CreationResult<CreationTask>;
+  bind(lease: CreationLease, sessionId: string, runId: string, now: number): CreationResult<CreationExecution>;
+}
+export interface CreationArtifactWriter {
+  /** Repeating an admitted operation must return its real receipt without modifying the saved artifact. */
+  commit(task: CreationTaskSpec, outputDigest: string): Promise<CreationArtifact>;
+}

@@ -14,16 +14,15 @@ describe("locale policy", () => {
     expect(resolveLocale("system", ["en-US", "zh-CN"])).toBe("en");
     expect(resolveLocale("system", ["zh-Hans-SG", "en"])).toBe("zh-CN");
     expect(resolveLocale("system", ["de-DE", "en-GB", "zh-CN"])).toBe("en");
-    expect(resolveLocale("system", ["zh-TW"])).toBe("en");
+    expect(resolveLocale("system", ["zh-TW"])).toBe("zh-TW");
+    expect(resolveLocale("system", ["zh-Hant-HK"])).toBe("zh-HK");
+    expect(resolveLocale("system", ["zh-Hant"])).toBe("zh-TW");
+    expect(resolveLocale("system", ["zh-MO"])).toBe("zh-HK");
     expect(resolveLocale("system", [])).toBe("en");
   });
   test("new regions and scripts use registry data rather than new language branches", () => {
-    const registry = [
-      ...SUPPORTED_LOCALES,
-      { code: "zh-TW", name: "繁體中文", direction: "ltr" },
-      { code: "fr", name: "Français", direction: "ltr" },
-    ];
-    expect(resolveLocale("system", ["zh-Hant-HK", "en"], registry)).toBe("zh-TW");
+    const registry = [...SUPPORTED_LOCALES, { code: "fr", name: "Français", direction: "ltr" }];
+    expect(resolveLocale("system", ["zh-Hant-HK", "en"], registry)).toBe("zh-HK");
     expect(resolveLocale("system", ["fr-CA", "en"], registry)).toBe("fr");
     expect(resolveLocale("system", ["zh-SG"], registry)).toBe("zh-CN");
   });
@@ -229,6 +228,8 @@ test("owned errors carry stable IDs while CLI diagnostics remain opaque", async 
   const payload = errorPayload("auth.incorrectCredentials");
   expect(payload.error).toBe("Incorrect username or password");
   expect(errorText(payload, runtime.t)).toBe("用户名或密码不正确");
+  expect(errorText({ messageId: "connections.conflict" }, runtime.t)).toBe("连接已更改，请重新加载后保存或测试。");
+  expect(errorText({ messageId: "accounts.authorizationExpired" }, runtime.t)).toContain("授权已过期");
   expect(errorText({ error: "CLI: Settings failed" }, runtime.t)).toBe("CLI: Settings failed");
 });
 

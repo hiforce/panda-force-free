@@ -1,6 +1,6 @@
 import { basename, resolve } from "node:path";
 import { readServiceLogConfig } from "../src/server/logging/config.js";
-import { runLoggedProcess } from "../src/server/logging/supervisor.js";
+import { runRestartableLoggedProcess } from "../src/server/logging/managed-restart.js";
 
 try {
   const root = resolve(import.meta.dir, "..");
@@ -15,7 +15,7 @@ try {
         ? "src/server/cluster/gateway.ts"
         : "src/server/main.ts",
   );
-  process.exitCode = await runLoggedProcess({
+  process.exitCode = await runRestartableLoggedProcess({
     command: [process.execPath, entry, ...process.argv.slice(2)],
     cwd: root,
     logging: readServiceLogConfig(),

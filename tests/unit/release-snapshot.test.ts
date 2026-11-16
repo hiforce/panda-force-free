@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { exportFree } from "../../scripts/release/export-free.mjs";
+import { exportFree, isPublicSourcePath } from "../../scripts/release/export-free.mjs";
 import { prepareUpdate } from "../../scripts/release/prepare-update.mjs";
 import { git, assertReleasePath, inspectText, verifySnapshot } from "../../scripts/release/snapshot-lib.mjs";
 const templates = [
@@ -13,6 +13,7 @@ const templates = [
   "Dockerfile",
   "docker-compose.yml",
   "docker-compose.build.yml",
+  "docker-compose.documents.registry.yml",
   ".env.example",
   ".gitignore",
   ".dockerignore",
@@ -114,5 +115,28 @@ test("filtered exports exclude private state and internal history; three-way upd
       expect(() => assertReleasePath(path)).toThrow();
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("public inventory rejects internal operations and retains portable deployment inputs", () => {
+  for (const path of [
+    "docs/internal/design.html",
+    "scripts/internal/release.py",
+    "tests/ops/release.py",
+    "deployment.private.json",
+  ]) {
+    expect(isPublicSourcePath(path)).toBe(false);
+    expect(() => assertReleasePath(path)).toThrow();
+  }
+  for (const path of [
+    "public/gadget.css",
+    "public/template-previews/journal-home.webp",
+    "deploy/documents/executor/Dockerfile",
+    "examples/gadget/demo/frontend.ts",
+    "LICENSES/css-tokenizer-MIT.txt",
+    "docker-compose.documents.registry.yml",
+  ]) {
+    expect(isPublicSourcePath(path)).toBe(true);
+    expect(() => assertReleasePath(path)).not.toThrow();
   }
 });

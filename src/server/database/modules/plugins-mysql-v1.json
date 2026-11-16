@@ -1,0 +1,498 @@
+[
+  {
+    "name": "panda_force_plugin_audit",
+    "columns": [
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "action",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "permissions",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "exports",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["sequence"]
+      },
+      {
+        "name": "plugin_audit_unique_1",
+        "unique": true,
+        "columns": ["revision"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_plugin_export_heads",
+    "columns": [
+      {
+        "name": "packageId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "kind",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "exportId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["packageId", "kind", "exportId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_plugin_exports",
+    "columns": [
+      {
+        "name": "packageId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "kind",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "exportId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "enabled",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["packageId", "version", "kind", "exportId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_plugin_heads",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_plugin_registry",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_plugin_versions",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "manifest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "installedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "installedBy",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "enabled",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "grants",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id", "version"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_site_sample_runs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "sampleKey",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "record",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "input",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "logs",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "terminal",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "site_samples_by_key",
+        "unique": false,
+        "columns": ["sampleKey", "createdAt"]
+      },
+      {
+        "name": "site_samples_by_owner",
+        "unique": false,
+        "columns": ["owner", "createdAt"]
+      },
+      {
+        "name": "site_sample_runs_sequence",
+        "unique": true,
+        "columns": ["sequence"]
+      },
+      {
+        "name": "site_sample_runs_lookup_0",
+        "unique": false,
+        "columns": ["terminal", "sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_template_drafts",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "definition",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "packageDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "validation",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "publishedAt",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedBy",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_template_library_audit",
+    "columns": [
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "draftId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "action",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["sequence"]
+      },
+      {
+        "name": "template_library_audit_lookup_0",
+        "unique": false,
+        "columns": ["draftId", "sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_template_releases",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "packageDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "definition",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "validation",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "publishedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "publishedBy",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id", "version"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_plugins_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  }
+]

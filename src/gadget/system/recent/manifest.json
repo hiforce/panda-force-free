@@ -1,0 +1,51 @@
+{
+  "id": "system.recent",
+  "apiVersion": 1,
+  "version": "1.0.0",
+  "configVersion": 1,
+  "title": {
+    "zh-CN": "最近工作",
+    "en": "Recent work",
+    "zh-HK": "最近工作",
+    "zh-TW": "最近工作"
+  },
+  "description": {
+    "en": "Continue recent conversations and tasks.",
+    "zh-CN": "继续最近的会话与任务。",
+    "zh-HK": "繼續最近的對話與任務。",
+    "zh-TW": "繼續最近的對話與任務。"
+  },
+  "icon": "clock",
+  "singleton": true,
+  "source": "system",
+  "layout": {
+    "w": 8,
+    "h": 12,
+    "minW": 4,
+    "minH": 4
+  },
+  "config": {
+    "limit": {
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "max": 20,
+      "label": {
+        "en": "Items shown",
+        "zh-CN": "显示条数",
+        "zh-HK": "顯示筆數",
+        "zh-TW": "顯示筆數"
+      }
+    }
+  },
+  "services": ["summary"],
+  "actions": ["open"],
+  "minRefreshSeconds": 60,
+  "defaultPlacement": {
+    "x": 0,
+    "y": 11,
+    "order": 2
+  },
+  "permissions": ["sessions.read"],
+  "clientCapabilities": ["panda.sessions"]
+}

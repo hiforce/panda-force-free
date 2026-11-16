@@ -187,6 +187,17 @@ export function assembleStartup({
         if (configured) workspacePreparation.complete("configuration");
       })(),
     );
+    if (globalThis.__pandaForceIdentity?.role === "member") {
+      await configurationReadiness.ready;
+      await projectsPort.businessProjects.load();
+      workspacePreparation.complete("connection");
+      workspacePreparation.complete("sessions");
+      workspacePreparation.complete("models");
+      workspacePreparation.complete("permissions");
+      workspacePreparation.complete("projects");
+      viewUpdates.request("workbench");
+      return;
+    }
     void sidebarPort.loadProjectVisibility().catch(() => {});
     // Expiration is also checked on every cache read. Cleanup can wait until the
     // first sidebar/history paint instead of locking IndexedDB during startup.

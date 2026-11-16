@@ -138,7 +138,6 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 22px 23px 28px;
-  scrollbar-width: thin;
 }
 .session-section + .session-section {
   margin-top: 19px;
@@ -1039,14 +1038,10 @@
 .session-layout #threadPath {
   display: none;
 }
-.session-layout .conversation-shell {
-  container-type: inline-size;
-}
 .session-layout .conversation {
   width: 100%;
   max-width: none;
   padding: 36px 0 28px;
-  scrollbar-gutter: stable both-edges;
 }
 /* Measure both rails from the main column, independent of panels and scrollbar width. */
 .session-layout .conversation > * {
@@ -1129,7 +1124,7 @@
     grid-column: 3;
   }
   .session-layout.sidebar-hidden .window-brand {
-    visibility: visible !important;
+    visibility: visible;
   }
   .session-layout .sidebar {
     position: static;
@@ -1212,7 +1207,7 @@
     font-size: 9px;
   }
   .session-layout .top-actions {
-    display: contents !important;
+    display: contents;
   }
   .session-layout .top-actions > #toggleSidebar {
     order: 0;
@@ -1526,4 +1521,6 @@
 }
 
 /* The conversation viewport owns reading anchors across streamed updates. */
-#conversation { overflow-anchor: none; }
+#conversation {
+  overflow-anchor: none;
+}

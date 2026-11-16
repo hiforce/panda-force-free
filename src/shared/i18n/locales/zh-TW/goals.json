@@ -1,0 +1,10 @@
+{
+  "saving": "正在儲存…",
+  "goalStatus": "Goal 狀態",
+  "showGoalDetails": "檢視 Goal 詳情",
+  "goalActions": "Goal 操作",
+  "goalObjective": "Goal 目標",
+  "goalObjectiveCannotBeEmpty": "Goal 目標不能為空",
+  "goalUpdated": "Goal 已更新",
+  "goalCleared": "已清除目標"
+}

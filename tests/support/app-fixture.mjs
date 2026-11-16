@@ -14,9 +14,10 @@ import {
 import { join } from "node:path";
 import { createServer } from "node:net";
 import { seedGoalFixture } from "./goal-fixture.mjs";
+import { ProjectCatalog } from "../../src/server/projects/catalog.js";
 
-export async function waitFor(check) {
-  const deadline = performance.now() + 20_000;
+export async function waitFor(check, timeoutMs = 20000) {
+  const deadline = performance.now() + timeoutMs;
   while (performance.now() < deadline) {
     const value = await check();
     if (value) return value;
@@ -27,15 +28,20 @@ export async function waitFor(check) {
 
 export async function createAppFixture({
   freshAdministrator = false,
+  initialDatabaseChoice = false,
   historySessions = 0,
   questionnaireRollout = false,
   sharedApprovals = false,
   usageRollout = false,
   unnamedSessions = false,
   models = null,
+  applicationCreation = false,
+  applicationKnowledge = false,
   account = null,
   goals = [],
-  workspaceDirectory = null,
+  workspaceDirectory = /** @type {string | null} */ (null),
+  prepareState = /** @type {(context: {dir: string; stateRoot: string}) => Promise<void>} */ (async () => {}),
+  startupTimeoutMs = 20000,
   extraEnvironment = /** @type {(context: {base: string; dir: string}) => NodeJS.ProcessEnv} */ (() => ({})),
 } = {}) {
   // Keep the project inside the application's existing folder-browsing boundary.
@@ -45,7 +51,7 @@ export async function createAppFixture({
   if (process.env.PANDA_FORCE_TEST_RUN)
     appendFileSync(
       join(process.env.PANDA_FORCE_TEST_RUN, "fixtures.jsonl"),
-      JSON.stringify({ owner: process.pid, path: dir }) + "\n",
+      JSON.stringify({ owner: process.pid, suite: process.env.PANDA_FORCE_TEST_SUITE, path: dir }) + "\n",
     );
   const alpha = join(dir, "alpha"),
     beta = join(dir, "beta");
@@ -184,6 +190,13 @@ let count=0;
 let account=${JSON.stringify(account)};
 const threads=${JSON.stringify(initial)};
 const queues=new Map();
+const applicationThreads=new Set(), applicationCalls=new Map();
+const knowledgeThreads=new Map(),knowledgeCalls=new Map();
+function knowledgeCall(pending,tool,args){
+ const id='knowledge-'+(++count);knowledgeCalls.set(id,pending);
+ setTimeout(()=>send({id,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId:id,tool,arguments:args}}),15);
+}
+function knowledgeFinish(pending){send({method:'turn/completed',params:{threadId:pending.thread,turn:{id:pending.run,status:'completed'}}});}
 const goalDb=${goals.length > 0} ? new Database(${JSON.stringify(goalPath)}) : null;
 function goalResult(id){
   const row=goalDb?.query('SELECT * FROM thread_goals WHERE thread_id=?').get(id);
@@ -194,7 +207,34 @@ const send=value=>sharedSocket?sharedSocket.send(JSON.stringify(value)):process.
 setInterval(()=>{if(existsSync(${JSON.stringify(serverRequest)})){const request=JSON.parse(readFileSync(${JSON.stringify(serverRequest)},'utf8'));unlinkSync(${JSON.stringify(serverRequest)});send(request)}},50).unref();
 const handleLine=line=>{
   const m=JSON.parse(line),p=m.params||{};
-  if(!m.method&&('result' in m||'error' in m)){appendFileSync(${JSON.stringify(trace)},JSON.stringify({type:'response',...m})+'\\n');return}
+  if(!m.method&&('result' in m||'error' in m)){
+    const knowledge=knowledgeCalls.get(m.id);
+    if(knowledge){knowledgeCalls.delete(m.id);
+      if(m.result?.success!==true){knowledgeFinish(knowledge);return;}
+      let value;try{value=JSON.parse(m.result.contentItems[0].text);}catch{knowledgeFinish(knowledge);return;}
+      if(knowledge.stage==='source'){
+        knowledge.source=(knowledge.source||'')+value.text;
+        if(value.next!==null)knowledgeCall(knowledge,'panda_knowledge_context',{id:knowledge.manifest.sources[0].id,start:value.next});
+        else{const source=knowledge.manifest.sources[0];knowledge.stage='draft';knowledgeCall(knowledge,'panda_knowledge_draft',{schema:1,title:'Reviewed storage knowledge',summary:'Saved source guidance for reliable indexing.',claims:[{id:'claim-1',kind:'source',text:knowledge.source.trim(),evidence:[{sourceId:source.id,version:source.version,quote:knowledge.source.slice(0,Math.min(300,knowledge.source.length)),start:0}]}],uncertainties:[]});}
+      }else if(knowledge.stage==='review-source'){
+        if(value.next!==null)knowledgeCall(knowledge,'panda_knowledge_review_source',{id:knowledge.manifest.sources[knowledge.sourceIndex].id,start:value.next});
+        else if(++knowledge.sourceIndex<knowledge.manifest.sources.length)knowledgeCall(knowledge,'panda_knowledge_review_source',{id:knowledge.manifest.sources[knowledge.sourceIndex].id,start:0});
+        else{knowledge.stage='review-draft';knowledge.text='';knowledgeCall(knowledge,'panda_knowledge_review_draft',{start:0});}
+      }else if(knowledge.stage==='review-draft'){
+        knowledge.text+=value.text;
+        if(value.next!==null)knowledgeCall(knowledge,'panda_knowledge_review_draft',{start:value.next});
+        else{const draft=JSON.parse(knowledge.text);knowledge.stage='review-decision';knowledgeCall(knowledge,'panda_knowledge_review_decision',{schema:1,verdict:'approve',summary:'The complete draft follows its saved source context.',checks:{faithfulness:true,coverage:true,separation:true,clarity:true,contradictions:true},claims:draft.claims.map(claim=>({id:claim.id,supported:true,reason:'The selected saved source supports this claim.'})),issues:[]});}
+      }else knowledgeFinish(knowledge);
+      return;
+    }
+    const pending=applicationCalls.get(m.id);
+    if(pending){applicationCalls.delete(m.id);
+      if(pending.kind==='question'){
+        const next={...pending,kind:'save'}; const callId='save-'+pending.run;
+        applicationCalls.set(callId,next); send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_documents_create',arguments:{title:'Generated handbook',body:{schema:1,format:'richtext',document:{type:'doc',content:[{type:'heading',attrs:{level:2},content:[{type:'text',text:'A useful result'}]},{type:'paragraph',content:[{type:'text',text:'An editable document from an answered task.'}]}]}}}}});
+      }else send({method:'turn/completed',params:{threadId:pending.thread,turn:{id:pending.run,status:'completed'}}});
+    }
+    appendFileSync(${JSON.stringify(trace)},JSON.stringify({type:'response',...m})+'\\n');return}
   if(!m.method||m.id===undefined)return;
   appendFileSync(${JSON.stringify(trace)},JSON.stringify({method:m.method,params:p})+'\\n');
   if('pandaProjectless' in p)throw new Error('PandaForce metadata leaked into native RPC');
@@ -222,6 +262,9 @@ const handleLine=line=>{
   else if(m.method==='thread/start'){
     if(p.model==='fail'){send({id:m.id,error:{message:'Fixture creation failed'}});return}
     const thread={id:'new-'+(++count),name:${unnamedSessions} ? null : 'New session '+count,preview:'',cwd:p.cwd,status:{type:'idle'},createdAt:Date.now()/1000,updatedAt:Date.now()/1000,turns:[],canAcceptDirectInput:true};
+    if(${applicationCreation}&&p.dynamicTools?.some(tool=>tool.name==='panda_documents_create'))applicationThreads.add(thread.id);
+    if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_draft'))knowledgeThreads.set(thread.id,'draft');
+    if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_review_decision'))knowledgeThreads.set(thread.id,'review');
     threads.unshift(thread);send({method:'thread/started',params:{thread}});result={thread};
   }else if(m.method==='thread/name/set'){
     const thread=threads.find(t=>t.id===p.threadId);
@@ -235,7 +278,16 @@ const handleLine=line=>{
   }else if(m.method==='turn/start'){
     const thread=threads.find(t=>t.id===p.threadId);
     if(${unnamedSessions}&&thread&&!thread.preview)thread.preview=(p.input||[]).filter(x=>x.type==='text').map(x=>x.text).join('\\n');
-    result={turn:{id:'turn-'+(++count),status:'completed',items:[]}};
+    result={turn:{id:'turn-'+(++count),status:applicationThreads.has(p.threadId)||knowledgeThreads.has(p.threadId)?'inProgress':'completed',items:[]}};
+    if(knowledgeThreads.has(p.threadId)){
+      const manifest=JSON.parse(p.input.find(item=>item.type==='text').text),pending={thread:p.threadId,run:result.turn.id,manifest,sourceIndex:0,stage:knowledgeThreads.get(p.threadId)==='review'?'review-source':'source'};
+      if(pending.stage==='source'&&manifest.purpose.includes('ask-audience')&&!manifest.dialogue.answers.length){pending.stage='question';knowledgeCall(pending,'panda_knowledge_ask',{questions:[{question:'Who is this knowledge for?',options:['Developers','Writers']}]});}
+      else knowledgeCall(pending,pending.stage==='source'?'panda_knowledge_context':'panda_knowledge_review_source',{id:manifest.sources[0].id,start:0});
+    }
+    if(applicationThreads.has(p.threadId)){
+      const run=result.turn.id, id='question-'+run; applicationCalls.set(id,{kind:'question',thread:p.threadId,run});
+      setTimeout(()=>send({id,method:'item/tool/requestUserInput',params:{threadId:p.threadId,turnId:run,questions:[{id:'audience',header:'Audience',isOther:true,question:'Who should this document help?',options:[{label:'New users',description:'A short practical introduction.'},{label:'Maintainers',description:'Implementation and operational detail.'}]}]}}),20);
+    }
     send({method:'thread/status/changed',params:{threadId:p.threadId,status:{type:'idle'}}});
   }else if(m.method==='thread/queue/add'){
     const queuedSubmission={id:'queue-'+(++count),clientUserMessageId:p.clientUserMessageId,input:p.input};
@@ -277,6 +329,18 @@ else createInterface({input:process.stdin}).on('line',handleLine);
     beta,
     base,
     headers,
+    /** Seed an existing legacy project without exercising the application's new-project policy. @param {unknown} input */
+    legacyProject(input) {
+      if (!input || typeof input !== "object" || Array.isArray(input)) throw Error("Invalid legacy project fixture");
+      const fields = /** @type {Record<string, unknown>} */ (input);
+      if (fields.id !== undefined) throw Error("Legacy fixture seeding requires a new catalog identity");
+      const catalog = new ProjectCatalog(join(dir, "panda-state/data/projects.sqlite"));
+      try {
+        return catalog.save(fields, fields.revision ?? catalog.revision());
+      } finally {
+        catalog.close();
+      }
+    },
     calls() {
       try {
         return readFileSync(trace, "utf8")
@@ -298,13 +362,28 @@ else createInterface({input:process.stdin}).on('line',handleLine);
       });
       const response = await context.request.post(`${base}/api/auth/login`, {
         data: { username: "fixture-owner", password: "visibility-test" },
+        headers: { Origin: base },
       });
       if (!response.ok())
         throw new Error(`Fixture login failed: ${response.status()} ${await response.text()}\n${serverLogs}`);
       if ((await response.json()).migrationRequired) {
-        const setup = await context.request.post(`${base}/api/auth/setup`, { data: { username: "fixture-owner" } });
+        const setup = await context.request.post(`${base}/api/auth/setup`, {
+          data: { username: "fixture-owner" },
+          headers: { Origin: base },
+        });
         if (!setup.ok())
           throw new Error(`Fixture migration failed: ${setup.status()} ${await setup.text()}\n${serverLogs}`);
+      }
+      if (!initialDatabaseChoice) {
+        const overview = await context.request.get(`${base}/api/system/database`);
+        if (!overview.ok()) throw new Error(`Fixture database overview failed: ${overview.status()}`);
+        if ((await overview.json()).initialChoiceRequired) {
+          const selection = await context.request.post(`${base}/api/system/database/selection`, {
+            data: { driver: "sqlite" },
+            headers: { Origin: base },
+          });
+          if (!selection.ok()) throw new Error(`Fixture database selection failed: ${selection.status()}`);
+        }
       }
     },
     async start() {
@@ -331,6 +410,8 @@ else createInterface({input:process.stdin}).on('line',handleLine);
           NODE_ENV: "production",
           HOME: workspaceDirectory || dir,
           PANDA_FORCE_HOME: join(dir, "panda-state"),
+          PANDA_FORCE_AUTH_STORE: join(dir, "panda-state", "config", "password.json"),
+          PANDA_FORCE_ADMIN_STORE: join(dir, "panda-state", "config", "administrator.json"),
           BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0",
           PATH: `${dir}:${process.env.PATH}`,
           CODEX_HOME: dir,
@@ -365,16 +446,21 @@ else createInterface({input:process.stdin}).on('line',handleLine);
           if (proc.exitCode !== null) throw error;
           return false;
         }
-      }).catch((error) => {
+      }, startupTimeoutMs).catch((error) => {
         throw new Error(`${error.message}\n${serverLogs}`);
       });
     },
+    processExitCode() {
+      return proc?.exitCode ?? null;
+    },
     async stop() {
       if (proc) {
-        proc.kill();
-        await proc.exited;
+        if (proc.exitCode === null) proc.kill();
+        const code = await proc.exited;
         proc = null;
+        return code;
       }
+      return null;
     },
     async dispose() {
       if (disposed) return;
@@ -408,6 +494,7 @@ else createInterface({input:process.stdin}).on('line',handleLine);
     },
   };
   try {
+    await prepareState({ dir, stateRoot: join(dir, "panda-state") });
     await fixture.start();
     return fixture;
   } catch (error) {

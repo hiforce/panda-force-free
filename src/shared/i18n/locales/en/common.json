@@ -593,5 +593,8 @@
   "noUrlCredentials": "URLs with embedded credentials are not supported",
   "applicationSessionExpired": "Your application session has expired. Your page and draft are kept here. Continue through your sign-in provider to reconnect.",
   "historyRequiresSignIn": "Sign in again to load this conversation. Your history has not been deleted.",
-  "historyLoadFailed": "Could not load conversation history. Please retry."
+  "historyLoadFailed": "Could not load conversation history. Please retry.",
+  "pageLoading": "Loading…",
+  "pageLoadFailed": "This page couldn’t load. Try again.",
+  "pageReloadRequired": "Reload the page to continue."
 }

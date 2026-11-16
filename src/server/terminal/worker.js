@@ -1,5 +1,6 @@
 import pty from "node-pty";
 import { normalizeTerminalResize } from "./protocol.js";
+import { terminalEnvironment } from "./protocol.js";
 
 const cwd = process.argv[2] || process.cwd();
 const cols = Number(process.argv[3]) || 100;
@@ -13,7 +14,7 @@ const terminal = pty.spawn(shell, args, {
   cols,
   rows,
   cwd,
-  env: { ...process.env, TERM: "xterm-256color", COLORTERM: "truecolor" },
+  env: terminalEnvironment(),
 });
 
 terminal.onData((data) => process.stdout.write(data));

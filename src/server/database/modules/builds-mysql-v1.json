@@ -1,0 +1,250 @@
+[
+  {
+    "name": "panda_force_native_sample_runs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "signature",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "sampleKey",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "record",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "inputReady",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "terminal",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "reservedBytes",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "removed",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "logs",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "native_sample_key",
+        "unique": false,
+        "columns": ["owner", "sampleKey", "removed"]
+      },
+      {
+        "name": "native_sample_runs_sequence",
+        "unique": true,
+        "columns": ["sequence"]
+      },
+      {
+        "name": "native_sample_runs_lookup_0",
+        "unique": false,
+        "columns": ["terminal", "inputReady", "sequence"]
+      },
+      {
+        "name": "native_sample_runs_lookup_1",
+        "unique": false,
+        "columns": ["owner", "sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_site_build_resource_inputs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "ready",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "reservedBytes",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_site_builds",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "spaceId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "record",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "input",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "logs",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "terminal",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "projectId",
+        "type": "varchar(191)",
+        "nullable": true
+      },
+      {
+        "name": "removed",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "site_builds_by_project_space",
+        "unique": false,
+        "columns": ["projectId", "spaceId", "createdAt"]
+      },
+      {
+        "name": "site_builds_by_space",
+        "unique": false,
+        "columns": ["spaceId", "createdAt"]
+      },
+      {
+        "name": "site_builds_sequence",
+        "unique": true,
+        "columns": ["sequence"]
+      },
+      {
+        "name": "site_builds_lookup_0",
+        "unique": false,
+        "columns": ["terminal", "removed", "sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_samples_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_site_builds_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  }
+]

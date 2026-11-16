@@ -1,7 +1,6 @@
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { existingApplicationPath, pandaEnvironment } from "../environment.js";
+import { dirname } from "node:path";
+import { localAuthPaths } from "./paths.js";
 import { errorCode } from "./../../shared/errors.js";
 import { isStoredPassword } from "./security.js";
 
@@ -13,10 +12,7 @@ export type StoredPassword = {
 };
 
 export function passwordStorePath(env: NodeJS.ProcessEnv = process.env) {
-  env = pandaEnvironment(env);
-  if (env.PANDA_FORCE_AUTH_STORE) return resolve(env.PANDA_FORCE_AUTH_STORE);
-  const codexHome = env.CODEX_HOME || join(homedir(), ".codex");
-  return existingApplicationPath(join(codexHome, "panda-force-auth.json"));
+  return localAuthPaths(env).password;
 }
 
 export function loadStoredPassword(path: string): StoredPassword | null {

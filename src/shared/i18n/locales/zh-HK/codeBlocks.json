@@ -1,0 +1,15 @@
+{
+  "title": "代碼塊",
+  "language": "代碼語言",
+  "search": "搜尋語言",
+  "plainText": "純文本",
+  "noLanguages": "沒有匹配的語言",
+  "currentLanguage": "代碼語言：{language}",
+  "copy": "複製代碼",
+  "copied": "代碼已複製",
+  "enableWrap": "開啓自動換行",
+  "disableWrap": "取消自動換行",
+  "content": "代碼編輯器",
+  "fold": "摺疊代碼",
+  "unfold": "展開代碼"
+}

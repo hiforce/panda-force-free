@@ -28,7 +28,7 @@ try {
     events,
     failSessions = false;
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("**/app.bundle.js", (route) => {
+  await page.route("**/app.bundle.js*", (route) => {
     bundle = route;
   });
   await page.route("**/api/events*", (route) => {
@@ -76,7 +76,7 @@ try {
   await waitFor(() => bundle);
   assert.equal(await page.evaluate(() => Boolean(globalThis.__pandaForceDebug)), false);
   await bundle.continue();
-  await page.unroute("**/app.bundle.js");
+  await page.unroute("**/app.bundle.js*");
   await page.waitForFunction(() => globalThis.__pandaForceDebug);
   await waitFor(() => held.has("configuration") && held.has("projects") && held.has("models") && events);
   await page.waitForFunction(() => document.querySelector("#workspacePreparationProgress").value === 1);
@@ -132,14 +132,14 @@ try {
   await page.locator("#workspacePreparationContinue").click();
   assert.equal(await page.locator("#workspacePreparation").isVisible(), false);
   failSessions = false;
-  await page.route("**/app.bundle.js", (route) => route.abort("failed"));
+  await page.route("**/app.bundle.js*", (route) => route.abort("failed"));
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(
     () => document.querySelector('#workspacePreparation [data-step="interface"]')?.dataset.status === "error",
   );
   assert.equal(await page.locator("#workspacePreparationReload").isVisible(), true);
   assert.equal(await page.locator("#workspacePreparationContinue").isDisabled(), true);
-  await page.unroute("**/app.bundle.js");
+  await page.unroute("**/app.bundle.js*");
   await page.locator("#workspacePreparationReload").click();
   await page.locator('.thread-item[data-id="old-alpha"]').waitFor();
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });

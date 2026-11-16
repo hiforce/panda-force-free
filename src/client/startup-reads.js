@@ -15,6 +15,10 @@ export function startStartupReads({ fetchImpl = globalThis.fetch, timeoutMs = 80
       clearTimeout(timer);
     }
   };
+  if (globalThis.__pandaForceIdentity?.role === "member") {
+    globalThis[GLOBAL_KEY] = { config: read("/api/config") };
+    return;
+  }
   globalThis[GLOBAL_KEY] = {
     config: read("/api/config"),
     visibility: read("/api/projects/visibility"),

@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { root, launchOptions, artifact } from "../support/browser-runtime.mjs";
-// Exercise the real frontend without a Codex process or external account.
-const build = await Bun.build({ entrypoints: [`${root}/src/client/app.js`], target: "browser", minify: true });
-assert.ok(build.success, build.logs.join("\n"));
-const bundle = await build.outputs[0].text();
+// Exercise the release frontend and its real lazy-module boundaries without an external account.
+const bundle = await Bun.file(`${root}/public/app.bundle.js`).text();
 const server = Bun.serve({
   hostname: "127.0.0.1",
   port: 0,

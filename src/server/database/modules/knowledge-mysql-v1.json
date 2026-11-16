@@ -1,0 +1,818 @@
+[
+  {
+    "name": "panda_force_knowledge_catalog",
+    "columns": [
+      {
+        "name": "taskId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "outputDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "projection",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["taskId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_generation_jobs",
+    "columns": [
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "policyRevision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "notBefore",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "failures",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "taskId",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "sourceKind",
+        "type": "varchar(16)",
+        "nullable": false,
+        "defaultValue": "document"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "knowledge_generation_expired",
+        "unique": false,
+        "columns": ["owner", "project", "state", "leaseUntil", "updatedAt", "documentId"]
+      },
+      {
+        "name": "knowledge_generation_ready",
+        "unique": false,
+        "columns": ["owner", "project", "state", "notBefore", "updatedAt", "documentId"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["owner", "project", "documentId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_generation_limits",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "installationDaily",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "ownerDaily",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "installationPending",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "ownerPending",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_generation_origins",
+    "columns": [
+      {
+        "name": "taskId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "policyRevision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "manual",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "sourceKind",
+        "type": "varchar(16)",
+        "nullable": false,
+        "defaultValue": "document"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "knowledge_generation_origin_scope",
+        "unique": false,
+        "columns": ["owner", "project", "documentId", "taskId"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["taskId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_generation_pending",
+    "columns": [
+      {
+        "name": "taskId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "knowledge_generation_pending_owner",
+        "unique": false,
+        "columns": ["owner", "project"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["taskId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_generation_policies",
+    "columns": [
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "enabled",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "purpose",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "selection",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "dailyLimit",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "pendingLimit",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "observedCommit",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "nextScanAt",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "scanFailures",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "nextAdmissionAt",
+        "type": "bigint",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "knowledge_access_generation",
+        "unique": false,
+        "columns": ["owner", "project"]
+      },
+      {
+        "name": "knowledge_generation_dispatch",
+        "unique": false,
+        "columns": ["enabled", "scanFailures", "nextAdmissionAt", "owner", "project"]
+      },
+      {
+        "name": "knowledge_generation_policy_scan",
+        "unique": false,
+        "columns": ["enabled", "nextScanAt", "owner", "project"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["owner", "project"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_generation_totals",
+    "columns": [
+      {
+        "name": "scope",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "identity",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "day",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "used",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["scope", "identity", "day"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_generation_usage",
+    "columns": [
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "day",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "used",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["owner", "project", "day"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_review_policies",
+    "columns": [
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "automatic",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "knowledge_access_review",
+        "unique": false,
+        "columns": ["owner", "project"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["owner", "project"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_reviews",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "taskId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "taskRevision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "policyRevision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "inputDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "dialogueDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "draftDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "sessionId",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "runId",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "reportDigest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "finishedAt",
+        "type": "bigint",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "knowledge_reviews_owner",
+        "unique": false,
+        "columns": ["owner", "state", "leaseUntil"]
+      },
+      {
+        "name": "knowledge_reviews_pending",
+        "unique": false,
+        "columns": ["state", "createdAt"]
+      },
+      {
+        "name": "knowledge_reviews_2",
+        "unique": true,
+        "columns": ["taskId", "taskRevision", "policyRevision"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_submissions",
+    "columns": [
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "requestHash",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "taskId",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["owner", "operationId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_tasks",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "title",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "signature",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "inputDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "dialogueDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "generation",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "attempts",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "failures",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "rounds",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "reviewRevision",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "draftDigest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "outputDigest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "result",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "failure",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "outputAttempts",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "nextOutputAt",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "sessionId",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "runId",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "autoEligible",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 1
+      },
+      {
+        "name": "rowSequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "knowledge_history_page",
+        "unique": false,
+        "columns": ["owner", "project", "createdAt", "id"]
+      },
+      {
+        "name": "knowledge_access_tasks",
+        "unique": false,
+        "columns": ["owner", "project", "id"]
+      },
+      {
+        "name": "knowledge_completed_project",
+        "unique": false,
+        "columns": ["project", "state", "id"]
+      },
+      {
+        "name": "knowledge_execution_owner",
+        "unique": false,
+        "columns": ["owner", "state", "leaseUntil"]
+      },
+      {
+        "name": "knowledge_active_signature",
+        "unique": false,
+        "columns": ["owner", "signature"]
+      },
+      {
+        "name": "knowledge_owner",
+        "unique": false,
+        "columns": ["owner", "project", "createdAt"]
+      },
+      {
+        "name": "knowledge_queue",
+        "unique": false,
+        "columns": ["state", "leaseUntil", "createdAt"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "knowledge_task_sequence",
+        "unique": true,
+        "columns": ["rowSequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_knowledge_mutex",
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  }
+]

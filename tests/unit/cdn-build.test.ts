@@ -57,6 +57,7 @@ test("rewrites feature chunks, workers, CSS fonts and images before hashing and 
   expect(css).toContain(first.assets["/icon.svg"].url);
   const js = f.objects.get(first.assets["/feature.bundle.js"].key)!.toString();
   expect(js).toContain(first.assets["/lazy.js"].url);
+  expect(js).toContain(first.assets["/lazy.js"].url + "?retry=1");
   expect(js).toContain(first.assets["/worker.js"].url);
   const writes = f.writes();
   const next = await publishAssets({ ...f.options, now: new Date("2026-12-01T00:00:00Z") });
@@ -120,6 +121,22 @@ test("CDN configuration is opt-in and never accepts credentials in the viewer UR
   expect(() => cdnConfiguration({ PANDA_FORCE_CDN_BASE_URL: "https://cdn.example.com" })).toThrow(
     "PANDA_FORCE_CDN_BUCKET",
   );
+  expect(
+    cdnConfiguration({
+      PANDA_FORCE_CDN_BASE_URL: "https://customer-cdn.example.com",
+      PANDA_FORCE_CDN_BUCKET: "customer-static",
+      PANDA_FORCE_CDN_PREFIX: "custom/assets",
+      PANDA_FORCE_CDN_S3_ENDPOINT: "http://storage.internal:9000",
+      AWS_REGION: "custom-region",
+      AWS_ACCESS_KEY_ID: "fixture-key",
+      AWS_SECRET_ACCESS_KEY: "fixture-secret",
+    }),
+  ).toMatchObject({
+    bucket: "customer-static",
+    prefix: "custom/assets",
+    endpoint: "http://storage.internal:9000",
+    region: "custom-region",
+  });
 });
 
 test("CDN verification fails closed when browser CORS headers are missing", async () => {

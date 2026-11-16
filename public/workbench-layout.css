@@ -1,31 +1,78 @@
-/* One center-column rail aligns the contextual title, conversation and composer. */
+/* Width preferences frame the application and its content rails together. */
+:root {
+  --workspace-frame-max: 1480px;
+  --workspace-frame-gutter: 18px;
+  --workspace-frame-inset: max(var(--workspace-frame-gutter), calc((100vw - var(--workspace-frame-max)) / 2));
+  --workspace-frame-width: calc(100vw - var(--workspace-frame-inset) * 2);
+  --workspace-header-height: 56px;
+  --workspace-sidebar-default-width: 264px;
+  --workspace-sidebar-min-width: 224px;
+  --workspace-sidebar-max-width: 360px;
+  --workspace-content-min-width: 360px;
+  --workspace-sidebar-width: var(--workspace-sidebar-default-width);
+  --pf-page-padding: 24px;
+  --pf-page-padding-inline: 48px;
+  --workspace-session-width: 800px;
+  --workspace-document-width: 900px;
+  --workspace-settings-width: 1200px;
+  --workspace-template-width: 1320px;
+}
+:root[data-workbench-width="wide"] {
+  --workspace-frame-max: 1800px;
+  --workspace-frame-gutter: 24px;
+}
+:root[data-workbench-width="fill"] {
+  --workspace-frame-max: 100vw;
+  --workspace-frame-gutter: 12px;
+}
+:root:is([data-workbench-width="wide"], [data-workbench-width="fill"]) {
+  --workspace-session-width: 100cqw;
+  --workspace-document-width: 100%;
+  --workspace-settings-width: 100%;
+  --workspace-template-width: var(--workspace-frame-width);
+}
 .panda-workspace {
   --session-inspector-width: 300px;
-  --session-content-width: 800px;
-  --session-content-gutter: 28px;
+  --session-content-width: var(--workspace-session-width);
+  --session-content-gutter: var(--pf-page-padding-inline);
   --session-content-rail: min(var(--session-content-width), calc(100cqw - var(--session-content-gutter) * 2));
+  background: var(--pf-backdrop, var(--pf-sidebar));
 }
-:root[data-workbench-width="wide"] .panda-workspace {
-  --session-content-width: 1040px;
+.panda-workspace .app-shell {
+  width: var(--workspace-frame-width);
+  margin-inline: auto;
+  border-inline: 1px solid var(--pf-line);
+  box-shadow: var(--pf-frame-shadow);
 }
-:root[data-workbench-width="fill"] .panda-workspace {
-  --session-content-width: 100cqw;
+.panda-workspace .settings-dialog {
+  position: fixed;
+  z-index: 55;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  max-width: none;
+  max-height: none;
+  inset: calc(var(--app-viewport-top, 0px) + var(--workspace-header-height)) auto auto var(--workspace-frame-inset);
+  width: var(--workspace-frame-width);
+  height: calc(var(--app-viewport-height, 100dvh) - var(--workspace-header-height));
+  border-inline: 1px solid var(--pf-line);
 }
-.panda-workspace .conversation-shell {
+.panda-workspace:is(.session-layout, [data-workbench-page="new"]) .conversation-shell {
   container-type: inline-size;
 }
 .panda-workspace .topbar {
   display: flex;
   align-items: center;
   gap: 20px;
-  height: 64px;
+  height: var(--workspace-header-height);
   background: var(--pf-card);
 }
 .panda-workspace .window-brand {
-  display: flex !important;
+  display: flex;
   align-items: center;
-  visibility: visible !important;
-  flex: 0 0 232px;
+  visibility: visible;
+  flex: 0 0 var(--workspace-sidebar-width);
   height: 100%;
   padding: 0 20px;
 }
@@ -37,13 +84,13 @@
   line-height: 0;
 }
 .panda-workspace .top-actions {
-  display: flex !important;
+  display: flex;
   flex: none;
   margin-inline-start: auto;
   padding: 0 20px 0 0;
   border: 0;
 }
-.workbench-global-context {
+.workbench-global-actions {
   flex: 1;
   min-width: 0;
   color: var(--pf-muted);
@@ -201,11 +248,53 @@
   max-width: 100%;
   font-size: 11px;
 }
+.workspace-sidebar-resizer {
+  display: none;
+  grid-column: 1;
+  grid-row: 2;
+  justify-self: end;
+  width: 8px;
+  margin-inline-end: -4px;
+  z-index: 20;
+  cursor: col-resize;
+  touch-action: none;
+}
+.workspace-sidebar-resizer::after {
+  content: "";
+  display: block;
+  width: 2px;
+  height: 100%;
+  margin: auto;
+  background: transparent;
+  transition: background 120ms;
+}
+.workspace-sidebar-resizer:hover::after,
+.workspace-sidebar-resizer:focus-visible::after,
+.sidebar-resizing .workspace-sidebar-resizer::after {
+  background: var(--pf-accent);
+}
+.sidebar-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+.sidebar-resizing :is(.app-shell, .topbar, .sidebar) {
+  transition: none;
+}
 @media (min-width: 768px) {
+  .workspace-sidebar-resizer[data-ready="true"] {
+    display: block;
+  }
+  .sidebar-hidden #workspaceSidebarResize {
+    display: none;
+  }
   .panda-workspace .app-shell {
-    --sidebar-w: 232px;
+    --sidebar-w: clamp(
+      var(--workspace-sidebar-min-width),
+      var(--workspace-sidebar-width),
+      var(--workspace-sidebar-max-width)
+    );
     grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--changes-w);
-    grid-template-rows: 64px minmax(0, 1fr);
+    grid-template-rows: var(--workspace-header-height) minmax(0, 1fr);
   }
   .panda-workspace.sidebar-hidden .app-shell {
     --sidebar-w: 0px;
@@ -236,20 +325,66 @@
   .panda-workspace .workbench-mobile-nav {
     display: none;
   }
+  .panda-workspace .settings-card {
+    grid-template-columns: var(--workspace-sidebar-width) minmax(0, 1fr);
+  }
+  .panda-workspace .settings-nav {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .panda-workspace .settings-card > .workspace-sidebar-resizer {
+    grid-row: 1;
+  }
+  .panda-workspace .settings-content {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .panda-workspace .settings-nav-toolbar-spacer {
+    height: 20px;
+    flex-basis: 20px;
+  }
   .panda-workspace {
     --pf-mobile-nav-height: 0px;
+  }
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  :root {
+    --pf-page-padding: 24px;
+    --pf-page-padding-inline: 36px;
+  }
+  .panda-workspace :is(.side-panel, .summary-panel, .changes-panel) {
+    top: calc(var(--app-viewport-top, 0px) + var(--workspace-header-height));
+    right: var(--workspace-frame-inset);
+    bottom: auto;
+    height: calc(var(--app-viewport-height, 100dvh) - var(--workspace-header-height));
+    max-width: var(--workspace-frame-width);
   }
 }
 @media (min-width: 768px) and (max-width: 1080px) {
   .panda-workspace .session-inspector {
     width: 320px;
     top: 76px;
+    right: calc(var(--workspace-frame-inset) + 12px);
     height: calc(var(--app-viewport-height, 100dvh) - 88px);
   }
 }
 @media (max-width: 767px) {
+  :root {
+    --workspace-frame-inset: 0px;
+    --workspace-header-height: 56px;
+    --pf-page-padding: 16px;
+    --pf-page-padding-inline: 24px;
+    --pf-text-heading: 23px;
+  }
+  .panda-workspace .app-shell,
+  .panda-workspace .settings-dialog {
+    border-inline: 0;
+    box-shadow: none;
+  }
   /* Home and list pages scroll inside the view, never in two nested containers. */
   .panda-workspace .conversation-shell {
+    grid-column: 1;
+    grid-row: 2;
     overflow: hidden;
   }
   .panda-workspace .workbench-view {
@@ -258,14 +393,13 @@
   .panda-workspace .session-inspector {
     width: 100%;
   }
-  .panda-workspace :is(.side-panel, .summary-panel) {
-    top: calc(var(--app-viewport-top, 0px) + 56px) !important;
-    height: calc(var(--app-viewport-height, 100dvh) - 56px);
-  }
-  .panda-workspace {
-    --session-content-gutter: 16px;
+  .panda-workspace :is(.side-panel, .summary-panel, .changes-panel) {
+    top: calc(var(--app-viewport-top, 0px) + var(--workspace-header-height));
+    height: calc(var(--app-viewport-height, 100dvh) - var(--workspace-header-height));
   }
   .panda-workspace .app-shell {
+    --sidebar-w: 0px;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 56px minmax(0, 1fr) var(--pf-mobile-nav-height);
   }
   .panda-workspace.session-layout .app-shell {
@@ -298,16 +432,30 @@
     height: 44px;
     margin: 0;
   }
-  .panda-workspace .workbench-global-context {
+  .panda-workspace .workbench-global-actions {
     display: none;
   }
   .panda-workspace .top-actions {
     padding: 0;
   }
   .panda-workspace .sidebar {
+    position: fixed;
+    z-index: 60;
+    left: 0;
+    width: min(304px, calc(100vw - 32px));
+    transform: translateX(-100%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
     top: calc(var(--app-viewport-top, 0px) + 56px);
     height: calc(var(--app-viewport-height, 100dvh) - 56px);
     bottom: auto;
+  }
+  .panda-workspace .sidebar.mobile-open {
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
   }
   .workbench-sidebar-launch #toggleSidebar {
     display: none;

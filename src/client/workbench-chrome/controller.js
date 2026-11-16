@@ -2,6 +2,7 @@ import { closestElement, findElement, findElements, requireElement } from "../do
 import { applyThemePreference } from "../theme.js";
 import { localizeAttribute, setMessageHtml } from "../i18n.js";
 import { createWorkbenchLayout } from "./layout.js";
+import { createSidebarResize } from "./sidebar-resize.js";
 import { chromeIcon, createChromeView, renderChromeMenu } from "./view.js";
 
 /** Global preferences operate on existing feature owners, never on session state. */
@@ -10,6 +11,7 @@ export function createWorkbenchChrome(options) {
   const { t, i18n } = options;
   const { toolbar, dialog } = createChromeView(t);
   const layout = createWorkbenchLayout(options);
+  const sidebar = createSidebarResize(t);
   requireElement(".top-actions").append(toolbar);
   const exitFocus = requireElement("#workbenchExitFocus");
   const mobile = matchMedia("(max-width: 767px)");
@@ -104,6 +106,7 @@ export function createWorkbenchChrome(options) {
       refresh();
       if (!exitFocus.hidden) exitFocus.focus();
     } else if (kind === "restore") {
+      sidebar.reset();
       close();
       layout.setFocus(false);
       layout.setWidth("comfortable");
@@ -143,6 +146,7 @@ export function createWorkbenchChrome(options) {
   function bind() {
     if (bound) return;
     bound = true;
+    sidebar.bind();
     toolbar.addEventListener("click", (event) => {
       const button = closestElement("[data-chrome-menu]", event.target);
       if (!button) return;
@@ -175,6 +179,7 @@ export function createWorkbenchChrome(options) {
     document.addEventListener("keydown", keydown, true);
     document.addEventListener("fullscreenchange", refresh);
     addEventListener("resize", position);
+    addEventListener("panda-force:layout-changed", position);
     addEventListener("panda-force:appearance-changed", refresh);
     mobile.addEventListener("change", () => {
       close(false);

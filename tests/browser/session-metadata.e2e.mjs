@@ -41,7 +41,10 @@ for (const [engine, width] of [
     assert.equal(await page.evaluate(() => globalThis.__metadataDocument), true);
     checks.push(`${width}: unnamed session title follows native preview polling without a reload`);
 
-    await page.evaluate((id) => globalThis.__pandaForceDebug.workbench.navigate("/project?id=" + id), project.id);
+    await page.evaluate(
+      (id) => globalThis.__pandaForceDebug.workbench.navigate("/project?id=" + id + "&tab=sessions"),
+      project.id,
+    );
     if (width < 600) await page.locator("#workspaceNavigationToggle").click();
     await page.locator("#newTask").click();
     await page.waitForURL("**/new?project=" + project.id);
@@ -51,7 +54,10 @@ for (const [engine, width] of [
       await page.evaluate(() => globalThis.__pandaForceDebug.state.workspaceContext.cwd),
       project.workspace.path,
     );
-    await page.evaluate((id) => globalThis.__pandaForceDebug.workbench.navigate("/project?id=" + id), project.id);
+    await page.evaluate(
+      (id) => globalThis.__pandaForceDebug.workbench.navigate("/project?id=" + id + "&tab=sessions"),
+      project.id,
+    );
     await page.locator('.wb-empty [data-wb="new"]').click();
     assert.equal(await page.locator("#sessionProjectSelect").inputValue(), project.id);
     await page.locator("#prompt").fill("A session owned by the selected project");
@@ -72,7 +78,10 @@ for (const [engine, width] of [
     );
     checks.push(`${width}: global New session inherits the project page and creates in its managed directory`);
 
-    await page.evaluate((id) => globalThis.__pandaForceDebug.workbench.navigate("/project?id=" + id), project.id);
+    await page.evaluate(
+      (id) => globalThis.__pandaForceDebug.workbench.navigate("/project?id=" + id + "&tab=sessions"),
+      project.id,
+    );
     await page.locator('[data-wb="project-new"]').click();
     assert.equal(await page.locator("#sessionProjectSelect").inputValue(), project.id);
     await page.locator("#sessionProjectSelect").selectOption("");

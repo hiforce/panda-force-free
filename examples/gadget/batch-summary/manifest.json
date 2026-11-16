@@ -1,0 +1,44 @@
+{
+  "id": "example.batch-summary",
+  "apiVersion": 1,
+  "version": "1.0.0",
+  "configVersion": 1,
+  "title": {
+    "en": "Batch progress",
+    "zh-CN": "批次进展",
+    "zh-HK": "批次進度",
+    "zh-TW": "批次進度"
+  },
+  "description": {
+    "en": "Connect a business-owned batch summary provider.",
+    "zh-CN": "接入业务系统的批次摘要服务。",
+    "zh-HK": "接入業務系統的批次摘要服務。",
+    "zh-TW": "接入業務系統的批次摘要服務。"
+  },
+  "source": "extension",
+  "singleton": false,
+  "icon": "chartNoAxesColumn",
+  "layout": {
+    "w": 4,
+    "h": 6,
+    "minW": 4,
+    "minH": 4
+  },
+  "config": {
+    "batch": {
+      "type": "string",
+      "default": "latest",
+      "max": 100,
+      "label": {
+        "en": "Batch",
+        "zh-CN": "批次",
+        "zh-HK": "批次",
+        "zh-TW": "批次"
+      }
+    }
+  },
+  "services": ["summary"],
+  "actions": ["open"],
+  "minRefreshSeconds": 60,
+  "permissions": ["pim.batch.read"]
+}

@@ -1,0 +1,530 @@
+[
+  {
+    "name": "panda_force_package_source_stage_events",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "at",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "failure",
+        "type": "longtext",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id", "revision"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_package_source_stages",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "purpose",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "limits",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "fingerprint",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "reservedBytes",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "origin",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "failure",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "expiresAt",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "entryPolicy",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "package_source_stages_actor",
+        "unique": false,
+        "columns": ["actor", "state", "updatedAt"]
+      },
+      {
+        "name": "package_source_stages_unique_2",
+        "unique": true,
+        "columns": ["actor", "operationId"]
+      },
+      {
+        "name": "package_source_stages_lookup_0",
+        "unique": false,
+        "columns": ["state", "expiresAt", "createdAt"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_theme_source_stage_events",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "at",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "failure",
+        "type": "longtext",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id", "revision"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_theme_source_stages",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "purpose",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "limits",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "fingerprint",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "reservedBytes",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "origin",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "failure",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "expiresAt",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "entryPolicy",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "package_source_stages_actor",
+        "unique": false,
+        "columns": ["actor", "state", "updatedAt"]
+      },
+      {
+        "name": "package_source_stages_unique_2",
+        "unique": true,
+        "columns": ["actor", "operationId"]
+      },
+      {
+        "name": "package_source_stages_lookup_0",
+        "unique": false,
+        "columns": ["state", "expiresAt", "createdAt"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_slides_source_stage_events",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "at",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "failure",
+        "type": "longtext",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id", "revision"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_slides_source_stages",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "purpose",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "limits",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "fingerprint",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "reservedBytes",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "origin",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "failure",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "expiresAt",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "entryPolicy",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "package_source_stages_actor",
+        "unique": false,
+        "columns": ["actor", "state", "updatedAt"]
+      },
+      {
+        "name": "package_source_stages_unique_2",
+        "unique": true,
+        "columns": ["actor", "operationId"]
+      },
+      {
+        "name": "package_source_stages_lookup_0",
+        "unique": false,
+        "columns": ["state", "expiresAt", "createdAt"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_package_stages_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_theme_stages_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_slides_stages_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  }
+]

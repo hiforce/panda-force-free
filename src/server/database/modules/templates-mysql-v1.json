@@ -1,0 +1,854 @@
+[
+  {
+    "name": "panda_force_portable_template_audit",
+    "columns": [
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "action",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_portable_template_draft_images",
+    "columns": [
+      {
+        "name": "draft",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "bytes",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "metadata",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["draft", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_portable_template_draft_operations",
+    "columns": [
+      {
+        "name": "owner",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "receipt",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["owner", "operationId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_portable_template_draft_revisions",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id", "revision"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_portable_template_drafts",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "manifest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "removed",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "portable_template_drafts_owner",
+        "unique": false,
+        "columns": ["owner", "removed", "updatedAt"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_portable_template_heads",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_portable_template_operations",
+    "columns": [
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "receipt",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["actor", "operationId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_portable_template_registry",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_portable_template_versions",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "manifest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "origin",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "enabled",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "installedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "installedBy",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id", "version"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_theme_audit",
+    "columns": [
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "action",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_theme_heads",
+    "columns": [
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["actor", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_theme_operations",
+    "columns": [
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "signature",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "expectedRevision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "descriptor",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "settingsDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "receipt",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "cleaned",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["actor", "operationId"]
+      },
+      {
+        "name": "native_theme_operations_recovery",
+        "unique": false,
+        "columns": ["state", "cleaned", "createdAt"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_theme_owners",
+    "columns": [
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["actor"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_theme_versions",
+    "columns": [
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "descriptor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "sourceId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "enabled",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "installedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["actor", "id", "version"]
+      },
+      {
+        "name": "native_theme_versions_sources",
+        "unique": false,
+        "columns": ["actor", "sourceId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_slides_audit",
+    "columns": [
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "action",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_slides_heads",
+    "columns": [
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["actor", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_slides_operations",
+    "columns": [
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "operationId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "signature",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "expectedRevision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "descriptor",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "settingsDigest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "receipt",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "cleaned",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["actor", "operationId"]
+      },
+      {
+        "name": "native_slides_operations_recovery",
+        "unique": false,
+        "columns": ["state", "cleaned", "createdAt"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_slides_owners",
+    "columns": [
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["actor"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_slides_versions",
+    "columns": [
+      {
+        "name": "actor",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "descriptor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "sourceId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "enabled",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "installedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["actor", "id", "version"]
+      },
+      {
+        "name": "native_slides_versions_sources",
+        "unique": false,
+        "columns": ["actor", "sourceId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_portable_templates_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_theme_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_native_slides_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  }
+]

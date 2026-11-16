@@ -1,0 +1,10 @@
+{
+  "used": "已用",
+  "remaining": "剩餘",
+  "resetsAt": "重設時間",
+  "resetsInDaysdHourshMinutesm": "{days, number}天{hours, number}小時{minutes, number}分鐘後",
+  "updatedAt": "更新時間",
+  "resetTimeUnavailable": "重設時間不可用",
+  "usageDataUnavailable": "暫無用量數據",
+  "loadingUsage": "正在載入用量…"
+}

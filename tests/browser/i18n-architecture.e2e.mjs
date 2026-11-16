@@ -132,7 +132,8 @@ try {
 
   for (const [languages, expected] of [
     [["zh-Hans-SG", "en"], "zh-CN"],
-    [["zh-TW", "en"], "en"],
+    [["zh-TW", "en"], "zh-TW"],
+    [["zh-Hant-HK", "en"], "zh-HK"],
     [["de-DE"], "en"],
   ]) {
     const next = await browser.newContext({ locale: languages[0] });

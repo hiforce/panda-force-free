@@ -2,9 +2,10 @@ import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, chmodSync } from "node:fs";
 import { dirname } from "node:path";
+import { distinctLegacyRevocations, importRevocations } from "./revocation-migration.js";
 
 /** Revocations live on the workspace owner's private volume and survive its restart. */
-export function createSessionRevocations(path: string, now = Date.now) {
+export function createSessionRevocations(path: string, now = Date.now, legacyPath?: string) {
   let database: Database | null = null;
   const watchers = new Map<string, Set<() => void>>();
   const digest = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -12,12 +13,19 @@ export function createSessionRevocations(path: string, now = Date.now) {
     if (database) return database;
     if (!create && !existsSync(path)) return null;
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-    database = new Database(path, { create: true, strict: true });
-    chmodSync(path, 0o600);
-    database.exec(
-      "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000; CREATE TABLE IF NOT EXISTS revoked_sessions(digest TEXT PRIMARY KEY,expires_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS revoked_sessions_expiry ON revoked_sessions(expires_at)",
-    );
-    return database;
+    const db = new Database(path, { create: true, strict: true });
+    try {
+      chmodSync(path, 0o600);
+      db.exec(
+        "PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000; CREATE TABLE IF NOT EXISTS revoked_sessions(digest TEXT PRIMARY KEY,expires_at INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS revoked_sessions_expiry ON revoked_sessions(expires_at)",
+      );
+      if (distinctLegacyRevocations(path, legacyPath)) importRevocations(db, legacyPath, now());
+      database = db;
+      return db;
+    } catch (error) {
+      db.close();
+      throw error;
+    }
   }
   function has(token: string) {
     const result = open()
@@ -25,6 +33,8 @@ export function createSessionRevocations(path: string, now = Date.now) {
       .get(digest(token));
     return Boolean(result && result.expires_at > now());
   }
+  // Existing deployments migrate before accepting requests, even before the next logout.
+  if (distinctLegacyRevocations(path, legacyPath)) open(true);
   return {
     has,
     revoke(token: string) {

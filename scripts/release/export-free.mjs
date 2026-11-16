@@ -1,6 +1,36 @@
 import { mkdirSync, writeFileSync, chmodSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { git, sha256, assertReleasePath, inspectText, verifySnapshot } from "./snapshot-lib.mjs";
+export const COMMUNITY_TEMPLATE_FILES = [
+  "README.md",
+  "README-zh.md",
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.md",
+  "Dockerfile",
+  "docker-compose.yml",
+  "docker-compose.build.yml",
+  "docker-compose.documents.registry.yml",
+  ".env.example",
+  ".gitignore",
+  ".dockerignore",
+];
+
+/** Select reusable application inputs; approval remains an explicit file inventory. */
+export function isPublicSourcePath(path) {
+  if (
+    /^(?:docs\/|scripts\/internal\/|tests\/ops\/)/.test(path) ||
+    path === "tests/unit/nj-build-dependencies.test.ts" ||
+    /(?:^|[/.])private(?:[/.]|$)/i.test(path)
+  )
+    return false;
+  return (
+    /^(?:src|tests|patches|scripts|panda-docs|release\/community|public|LICENSES|deploy|examples)\//.test(path) ||
+    /^(?:package\.json|bun\.lock|eslint\.config\.mjs|prettier\.config\.mjs|tsconfig(?:\.(?:strict|contracts|tooling))?\.json|docker-compose(?:\.[a-z-]+)*\.yml)$/.test(
+      path,
+    )
+  );
+}
+
 // Export bytes from one Git tree, not a checkout or a copy of its history/state.
 export function exportFree({ source = process.cwd(), ref = "HEAD", destination, allowDirty = false }) {
   source = resolve(source);
@@ -14,31 +44,12 @@ export function exportFree({ source = process.cwd(), ref = "HEAD", destination, 
   for (const entry of entries) {
     const [meta, path] = entry.split("\t");
     const [mode, type] = meta.split(" ");
-    const selected =
-      /^(?:src|tests|patches|scripts|panda-docs|release\/community)\//.test(path) ||
-      /^(?:package\.json|bun\.lock|eslint\.config\.mjs|prettier\.config\.mjs|tsconfig(?:\.(?:strict|contracts|tooling))?\.json|LICENSES\/(?:upstream|immer)-MIT\.txt)$/.test(
-        path,
-      ) ||
-      /^public\/(?:index\.html|manifest\.webmanifest|style\.css|workbench\.css|session-workspace\.css|workbench-chrome\.css|workbench-layout\.css|appearance\.css|file-preview\.css|favicon\.svg|assets\/panda-(?:mark\.svg|icon\.png|touch-180\.png|app-(?:192|512)\.png|launch-\d+x\d+-(?:light|dark)\.png))$/.test(
-        path,
-      );
-    if (!selected) continue;
+    if (!isPublicSourcePath(path)) continue;
     if (type !== "blob" || !["100644", "100755"].includes(mode)) throw new Error("Non-regular export input: " + path);
     assertReleasePath(path);
     mapping.set(path, { source: path, mode });
   }
-  for (const name of [
-    "README.md",
-    "README-zh.md",
-    "LICENSE",
-    "THIRD_PARTY_NOTICES.md",
-    "Dockerfile",
-    "docker-compose.yml",
-    "docker-compose.build.yml",
-    ".env.example",
-    ".gitignore",
-    ".dockerignore",
-  ])
+  for (const name of COMMUNITY_TEMPLATE_FILES)
     mapping.set(name, { source: "release/community/" + name, mode: "100644" });
   // New files require an explicit public-license review, even under source roots.
   const approved = JSON.parse(
@@ -72,7 +83,7 @@ export function exportFree({ source = process.cwd(), ref = "HEAD", destination, 
     // Keep the lockfile's root workspace name consistent with the exported manifest.
     if (path === "bun.lock")
       bytes = Buffer.from(bytes.toString().replace(/("name":\s*)"[^"]+"/, '$1"panda-force-free"'));
-    if (!/\.(?:png|woff2?|ttf|ico)$/i.test(path)) inspectText(path, bytes);
+    if (!/\.(?:png|jpe?g|webp|avif|gif|woff2?|ttf|ico)$/i.test(path)) inspectText(path, bytes);
     files.push({ path, bytes: bytes.length, sha256: sha256(bytes), mode: item.mode });
     prepared.push({ path, bytes, mode: item.mode });
   }

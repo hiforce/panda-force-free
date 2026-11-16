@@ -36,5 +36,6 @@
   "methodNotAllowed": "不支持此请求方法",
   "unexpectedError": "出现意外错误",
   "engineRequestTimedOut": "引擎请求超时：{operation}",
-  "bridgeRequestFailed": "引擎请求失败"
+  "bridgeRequestFailed": "引擎请求失败",
+  "cdnBuildRequired": "已启用 CDN，但编译资源缺失或不完整。请使用已配置的 CDN 参数重新构建。"
 }

@@ -1,0 +1,23 @@
+{
+  "unavailable": "技能库暂时不可用，请稍后重试。",
+  "invalidInput": "技能库请求无效。",
+  "identityRequired": "请重新登录以查看技能库。",
+  "unsupportedSchema": "此技能库需要更新版本的应用。",
+  "registryConflict": "技能库已发生变化，请刷新后重试。",
+  "reviewChanged": "来源、选择或权限已改变，请重新审阅。",
+  "immutableVersion": "现有版本不能覆盖，请创建新版本。",
+  "notInstalled": "此技能包尚未安装。",
+  "skillDisabled": "此技能已停用。",
+  "approvalRequired": "请先审阅并批准所需的应用权限。",
+  "operationConflict": "此操作属于其他请求，请刷新后重试。",
+  "notFound": "未找到此技能。",
+  "readDocuments": "读取项目文档",
+  "createDocuments": "创建项目文档",
+  "proposeChanges": "提出文档修改供审阅",
+  "readAssets": "读取项目附件",
+  "webResearch": "检索公开网页资料",
+  "generateImages": "生成图片",
+  "generateSlides": "生成演示文稿",
+  "generateVideo": "生成视频",
+  "generateWeb": "生成网页"
+}

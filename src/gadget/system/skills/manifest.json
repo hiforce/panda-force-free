@@ -1,0 +1,54 @@
+{
+  "id": "system.skills",
+  "apiVersion": 1,
+  "version": "1.0.0",
+  "configVersion": 1,
+  "title": {
+    "zh-CN": "常用技能",
+    "en": "Favorite skills",
+    "zh-HK": "常用技能",
+    "zh-TW": "常用技能"
+  },
+  "description": {
+    "zh-CN": "常用技能一键加入本次创作。",
+    "en": "Keep your favorite skills within reach.",
+    "zh-HK": "快速將常用技能加入本次創作。",
+    "zh-TW": "快速將常用技能加入本次創作。"
+  },
+  "icon": "layout",
+  "singleton": true,
+  "source": "system",
+  "layout": {
+    "w": 4,
+    "h": 6,
+    "minW": 4,
+    "minH": 4
+  },
+  "config": {
+    "limit": {
+      "type": "number",
+      "default": 2,
+      "min": 1,
+      "max": 20,
+      "label": {
+        "en": "Items shown",
+        "zh-CN": "显示条数",
+        "zh-HK": "顯示筆數",
+        "zh-TW": "顯示筆數"
+      }
+    }
+  },
+  "services": ["summary"],
+  "actions": ["open"],
+  "minRefreshSeconds": 60,
+  "defaultPlacement": {
+    "x": 8,
+    "y": 7,
+    "order": 4
+  },
+  "events": {
+    "publish": ["creation.skill-selected"],
+    "subscribe": []
+  },
+  "permissions": ["skills.read"]
+}

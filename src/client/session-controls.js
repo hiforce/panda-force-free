@@ -1,17 +1,14 @@
+import { createSessionPermissionControls } from "./session-controls/permissions.js";
+import { focusMenuSelection, bindMenuDismiss } from "./session-controls/menu.js";
+import { createSessionModelCache } from "./session-controls/model-cache.js";
+import { createModelCatalogLoader } from "./session-controls/model-loader.js";
+import { createTaskCompletionNotifications } from "./session-controls/notifications.js";
 import { errorMessage } from "../shared/errors.js";
 import { findElement, requireElement } from "./dom.js";
-import {
-  localizeAttribute,
-  localizeText,
-  messageAttributes,
-  messageHtml,
-  setMessageHtml,
-  setOpaqueText,
-} from "./i18n.js";
-import { createBridgeError } from "../shared/bridge-errors.js";
+import { localizeAttribute, messageAttributes, messageHtml, setMessageHtml, setOpaqueText } from "./i18n.js";
 import { codexIcon } from "./codex-icons.js";
 import { storage, STORAGE_KEYS } from "./storage.js";
-import { createLatestRequestGate, filterAppModels, selectModelState } from "./ui-core.js";
+import { selectModelState } from "./ui-core.js";
 /**
  * Session controls: model/effort selection with per-thread overrides, the
  * model and permission menus, permission profiles/policies, task-completed
@@ -30,36 +27,16 @@ export function createSessionControls({
   mutations,
   onSettingsChanged = () => {},
 }) {
-  const permissionProfileRequestGate = createLatestRequestGate();
-  let modelLoadPromise = null;
-  let pendingFullAccessAction = "select";
-  let pendingFullAccessSession = "";
-  let requestingNotificationPermission = false;
-  function readLocalSessionModelSettings(threadId = state.active?.id) {
-    if (!threadId) return null;
-    try {
-      return JSON.parse(storage.get(STORAGE_KEYS.sessionModelCache) || "{}")[threadId] || null;
-    } catch {
-      return null;
-    }
-  }
-  function writeLocalSessionModelSettings(threadId, settings) {
-    if (!threadId) return;
-    try {
-      const all = JSON.parse(storage.get(STORAGE_KEYS.sessionModelCache) || "{}");
-      all[threadId] = { ...(all[threadId] || {}), ...settings };
-      storage.set(STORAGE_KEYS.sessionModelCache, JSON.stringify(all));
-    } catch {}
-  }
-  function clearLocalSessionModelSettings(threadId = state.active?.id) {
-    if (!threadId) return;
-    try {
-      const all = JSON.parse(storage.get(STORAGE_KEYS.sessionModelCache) || "{}");
-      if (!all[threadId]) return;
-      delete all[threadId];
-      storage.set(STORAGE_KEYS.sessionModelCache, JSON.stringify(all));
-    } catch {}
-  }
+  const { syncTaskNotifySettings, setTaskNotifyEnabled, maybeNotifyTaskCompleted } = createTaskCompletionNotifications({
+    $,
+    t,
+    threads: () => state.threads,
+    toast,
+  });
+  const localModelCache = createSessionModelCache(storage);
+  const readLocalSessionModelSettings = (threadId = state.active?.id) => localModelCache.read(threadId);
+  const writeLocalSessionModelSettings = (threadId, settings) => localModelCache.write(threadId, settings);
+  const clearLocalSessionModelSettings = (threadId = state.active?.id) => localModelCache.clear(threadId);
   function commitSessionModelSettings(threadId) {
     if (!threadId) return;
     const current = state.sessionSettings.get(threadId) || {};
@@ -89,45 +66,21 @@ export function createSessionControls({
     $("#modelButton").setAttribute("aria-busy", String(state.modelLoadStatus === "loading" && !state.models.length));
     if (!$("#modelMenu").hidden) renderModelMenuMain();
   }
-  function loadModels({ timeoutMs = 8000, attempts = 3, retryDelayMs = 500 } = {}) {
-    if (modelLoadPromise) return modelLoadPromise;
-    mutations.set("modelLoadStatus", "loading");
-    updateModelLoadUi();
-    modelLoadPromise = (async () => {
-      let lastError;
-      for (let attempt = 0; attempt < attempts; attempt++) {
-        const controller = new AbortController(),
-          timer = setTimeout(() => controller.abort(), timeoutMs);
-        try {
-          // Catalog reads do not depend on the lifetime of the event WebSocket.
-          const message = await postBridge(
-            "/api/rpc",
-            { id: mutations.update("rpcId", (value) => value + 1, true), method: "model/list", params: { limit: 50 } },
-            controller.signal,
-          );
-          if (message.type !== "rpc/result")
-            throw createBridgeError(message.error || "Could not load models", message.code);
-          const models = filterAppModels(message.result?.data || []);
-          if (!models.length) throw new Error("No models available");
-          mutations.set("models", models);
-          renderModels();
-          return true;
-        } catch (error) {
-          lastError = error;
-          if (attempt + 1 < attempts) await new Promise((resolve) => setTimeout(resolve, retryDelayMs * (attempt + 1)));
-        } finally {
-          clearTimeout(timer);
-        }
-      }
-      mutations.set("modelLoadStatus", "error");
-      updateModelLoadUi();
-      addPersistentError(errorMessage(lastError, t("errors.couldNotLoadModels")), { key: "model-load" });
-      return false;
-    })().finally(() => {
-      modelLoadPromise = null;
-    });
-    return modelLoadPromise;
-  }
+  const loadModels = createModelCatalogLoader({
+    request: (signal) =>
+      postBridge(
+        "/api/rpc",
+        { id: mutations.update("rpcId", (value) => value + 1, true), method: "model/list", params: { limit: 50 } },
+        signal,
+      ),
+    setStatus: (status) => mutations.set("modelLoadStatus", status),
+    changed: updateModelLoadUi,
+    accept: (models) => {
+      mutations.set("models", models);
+      renderModels();
+    },
+    failed: (error) => addPersistentError(errorMessage(error, t("errors.couldNotLoadModels")), { key: "model-load" }),
+  });
   function modelDisplay(model, stripPrefix = false) {
     const value = String(model?.displayName || model?.model || state.selectedModel || "Select model").trim();
     if (!stripPrefix) return value;
@@ -382,367 +335,35 @@ export function createSessionControls({
     menu.hidden = true;
     $("#modelButton").setAttribute("aria-expanded", "false");
   }
-  const permissionModes = {
-    default: {
-      kind: "legacy",
-      label: "common.askForApproval",
-      description: "common.alwaysAskForPermissionBeforeEditingExternalFilesOrUsing",
-      icon: "shield",
-      approvalPolicy: "on-request",
-      approvalsReviewer: "user",
-      sandbox: "workspace-write",
-    },
-    "guardian-approvals": {
-      kind: "legacy",
-      label: "common.approveForMe",
-      description: "common.onlyAskForActionsDetectedAsPotentiallyUnsafe",
-      icon: "shield",
-      approvalPolicy: "on-request",
-      approvalsReviewer: "auto_review",
-      sandbox: "workspace-write",
-    },
-    "full-access": {
-      kind: "legacy",
-      label: "common.fullAccess",
-      description: "common.unrestrictedAccessToTheInternetAndAnyFileOnYour",
-      icon: "terminal",
-      approvalPolicy: "never",
-      approvalsReviewer: "user",
-      sandbox: "danger-full-access",
-    },
-  };
-  const PERMISSION_PROFILE_PREFIX = "profile:";
-  const RESERVED_PERMISSION_PROFILE_IDS = new Set(["default", "guardian-approvals", "full-access", "custom"]);
-  function permissionProfileCwd() {
-    if (state.projectless) return null;
-    const path =
-      state.active?.cwd ||
-      state.workspaceContext?.cwd ||
-      storage.get(STORAGE_KEYS.project) ||
-      state.config.defaultCwd ||
-      null;
-    return typeof path === "string" && path.startsWith("~") ? state.config.home + path.slice(1) : path;
-  }
-  function permissionProfileId(mode = state.permissionMode) {
-    return String(mode || "").startsWith(PERMISSION_PROFILE_PREFIX)
-      ? String(mode).slice(PERMISSION_PROFILE_PREFIX.length)
-      : null;
-  }
-  function autoReviewSupported() {
-    return state.account?.type === "chatgpt";
-  }
-  function permissionModeDefinition(mode = state.permissionMode) {
-    if (permissionModes[mode]) return { mode, ...permissionModes[mode] };
-    const profileId = permissionProfileId(mode),
-      profile = profileId && state.permissionProfiles.find((item) => item.id === profileId);
-    return profile
-      ? {
-          kind: "profile",
-          mode,
-          profileId,
-          label: profile.id,
-          description: profile.description || "Custom permission profile",
-          icon: "file",
-          allowed: profile.allowed !== false,
-        }
-      : null;
-  }
-  function permissionModeAvailable(mode = state.permissionMode) {
-    const selected = permissionModeDefinition(mode);
-    if (!selected || selected.allowed === false) return false;
-    if (mode === "guardian-approvals") return autoReviewSupported();
-    if (mode === "full-access") return state.permissionVisibility.fullAccess;
-    return true;
-  }
-  function normalizePermissionMode() {
-    if (permissionModeAvailable()) return;
-    mutations.set("permissionMode", "default");
-    storage.set(STORAGE_KEYS.permissionMode, "default");
-  }
-  function selectedPermission() {
-    normalizePermissionMode();
-    return permissionModeDefinition() || { mode: "default", ...permissionModes.default };
-  }
-  /** @param {readonly import("../shared/engine/types.js").PermissionProfile[]} profiles */
-  function setPermissionProfiles(profiles = []) {
-    const seen = new Set();
-    mutations.set(
-      "permissionProfiles",
-      (Array.isArray(profiles) ? profiles : []).flatMap((profile) => {
-        if (!profile || typeof profile.id !== "string") return [];
-        const id = profile.id.trim(),
-          key = id.toLocaleLowerCase();
-        if (!id || id.startsWith(":") || RESERVED_PERMISSION_PROFILE_IDS.has(key) || seen.has(key)) return [];
-        seen.add(key);
-        return [
-          {
-            id,
-            description: typeof profile.description === "string" ? profile.description : "",
-            allowed: profile.allowed !== false,
-          },
-        ];
-      }),
-    );
-    normalizePermissionMode();
-    syncPermissionControl();
-  }
-  async function loadPermissionProfiles() {
-    if (!state.connected) return false;
-    const requestId = permissionProfileRequestGate.next();
-    try {
-      const result = await rpc("permissionProfile/list", { cwd: permissionProfileCwd(), limit: 100 });
-      if (permissionProfileRequestGate.isCurrent(requestId)) setPermissionProfiles(result.data || []);
-      return permissionProfileRequestGate.isCurrent(requestId);
-    } catch {
-      if (permissionProfileRequestGate.isCurrent(requestId)) setPermissionProfiles([]);
-      return false;
-    }
-  }
-  function permissionThreadPolicy() {
-    const selected = selectedPermission();
-    if (selected.kind === "profile") return { permissions: selected.profileId };
-    return {
-      approvalPolicy: selected.approvalPolicy,
-      approvalsReviewer: selected.approvalsReviewer,
-      sandbox: selected.sandbox,
-    };
-  }
-  function permissionTurnPolicy(cwd) {
-    const selected = selectedPermission();
-    if (selected.kind === "profile")
-      return { permissions: selected.profileId, approvalPolicy: null, approvalsReviewer: null };
-    const sandboxPolicy =
-      selected.sandbox === "danger-full-access"
-        ? { type: "dangerFullAccess" }
-        : {
-            type: "workspaceWrite",
-            writableRoots: cwd ? [cwd] : [],
-            networkAccess: false,
-            excludeTmpdirEnvVar: false,
-            excludeSlashTmp: false,
-          };
-    return {
-      permissions: null,
-      approvalPolicy: selected.approvalPolicy,
-      approvalsReviewer: selected.approvalsReviewer,
-      sandboxPolicy,
-    };
-  }
-  function renderPermissionMenu() {
-    const list = $("#permissionOptions");
-    if (!list) return;
-    setMessageHtml(list, "");
-    const modes = ["default"];
-    if (autoReviewSupported()) modes.push("guardian-approvals");
-    if (state.permissionVisibility.fullAccess) modes.push("full-access");
-    for (const profile of state.permissionProfiles) modes.push(`${PERMISSION_PROFILE_PREFIX}${profile.id}`);
-    for (const mode of modes) {
-      const option = permissionModeDefinition(mode);
-      if (!option) continue;
-      const checked = mode === state.permissionMode,
-        button = document.createElement("button");
-      button.type = "button";
-      button.className = "permission-option";
-      button.dataset.permissionMode = mode;
-      button.role = "menuitemradio";
-      button.disabled = option.allowed === false;
-      button.setAttribute("aria-checked", String(checked));
-      const description = option.allowed === false ? "Not allowed by managed settings" : option.description;
-      setMessageHtml(
-        button,
-        `<span class="permission-option-icon">${codexIcon(option.icon)}</span><span class="permission-option-copy"><strong>${messageHtml(option.optionLabel || option.label, undefined, t)}</strong><small>${messageHtml(description, undefined, t)}</small></span><span class="permission-option-check">${checked ? codexIcon("check") : ""}</span>`,
-      );
-      button.onclick = () => choosePermissionMode(mode);
-      list.append(button);
-    }
-  }
-  function syncPermissionSettings() {
-    const autoRow = $("#settingsAutoReviewRow"),
-      autoToggle = $("#settingsAutoReviewToggle"),
-      fullToggle = $("#settingsFullAccessToggle");
-    if (autoRow) autoRow.hidden = true;
-    if (autoToggle) autoToggle.checked = autoReviewSupported();
-    if (fullToggle) fullToggle.checked = state.permissionVisibility.fullAccess;
-    syncTaskNotifySettings();
-  }
-  function taskNotifyEnabled() {
-    return storage.get(STORAGE_KEYS.taskNotify) !== "false";
-  }
-  function syncTaskNotifySettings() {
-    const toggle = $("#settingsTaskNotifyToggle");
-    if (toggle) {
-      const available = "Notification" in window;
-      toggle.checked =
-        available &&
-        (requestingNotificationPermission || (taskNotifyEnabled() && Notification.permission === "granted"));
-      toggle.disabled = !available || requestingNotificationPermission;
-      toggle.setAttribute("aria-busy", String(requestingNotificationPermission));
-    }
-  }
-  async function setTaskNotifyEnabled(enabled) {
-    if (requestingNotificationPermission) return;
-    const on = Boolean(enabled);
-    if (!on || !("Notification" in window)) {
-      storage.set(STORAGE_KEYS.taskNotify, "false");
-      syncTaskNotifySettings();
-      return;
-    }
-    try {
-      requestingNotificationPermission = Notification.permission === "default";
-      syncTaskNotifySettings();
-      // This path is called only by the user's notification toggle gesture.
-      const permission = requestingNotificationPermission
-        ? await Notification.requestPermission()
-        : Notification.permission;
-      storage.set(STORAGE_KEYS.taskNotify, String(permission === "granted"));
-      if (permission === "denied") toast(t("sessions.browserNotificationsAreBlocked"));
-    } catch {
-      storage.set(STORAGE_KEYS.taskNotify, "false");
-      toast(t("errors.couldNotEnableBrowserNotifications"));
-    } finally {
-      requestingNotificationPermission = false;
-      syncTaskNotifySettings();
-    }
-  }
-  function maybeNotifyTaskCompleted(p) {
-    if (!taskNotifyEnabled()) return;
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-    if (document.hasFocus() && !document.hidden) return;
-    const thread = state.threads.find((x) => x.id === p.threadId),
-      title = thread?.name || t("sessions.taskCompleted");
-    try {
-      new Notification(t("sessions.taskCompleted"), { body: title, tag: `codex-turn-${p.turn?.id || Date.now()}` });
-    } catch {}
-  }
-  function syncPermissionControl() {
-    normalizePermissionMode();
-    const selected = selectedPermission();
-    localizeText($("#modeButton .control-label"), state.planMode ? "common.planMode" : selected.label, undefined, t);
-    for (const attribute of ["aria-label", "title"])
-      localizeAttribute(
-        $("#modeButton"),
-        attribute,
-        "common.permissionSetting",
-        {
-          mode: t(state.planMode ? "common.planMode" : selected.label),
-        },
-        t,
-      );
-    $("#modeButton").dataset.permissionMode = state.planMode ? "plan" : state.permissionMode;
-    $("#modeButton").classList.toggle("active", state.planMode || state.permissionMode !== "default");
-    if ($("#settingsPermissionValue")) localizeText($("#settingsPermissionValue"), selected.label, undefined, t);
-    syncPermissionSettings();
-    renderPermissionMenu();
-    onSettingsChanged();
-  }
-  function setPermissionMode(mode) {
-    if (!permissionModeAvailable(mode)) return;
-    const selected = permissionModeDefinition(mode);
-    mutations.set("permissionMode", mode);
-    storage.set(STORAGE_KEYS.permissionMode, mode);
-    syncPermissionControl();
-    closePermissionMenu();
-    toast(t(selected.label));
-  }
-  function setPermissionVisibility(kind, enabled) {
-    mutations.edit("permissionVisibility", (draft) => (draft[kind] = Boolean(enabled)));
-    storage.set(
-      kind === "autoReview" ? "panda-force-permission-auto-review" : STORAGE_KEYS.permissionFullAccess,
-      String(Boolean(enabled)),
-    );
-    normalizePermissionMode();
-    syncPermissionControl();
-  }
-  function openPermissionMenu() {
-    closeModelMenu();
-    syncPermissionControl();
-    $("#permissionMenu").hidden = false;
-    $("#modeButton").setAttribute("aria-expanded", "true");
-    focusMenuSelection($("#permissionMenu"));
-  }
-  function closePermissionMenu() {
-    const menu = $("#permissionMenu");
-    menu.hidden = true;
-    $("#modeButton").setAttribute("aria-expanded", "false");
-  }
-  function togglePermissionMenu() {
-    if ($("#permissionMenu").hidden) openPermissionMenu();
-    else closePermissionMenu();
-  }
-  function choosePermissionMode(mode) {
-    closePermissionMenu();
-    if (mode === "full-access" && state.permissionMode !== "full-access") {
-      pendingFullAccessAction = "select";
-      const dialog = $("#fullAccessDialog");
-      if (!dialog.open) dialog.showModal();
-      return;
-    }
-    setPermissionMode(mode);
-  }
-  /** @param {HTMLElement} menu */
-  function focusMenuSelection(menu) {
-    const close = findElement(".session-menu-close", menu);
-    if (!close?.getClientRects().length) return;
-    (findElement('[aria-checked="true"]', menu) || findElement("button:not(.session-menu-close)", menu) || close).focus(
-      { preventScroll: true },
-    );
-  }
-  /** @param {HTMLElement} menu @param {HTMLButtonElement} trigger @param {() => void} close */
-  function bindMenuDismiss(menu, trigger, close) {
-    const dismiss = () => {
-      close();
-      trigger.focus({ preventScroll: true });
-    };
-    menu.addEventListener("click", (event) => {
-      if (event.target instanceof Element && event.target.closest(".session-menu-close")) dismiss();
-    });
-    menu.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      event.stopPropagation();
-      dismiss();
-    });
-  }
-  bindMenuDismiss($("#modelMenu"), $("#modelButton"), closeModelMenu);
-  bindMenuDismiss($("#permissionMenu"), $("#modeButton"), closePermissionMenu);
-  $("#modelButton").addEventListener("click", toggleModelMenu);
-  $("#modeButton").onclick = togglePermissionMenu;
-  $("#confirmFullAccess").onclick = () => {
-    const action = pendingFullAccessAction,
-      sessionId = pendingFullAccessSession;
-    $("#fullAccessDialog").close();
-    if (sessionId && state.active?.id !== sessionId) {
-      toast(t("sessionview.sessionChanged"));
-      return;
-    }
-    if (action === "enable") setPermissionVisibility("fullAccess", true);
-    else setPermissionMode("full-access");
-    pendingFullAccessAction = "select";
-    pendingFullAccessSession = "";
-  };
-  $("#fullAccessDialog").addEventListener("close", () => {
-    pendingFullAccessAction = "select";
-    pendingFullAccessSession = "";
-    syncPermissionSettings();
+  const {
+    closePermissionMenu,
+    loadPermissionProfiles,
+    permissionThreadPolicy,
+    permissionTurnPolicy,
+    renderPermissionMenu,
+    selectedPermission,
+    setPermissionMode,
+    setPermissionProfiles,
+    setPermissionVisibility,
+    syncPermissionControl,
+    syncPermissionSettings,
+    applyPermissionSelection,
+    permissionsView,
+  } = createSessionPermissionControls({
+    $,
+    t,
+    state,
+    rpc,
+    toast,
+    mutations,
+    onSettingsChanged,
+    closeModelMenu,
+    syncTaskNotifySettings,
   });
-  $("#settingsAutoReviewToggle").onchange = (event) =>
-    setPermissionVisibility("autoReview", event.currentTarget.checked);
+  bindMenuDismiss($("#modelMenu"), $("#modelButton"), closeModelMenu);
+  $("#modelButton").addEventListener("click", toggleModelMenu);
   $("#settingsTaskNotifyToggle").onchange = (event) => setTaskNotifyEnabled(event.currentTarget.checked);
-  $("#settingsFullAccessToggle").onchange = (event) => {
-    if (!event.currentTarget.checked) {
-      setPermissionVisibility("fullAccess", false);
-      return;
-    }
-    event.currentTarget.checked = false;
-    pendingFullAccessAction = "enable";
-    const dialog = $("#fullAccessDialog");
-    if (!dialog.open) dialog.showModal();
-  };
   function sessionControlView() {
-    const modes = ["default"];
-    if (autoReviewSupported()) modes.push("guardian-approvals");
-    if (state.permissionVisibility.fullAccess) modes.push("full-access");
-    modes.push(...state.permissionProfiles.map((profile) => `${PERMISSION_PROFILE_PREFIX}${profile.id}`));
     return {
       sessionId: state.active?.id || "",
       model: state.selectedModel,
@@ -757,15 +378,7 @@ export function createSessionControls({
           label: reasoningLabel(item.reasoningEffort),
         })),
       })),
-      permissions: modes
-        .map((mode) => permissionModeDefinition(mode))
-        .filter(Boolean)
-        .map((option) => ({
-          id: option.mode,
-          label: option.kind === "profile" ? option.label : t(option.label),
-          description: option.kind === "profile" ? option.description : t(option.description),
-          allowed: permissionModeAvailable(option.mode),
-        })),
+      permissions: permissionsView(),
     };
   }
   function applyModelSelection(sessionId, model, effort) {
@@ -777,12 +390,7 @@ export function createSessionControls({
     chooseModel(model, true);
     chooseEffort(effort);
   }
-  function applyPermissionSelection(sessionId, mode) {
-    if (!sessionId || state.active?.id !== sessionId) throw new Error(t("sessionview.sessionChanged"));
-    if (!permissionModeAvailable(mode)) throw new Error(t("sessionview.permissionUnavailable"));
-    choosePermissionMode(mode);
-    if (mode === "full-access" && $("#fullAccessDialog").open) pendingFullAccessSession = sessionId;
-  }
+
   return {
     sessionControlView,
     applyModelSelection,

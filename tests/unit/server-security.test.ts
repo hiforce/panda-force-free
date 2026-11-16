@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import {
   createPasswordSession,
@@ -15,6 +15,13 @@ import {
 } from "../../src/server/auth/security.js";
 
 describe("PandaForce server security boundary", () => {
+  test("the real application stylesheet dependencies are in the closed public asset inventory", () => {
+    const root = resolve("public"),
+      html = readFileSync(join(root, "index.html"), "utf8");
+    const styles = [...html.matchAll(/<link\s+[^>]*href="([^"?]+\.css)(?:\?[^"]*)?"/g)].map((match) => match[1]!);
+    expect(styles.length).toBeGreaterThan(10);
+    for (const path of styles) expect(resolvePublicAsset(path, root)).not.toBeNull();
+  });
   test("allows only the RPC methods used by the browser client", () => {
     for (const method of [
       "model/list",

@@ -1,10 +1,12 @@
 import { gzipSync } from "node:zlib";
+import { errorStatus } from "../../shared/errors.js";
 import { config } from "../config.js";
 import type { RuntimeServices } from "./../services.js";
 import { readJsonBody } from "./body.js";
 import { projectRoutes } from "./project-routes.js";
 import { respondError, respondJson } from "./respond.js";
-import type { Route } from "./router.js";
+import type { Route, RouteContext } from "./router.js";
+import { sharedWorkspaceAllowed } from "../auth/users/access.js";
 
 /** Owns bridge routes. Dependencies are supplied by the composition root. */
 export function bridgeRoutes({
@@ -23,6 +25,7 @@ export function bridgeRoutes({
   projectVisibility,
   projectCatalog,
   projectWorkspaces,
+  projectOwner,
   directoryPolicy,
   sseClients,
   pendingEngineRequests,
@@ -54,7 +57,7 @@ export function bridgeRoutes({
   | "engineDriver"
   | "broadcast"
   | "dispatchBrowserMessage"
->): Route[] {
+> & { projectOwner(context: RouteContext): string | undefined }): Route[] {
   return [
     {
       path: "/api/engine",
@@ -69,6 +72,7 @@ export function bridgeRoutes({
     ...projectRoutes({
       catalog: projectCatalog,
       workspaces: projectWorkspaces,
+      projectOwner,
       directoryPolicy,
       request,
       getSession: (id: string) => threadHub.getThreadMetadata(id),
@@ -95,10 +99,14 @@ export function bridgeRoutes({
           res.once("close", unwatch);
         }
         if (!idaasAuth && watchPasswordSession) {
-          const unwatch = watchPasswordSession(req, () =>
+          const unwatch = await watchPasswordSession(req, () =>
             res.end(`data: ${JSON.stringify({ type: "auth/required" })}\n\n`),
           );
           res.once("close", unwatch);
+          if (res.destroyed || res.writableEnded) {
+            unwatch();
+            return;
+          }
         }
         res.write("retry: 1000\n\n");
         if (cluster)
@@ -115,7 +123,7 @@ export function bridgeRoutes({
         else sseClients.add(res);
         if (res.destroyed) return;
         res.write(
-          `data: ${JSON.stringify({ type: "projects/visibility", ...directoryPolicy.visibility(projectVisibility.snapshot()) })}\n\n`,
+          `data: ${JSON.stringify({ type: "projects/visibility", ...directoryPolicy.visibility(await projectVisibility.snapshot()) })}\n\n`,
         );
         res.write(
           `data: ${JSON.stringify({ type: "bridge/status", status: engineDriver.connected ? "connected" : "connecting" })}\n\n`,
@@ -181,12 +189,12 @@ export function bridgeRoutes({
             const { project, hidden, expectedHiddenAt } = await readJsonBody(req);
             if (typeof hidden !== "boolean") throw new Error("Invalid project visibility");
             if (!directoryPolicy.allowsPath(project)) throw new Error("Directory is outside the project root");
-            if (projectVisibility.setHidden(project, hidden, expectedHiddenAt))
-              broadcast({ type: "projects/visibility", ...projectVisibility.snapshot() });
+            if (await projectVisibility.setHidden(project, hidden, expectedHiddenAt))
+              broadcast({ type: "projects/visibility", ...(await projectVisibility.snapshot()) });
           }
-          respondJson(res, 200, directoryPolicy.visibility(projectVisibility.snapshot()));
+          respondJson(res, 200, directoryPolicy.visibility(await projectVisibility.snapshot()));
         } catch (error) {
-          respondError(res, 400, error);
+          respondError(res, errorStatus(error, 400), error);
         }
       },
     },
@@ -203,16 +211,21 @@ export function bridgeRoutes({
     },
     {
       path: "/api/config",
-      handler: ({ res }) =>
+      handler: ({ req, res }) =>
         respondJson(res, 200, {
           engine: engineDriver.descriptor,
-          home: homeDir,
-          defaultCwd,
-          reviewRoot: reviewRoots[0],
-          browseRoots,
-          allowExternalDirectories: config.allowExternalDirectories,
-          projectWorkspaceRoot: config.projectWorkspaceRoot,
-          projectless,
+          sharedWorkspace: sharedWorkspaceAllowed(req),
+          ...(sharedWorkspaceAllowed(req)
+            ? {
+                home: homeDir,
+                defaultCwd,
+                reviewRoot: reviewRoots[0],
+                browseRoots,
+                allowExternalDirectories: config.allowExternalDirectories,
+                projectWorkspaceRoot: config.projectWorkspaceRoot,
+                projectless,
+              }
+            : { projectless: true }),
           attachmentStorage: attachmentStorage ? "oss" : "local",
           attachmentUrlPrefix: attachmentStorage?.urlPrefix || null,
         }),

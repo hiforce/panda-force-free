@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { sourceIdentity } from "../../scripts/verification/source.js";
+import { sourceIdentity, verificationFiles } from "../../scripts/verification/source.js";
 import { assertCompleteVerification } from "../../scripts/verification/contracts.js";
 import { verificationPlan } from "../../scripts/testing/verification-plan.js";
 
@@ -52,17 +52,43 @@ test("source identity binds code, dependency patches and executable modes while 
     const initial = sourceIdentity(root).sha256;
     writeFileSync(join(root, "dist", "server.js"), "generated");
     writeFileSync(join(root, "public", "app.bundle.js"), "generated");
+    writeFileSync(join(root, "public", "gadget-document.bundle.js"), "generated optional document runtime");
     expect(sourceIdentity(root).sha256).toBe(initial);
     writeFileSync(join(root, "patches", "dependency.patch"), "changed");
     const changed = sourceIdentity(root).sha256;
     expect(changed).not.toBe(initial);
-    for (const stylesheet of ["workbench-chrome.css", "workbench-layout.css", "appearance.css"]) {
+    for (const stylesheet of ["workbench-chrome.css", "workbench-layout.css", "appearance.css", "bots.css"]) {
       const beforeStylesheet = sourceIdentity(root).sha256;
       writeFileSync(join(root, "public", stylesheet), "body { color: #222; }");
       expect(sourceIdentity(root).sha256).not.toBe(beforeStylesheet);
     }
     chmodSync(join(root, "src", "main.ts"), 0o755);
     expect(sourceIdentity(root).sha256).not.toBe(changed);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("every application stylesheet in the HTML shell participates in the image source certificate", () => {
+  const files = new Set(verificationFiles()),
+    shell = readFileSync("public/index.html", "utf8");
+  const styles = [...shell.matchAll(/href="\/([^"?]+\.css)"/g)].map((match) => "public/" + match[1]);
+  expect(styles.length).toBeGreaterThan(5);
+  for (const path of styles) expect(files.has(path)).toBe(true);
+});
+
+test("optional vector installation inputs participate in the release source identity", () => {
+  const root = mkdtempSync(join(tmpdir(), "panda-vector-source-proof-"));
+  try {
+    mkdirSync(join(root, "deploy/search"), { recursive: true });
+    const paths = ["docker-compose.search.yml", "deploy/search/embed-etcd.yaml"];
+    for (const path of paths) writeFileSync(join(root, path), "reviewed installation configuration");
+    for (const path of paths) {
+      expect(verificationFiles(root)).toContain(path);
+      const before = sourceIdentity(root).sha256;
+      writeFileSync(join(root, path), "changed installation configuration");
+      expect(sourceIdentity(root).sha256).not.toBe(before);
+    }
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

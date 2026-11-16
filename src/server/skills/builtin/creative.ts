@@ -1,0 +1,278 @@
+import type { BuiltinSkillSpec } from "./spec.js";
+
+/** These skills produce editable production plans; rendering remains a separate configured capability. */
+export const creativeSkills: readonly BuiltinSkillSpec[] = [
+  {
+    id: "executive-deck",
+    category: "slides",
+    name: { en: "Executive Deck Outline", "zh-CN": "汇报幻灯片大纲" },
+    description: {
+      en: "Plan a focused presentation with slide takeaways, evidence and speaker notes.",
+      "zh-CN": "规划重点清晰的汇报幻灯片，逐页说明结论、依据与讲述要点。",
+    },
+    inputs: "Audience, the decision or action requested, presentation duration and available facts or data.",
+    steps: [
+      "Define the one decision or takeaway the audience should retain. Choose a realistic slide count for the available time.",
+      "Build a narrative from context to evidence, options and action. Use a specific takeaway as each slide title.",
+      "For each slide provide the key message, supporting content, proposed visual and speaker notes. Assign estimates of presentation time without pretending they are measured.",
+      "Specify charts only when the underlying data is supplied; otherwise use an explicit placeholder and the data needed.",
+      "Finish with a clear request, ownership and next steps. Mark backup material separately. Deliver a document outline, not a claim that a PPTX was rendered.",
+    ],
+    sections: [
+      "Audience and presentation goal",
+      "Narrative and timing",
+      "Slide-by-slide plan",
+      "Data and visual assets needed",
+      "Speaker notes and anticipated questions",
+      "Closing request",
+    ],
+    checks: [
+      "Every slide has one primary message and evidence.",
+      "The requested action is explicit.",
+      "Charts do not contain fabricated numbers; the output is clearly an outline.",
+    ],
+    example: {
+      en: "Plan a ten-minute roadmap review for executives, including tradeoffs and the decision needed.",
+      "zh-CN": "规划十分钟的管理层路线图汇报，说明取舍和需要作出的决定。",
+    },
+  },
+  {
+    id: "lesson-deck",
+    category: "slides",
+    name: { en: "Lesson Slide Plan", "zh-CN": "课程幻灯片教案" },
+    description: {
+      en: "Design a teachable slide sequence with examples, practice and checks for understanding.",
+      "zh-CN": "设计可讲授的幻灯片顺序，包含例子、练习和理解检查。",
+    },
+    inputs: "Learner level, learning objectives, topic, lesson duration and accessibility or classroom constraints.",
+    steps: [
+      "Define observable learning outcomes and the knowledge learners already have. Avoid overloading one lesson with unrelated goals.",
+      "Sequence explanation, worked example, guided practice and independent check. Allocate time for questions and practice.",
+      "Describe each slide's instructional purpose, visible content, proposed visual and instructor notes. Keep learner-facing wording concise.",
+      "Write practice prompts and answer guidance that actually test the stated outcomes. Include a likely misconception and how to address it.",
+      "Provide an accessible recap and follow-up exercise. Deliver the editable teaching plan; do not claim slide rendering or classroom validation.",
+    ],
+    sections: [
+      "Learners and learning outcomes",
+      "Lesson sequence and timing",
+      "Slide-by-slide teaching plan",
+      "Worked example",
+      "Practice and answer guidance",
+      "Recap and follow-up",
+    ],
+    checks: [
+      "Activities and checks map to learning outcomes.",
+      "Examples fit the learner's prior knowledge.",
+      "Visual instructions include text alternatives and do not rely solely on color.",
+    ],
+    example: {
+      en: "Design a thirty-minute lesson on database indexes for developers, with a worked example and two exercises.",
+      "zh-CN": "为开发者设计三十分钟的数据库索引课程，包含实例和两道练习。",
+    },
+  },
+  {
+    id: "science-illustration",
+    category: "image",
+    name: { en: "Knowledge Illustration Brief", "zh-CN": "知识插图策划" },
+    description: {
+      en: "Turn a concept into an accurate illustration brief and a usable image prompt.",
+      "zh-CN": "把知识点整理为准确的插图方案与可用的绘图提示词。",
+    },
+    inputs: "The concept, intended readers, teaching goal, required labels and intended placement or aspect ratio.",
+    steps: [
+      "Identify the single relationship or mechanism the illustration must explain. Verify scientific facts against the supplied sources and flag uncertainty.",
+      "Choose a concrete composition: subjects, positions, scale relationships, sequence and arrows. Distinguish explanatory simplification from factual distortion.",
+      "List exact label text separately from the image prompt so text can be added accessibly after generation.",
+      "Write a prompt with composition, style, palette, perspective and output constraints, plus specific things to avoid. Preserve consistent subjects across related images.",
+      "Provide alt text, a factual review checklist and any source attributions. Deliver a brief and prompts; actual image generation requires a separately configured model.",
+    ],
+    sections: [
+      "Concept and audience",
+      "What the image must explain",
+      "Composition and relationships",
+      "Labels",
+      "Image prompt and exclusions",
+      "Alt text and factual checks",
+    ],
+    checks: [
+      "Arrows, scale and sequence do not imply a false mechanism.",
+      "Labels are short, accurate and separately editable.",
+      "The result is not described as a generated image.",
+    ],
+    example: {
+      en: "Plan a child-friendly illustration of the water cycle, with accurate arrows, labels and alt text.",
+      "zh-CN": "规划面向儿童的水循环插图，明确箭头、标签与替代文本。",
+    },
+  },
+  {
+    id: "infographic-brief",
+    category: "image",
+    name: { en: "Infographic Brief", "zh-CN": "信息图设计简报" },
+    description: {
+      en: "Organize a process or dataset into an honest, readable infographic plan.",
+      "zh-CN": "把流程或数据组织为信息准确、层次清晰的信息图方案。",
+    },
+    inputs: "The message, target audience, source data, units, time period and intended display size.",
+    steps: [
+      "Choose the main finding and the minimum context a reader needs. Inventory the evidence and separate missing data from actual zero values.",
+      "Select a layout suited to the relationship: sequence, comparison, hierarchy or part-to-whole. Explain why the layout fits.",
+      "Specify content blocks, reading order, visual hierarchy and chart encodings. Keep units, baselines and denominators explicit.",
+      "Write concise headings, captions and annotations. Use a limited palette with meaning that also survives grayscale and color-vision differences.",
+      "Provide a production brief, exact text, alt text and a source footer. If data is missing, provide a wireframe with labeled placeholders rather than invented values.",
+    ],
+    sections: [
+      "Main message and audience",
+      "Evidence and data definitions",
+      "Layout and reading order",
+      "Visual encodings",
+      "Exact text and annotations",
+      "Accessibility and source footer",
+    ],
+    checks: [
+      "Charts and proportions represent the supplied data faithfully.",
+      "The reading order is clear at the requested size.",
+      "Missing values and estimates are visibly labeled.",
+    ],
+    example: {
+      en: "Plan an infographic of this onboarding funnel, preserving denominators and explaining where users drop off.",
+      "zh-CN": "根据这份新用户漏斗数据规划信息图，保留分母定义并解释流失位置。",
+    },
+  },
+  {
+    id: "landing-page-brief",
+    category: "web",
+    name: { en: "Landing Page Brief", "zh-CN": "产品介绍页方案" },
+    description: {
+      en: "Plan a page around audience needs, credible proof and one clear primary action.",
+      "zh-CN": "围绕用户需求、可信证据与一个主行动规划产品介绍页。",
+    },
+    inputs: "Product purpose, audience, primary conversion goal, evidence, constraints and brand requirements.",
+    steps: [
+      "State who the product serves, what problem it solves and the one action the page should invite.",
+      "Build a section sequence covering value, how it works, credible evidence, objections and the primary action. Remove sections that do not support a user decision.",
+      "Draft concise page copy with a clear hierarchy. Do not invent testimonials, logos, performance metrics, prices or availability.",
+      "Specify desktop and mobile layouts, navigation, form behavior, loading, error, success and accessible interaction states.",
+      "Provide a handoff document with exact copy, layout intent, required assets and acceptance checks. Do not claim a website has been built, hosted or published.",
+    ],
+    sections: [
+      "Audience, positioning and primary action",
+      "Page structure",
+      "Section copy",
+      "Desktop and mobile behavior",
+      "Forms and interaction states",
+      "Assets, evidence and acceptance checks",
+    ],
+    checks: [
+      "The primary action is consistent across the page.",
+      "Evidence-backed copy is distinguishable from proposed claims.",
+      "Narrow screens, keyboard access and error recovery are covered.",
+    ],
+    example: {
+      en: "Plan a landing page for a local document workspace. Use only the supplied product facts.",
+      "zh-CN": "为本地文档工作空间规划介绍页，仅使用已提供的产品事实。",
+    },
+  },
+  {
+    id: "information-architecture",
+    category: "web",
+    name: { en: "Information Architecture", "zh-CN": "信息架构梳理" },
+    description: {
+      en: "Turn a confusing content set into clear navigation, labels and findable user journeys.",
+      "zh-CN": "把复杂内容整理为清晰导航、准确命名与容易查找的用户路径。",
+    },
+    inputs: "A content inventory, target users, common tasks, existing navigation and known findability problems.",
+    steps: [
+      "Inventory the content and identify duplicates, ownership, lifecycle and ambiguous terminology. Do not confuse file format with the user's purpose.",
+      "Group content around high-frequency user tasks. Distinguish global navigation, local navigation, personal shortcuts and contextual actions.",
+      "Propose short, clear labels with natural equivalents in the requested languages. Explain uncertain labels and the evidence needed to validate them.",
+      "Trace representative tasks from entry to completion, including search, filters, empty states, permissions and back navigation.",
+      "Describe migration redirects, content ownership and evaluation steps. Treat tree testing or card sorting as proposed validation unless actually performed.",
+    ],
+    sections: [
+      "User tasks and current problems",
+      "Content inventory",
+      "Navigation hierarchy and labels",
+      "Search, filters and personal shortcuts",
+      "Representative journeys",
+      "Migration and evaluation",
+    ],
+    checks: [
+      "The same term has the same meaning across navigation and content.",
+      "Personal shortcuts are distinct from the shared information structure.",
+      "Proposed usability results are not presented as observed evidence.",
+    ],
+    example: {
+      en: "Reorganize these skill categories and personal shortcuts without adding duplicate global navigation.",
+      "zh-CN": "重新组织技能分类和个人快捷入口，避免增加重复的全局导航。",
+    },
+  },
+  {
+    id: "short-film-storyboard",
+    category: "video",
+    name: { en: "Short Film Storyboard", "zh-CN": "短片分镜脚本" },
+    description: {
+      en: "Translate a story into timed shots, visual continuity and clear production notes.",
+      "zh-CN": "把故事拆解为有节奏的镜头、连贯画面与清楚的制作说明。",
+    },
+    inputs: "The story or message, intended audience, target duration, aspect ratio and production constraints.",
+    steps: [
+      "Define the emotional or informational arc and the final audience takeaway before choosing shots.",
+      "Break the story into beats, then shots. For each shot state its purpose, composition, action, camera movement, dialogue or narration and approximate duration.",
+      "Maintain character, setting, lighting and prop continuity. Mark intentional transitions and avoid impossible camera instructions.",
+      "Write image or video prompts as optional production inputs with consistent character and environment descriptions; keep spoken text and on-screen labels separate.",
+      "Check the total planned duration, include accessibility notes and list assets or rights to obtain. Deliver a storyboard document, not a rendered film.",
+    ],
+    sections: [
+      "Story premise and constraints",
+      "Narrative beats",
+      "Timed shot list",
+      "Dialogue and on-screen text",
+      "Continuity and optional generation prompts",
+      "Production, rights and accessibility notes",
+    ],
+    checks: [
+      "Shot purposes form a coherent story.",
+      "Planned durations add up within the requested limit.",
+      "Character and scene continuity are explicit; rendering is not claimed.",
+    ],
+    example: {
+      en: "Write a sixty-second storyboard explaining how a small team turns notes into a shared knowledge base.",
+      "zh-CN": "为小团队把笔记整理成知识库的过程编写六十秒分镜脚本。",
+    },
+  },
+  {
+    id: "product-demo-script",
+    category: "video",
+    name: { en: "Product Demo Script", "zh-CN": "产品演示脚本" },
+    description: {
+      en: "Show a real user task with accurate product behavior, concise narration and useful pacing.",
+      "zh-CN": "围绕真实用户任务，用准确功能、简洁旁白与合适节奏组织演示。",
+    },
+    inputs:
+      "The product's verified capabilities, target audience, demonstration goal, duration and available recording environment.",
+    steps: [
+      "Choose one representative user task and define the before-and-after outcome. Avoid a feature tour without a purpose.",
+      "Lay out the exact interaction sequence. Verify each claimed capability against the supplied product facts and mark unavailable steps.",
+      "Pair screen action, narration, on-screen text and planned duration. Leave enough time for viewers to see the resulting state.",
+      "Use synthetic example data and identify credentials or personal information that must be hidden in recording.",
+      "Include setup, reset, fallback and recording checklists, plus captions and a concise closing action. Do not invent a successful run or claim recording has occurred.",
+    ],
+    sections: [
+      "Audience, goal and verified scope",
+      "Demo setup",
+      "Screen action and narration by scene",
+      "Timing and transitions",
+      "Recording safety and recovery",
+      "Captions and closing action",
+    ],
+    checks: [
+      "Every demonstrated step corresponds to verified product behavior.",
+      "The script shows task completion and not merely clicks.",
+      "Sensitive data is excluded; planned timing and actual recording are distinguished.",
+    ],
+    example: {
+      en: "Script a ninety-second demo of importing, finding and pinning a skill, with synthetic example data.",
+      "zh-CN": "用示例数据编写九十秒的技能导入、查找和固定演示脚本。",
+    },
+  },
+];

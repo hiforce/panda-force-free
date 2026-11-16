@@ -20,9 +20,9 @@ Version 0.0.2 checks browser sign-in in the background every five minutes while 
 
 A single timeout or temporary failure stays quiet and retries with backoff. An unavailable notice appears only after repeated failures spanning at least fifteen seconds; it disappears after recovery. Confirmed expiry still prompts sign-in immediately, preserving the page and draft.
 
-IDAAS token-introspection results are cached for up to five minutes, never beyond the token expiry. Local logout and known expiry remain immediate; remote revocation can take up to five minutes to propagate. No protected access is granted on an unsuccessful required revalidation.
+Local account disablement, role changes and password changes invalidate old browser credentials. Shared native connections are closed after credential revalidation; logout revocation is persistent. A request to send a password reset email does not itself revoke an existing session.
 
-Slow or failed IDAAS calls emit `auth/provider-request` with operation, duration, HTTP status and outcome. Slow or failed status handling emits `auth/status-request`. These records omit tokens, cookies, client secrets, query strings and provider error bodies. Gateway request duration measures the whole HTTP request and must not be treated as the duration of an IDAAS request or a Codex socket call.
+If invitation or reset mail does not arrive, check SMTP configuration, the displayed delivery state, spam filtering and the sender's delivery logs. SMTP acceptance does not prove inbox delivery. Resending an invitation invalidates its previous link. Do not delete application state or model-provider credentials to repair email delivery.
 
 ## Message contrast and theme preferences
 

@@ -50,7 +50,7 @@ try {
     if (route.request().postDataJSON().method === "model/list" && ++requests === 1) return route.abort("failed");
     return route.continue();
   });
-  await page.goto(base, { waitUntil: "domcontentloaded" });
+  await page.goto(base + "/new", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === "ready");
   assert.equal(requests, 2);
   assert.equal(await page.locator("#settingsTaskNotifyToggle").isEnabled(), false);

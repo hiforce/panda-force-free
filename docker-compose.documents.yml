@@ -1,0 +1,85 @@
+# Use with docker-compose.yml. Build the worker with --profile tools before the first local start.
+services:
+  panda-force:
+    image: ${PANDA_FORCE_IMAGE:-panda-force:documents}
+    pull_policy: ${PANDA_FORCE_PULL_POLICY:-missing}
+    environment:
+      PANDA_FORCE_BUILD_EXECUTOR_URL: http://panda-executor:8900
+      PANDA_FORCE_BUILD_EXECUTOR_TOKEN_FILE: /run/panda-executor/token
+      PANDA_FORCE_PUBLICATION_ROOTS: ${PANDA_FORCE_PUBLICATION_ROOTS:-}
+    volumes:
+      - panda-executor-token:/run/panda-executor:ro
+    depends_on:
+      panda-executor:
+        condition: service_healthy
+
+  panda-executor-init:
+    image: ${PANDA_FORCE_EXECUTOR_IMAGE:-panda-force-executor:local}
+    pull_policy: ${PANDA_FORCE_EXECUTOR_PULL_POLICY:-missing}
+    command: ["init"]
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+    volumes:
+      - panda-executor-token:/run/panda-executor
+    network_mode: none
+    read_only: true
+
+  panda-executor:
+    image: ${PANDA_FORCE_EXECUTOR_IMAGE:-panda-force-executor:local}
+    pull_policy: ${PANDA_FORCE_EXECUTOR_PULL_POLICY:-missing}
+    build:
+      context: .
+      dockerfile: deploy/documents/executor.Dockerfile
+      args:
+        BUN_IMAGE: ${PANDA_FORCE_BUN_IMAGE:-oven/bun:1.4.2@sha256:9114c058aeae42162ee16dd5084b95fe9473970bb6bcb5b232ab1630f0546895}
+    restart: unless-stopped
+    read_only: true
+    environment:
+      PANDA_FORCE_HEXO_IMAGE: ${PANDA_FORCE_HEXO_IMAGE:-${PANDA_FORCE_DOCUMENT_WORKER_IMAGE:-panda-force-document-worker:local}}
+      PANDA_FORCE_DOCUSAURUS_IMAGE: ${PANDA_FORCE_DOCUSAURUS_IMAGE:-${PANDA_FORCE_DOCUMENT_WORKER_IMAGE:-panda-force-document-worker:local}}
+      PANDA_FORCE_ENGINE_PULL_POLICY: ${PANDA_FORCE_ENGINE_PULL_POLICY:-if-not-present}
+      PANDA_FORCE_HEXO_PULL_POLICY: ${PANDA_FORCE_HEXO_PULL_POLICY:-${PANDA_FORCE_ENGINE_PULL_POLICY:-if-not-present}}
+      PANDA_FORCE_DOCUSAURUS_PULL_POLICY: ${PANDA_FORCE_DOCUSAURUS_PULL_POLICY:-${PANDA_FORCE_ENGINE_PULL_POLICY:-if-not-present}}
+      PANDA_FORCE_BUILD_TIMEOUT_SECONDS: ${PANDA_FORCE_BUILD_TIMEOUT_SECONDS:-300}
+    volumes:
+      - ${PANDA_FORCE_DOCKER_SOCKET_HOST:-/var/run/docker.sock}:/var/run/docker.sock
+      - panda-executor-state:/var/lib/panda-executor
+      - panda-executor-token:/run/panda-executor:ro
+    depends_on:
+      panda-executor-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "fetch('http://127.0.0.1:8900/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  document-worker:
+    profiles: ["tools"]
+    image: ${PANDA_FORCE_DOCUMENT_WORKER_IMAGE:-panda-force-document-worker:local}
+    build:
+      context: .
+      dockerfile: deploy/documents/worker.Dockerfile
+      args:
+        BUN_IMAGE: ${PANDA_FORCE_BUN_IMAGE:-oven/bun:1.4.2@sha256:9114c058aeae42162ee16dd5084b95fe9473970bb6bcb5b232ab1630f0546895}
+        NODE_IMAGE: ${PANDA_FORCE_NODE_IMAGE:-node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da}
+    network_mode: none
+    read_only: true
+    entrypoint:
+      ["node", "-e", "console.log('Document worker image is ready; the executor creates isolated build containers.')"]
+
+volumes:
+  panda-executor-state:
+  panda-executor-token:

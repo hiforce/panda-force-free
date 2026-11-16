@@ -1,0 +1,452 @@
+/* Desktop authoring is a full-height workspace with one aligned header band. */
+@media (min-width: 701px) {
+  body[data-workbench-page="documents"] .workbench-view:has(.project-document-authoring) {
+    max-width: none;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    scrollbar-gutter: auto;
+  }
+  .workbench-view:has(.project-document-authoring) > :is(#workbenchHero, #workbenchComposerSlot) {
+    display: none;
+  }
+  .workbench-view:has(.project-document-authoring) > #workbenchContent {
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    min-width: 0;
+    flex: 1;
+    display: flex;
+  }
+  .project-document-authoring {
+    --document-directory-width: clamp(210px, 18vw, 260px);
+    --document-header-height: 48px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+  }
+  .project-document-authoring > .documents-heading {
+    position: absolute;
+    top: 0;
+    inset-inline-start: 0;
+    z-index: 25;
+    width: var(--document-directory-width);
+    height: var(--document-header-height);
+    padding: 7px 10px;
+    margin: 0;
+    gap: 6px;
+    background: var(--pf-canvas);
+    border-bottom: 1px solid var(--pf-line);
+    border-inline-end: 1px solid var(--pf-line);
+  }
+  .project-document-authoring > .documents-heading > div:first-child {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 6px;
+  }
+  .project-document-authoring .documents-heading h1 {
+    margin: 0;
+    min-width: 0;
+    font-size: 13px;
+    line-height: 1.4;
+    letter-spacing: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .project-document-authoring .documents-heading-actions {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    gap: 4px;
+  }
+  .project-document-authoring .authoring-workspace-back,
+  .project-document-authoring .documents-heading-actions > .wb-button,
+  .project-document-authoring .documents-heading-actions > .document-workspace-more > summary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 30px;
+    width: 30px;
+    height: 30px;
+    padding: 5px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--pf-muted);
+  }
+  .project-document-authoring .documents-heading :is(a, button, summary):hover {
+    background: var(--pf-soft);
+    color: var(--pf-ink);
+  }
+  .project-document-authoring .documents-heading-actions > .wb-button > span:not(.icon-slot),
+  .project-document-authoring .documents-heading-actions > .document-workspace-more > summary > span:not(.icon-slot),
+  .authoring-workspace-back > span:not(.icon-slot) {
+    display: none;
+  }
+  .project-document-authoring .documents-heading svg,
+  .authoring-directory-utilities svg {
+    width: 17px;
+    height: 17px;
+  }
+  .project-document-authoring > .document-authoring-context {
+    display: none;
+  }
+  .project-document-authoring > .documents-notice {
+    position: absolute;
+    z-index: 30;
+    top: 56px;
+    inset-inline-end: 20px;
+    max-width: min(540px, calc(100% - var(--document-directory-width) - 40px));
+    box-shadow: var(--pf-shadow);
+  }
+  .project-document-authoring .document-authoring-layout {
+    grid-template-columns: var(--document-directory-width) minmax(0, 1fr);
+    flex: 1;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    align-items: stretch;
+    overflow: hidden;
+  }
+  .project-document-authoring .document-authoring-layout > .documents-directory {
+    position: static;
+    align-self: stretch;
+    max-height: none;
+    min-height: 0;
+    padding: calc(var(--document-header-height) + 10px) 10px 12px;
+  }
+  .project-document-authoring .authoring-directory-heading {
+    min-height: 28px;
+    padding: 0 2px 8px;
+  }
+  .project-document-authoring .authoring-directory-heading strong {
+    font-size: 11px;
+    color: var(--pf-muted);
+    font-weight: 500;
+  }
+  .project-document-authoring .authoring-directory-add {
+    display: none;
+  }
+  .authoring-directory-utilities {
+    display: flex;
+    margin-inline-start: auto;
+  }
+  .authoring-directory-utilities .wb-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    width: 26px;
+    height: 26px;
+    padding: 4px;
+    border: 0;
+    background: transparent;
+  }
+  .authoring-directory-utilities .wb-button > span:not(.icon-slot) {
+    display: none;
+  }
+  .project-document-authoring #documentSearch {
+    min-height: 32px;
+    height: 32px;
+    padding: 6px 10px;
+  }
+  .project-document-authoring #documentTree {
+    margin-top: 8px;
+    min-height: 0;
+  }
+  .document-authoring-editor {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .document-authoring-editor .document-authoring-editor-header {
+    flex-shrink: 0;
+    min-height: var(--document-header-height);
+    height: var(--document-header-height);
+    flex-wrap: nowrap;
+    gap: 12px;
+    padding: 7px 20px;
+  }
+  .document-authoring-editor .document-authoring-editor-header > .document-editor-identity {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+  }
+  .document-editor-breadcrumb-slot {
+    flex: 1;
+    min-width: 0;
+  }
+  .document-editor-breadcrumb-slot nav {
+    color: var(--pf-muted);
+    font-size: 12px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .document-authoring-editor-header :is(#documentModeLabel, .document-revision) {
+    display: none;
+  }
+  .document-authoring-editor-header #documentSaveState {
+    flex-shrink: 1;
+    margin: 0;
+    max-width: 150px;
+    font-size: 11px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .document-authoring-editor-header .document-editor-actions {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    gap: 6px;
+  }
+  .document-authoring-editor-header .wb-button,
+  .document-authoring-editor-header .document-editor-more > summary {
+    min-height: 30px;
+    height: 30px;
+    padding: 5px 9px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .document-authoring-editor .document-canvas {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+  .document-authoring-editor .document-rich-title {
+    width: 100%;
+    max-width: var(--workspace-document-width);
+    padding: 32px 40px 8px;
+  }
+  .document-authoring-editor .document-rich-status {
+    display: none;
+  }
+  .document-authoring-editor .document-rich-surface {
+    max-width: var(--workspace-document-width);
+    padding: 18px 40px 64px;
+  }
+  .document-authoring-editor .document-rich-content {
+    min-height: min(420px, 45dvh);
+  }
+  .document-authoring-editor .document-rich-toolbar {
+    padding: 5px 7px;
+    height: 46px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    border: 1px solid transparent;
+    border-bottom-color: var(--pf-line);
+    transition:
+      box-shadow 160ms ease,
+      border-color 160ms ease,
+      border-radius 160ms ease;
+  }
+  .document-authoring-editor .document-toolbar-marker {
+    height: 1px;
+    margin-top: 23px;
+  }
+  .document-authoring-editor .document-toolbar-slot {
+    position: sticky;
+    top: 8px;
+    z-index: 20;
+    width: min(calc(100% - 80px), calc(var(--workspace-document-width) - 80px));
+    margin-inline: auto;
+    scroll-margin-top: 8px;
+  }
+  .document-toolbar-slot[data-docked="true"] .document-rich-toolbar {
+    border-color: var(--pf-line);
+    border-radius: 12px;
+    box-shadow: 0 10px 32px -12px #0003;
+    background: var(--pf-card);
+  }
+  .document-authoring-editor .document-toolbar-slot:not([hidden]) + .document-rich-title {
+    padding-top: 28px;
+  }
+  .document-authoring-editor .document-rich-content {
+    scroll-margin-top: 72px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .document-authoring-editor .document-rich-toolbar {
+      transition: none;
+    }
+  }
+}
+@media (min-width: 701px) and (max-width: 1100px) {
+  .document-authoring-editor-header #documentSaveState {
+    max-width: 80px;
+  }
+  .document-authoring-editor .document-authoring-editor-header {
+    padding-inline: 12px;
+    gap: 8px;
+  }
+  .document-authoring-editor .document-editor-identity {
+    gap: 8px;
+  }
+}
+
+/* Contextual editing controls share the workbench palette and stay outside document source data. */
+.document-rich-popover {
+  position: fixed;
+  z-index: 190;
+  padding: 6px;
+  border: 1px solid var(--pf-line);
+  border-radius: 10px;
+  background: var(--pf-card);
+  color: var(--pf-ink);
+  box-shadow:
+    0 8px 28px #0002,
+    0 2px 6px #0001;
+  font: 13px/1.4 var(--pf-font, system-ui, sans-serif);
+  overflow: auto;
+}
+.document-rich-popover[hidden] {
+  display: none !important;
+}
+.document-selection-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.document-rich-popover .document-format-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 7px;
+  font-size: 13px;
+}
+.document-rich-popover .document-format-button svg {
+  width: 17px;
+  height: 17px;
+}
+.document-rich-popover select {
+  flex-shrink: 0;
+  width: 110px;
+  min-height: 32px;
+  margin-inline-end: 5px;
+  padding: 4px 7px;
+  border: 0;
+  border-inline-end: 1px solid var(--pf-line);
+  background: transparent;
+  color: var(--pf-ink);
+  font: inherit;
+}
+.document-rich-popover :is(button, select):focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: -2px;
+}
+.document-insert-menu {
+  display: grid;
+  gap: 2px;
+  min-width: 190px;
+}
+.document-insert-menu .document-format-button {
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 36px;
+  padding-inline: 10px;
+  text-align: start;
+}
+.document-editor-actions .document-insert-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  padding: 5px;
+}
+.document-insert-trigger svg {
+  width: 18px;
+  height: 18px;
+}
+.document-reading [data-doc-action="insert-content"] {
+  display: none;
+}
+@media (max-width: 700px) {
+  .document-authoring-editor-header .document-editor-actions > .document-insert-trigger {
+    min-width: 36px;
+    width: 36px;
+    padding: 6px;
+  }
+  .document-authoring-editor-header #documentSaveState {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .document-rich-popover .document-format-button {
+    min-height: 44px;
+  }
+}
+.document-block-handle {
+  position: fixed;
+  z-index: 85;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--pf-card);
+  color: var(--pf-muted);
+  cursor: pointer;
+}
+.document-block-handle[hidden] {
+  display: none !important;
+}
+.document-block-handle:hover,
+.document-block-handle[aria-expanded="true"] {
+  border-color: var(--pf-line);
+  color: var(--pf-accent);
+  background: var(--pf-soft);
+}
+.document-block-handle svg {
+  width: 18px;
+  height: 18px;
+}
+.document-block-outline {
+  position: fixed;
+  z-index: 84;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--pf-accent) 35%, transparent);
+  border-radius: 4px;
+}
+.document-block-outline[hidden] {
+  display: none !important;
+}
+.document-block-menu {
+  display: grid;
+  gap: 2px;
+  min-width: 210px;
+}
+.document-block-menu .document-format-button {
+  justify-content: flex-start;
+  gap: 10px;
+  padding-inline: 10px;
+}
+.document-block-menu .document-format-button.danger {
+  color: var(--pf-danger, #ce4141);
+}
+.document-block-menu .document-format-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.document-block-menu [data-block-action="copy"],
+.document-block-menu [data-block-action="delete"] {
+  margin-top: 4px;
+  border-top: 1px solid var(--pf-line);
+  border-radius: 0;
+  padding-top: 10px;
+}

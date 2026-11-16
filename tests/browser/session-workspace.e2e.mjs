@@ -33,6 +33,23 @@ try {
     projects.push((await response.json()).projects.find((project) => project.code === code));
   }
   const page = await context.newPage();
+  const nativeWait = page.waitForFunction.bind(page);
+  page.waitForFunction = async (...args) => {
+    try {
+      return await nativeWait(...args);
+    } catch (error) {
+      console.error(
+        "Session wait failed",
+        String(args[0]),
+        await page.evaluate(() => ({
+          title: document.querySelector("#threadTitle").textContent,
+          activeId: globalThis.__pandaForceDebug?.state.active?.id,
+          activeName: globalThis.__pandaForceDebug?.state.active?.name,
+        })),
+      );
+      throw error;
+    }
+  };
   page.on("pageerror", (error) => errors.push(error.message));
   const go = async (id) => {
     await page.goto(fixture.base + "/task/" + id);
@@ -298,11 +315,22 @@ try {
   assert.equal(await page.locator("#changesPanel").isVisible(), false);
   await openInspector();
   await page.locator("#toggleSidebar").click();
-  await page.waitForFunction(() => document.querySelector(".conversation-shell").getBoundingClientRect().x < 2);
+  await page.waitForFunction(() => {
+    const app = document.querySelector("#app");
+    const origin = app.getBoundingClientRect().x + parseFloat(getComputedStyle(app).borderLeftWidth);
+    return Math.abs(document.querySelector(".conversation-shell").getBoundingClientRect().x - origin) < 2;
+  });
   const collapsed = await page.locator(".conversation-shell").boundingBox();
-  assert.ok(collapsed.x < 2, JSON.stringify(collapsed));
+  const frameOrigin = await page
+    .locator("#app")
+    .evaluate((app) => app.getBoundingClientRect().x + parseFloat(getComputedStyle(app).borderLeftWidth));
+  assert.ok(Math.abs(collapsed.x - frameOrigin) < 2, JSON.stringify(collapsed));
   await page.locator("#workspaceNavigationToggle").click();
-  await page.waitForFunction(() => document.querySelector(".conversation-shell").getBoundingClientRect().x >= 231);
+  await page.waitForFunction(() => {
+    const app = document.querySelector("#app");
+    const origin = app.getBoundingClientRect().x + parseFloat(getComputedStyle(app).borderLeftWidth);
+    return Math.abs(document.querySelector(".conversation-shell").getBoundingClientRect().x - origin - 264) < 2;
+  });
   await page.locator("#sessionActionsButton").click();
   assert.equal(await page.locator("#summarySessionName").isVisible(), true);
   await closeDialog("#sessionActionsDialog");

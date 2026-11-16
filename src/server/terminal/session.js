@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { errorMessage } from "../../shared/errors.js";
 import { pandaEnvironment } from "../environment.js";
 import { inside } from "../path-utils.js";
+import { terminalEnvironment } from "./protocol.js";
 
 const require = createRequire(import.meta.url);
 export { normalizeTerminalResize } from "./protocol.js";
@@ -56,7 +57,7 @@ export function createTerminalSession({ cwd, cols = 100, rows = 24, onData, onEx
   try {
     session = spawn(pandaEnvironment().PANDA_FORCE_NODE || "node", [worker, cwd, String(cols), String(rows)], {
       cwd,
-      env: process.env,
+      env: terminalEnvironment(),
       stdio: ["pipe", "pipe", "pipe", "ipc"],
     });
   } catch (error) {

@@ -1,0 +1,23 @@
+{
+  "find": "查找",
+  "findInFile": "在檔案中查找",
+  "wrap": "換行",
+  "unwrap": "取消換行",
+  "enableWordWrap": "啓用自動換行",
+  "disableWordWrap": "關閉自動換行",
+  "copyFile": "複製檔案內容",
+  "readOnly": "只讀",
+  "syntaxHighlightingWasDisabledForThisLargeFileToKeep": "檔案較大，已關閉語法高亮以保持瀏覽器回應。",
+  "copyFailed": "複製失敗",
+  "download": "下載",
+  "closeFilePreview": "關閉檔案預覽",
+  "thisFileIsTooLargeToPreview": "檔案過大，無法預覽。",
+  "onlyTheFirst20000LinesAreShown": "僅顯示前 20,000 行。",
+  "copy": "複製",
+  "backToFiles": "返回檔案",
+  "closeAll": "關閉全部",
+  "gitStatusStatus": "Git 狀態：{status}",
+  "moreFilesAreHiddenSearchToFindThem": "還有更多檔案未顯示，請使用搜尋查找。",
+  "tooLarge": "檔案過大",
+  "loading": "載入中…"
+}

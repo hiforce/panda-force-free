@@ -7,6 +7,10 @@ const runtime = await createBrowserFixture();
 const browser = await runtime.launchBrowser(launchOptions());
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, colorScheme: "dark" });
 const baseUrl = runtime.base;
+await page.context().request.post(baseUrl + "/api/system/database/selection", {
+  data: { driver: "sqlite" },
+  headers: { Origin: baseUrl },
+});
 const pageErrors = [];
 page.on("pageerror", (error) => pageErrors.push(error.message));
 await page.goto(baseUrl + "/new", { waitUntil: "networkidle" });
@@ -122,7 +126,7 @@ await browser.close();
 const expectedActions = ["Review", "Terminal", "Browser", "Files", "Side task"];
 const valid =
   pageErrors.length === 0 &&
-  initial.topbarHeight === 64 &&
+  initial.topbarHeight === 56 &&
   initial.hasBottomPanelButton === false &&
   initial.hasSummaryPanelButton &&
   initial.hasSidePanelButton &&

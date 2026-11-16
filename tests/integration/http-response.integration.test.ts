@@ -29,8 +29,12 @@ createInterface({ input: process.stdin }).on("line", line => {
   const server = Bun.spawn(["bun", "run", "src/server/main.ts"], {
     cwd: new URL("../..", import.meta.url).pathname,
     env: {
-      ...process.env,
+      ...Object.fromEntries(
+        Object.entries(process.env).filter(([key]) => !/^(?:PANDA_FORCE_|CODEX_|WEBUI_|IDAAS_|OSS_|ALIYUN_)/.test(key)),
+      ),
       NODE_ENV: "production",
+      HOME: dir,
+      PANDA_FORCE_HOME: join(dir, "panda-state"),
       PATH: `${dir}:${process.env.PATH}`,
       CODEX_HOME: dir,
       PANDA_FORCE_CWD: dir,
@@ -42,16 +46,23 @@ createInterface({ input: process.stdin }).on("line", line => {
       PORT: String(port),
     },
     stdout: "ignore",
-    stderr: "ignore",
+    stderr: "pipe",
   });
+  let serverLogs = "";
+  void (async () => {
+    for await (const chunk of server.stderr) serverLogs = (serverLogs + Buffer.from(chunk).toString()).slice(-12000);
+  })();
   let client: ReturnType<typeof Bun.spawn> | undefined;
   try {
     let ready = false;
+    let lastHealth: unknown = null;
     for (let i = 0; i < 200; i++) {
+      if (server.exitCode !== null) break;
       try {
         const health = await fetch(`http://127.0.0.1:${port}/api/health`, {
           headers: { authorization: `Bearer ${token}` },
         }).then((r) => r.json());
+        lastHealth = health;
         if (health.codex) {
           ready = true;
           break;
@@ -59,7 +70,7 @@ createInterface({ input: process.stdin }).on("line", line => {
       } catch {}
       await Bun.sleep(25);
     }
-    expect(ready).toBe(true);
+    expect(ready, JSON.stringify({ lastHealth, serverExitCode: server.exitCode, serverLogs })).toBe(true);
     // A small TCP receive window prevents buffering the entire response before
     // the pause. Python exposes SO_RCVBUF, unlike Node's TCP Socket API.
     client = Bun.spawn(

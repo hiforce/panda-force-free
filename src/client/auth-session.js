@@ -202,7 +202,7 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
       button.disabled = false;
     }
   };
-  findElement('[data-settings-content="general-settings"]')?.append(button);
+  findElement('[data-settings-content="profile"]')?.append(button);
   const handle = {
     check,
     dispose() {

@@ -1,0 +1,88 @@
+[
+  {
+    "name": "panda_force_template_previews",
+    "columns": [
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "id",
+        "type": "varchar(36)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "cacheKey",
+        "type": "char(64)",
+        "nullable": false
+      },
+      {
+        "name": "record",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "phase",
+        "type": "varchar(16)",
+        "nullable": false
+      },
+      {
+        "name": "token",
+        "type": "varchar(36)",
+        "nullable": true
+      },
+      {
+        "name": "until",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["sequence"]
+      },
+      {
+        "name": "template_previews_id",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "template_previews_owner_key",
+        "unique": true,
+        "columns": ["owner", "cacheKey"]
+      },
+      {
+        "name": "template_previews_queue",
+        "unique": false,
+        "columns": ["phase", "until", "sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_template_previews_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  }
+]

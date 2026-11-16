@@ -1,12 +1,16 @@
 import { syncCatalogModules } from "./catalog-modules.mjs";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { parse as parseJavaScript } from "acorn";
-import { SUPPORTED_LOCALES } from "../../src/shared/i18n/locale-policy.js";
-import { messageContract } from "../../src/shared/i18n/message-contract.js";
+import { REQUIRED_LOCALE_CODES, SUPPORTED_LOCALES } from "../../src/shared/i18n/locale-policy.js";
+import { auditCatalogCoverage } from "./catalog-contract.mjs";
 
 syncCatalogModules(process.argv.includes("--write"));
 const failures = [],
   catalogs = new Map();
+for (const code of REQUIRED_LOCALE_CODES)
+  if (!SUPPORTED_LOCALES.some((entry) => entry.code === code)) failures.push("Required locale is missing: " + code);
+if (new Set(SUPPORTED_LOCALES.map((entry) => entry.code)).size !== SUPPORTED_LOCALES.length)
+  failures.push("Duplicate published locale");
 const files = (directory) =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) =>
     entry.isDirectory() ? files(directory + "/" + entry.name) : [directory + "/" + entry.name],
@@ -28,25 +32,15 @@ for (const locale of SUPPORTED_LOCALES) {
     }
     for (const [key, text] of Object.entries(JSON.parse(source))) {
       const id = name + "." + key;
-      try {
-        all[id] = { text, contract: messageContract(text) };
-      } catch (error) {
-        failures.push(id + " (" + locale.code + "): " + error.message);
-      }
+      all[id] = text;
     }
   }
   catalogs.set(locale.code, all);
 }
-const english = catalogs.get("en"),
+const coverage = auditCatalogCoverage(catalogs, REQUIRED_LOCALE_CODES);
+failures.push(...coverage.failures);
+const english = coverage.contracts.get("en"),
   namespaces = new Set(Object.keys(english).map((id) => id.split(".")[0]));
-for (const [locale, messages] of catalogs) {
-  for (const id of Object.keys(english)) {
-    if (!messages[id]) failures.push(locale + ": missing " + id);
-    else if (JSON.stringify(messages[id].contract) !== JSON.stringify(english[id].contract))
-      failures.push(locale + ": parameter contract differs for " + id);
-  }
-  for (const id of Object.keys(messages)) if (!english[id]) failures.push(locale + ": unknown key " + id);
-}
 function checkId(id, path) {
   if (typeof id === "string" && /^[a-z]+\.[a-zA-Z0-9]+$/.test(id) && namespaces.has(id.split(".")[0]) && !english[id])
     failures.push(path + ": unknown message ID " + id);

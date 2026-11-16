@@ -30,8 +30,11 @@ const entries = {
     { name: "comments", command: ["run", "release:comments"] },
   ],
   build: [{ name: "build-client", command: ["run", "build:client"] }],
-  unit: [{ name: "unit", command: ["test", ...unit], timeout: 120000 }],
-  integration: [{ name: "integration", command: ["test", ...integration], timeout: 240000 }],
+  unit: [{ name: "unit", command: ["scripts/testing/file-tests.mjs", ...unit], timeout: 300000 }],
+  // File workers isolate module globals; each test retains its own disposable files and ports.
+  integration: [
+    { name: "integration", command: ["test", "--parallel=3", "--max-concurrency=1", ...integration], timeout: 600000 },
+  ],
 };
 const browser = (names) =>
   names.map((name) => ({
@@ -42,7 +45,7 @@ const browser = (names) =>
 for (const [key, names] of Object.entries(manifest.groups)) entries[key] = browser(names);
 entries.browser = browser(manifest.browser);
 entries.live = browser(manifest.live.map((entry) => entry.file));
-entries.tooling = browser(manifest.tooling.map((entry) => entry.file));
+entries.tooling = manifest.tooling.map((entry) => ({ ...browser([entry.file])[0], timeout: entry.timeoutMs || 90000 }));
 if (group === "tooling" && process.env.PANDA_FORCE_TOOLING_TESTS !== "1")
   throw Error("Tooling diagnostics require PANDA_FORCE_TOOLING_TESTS=1 and modify disposable development files.");
 if (group === "live" && process.env.PANDA_FORCE_LIVE_TESTS !== "1")
@@ -93,7 +96,7 @@ async function run(entry) {
     cwd: root,
     stdio: ["ignore", fd, fd],
     detached: true,
-    env: { ...process.env, PANDA_FORCE_TEST_RUN: directory },
+    env: { ...process.env, PANDA_FORCE_TEST_RUN: directory, PANDA_FORCE_TEST_SUITE: entry.name },
   });
   running.add(child);
   let timedOut = false,
@@ -119,7 +122,7 @@ async function run(entry) {
         path = resolve(fixture.path);
       // Only this suite's registered temporary application directory is eligible.
       if (
-        fixture.owner === child.pid &&
+        (fixture.suite ? fixture.suite === entry.name : fixture.owner === child.pid) &&
         path.startsWith(resolve(root, ".artifacts") + "/app-fixture-") &&
         !path.slice(resolve(root, ".artifacts").length + 1).includes("/")
       )

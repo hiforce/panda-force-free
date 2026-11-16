@@ -1,3 +1,6 @@
+import { showEmailOnboarding } from "./users/onboarding.js";
+import { initializeDatabaseSetup } from "./database/bootstrap.js";
+import { prepareInterfaceStyles } from "./interface-styles.js";
 import { errorMessage } from "./../shared/errors.js";
 import { findElement, requireElement } from "./dom.js";
 import { request as fetch } from "./http-client.js";
@@ -11,7 +14,6 @@ import {
   setOpaqueText,
 } from "./i18n.js";
 
-import { sessionLoginUrl } from "../shared/auth-return-path.js";
 import { installPandaForceSession } from "./auth-session.js";
 import { pandaInterfaceMark } from "./panda-brand.js";
 import { applyThemePreference } from "./theme.js";
@@ -49,7 +51,6 @@ function showAuthFailure(message) {
 async function loadApp() {
   const preparation = getWorkspacePreparation();
   preparation.begin();
-  dismissStartupScreen();
   startStartupReads();
   for (const href of ["/vendor/katex/katex.min.css", "/vendor/xterm/xterm.css"]) {
     if (findElement(`link[href="${href}"]`)) continue;
@@ -58,13 +59,16 @@ async function loadApp() {
     link.href = href;
     document.head.append(link);
   }
-  $("#app").hidden = false;
   try {
+    await prepareInterfaceStyles();
+    dismissStartupScreen();
+    $("#app").hidden = false;
     await import("/app.bundle.js");
     preparation.complete("interface");
     return true;
   } catch (error) {
     preparation.fail("interface");
+    if ($("#app").hidden) showAuthFailure(t("errors.couldNotOpenTheWorkspacePleaseReload"));
     console.error("[panda-force] workspace interface could not be loaded", error);
     return false;
   }
@@ -85,17 +89,26 @@ async function start() {
     showAuthFailure(errorMessage(error));
     return;
   }
+  if (["/invite", "/verify-email", "/reset-password", "/reset-password/new"].includes(location.pathname)) {
+    await showEmailOnboarding(
+      t,
+      location.pathname === "/reset-password/new" || (location.pathname === "/reset-password" && !location.hash)
+        ? "forgot"
+        : /** @type {"invite"|"verify-email"|"reset-password"} */ (location.pathname.slice(1)),
+    );
+    return;
+  }
   const finish = async () => {
     globalThis.__pandaForceIdentity = status.identity || {};
     const identity =
       status.authMode +
       ":" +
-      (status.identity?.uuid || status.identity?.username || status.identity?.account || "local") +
+      (status.identity?.id || status.identity?.username || "local") +
       (status.directoryScope ? ":" + status.directoryScope : "");
     globalThis.__pandaForceIdentityKey = identity;
     try {
       const previous = localStorage.getItem("panda-force-browser-identity");
-      if ((previous && previous !== identity) || (!previous && status.authMode === "idaas")) {
+      if (previous !== identity) {
         for (const key of Object.keys(localStorage))
           if (key.startsWith("panda-force-") && key !== "panda-force-locale") localStorage.removeItem(key);
       }
@@ -103,18 +116,10 @@ async function start() {
     } catch {}
 
     $("#passwordGate").hidden = true;
-    if (status.authMode === "idaas" || status.passwordRequired)
-      installPandaForceSession(status, { translate: t, i18n });
+    if (status.passwordRequired) installPandaForceSession(status, { translate: t, i18n });
     if (!(await loadApp())) return;
+    void initializeDatabaseSetup(t);
   };
-  if (status.authMode === "idaas") {
-    if (!status.authenticated) {
-      location.assign(sessionLoginUrl(location.pathname + location.search + location.hash));
-      return;
-    }
-    await finish();
-    return;
-  }
   if (status.authenticated && !status.migrationRequired) {
     await finish();
     return;
@@ -178,10 +183,11 @@ async function start() {
       t,
     );
     field("#usernameField", username, needsUsername);
+    username.maxLength = setup || migrate ? 64 : 254;
     if ((setup || migrate) && !username.value) username.value = "admin";
     localizeText(
       $("#usernameLabel"),
-      setup || migrate ? "common.administratorUsername" : "common.username",
+      setup || migrate ? "common.administratorUsername" : "users.usernameOrEmail",
       undefined,
       t,
     );
@@ -210,12 +216,21 @@ async function start() {
   gate.hidden = false;
   dismissStartupScreen();
   configure();
+  if (status.passwordResetAvailable && !status.setupRequired) {
+    const forgot = document.createElement("button");
+    forgot.type = "button";
+    forgot.className = "auth-field-hint";
+    forgot.dataset.forgotPassword = "";
+    forgot.textContent = t("users.forgotPassword");
+    $("#passwordLoginForm").after(forgot);
+    forgot.onclick = () => showEmailOnboarding(t, "forgot");
+  }
   $("#passwordLoginForm").onsubmit = async (event) => {
     event.preventDefault();
     error.hidden = true;
     const submittingMode = mode;
     try {
-      if ((mode !== "login" || status.usernameRequired) && !/^[a-z0-9][a-z0-9._@-]{2,63}$/i.test(username.value.trim()))
+      if (mode !== "login" && !/^[a-z0-9][a-z0-9._@-]{2,63}$/i.test(username.value.trim()))
         throw new Error(t("auth.use364LettersNumbersDotsUnderscoresOrHyphensFor"));
       if (mode === "setup" && !validAdministratorPassword(input.value)) throw new Error(t("auth.passwordPolicy"));
       if (mode === "setup" && input.value !== confirm.value) throw new Error(t("auth.passwordsDoNotMatch"));

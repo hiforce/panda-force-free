@@ -46,7 +46,7 @@ try {
   const bootstrap = new Promise((resolve) => {
     releaseBootstrap = resolve;
   });
-  await page.route("**/auth-bootstrap.js", async (route) => {
+  await page.route("**/auth-bootstrap.js*", async (route) => {
     await bootstrap;
     await route.continue();
   });

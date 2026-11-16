@@ -552,6 +552,7 @@ export function startApplication() {
   install(
     settings,
     assembleSettings({
+      identity: environment.identityKey,
       $: environment.$,
       t: environment.t,
       shortPath: environment.shortPath,
@@ -863,6 +864,7 @@ export function startApplication() {
   install(
     workbench,
     assembleWorkbench({
+      identity: environment.identityKey,
       viewUpdates: environment.viewUpdates,
       t: environment.t,
       i18n: environment.i18n,

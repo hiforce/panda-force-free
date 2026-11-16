@@ -1,4 +1,53 @@
-const routes = new Set(["workspace", "tasks", "projects", "project", "deliverables", "connections", "new", "task"]);
+const routes = new Set([
+  "workspace",
+  "bots",
+  "tasks",
+  "projects",
+  "project",
+  "deliverables",
+  "connections",
+  "documents",
+  "create",
+  "skills",
+  "publish",
+  "new",
+  "task",
+]);
+
+/** Keep application links in the live workspace while preserving native browser actions. */
+export function workbenchLinkPath(anchor, event, base = location.href) {
+  if (
+    event.defaultPrevented ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey ||
+    anchor.hasAttribute("download") ||
+    anchor.hasAttribute("data-native-navigation") ||
+    (anchor.target && anchor.target !== "_self") ||
+    anchor.relList.contains("external")
+  )
+    return null;
+  const href = anchor.getAttribute("href");
+  if (!href || href.startsWith("#")) return null;
+  let url;
+  try {
+    url = new URL(href, base);
+  } catch {
+    return null;
+  }
+  const current = new URL(base),
+    page = url.pathname.split("/").filter(Boolean)[0];
+  if (
+    url.origin !== current.origin ||
+    !["http:", "https:"].includes(url.protocol) ||
+    (page && page !== "settings" && !routes.has(page)) ||
+    (url.pathname === current.pathname && url.search === current.search && url.hash)
+  )
+    return null;
+  return url.pathname + url.search + url.hash;
+}
 
 export function parseWorkbenchRoute(url = new URL(location.href)) {
   const parts = url.pathname.split("/").filter(Boolean);
@@ -13,5 +62,6 @@ export function parseWorkbenchRoute(url = new URL(location.href)) {
     page,
     id: page === "project" ? url.searchParams.get("id") || "" : id,
     projectId: url.searchParams.get("project") || "",
+    documentId: url.searchParams.get("document") || "",
   };
 }

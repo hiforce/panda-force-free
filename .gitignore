@@ -5,6 +5,7 @@ node_modules/
 /public/app.bundle.js.map
 /public/file-preview.bundle.js
 /public/terminal-runtime.bundle.js
+/public/document-rich-runtime.bundle.js
 /public/auth-bootstrap.js
 /public/i18n.js
 /public/panda-brand.js

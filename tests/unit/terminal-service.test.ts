@@ -7,8 +7,27 @@ import {
   normalizeTerminalResize,
   resolveTerminalCwd,
 } from "../../src/server/terminal/session.js";
+import { terminalEnvironment } from "../../src/server/terminal/protocol.js";
 
 describe("terminal service", () => {
+  test("keeps shell basics while excluding service credentials, loader injection and forwarded agents", () => {
+    const environment = terminalEnvironment({
+      HOME: "/safe/home",
+      PATH: "/usr/bin:/bin",
+      LANG: "en_US.UTF-8",
+      AWS_SECRET_ACCESS_KEY: "secret",
+      DATABASE_URL: "secret",
+      NODE_OPTIONS: "--require malicious.js",
+      LD_PRELOAD: "/tmp/library.so",
+      BASH_ENV: "/tmp/shell.sh",
+      SSH_AUTH_SOCK: "/tmp/agent",
+      UNRECOGNIZED_FUTURE_SECRET: "secret",
+    });
+    expect(environment.HOME).toBe("/safe/home");
+    expect(environment.PATH).toBe("/usr/bin:/bin");
+    expect(environment.TERM).toBe("xterm-256color");
+    expect(JSON.stringify(environment)).not.toMatch(/secret|malicious|library|shell\.sh|agent/);
+  });
   test("accepts bounded PTY sizes and rejects malformed resize messages", () => {
     expect(normalizeTerminalResize({ type: "resize", cols: 120, rows: 32 })).toEqual({ cols: 120, rows: 32 });
     expect(normalizeTerminalResize({ type: "resize", cols: 0, rows: 32 })).toBeNull();

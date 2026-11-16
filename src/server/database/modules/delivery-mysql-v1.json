@@ -1,0 +1,700 @@
+[
+  {
+    "name": "panda_force_publication_cancellations",
+    "columns": [
+      {
+        "name": "jobId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "requestedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["jobId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_confirmations",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "jobId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "fingerprint",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "resume",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "details",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "confirmations_by_job",
+        "unique": false,
+        "columns": ["jobId", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_delivery_schema",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "version",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_effects",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "jobId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "fence",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "operation",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "acknowledgedAt",
+        "type": "bigint",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "effects_by_job",
+        "unique": false,
+        "columns": ["jobId", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_jobs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "phase",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "step",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "error",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "receipt",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "leaseOwner",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "leaseFence",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "checkOnly",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "nextRunAt",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "rowSequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "publication_active_jobs",
+        "unique": false,
+        "columns": ["phase", "leaseUntil"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "publication_jobs_sequence",
+        "unique": true,
+        "columns": ["rowSequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_observations",
+    "columns": [
+      {
+        "name": "jobId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "observationKey",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "requestHash",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "result",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "observedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["jobId", "observationKey"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_plans",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "ownerId",
+        "type": "varchar(256)",
+        "nullable": false
+      },
+      {
+        "name": "spaceId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "connectionId",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "record",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "artifactHash",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "kind",
+        "type": "varchar(64)",
+        "nullable": false,
+        "defaultValue": "site"
+      },
+      {
+        "name": "identity",
+        "type": "varchar(64)",
+        "nullable": true
+      },
+      {
+        "name": "sourceProjectId",
+        "type": "varchar(128)",
+        "nullable": true
+      },
+      {
+        "name": "rowSequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "publications_by_source",
+        "unique": false,
+        "columns": ["kind", "ownerId", "sourceProjectId", "spaceId"]
+      },
+      {
+        "name": "publication_identity",
+        "unique": true,
+        "columns": ["kind", "ownerId", "identity"]
+      },
+      {
+        "name": "publications_by_owner",
+        "unique": false,
+        "columns": ["ownerId", "spaceId"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "publication_plans_sequence",
+        "unique": true,
+        "columns": ["rowSequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_recovery_evidence",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "jobId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "stepId",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "fingerprint",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "requestHash",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "stateToken",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "observedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "expiresAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "result",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "details",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "rowSequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "recovery_by_job",
+        "unique": false,
+        "columns": ["jobId", "stepId"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "publication_recovery_evidence_sequence",
+        "unique": true,
+        "columns": ["rowSequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_resolutions",
+    "columns": [
+      {
+        "name": "stepId",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "evidenceId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "decidedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "decision",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["stepId"]
+      },
+      {
+        "name": "publication_resolutions_1",
+        "unique": true,
+        "columns": ["evidenceId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_snapshots",
+    "columns": [
+      {
+        "name": "hash",
+        "type": "char(64)",
+        "nullable": false
+      },
+      {
+        "name": "payloadHash",
+        "type": "char(64)",
+        "nullable": false
+      },
+      {
+        "name": "bytes",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "chunkCount",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["hash"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_steps",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "jobId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "stepKey",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "operation",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "attempt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "outcome",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "requestHash",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "result",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "error",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "completedAt",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "retryAllowed",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "replacedBy",
+        "type": "bigint",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "publication_steps_job",
+        "unique": false,
+        "columns": ["jobId", "id"]
+      },
+      {
+        "name": "publication_steps_1",
+        "unique": true,
+        "columns": ["jobId", "stepKey", "attempt"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_successors",
+    "columns": [
+      {
+        "name": "parentId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "childId",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "actor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "fingerprint",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "stateToken",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["childId"]
+      },
+      {
+        "name": "publication_successors_1",
+        "unique": true,
+        "columns": ["parentId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_snapshot_chunks",
+    "columns": [
+      {
+        "name": "snapshotId",
+        "type": "char(64)",
+        "nullable": false
+      },
+      {
+        "name": "ordinal",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "bytes",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "char(64)",
+        "nullable": false
+      },
+      {
+        "name": "payload",
+        "type": "mediumblob",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["snapshotId", "ordinal"]
+      }
+    ]
+  }
+]

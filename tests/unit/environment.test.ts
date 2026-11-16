@@ -4,6 +4,7 @@ import { resolveAppServerConnection } from "../../src/server/bridge/app-server-c
 import { readOssAttachmentConfig } from "../../src/server/workspace/oss-attachments.js";
 import { passwordStorePath } from "../../src/server/auth/password-store.ts";
 import { administratorStorePath } from "../../src/server/auth/administrator-store.ts";
+import { localAuthPaths } from "../../src/server/auth/paths.js";
 test("legacy environment aliases remain read-only compatible; explicit PandaForce values win", () => {
   const source = {
     CODEX_WEBUI_CWD: "/legacy",
@@ -51,6 +52,36 @@ test("existing application files are reused without moving or replacing them", a
     expect(readFileSync(old, "utf8")).toBe("existing");
     writeFileSync(current, "canonical");
     expect(existingApplicationPath(current)).toBe(current);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("new authentication state belongs to the product volume while explicit and existing legacy files retain priority", async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const root = mkdtempSync(join(tmpdir(), "panda-auth-paths-")),
+    product = join(root, "product"),
+    model = join(root, "model");
+  const env = { PANDA_FORCE_HOME: product, CODEX_HOME: model };
+  try {
+    mkdirSync(model);
+    const paths = localAuthPaths(env);
+    expect(paths.password).toBe(join(product, "config", "password.json"));
+    expect(paths.administrator).toBe(join(product, "config", "administrator.json"));
+    expect(paths.revocations).toBe(join(product, "data", "auth-sessions.sqlite"));
+    writeFileSync(join(model, "panda-force-admin.json"), "existing administrator");
+    writeFileSync(join(model, "codex-webui-auth.json"), "existing password");
+    expect(localAuthPaths(env).administrator).toBe(join(model, "panda-force-admin.json"));
+    expect(localAuthPaths(env).password).toBe(join(model, "codex-webui-auth.json"));
+    mkdirSync(join(product, "config"), { recursive: true });
+    writeFileSync(paths.administrator, "product administrator");
+    expect(localAuthPaths(env).administrator).toBe(paths.administrator);
+    expect(readFileSync(join(model, "panda-force-admin.json"), "utf8")).toBe("existing administrator");
+    expect(localAuthPaths({ ...env, PANDA_FORCE_SESSION_STORE: join(root, "session.sqlite") }).revocations).toBe(
+      join(root, "session.sqlite"),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

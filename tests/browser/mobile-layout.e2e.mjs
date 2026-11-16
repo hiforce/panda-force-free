@@ -174,7 +174,7 @@ await browser.close();
   qualityAssert.equal(result.openSidePanel.width, 591, "Condition: result.openSidePanel.width!==591");
   qualityAssert.ok(!(result.closedSidebar.x >= 0), "Condition: result.closedSidebar.x>=0");
   qualityAssert.ok(!(Math.abs(result.openSidebar.x) > 0.5), "Condition: Math.abs(result.openSidebar.x)>0.5");
-  qualityAssert.equal(result.openSidebar.width, 275, "Condition: result.openSidebar.width!==275");
+  qualityAssert.equal(result.openSidebar.width, 304, "Mobile drawer uses its separate 304px width");
   qualityAssert.ok(
     !(result.sidebarVisibility.display === "none"),
     "Condition: result.sidebarVisibility.display==='none'",

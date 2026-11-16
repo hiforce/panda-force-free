@@ -1,0 +1,73 @@
+# Optional real website screenshots. Use with docker-compose.yml and docker-compose.documents.yml.
+services:
+  panda-force:
+    environment:
+      PANDA_FORCE_PREVIEW_RENDERER_URL: http://panda-preview-renderer:8901
+      PANDA_FORCE_PREVIEW_TOKEN_FILE: /run/panda-preview/token
+    volumes:
+      - panda-preview-token:/run/panda-preview:ro
+    networks: [default, panda-preview]
+    depends_on:
+      panda-preview-renderer:
+        condition: service_healthy
+
+  panda-preview-init:
+    image: ${PANDA_FORCE_EXECUTOR_IMAGE:-panda-force-executor:local}
+    pull_policy: ${PANDA_FORCE_EXECUTOR_PULL_POLICY:-missing}
+    command: ["init"]
+    environment:
+      PANDA_FORCE_EXECUTOR_TOKEN_FILE: /run/panda-preview/token
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+    volumes:
+      - panda-preview-token:/run/panda-preview
+    network_mode: none
+    read_only: true
+
+  panda-preview-renderer:
+    image: ${PANDA_FORCE_PREVIEW_IMAGE:-panda-force-preview-renderer:local}
+    pull_policy: ${PANDA_FORCE_PREVIEW_PULL_POLICY:-missing}
+    build:
+      context: .
+      dockerfile: deploy/previews/Dockerfile
+      args:
+        BUN_IMAGE: ${PANDA_FORCE_BUN_IMAGE:-oven/bun:1.4.2@sha256:9114c058aeae42162ee16dd5084b95fe9473970bb6bcb5b232ab1630f0546895}
+        NODE_IMAGE: ${PANDA_FORCE_NODE_IMAGE:-node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da}
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    mem_limit: 1g
+    cpus: 1
+    environment:
+      PANDA_FORCE_PREVIEW_TOKEN_FILE: /run/panda-preview/token
+    volumes:
+      - panda-preview-token:/run/panda-preview:ro
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    networks: [panda-preview]
+    depends_on:
+      panda-preview-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:8901/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  panda-preview:
+    internal: true
+volumes:
+  panda-preview-token:

@@ -1,0 +1,23 @@
+{
+  "chooseOrWriteYourAnswersThenSubmitThemDirectlyTo": "選擇或填寫答案，點選提交即可直接傳送到對話。",
+  "earlierQuestion": "此前的提問",
+  "questionForYou": "需要你回答的問題",
+  "youContinuedTheConversationThisQuestionIsKeptAsHistory": "你已繼續對話，此提問僅作為歷史記錄保留。",
+  "answeredAnsweredOfTotalQuestions": "已回答 {answered} / {total} 題",
+  "pleaseEnterAnAnswerBeforeSubmitting": "請填寫答案後再提交。",
+  "reason": "申請原因",
+  "requestsRequiringYourAttention": "待你處理的請求",
+  "reviewRequestsCount": "處理待確認請求（{count}）",
+  "currentWorkspace": "目前工作臺",
+  "writeYourOwnAnswer": "自行填寫",
+  "writeYourAnswer": "填寫你的回答…",
+  "submitting": "正在提交…",
+  "networkTitle": "允許助手連線到 {host} 嗎？",
+  "networkSubtitle": "{host} 不在目前網路允許清單中",
+  "alwaysAllowHost": "始終允許 {host}",
+  "editFilesTitle": "允許助手編輯以下檔案嗎？（{count, number} 個）",
+  "permissionsTitle": "允許助手使用以下權限嗎？",
+  "reviewChangedFiles": "檢視 {count, number} 個更改的檔案",
+  "sessionContext": "對話：{name}",
+  "allowCommandTitle": "允許助手執行此指令嗎？"
+}

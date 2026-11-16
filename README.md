@@ -71,3 +71,17 @@ The original copyright notice and MIT license are preserved in [LICENSE](./LICEN
 ## Other model providers
 
 [Codex CLI: Zhipu GLM, Ollama and DeepSeek](panda-docs/docs/model-providers.md)
+
+## Development branch
+
+The `develop` branch contains the current public application source. Published container image tags are released separately. Build this branch from its checkout:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
+
+The default build performs compilation and packaging. Run source checks and regression suites separately with `bun run check` and the relevant test command. Administrators can select compatible build and runtime bases through `PANDA_FORCE_BUILD_BASE` and `PANDA_FORCE_RUNTIME_BASE`, including images in their own registry.
+
+### Local member accounts
+
+Create the initial administrator in the browser. An email address is optional at initialization. Configure SMTP in administration settings before binding an email address or inviting members. Administrators invite members by email; members set their own passwords. Password recovery uses an email verification code with a resend cooldown. Application accounts and Codex/model-provider authentication are separate.

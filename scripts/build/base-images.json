@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "inputsSha256": "7fc21178477adfc21cbfd4e9b2c8e0a7372925938978b1318aa3a36fccabc367",
+  "baseTag": "deps-7fc21178477adfc2",
+  "platform": "linux/amd64",
+  "buildBase": "hiforceai/panda-force-build-base:deps-7fc21178477adfc2@sha256:d1b3e34b9afe1405a52181f54b233e2ad1eedc7eb45babfd58548afbdaf6adf5",
+  "runtimeBase": "hiforceai/panda-force-runtime-base:deps-7fc21178477adfc2@sha256:7d5b745416b1321c73ebd6cf1b08535d3757de8ddb63c7bdf67a6312265c32c8"
+}

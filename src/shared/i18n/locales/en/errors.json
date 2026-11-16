@@ -36,5 +36,6 @@
   "methodNotAllowed": "Method not allowed",
   "unexpectedError": "Unexpected error",
   "engineRequestTimedOut": "Engine request timed out: {operation}",
-  "bridgeRequestFailed": "Engine request failed"
+  "bridgeRequestFailed": "Engine request failed",
+  "cdnBuildRequired": "CDN delivery is required, but the compiled assets are missing or invalid. Rebuild with the configured CDN settings."
 }

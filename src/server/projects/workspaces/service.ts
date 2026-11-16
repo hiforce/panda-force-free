@@ -1,30 +1,36 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { Database } from "bun:sqlite";
 import { ProjectError, projectFields } from "../catalog.js";
-import type { ProductProject } from "../../../shared/data-contracts.js";
 import type { ProjectSnapshot } from "../../../shared/engine/types.js";
 import { ProjectWorkspaceDirectory } from "./directory.js";
-import { ProjectWorkspaceRepository, type ProjectWorkspaceBinding } from "./repository.js";
-
-export interface WorkspaceCatalog {
-  readonly db: Database;
-  project(id: string): ProductProject;
-  save(input: unknown, revision: unknown): ProjectSnapshot;
-  snapshot(): ProjectSnapshot;
-  atomic<T>(work: () => T): T;
-}
+import type { ProjectWorkspaceBinding } from "./repository.js";
+import {
+  sqliteWorkspaceMetadata,
+  type WorkspaceCatalog,
+  type ProjectMetadataReservation,
+  type AsyncProjectMetadataReservation,
+  type ProjectWorkspaceMetadata,
+} from "./metadata.js";
+export type { WorkspaceCatalog, ProjectMetadataReservation } from "./metadata.js";
 /** Coordinates durable metadata reservations with filesystem preparation; never moves historical workspaces. */
-export class ProjectWorkspaceService {
-  private readonly repository: ProjectWorkspaceRepository;
+export class ProjectWorkspaceService<C extends WorkspaceCatalog = WorkspaceCatalog> {
+  private readonly repository: ProjectWorkspaceMetadata;
   private readonly directory: ProjectWorkspaceDirectory;
   private queue: Promise<unknown> = Promise.resolve();
   private pending = 0;
   constructor(
-    private readonly catalog: WorkspaceCatalog,
+    private readonly catalog: C,
     readonly root: string,
     private readonly available = true,
+    private readonly reserveMetadata?: C extends { readonly workspaceMetadata: ProjectWorkspaceMetadata }
+      ? AsyncProjectMetadataReservation
+      : ProjectMetadataReservation,
   ) {
-    this.repository = new ProjectWorkspaceRepository(catalog.db);
+    if (catalog.workspaceMetadata) this.repository = catalog.workspaceMetadata;
+    else {
+      if (!catalog.db || !("save" in catalog) || !("atomic" in catalog))
+        throw new ProjectError(503, "projects.errorWorkspaceUnavailable");
+      this.repository = sqliteWorkspaceMetadata(catalog as Parameters<typeof sqliteWorkspaceMetadata>[0]);
+    }
     this.directory = new ProjectWorkspaceDirectory(root);
   }
   async initialize(): Promise<void> {
@@ -50,35 +56,31 @@ export class ProjectWorkspaceService {
       if (error instanceof ProjectError) throw error;
       throw new ProjectError(503, "projects.errorWorkspaceUnavailable");
     }
-    this.repository.ready(binding.projectId);
+    await this.repository.ready(binding.projectId);
     return { path: binding.path, state: "ready" as const };
   }
-  async create(input: unknown, revision: unknown, requestId?: unknown): Promise<ProjectSnapshot> {
+  async create(input: unknown, revision: unknown, requestId?: unknown, creator?: string): Promise<ProjectSnapshot> {
     const fields = projectFields(input),
       operationId = requestId ?? randomUUID();
     if (typeof operationId !== "string" || !/^[a-z0-9_-]{1,128}$/i.test(operationId))
       throw new ProjectError(400, "projects.errorInvalidProjectDetails");
-    const hash = createHash("sha256").update(JSON.stringify(fields)).digest("hex");
+    const hash = createHash("sha256")
+      .update(JSON.stringify(creator ? [fields, creator] : fields))
+      .digest("hex");
     return this.exclusive(async () => {
-      if (!this.repository.operation(operationId)) {
-        if (this.catalog.snapshot().projects.some((project) => project.code === fields.code))
+      if (!(await this.repository.operation(operationId))) {
+        if ((await this.catalog.snapshot()).projects.some((project) => project.code === fields.code))
           throw new ProjectError(409, "projects.errorAProjectWithThisCodeAlreadyExists");
         await this.directory.assertAvailable(fields.code);
       }
-      const binding = this.catalog.atomic(() => {
-        const previous = this.repository.operation(operationId);
-        if (previous) {
-          if (previous.requestHash !== hash) throw new ProjectError(409, "projects.errorWorkspaceRequestChanged");
-          const current = this.repository.get(previous.projectId);
-          if (!current) throw new ProjectError(409, "projects.errorWorkspaceConflict");
-          return current;
-        }
-        const snapshot = this.catalog.save(fields, revision),
-          project = snapshot.projects.find((project) => project.code === fields.code);
-        if (!project) throw new ProjectError(503, "projects.errorWorkspaceUnavailable");
-        const reserved = this.repository.reserve(project, this.root);
-        this.repository.recordOperation(operationId, hash, project.id);
-        return reserved;
+      const binding = await this.repository.create({
+        fields,
+        revision,
+        operationId,
+        requestHash: hash,
+        root: this.root,
+        creator,
+        reserve: this.reserveMetadata,
       });
       await this.prepare(binding);
       return this.catalog.snapshot();
@@ -86,8 +88,9 @@ export class ProjectWorkspaceService {
   }
   async ensure(projectId: string) {
     return this.exclusive(async () => {
-      if (!this.repository.get(projectId)) await this.directory.assertAvailable(this.catalog.project(projectId).code);
-      const binding = this.catalog.atomic(() => this.repository.reserve(this.catalog.project(projectId), this.root));
+      if (!(await this.repository.get(projectId)))
+        await this.directory.assertAvailable((await this.catalog.project(projectId)).code);
+      const binding = await this.repository.ensure(projectId, this.root);
       return this.prepare(binding);
     });
   }

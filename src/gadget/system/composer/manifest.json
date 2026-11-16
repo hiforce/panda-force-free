@@ -1,0 +1,42 @@
+{
+  "id": "system.composer",
+  "apiVersion": 1,
+  "version": "1.0.0",
+  "configVersion": 1,
+  "title": {
+    "zh-CN": "开始创作",
+    "en": "Start creating",
+    "zh-HK": "開始創作",
+    "zh-TW": "開始創作"
+  },
+  "description": {
+    "zh-CN": "直接输入目标，按需添加技能。不选技能发起任务，选择技能创作文档。",
+    "en": "Describe a goal. Send a task directly, or add skills to create a document.",
+    "zh-HK": "直接輸入目標，按需要加入技能。未選技能會開啟任務，選擇技能則創作文檔。",
+    "zh-TW": "直接輸入目標，按需新增技能。未選技能會開啟任務，選擇技能則創作文件。"
+  },
+  "icon": "sparkles",
+  "singleton": true,
+  "source": "system",
+  "layout": {
+    "w": 8,
+    "h": 11,
+    "minW": 6,
+    "minH": 4
+  },
+  "config": {},
+  "services": ["summary"],
+  "actions": [],
+  "minRefreshSeconds": 60,
+  "defaultPlacement": {
+    "x": 0,
+    "y": 0,
+    "order": 0
+  },
+  "events": {
+    "publish": [],
+    "subscribe": ["creation.skill-selected"]
+  },
+  "permissions": ["conversations.create"],
+  "clientCapabilities": ["panda.composer"]
+}

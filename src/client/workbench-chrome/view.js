@@ -1,6 +1,6 @@
 import { escapeHtml } from "../../shared/html.js";
 import { codexIcon } from "../codex-icons.js";
-import { messageAttributes, messageHtml, setMessageHtml, SUPPORTED_LOCALES } from "../i18n.js";
+import { messageAttributes, messageHtml, setMessageHtml, SUPPORTED_LOCALES, resolveLocale } from "../i18n.js";
 import { readThemePreference, THEME_OPTIONS } from "../theme.js";
 
 /** Local outline glyphs match the existing 24-pixel icon grid. */
@@ -73,6 +73,9 @@ export function renderChromeMenu(menu, context) {
   } else if (menu === "language") {
     body =
       `<p class="chrome-menu-hint">${label("shell.languageHint")}</p>` +
+      (i18n.locale !== resolveLocale(i18n.preference, globalThis.navigator?.languages || [])
+        ? `<p class="chrome-menu-hint" role="status">${label("shell.languagePackUnavailable")}</p>`
+        : "") +
       option(
         "locale",
         "system",
@@ -111,7 +114,7 @@ export function renderChromeMenu(menu, context) {
       `<button type="button" class="chrome-option" data-chrome-action="panel" data-value="${panel}" role="switch" aria-checked="${enabled}">${chromeIcon(icon)}<span class="chrome-option-copy"><strong>${label(key)}</strong></span><span class="chrome-switch${enabled ? " on" : ""}" aria-hidden="true"></span></button>`;
     if (!mobile) {
       body +=
-        `<p class="chrome-menu-label">${label("shell.readingWidth")}</p>` +
+        `<p class="chrome-menu-label">${label("shell.appWidth")}</p>` +
         ["comfortable", "wide", "fill"]
           .map((width) =>
             option(

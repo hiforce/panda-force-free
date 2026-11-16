@@ -1,0 +1,330 @@
+/* Shared form components own control geometry; feature styles own their layout. */
+:root {
+  --pf-space-1: 4px;
+  --pf-space-2: 8px;
+  --pf-space-3: 12px;
+  --pf-space-4: 16px;
+  --pf-space-5: 24px;
+  --pf-radius-sm: 8px;
+  --pf-control-height: 40px;
+  --pf-touch-target: 44px;
+  --pf-control-text: 14px;
+  --pf-text-title: 18px;
+  --pf-touch-text: 16px;
+  --pf-checkbox-size: 18px;
+  --pf-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238793a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+.wb-form {
+  display: grid;
+  gap: var(--pf-space-3);
+  min-width: 0;
+}
+.wb-form .wb-field {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--pf-space-2);
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  color: var(--pf-ink);
+  font-size: var(--pf-text-body);
+  line-height: 1.6;
+  cursor: default;
+}
+.wb-form .wb-field:where(:not([hidden])) {
+  display: grid;
+}
+.wb-form .wb-field > :is(input, select, textarea),
+.wb-form .wb-control-with-icon > input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--pf-control-height);
+  margin: 0;
+  padding: var(--pf-space-2) var(--pf-space-3);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-card);
+  color: var(--pf-ink);
+  font: inherit;
+  font-size: var(--pf-control-text);
+  line-height: 1.6;
+}
+.wb-control-with-icon {
+  display: block;
+  position: relative;
+}
+.wb-control-with-icon > .icon-slot {
+  position: absolute;
+  inset-inline-start: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--pf-muted);
+  pointer-events: none;
+}
+.wb-form .wb-control-with-icon > input {
+  padding-inline-start: 38px;
+}
+.wb-select,
+.wb-form .wb-field > select:not([multiple]) {
+  appearance: none;
+  min-height: var(--pf-control-height);
+  padding: 8px 36px 8px 12px;
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius-sm);
+  background-color: var(--pf-card);
+  background-image: var(--pf-select-chevron);
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  color: var(--pf-ink);
+  font: inherit;
+  font-size: var(--pf-control-text);
+}
+@media (max-width: 767px), (pointer: coarse) {
+  :root {
+    --pf-control-text: var(--pf-touch-text);
+  }
+  .wb-select,
+  .wb-form .wb-field > select:not([multiple]) {
+    min-height: var(--pf-touch-target);
+    font-size: var(--pf-touch-text);
+  }
+}
+.wb-form .wb-field > textarea {
+  resize: vertical;
+}
+.wb-form .wb-field > input[type="file"] {
+  overflow: hidden;
+}
+.wb-form .wb-field > input::file-selector-button {
+  margin-inline-end: var(--pf-space-2);
+  padding: var(--pf-space-1) var(--pf-space-2);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-soft);
+  color: var(--pf-ink);
+  font: inherit;
+  cursor: pointer;
+}
+.wb-form-grid {
+  display: grid;
+  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pf-space-3);
+}
+.wb-form .wb-choice {
+  align-items: center;
+  gap: var(--pf-space-2);
+  min-width: 0;
+  min-height: var(--pf-touch-target);
+  margin: 0;
+  font-size: var(--pf-text-body);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.wb-form .wb-choice:where(:not([hidden])) {
+  display: flex;
+}
+.wb-choice > input[type="checkbox"] {
+  flex: 0 0 var(--pf-checkbox-size);
+  width: var(--pf-checkbox-size);
+  height: var(--pf-checkbox-size);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--pf-accent);
+}
+.wb-form :is(input, select, textarea, button, summary):focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 2px;
+}
+.wb-form > button {
+  justify-self: start;
+}
+@media (max-width: 760px) {
+  .wb-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wb-form .wb-field > :is(input, select, textarea),
+  .wb-form .wb-control-with-icon > input {
+    min-height: var(--pf-touch-target);
+    font-size: var(--pf-touch-text);
+  }
+  .wb-form :is(button, summary) {
+    min-height: var(--pf-touch-target);
+  }
+}
+
+.wb-description-list {
+  display: grid;
+  grid-template-columns: minmax(100px, 160px) minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.wb-description-list dt {
+  color: var(--pf-muted);
+}
+.wb-description-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .wb-description-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .wb-description-list dd + dt {
+    margin-top: 12px;
+  }
+}
+
+/* Email tasks share the authentication card without repeating login-only chrome. */
+.password-gate[data-email-flow] :is(.auth-symbol, .auth-eyebrow, .auth-account-note, .auth-footer) {
+  display: none;
+}
+.password-gate[data-email-flow] .auth-stage {
+  flex: 0 0 auto;
+  align-items: flex-start;
+  padding-block: clamp(40px, 8vh, 88px) var(--pf-space-5);
+}
+.auth-email-success {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-block-end: var(--pf-space-5);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--pf-success) 12%, var(--auth-card));
+  color: var(--pf-success);
+}
+.auth-email-success svg {
+  width: 26px;
+  height: 26px;
+}
+.auth-email-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-block-start: var(--pf-space-3);
+  color: var(--auth-ink);
+  font-size: 13px;
+  text-underline-offset: 3px;
+}
+.auth-primary-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: var(--pf-space-3) var(--pf-space-4);
+  border: 1px solid transparent;
+  border-radius: var(--pf-radius-sm);
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+.auth-primary-action:hover {
+  opacity: 0.88;
+}
+.auth-code {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--pf-space-2);
+  direction: ltr;
+}
+.auth-code-cell {
+  display: grid;
+  place-items: center;
+  height: 52px;
+  border: 1px solid var(--auth-border);
+  border-radius: var(--pf-radius-sm);
+  background: var(--auth-card);
+  color: var(--auth-ink);
+  font-size: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.auth-code:focus-within .auth-code-cell[data-active="true"] {
+  border-color: var(--pf-primary);
+  outline: 3px solid color-mix(in srgb, var(--pf-primary) 16%, transparent);
+}
+.auth-code-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: 16px;
+}
+.auth-code:has([aria-invalid="true"]) .auth-code-cell {
+  border-color: var(--pf-danger);
+}
+.auth-recovery-steps,
+.auth-recovery-identity {
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.auth-recovery-steps {
+  color: var(--auth-muted);
+}
+.auth-recovery-notice {
+  margin-block: 0 var(--pf-space-4);
+  padding: var(--pf-space-3);
+  border-radius: var(--pf-radius-sm);
+  background: color-mix(in srgb, var(--pf-primary) 8%, var(--auth-card));
+  color: var(--auth-ink);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.auth-recovery-notice[data-state="error"] {
+  color: var(--pf-danger);
+  background: color-mix(in srgb, var(--pf-danger) 8%, var(--auth-card));
+}
+.auth-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--pf-space-2);
+}
+.auth-recovery-actions button {
+  min-height: 44px;
+  color: var(--pf-accent);
+  font-size: 13px;
+}
+.auth-recovery-actions button:disabled {
+  color: var(--auth-muted);
+  cursor: default;
+}
+.auth-recovery-actions button:focus-visible,
+.auth-email-back:focus-visible,
+.auth-primary-action:focus-visible {
+  outline: 2px solid var(--pf-primary);
+  outline-offset: 3px;
+  border-radius: var(--pf-radius-sm);
+}
+@media (max-width: 520px) {
+  .password-gate[data-email-flow] {
+    padding-block-start: max(22px, env(safe-area-inset-top));
+    padding-block-end: max(18px, env(safe-area-inset-bottom));
+  }
+  .password-gate[data-email-flow] .auth-stage {
+    padding-block-start: calc(var(--pf-space-4) * 2);
+  }
+  .auth-code {
+    gap: var(--pf-space-1);
+  }
+}

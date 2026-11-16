@@ -1,0 +1,882 @@
+[
+  {
+    "name": "panda_force_search_analyzer_reviews",
+    "columns": [
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["owner", "digest"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_analyzers",
+    "columns": [
+      {
+        "name": "reference",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "descriptor",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["reference"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_audit_queue",
+    "columns": [
+      {
+        "name": "key",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "generation",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "nextAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "attempts",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["key"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_audit_reports",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "key",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "generation",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "checkedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "report",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "search_audit_reports_scope",
+        "unique": false,
+        "columns": ["key", "id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_binding",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "source",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_connections",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "descriptor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "envelope",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "binding",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_knowledge",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "descriptor",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_meta",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "value",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_progress",
+    "columns": [
+      {
+        "name": "key",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "requested",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "phase",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "completed",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "total",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "startedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "finishedAt",
+        "type": "bigint",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["key"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_project_policies",
+    "columns": [
+      {
+        "name": "source",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "key",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "settings",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "needsReview",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["source", "project"]
+      },
+      {
+        "name": "search_project_policies_1",
+        "unique": true,
+        "columns": ["key"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_resource_observations",
+    "columns": [
+      {
+        "name": "storage",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "epoch",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "status",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "missing",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "checkedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["storage", "epoch", "name"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_resource_reads",
+    "columns": [
+      {
+        "name": "storage",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "token",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "search_resource_read_expiry",
+        "unique": false,
+        "columns": ["leaseUntil"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["storage", "name", "token"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_resource_requests",
+    "columns": [
+      {
+        "name": "storage",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "operation",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "epoch",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["storage", "operation"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_resource_scans",
+    "columns": [
+      {
+        "name": "storage",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "epoch",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "nextAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "cursor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "batches",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "startedAt",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "checkedAt",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "completedAt",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "attempts",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "failure",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "previous",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "summary",
+        "type": "longtext",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["storage"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_resources",
+    "columns": [
+      {
+        "name": "storage",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "name",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "recipe",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "marker",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "identity",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "reference",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "orphanSince",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "search_resources_cleanup_times",
+        "unique": false,
+        "columns": ["storage", "state", "updatedAt"]
+      },
+      {
+        "name": "search_resources_live_scan",
+        "unique": false,
+        "columns": ["storage", "name"]
+      },
+      {
+        "name": "search_resources_by_name",
+        "unique": false,
+        "columns": ["name"]
+      },
+      {
+        "name": "search_resources_scan",
+        "unique": false,
+        "columns": ["storage", "name"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["storage", "name"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_retired",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "descriptor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "due",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_scope_history",
+    "columns": [
+      {
+        "name": "legacyKey",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "source",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "snapshot",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "auditQueue",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "auditReports",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "migratedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "search_scope_history_page",
+        "unique": false,
+        "columns": ["source", "project", "legacyKey"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["legacyKey"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_scopes",
+    "columns": [
+      {
+        "name": "key",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "source",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "project",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "settings",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "requested",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false
+      },
+      {
+        "name": "attempts",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "token",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "active",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "commitId",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "documentCount",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "failure",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "search_shared_project",
+        "unique": false,
+        "columns": ["source", "project"]
+      },
+      {
+        "name": "search_pending",
+        "unique": false,
+        "columns": ["state", "updatedAt"]
+      },
+      {
+        "name": "search_scopes_2",
+        "unique": true,
+        "columns": ["source", "owner", "project"]
+      },
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["key"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_sources",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "descriptor",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "revision",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_search_mutex",
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  }
+]

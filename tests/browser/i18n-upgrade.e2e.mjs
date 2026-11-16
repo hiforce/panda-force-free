@@ -17,16 +17,18 @@ try {
     const errors = [],
       unversioned = [];
     // Reproduce a login bundle from before the shell namespace was introduced.
-    await context.route("**/auth-bootstrap.js", (route) =>
-      route.fulfill({
-        contentType: "application/javascript",
-        body: `import {createI18n} from '/i18n.js?legacy-seed';
+    await context.route(
+      (url) => url.pathname === "/auth-bootstrap.js" && !url.searchParams.has("current"),
+      (route) =>
+        route.fulfill({
+          contentType: "application/javascript",
+          body: `import {createI18n} from '/i18n.js?legacy-seed';
         const legacy = createI18n({resources:{en:${JSON.stringify(english)}},loaders:{'zh-CN':async()=>(${JSON.stringify(chinese)})}});
         await legacy.ready;
         window.legacyLocaleOwner = legacy;
         window[Symbol.for('PandaForce.browserI18n')] = legacy;
         await import('/auth-bootstrap.js?current');`,
-      }),
+        }),
     );
     await context.route("**/i18n.js", (route) => {
       unversioned.push(route.request().url());

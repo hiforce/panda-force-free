@@ -10,10 +10,22 @@ try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, colorScheme: "light" });
   const page = await context.newPage();
   page.on("pageerror", (error) => errors.push(error.message));
+  let heldPermissions = false;
+  await page.route("**/api/rpc", async (route) => {
+    if (!heldPermissions && route.request().postDataJSON()?.method === "permissionProfile/list") {
+      heldPermissions = true;
+      const response = await route.fetch();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      return route.fulfill({ response });
+    }
+    return route.continue();
+  });
   const open = async (target = page, id = "old-alpha") => {
     await target.goto(fixture.base + "/task/" + id);
     await target.locator("#workspacePreparation").waitFor({ state: "hidden" });
     await target.waitForFunction(() => globalThis.__pandaForceDebug?.state.models.length > 0);
+    // Usage data can arrive while another preparation step still hides the workspace.
+    await target.locator("#sessionUsageView .session-usage-total strong").waitFor({ state: "visible" });
   };
   const usage = page.locator("#sessionUsageView .session-usage-total strong");
   await open();

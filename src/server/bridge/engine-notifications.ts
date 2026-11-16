@@ -1,10 +1,10 @@
+import type { EngineEnvelope, EngineEventParameters } from "../../shared/engine/contracts.js";
 import { isRecord } from "../../shared/records.js";
 import { notifyNtfyTurnCompleted } from "../misc/ntfy.js";
 import { publishCatalogUpdate } from "../projects/publish.js";
-import type { EngineEnvelope, EngineEventParameters } from "../../shared/engine/contracts.js";
-type NativeItem = NonNullable<EngineEventParameters["item"]>;
 import type { RuntimeServices } from "./../services.js";
 import { createNotificationRegistry } from "./notifications.js";
+type NativeItem = NonNullable<EngineEventParameters["item"]>;
 
 /** Registers native event side effects; transport and storage retain their own lifetimes. */
 export function createEngineNotifications({
@@ -76,7 +76,7 @@ export function createEngineNotifications({
   notifications.on("thread/name/updated", (params) => {
     const threadId = params.threadId;
     if (!threadId) return;
-    publishCatalogUpdate(projectCatalog, broadcast, () => {
+    void publishCatalogUpdate(projectCatalog, broadcast, () => {
       const snapshot = projectCatalog.refreshSessions([{ id: threadId, name: params.threadName || params.name }]);
       return snapshot;
     });

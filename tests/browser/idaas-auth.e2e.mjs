@@ -306,6 +306,7 @@ try {
   if (await page.locator("#workspacePreparation").isVisible())
     await page.locator("#workspacePreparationContinue").click();
   await page.locator("#accountButton").click();
+  await page.locator("[data-settings-page=profile]").click();
   await page.locator("#pandaLogout").click();
   await page.waitForURL("**/auth/logged-out");
   await page.getByRole("heading", { level: 1, name: "See you next time" }).waitFor();

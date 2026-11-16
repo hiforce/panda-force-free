@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { expect, test } from "bun:test";
 import { readClusterConfig } from "../../src/server/cluster/config.js";
 import { signClusterRequest, verifyClusterRequest } from "../../src/server/cluster/signing.js";
@@ -7,7 +8,7 @@ const config = readClusterConfig({
   PANDA_FORCE_CLUSTER_WORKSPACE: "test",
   PANDA_FORCE_CLUSTER_NODE_ID: "gateway-a",
   PANDA_FORCE_CLUSTER_DATABASE_URL: "postgres://panda@localhost/test",
-  PANDA_FORCE_CLUSTER_SECRET: "test-signing-key-with-at-least-32-characters",
+  PANDA_FORCE_CLUSTER_SECRET: randomBytes(32).toString("hex"),
   PANDA_FORCE_PUBLIC_URL: "https://panda.example.test",
 })!;
 const lease: OwnerLease = {

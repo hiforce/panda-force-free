@@ -1,3 +1,4 @@
+import { sidebarSessionGroups } from "./sidebar-session-groups.js";
 import { createSidebarSessionBrowser } from "./sidebar-session-browser.js";
 import { errorMessage } from "./../shared/errors.js";
 import { createAnchoredMenu } from "./anchored-menu.js";
@@ -466,162 +467,120 @@ export function createThreadSidebar({
     }
     const list = $("#threadList"),
       q = $("#threadSearch").value.trim().toLowerCase(),
-      groups = new Map();
+      ordered = sidebarSessionGroups({
+        sessions: projectCatalog ? projectCatalog.sessions() : state.threads,
+        allSessions: state.threads,
+        projects: projectCatalog?.projects(),
+        query: q,
+        hidden: sidebarProjectVisibility.hiddenProjects,
+        pinnedSessions: sidebarPinnedThreads,
+        pinnedProjects: sidebarPinnedProjects,
+        expansion: sidebarProjectExpansion,
+        activeSession: state.active?.id,
+        currentProject: currentSidebarProjectKey(),
+        pageSize: SIDEBAR_SESSION_PAGE_SIZE,
+        limits: sidebarSessionLimits,
+        projectKey: sidebarProjectKey,
+        projectName: sidebarProjectName,
+        title: titleOf,
+        activity: threadLastActivityAt,
+        compare: sidebarProjectCollator.compare,
+      });
     setMessageHtml(list, "");
-    for (const thread of projectCatalog ? projectCatalog.sessions() : state.threads) {
-      const key = sidebarProjectKey(thread);
-      if (
-        !Object.hasOwn(sidebarProjectVisibility.hiddenProjects, key) &&
-        (!q ||
-          titleOf(thread).toLowerCase().includes(q) ||
-          thread.cwd?.toLowerCase().includes(q) ||
-          (projectCatalog && sidebarProjectName(key).toLowerCase().includes(q)))
-      ) {
-        const group = groups.get(key) || { key, threads: [] };
-        group.threads.push(thread);
-        groups.set(key, group);
-      }
-    }
-    if (projectCatalog)
-      for (const p of projectCatalog.projects()) {
-        const key = "project:" + p.id;
-        if (
-          !Object.hasOwn(sidebarProjectVisibility.hiddenProjects, key) &&
-          !groups.has(key) &&
-          (!q || [p.name, p.code].join(" ").toLowerCase().includes(q))
-        )
-          groups.set(key, { key, threads: [] });
-      }
-    // Older unassigned sessions remain discoverable when every recently loaded session is linked.
-    if (
-      projectCatalog &&
-      !groups.has("__tasks__") &&
-      !Object.hasOwn(sidebarProjectVisibility.hiddenProjects, "__tasks__")
-    )
-      groups.set("__tasks__", { key: "__tasks__", threads: [] });
-    const pinnedThreads = state.threads.filter(
-      (thread) =>
-        sidebarPinnedThreads.has(thread.id) &&
-        (!q || titleOf(thread).toLowerCase().includes(q) || thread.cwd?.toLowerCase().includes(q)),
-    );
-    if (!q || pinnedThreads.length)
-      groups.set("__pinned__", { key: "__pinned__", threads: pinnedThreads, pinnedGroup: true });
-    const currentKey = currentSidebarProjectKey(),
-      ordered = [...groups.values()].sort(
-        (a, b) =>
-          Number(b.key === "__pinned__") - Number(a.key === "__pinned__") ||
-          Number(sidebarPinnedProjects.has(b.key)) - Number(sidebarPinnedProjects.has(a.key)) ||
-          sidebarProjectCollator.compare(sidebarProjectName(a.key), sidebarProjectName(b.key)) ||
-          a.key.localeCompare(b.key),
-      );
-    for (const group of ordered) {
-      group.threads.sort((a, b) => threadLastActivityAt(b) - threadLastActivityAt(a));
-      const limit =
-          group.key === "__tasks__" && projectCatalog
-            ? 10
-            : sidebarSessionLimits.get(group.key) || SIDEBAR_SESSION_PAGE_SIZE,
-        visibleThreads = q ? group.threads : group.threads.slice(0, limit),
-        hasMore = !(projectCatalog && group.key === "__tasks__") && visibleThreads.length < group.threads.length;
-      const containsActive = group.threads.some((thread) => thread.id === state.active?.id),
-        expanded =
-          group.pinnedGroup ||
-          Boolean(q) ||
-          (Object.hasOwn(sidebarProjectExpansion, group.key)
-            ? sidebarProjectExpansion[group.key]
-            : containsActive || group.key === currentKey),
-        section = document.createElement("section");
-      section.className = "sidebar-project-group";
-      section.dataset.project = group.key;
-      const pinned = sidebarPinnedProjects.has(group.key),
-        pinnedGroup = group.key === "__pinned__";
-      section.dataset.pinned = String(pinned);
-      const header = document.createElement("div");
-      header.className = "sidebar-project-header";
-      const heading = document.createElement("button");
-      heading.type = "button";
-      heading.className = "sidebar-project-row";
-      heading.setAttribute("aria-expanded", String(expanded));
-      setOpaqueAttribute(
-        heading,
-        "title",
-        pinnedGroup
-          ? t("sessions.pinned")
-          : projectCatalog
-            ? sidebarProjectName(group.key)
-            : group.key === "__tasks__"
-              ? t("common.tasks")
-              : shortPath(group.key),
-      );
-      setMessageHtml(
-        heading,
-        `${codexIcon(pinnedGroup ? "arrowUp" : group.key === "__tasks__" ? "messageSquare" : "folderOpen")}<span ${projectCatalog && group.key.startsWith("project:") ? "data-i18n-ignore" : ""}>${pinnedGroup ? messageHtml("sessions.pinned", undefined, t) : group.key === "__tasks__" ? messageHtml(projectCatalog ? "sessions.unassignedSessions" : "common.sessions", undefined, t) : escapeHtml(sidebarProjectName(group.key))}</span>${codexIcon("chevronRight", "sidebar-project-chevron")}`,
-      );
-      header.append(heading);
-      if (group.key !== "__tasks__" && !pinnedGroup) {
-        const options = document.createElement("button");
-        options.type = "button";
-        options.className = "sidebar-project-options";
-        localizeAttribute(options, "title", "sessions.projectOptions", undefined, t);
-        localizeAttribute(
-          options,
-          "aria-label",
-          "sessions.projectOptionsForName",
-          { name: sidebarProjectName(group.key) },
-          t,
-        );
-        options.setAttribute("aria-haspopup", "menu");
-        options.setAttribute("aria-expanded", "false");
-        setMessageHtml(options, codexIcon("ellipsis"));
-        options.onclick = () => openSidebarProjectMenu(group.key, options);
-        header.append(options);
-      }
-      section.append(header);
-      const threads = document.createElement("div");
-      threads.className = "sidebar-project-threads" + (expanded ? " expanded" : "");
-      threads.setAttribute("aria-hidden", String(!expanded));
-      threads.inert = !expanded;
-      threads.style.setProperty("--sidebar-thread-count", String(visibleThreads.length + (hasMore ? 1 : 0)));
-      heading.onclick = () => {
-        const next = heading.getAttribute("aria-expanded") !== "true";
-        sidebarProjectExpansion[group.key] = next;
-        saveSidebarProjectExpansion();
-        heading.setAttribute("aria-expanded", String(next));
-        threads.setAttribute("aria-hidden", String(!next));
-        threads.inert = !next;
-        threads.classList.toggle("expanded", next);
-      };
-      if (unassignedBrowser && group.key === "__tasks__") {
-        threads.classList.add("sidebar-unassigned-browser");
-        unassignedBrowser.render(threads, group.threads, q);
-      } else appendSessionRows(threads, visibleThreads);
-      if (pinnedGroup && !visibleThreads.length) {
-        const empty = document.createElement("div");
-        empty.className = "sidebar-pinned-empty";
-        localizeText(empty, "sessions.noPinnedSessions", undefined, t);
-        threads.append(empty);
-      }
-      if (hasMore) {
-        const more = document.createElement("button");
-        more.type = "button";
-        more.className = "sidebar-sessions-more";
-        localizeText(more, "sessions.showMoreSessions", undefined, t);
-        more.onclick = () => {
-          sidebarSessionLimits.set(group.key, limit + SIDEBAR_SESSION_PAGE_SIZE);
-          sidebarProjectExpansion[group.key] = true;
-          renderThreads();
-          findElement(`[data-project="${CSS.escape(group.key)}"] .sidebar-sessions-more`, $("#threadList"))?.focus();
-        };
-        threads.append(more);
-      }
-      section.append(threads);
-      list.append(section);
-    }
+    for (const group of ordered) list.append(renderProjectGroup(group, q));
     if (!list.children.length)
       setMessageHtml(
         list,
         `<div class="list-state">${messageHtml(q ? "common.noMatchingTasks" : "common.noVisibleProjects", undefined, t)}</div>`,
       );
     refreshSidebarMenu();
+  }
+  function renderProjectGroup(group, q) {
+    const { expanded, visibleThreads, hasMore, limit, pinned, pinnedGroup } = group;
+    const section = document.createElement("section");
+    section.className = "sidebar-project-group";
+    section.dataset.project = group.key;
+    section.dataset.pinned = String(pinned);
+    const header = document.createElement("div");
+    header.className = "sidebar-project-header";
+    const heading = document.createElement("button");
+    heading.type = "button";
+    heading.className = "sidebar-project-row";
+    heading.setAttribute("aria-expanded", String(expanded));
+    setOpaqueAttribute(
+      heading,
+      "title",
+      pinnedGroup
+        ? t("sessions.pinned")
+        : projectCatalog
+          ? sidebarProjectName(group.key)
+          : group.key === "__tasks__"
+            ? t("common.tasks")
+            : shortPath(group.key),
+    );
+    setMessageHtml(
+      heading,
+      `${codexIcon(pinnedGroup ? "arrowUp" : group.key === "__tasks__" ? "messageSquare" : "folderOpen")}<span ${projectCatalog && group.key.startsWith("project:") ? "data-i18n-ignore" : ""}>${pinnedGroup ? messageHtml("sessions.pinned", undefined, t) : group.key === "__tasks__" ? messageHtml(projectCatalog ? "sessions.unassignedSessions" : "common.sessions", undefined, t) : escapeHtml(sidebarProjectName(group.key))}</span>${codexIcon("chevronRight", "sidebar-project-chevron")}`,
+    );
+    header.append(heading);
+    if (group.key !== "__tasks__" && !pinnedGroup) {
+      const options = document.createElement("button");
+      options.type = "button";
+      options.className = "sidebar-project-options";
+      localizeAttribute(options, "title", "sessions.projectOptions", undefined, t);
+      localizeAttribute(
+        options,
+        "aria-label",
+        "sessions.projectOptionsForName",
+        { name: sidebarProjectName(group.key) },
+        t,
+      );
+      options.setAttribute("aria-haspopup", "menu");
+      options.setAttribute("aria-expanded", "false");
+      setMessageHtml(options, codexIcon("ellipsis"));
+      options.onclick = () => openSidebarProjectMenu(group.key, options);
+      header.append(options);
+    }
+    section.append(header);
+    const threads = document.createElement("div");
+    threads.className = "sidebar-project-threads" + (expanded ? " expanded" : "");
+    threads.setAttribute("aria-hidden", String(!expanded));
+    threads.inert = !expanded;
+    threads.style.setProperty("--sidebar-thread-count", String(visibleThreads.length + (hasMore ? 1 : 0)));
+    heading.onclick = () => {
+      const next = heading.getAttribute("aria-expanded") !== "true";
+      sidebarProjectExpansion[group.key] = next;
+      saveSidebarProjectExpansion();
+      heading.setAttribute("aria-expanded", String(next));
+      threads.setAttribute("aria-hidden", String(!next));
+      threads.inert = !next;
+      threads.classList.toggle("expanded", next);
+    };
+    if (unassignedBrowser && group.key === "__tasks__") {
+      threads.classList.add("sidebar-unassigned-browser");
+      unassignedBrowser.render(threads, group.threads, q);
+    } else appendSessionRows(threads, visibleThreads);
+    if (pinnedGroup && !visibleThreads.length) {
+      const empty = document.createElement("div");
+      empty.className = "sidebar-pinned-empty";
+      localizeText(empty, "sessions.noPinnedSessions", undefined, t);
+      threads.append(empty);
+    }
+    if (hasMore) {
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "sidebar-sessions-more";
+      localizeText(more, "sessions.showMoreSessions", undefined, t);
+      more.onclick = () => {
+        sidebarSessionLimits.set(group.key, limit + SIDEBAR_SESSION_PAGE_SIZE);
+        sidebarProjectExpansion[group.key] = true;
+        renderThreads();
+        findElement(`[data-project="${CSS.escape(group.key)}"] .sidebar-sessions-more`, $("#threadList"))?.focus();
+      };
+      threads.append(more);
+    }
+    section.append(threads);
+    return section;
   }
 
   function getProjects() {

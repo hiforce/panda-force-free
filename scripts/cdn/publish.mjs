@@ -1,28 +1,9 @@
+import { CDN_ASSET_TYPES as types } from "../../src/shared/cdn-assets.js";
 import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, posix, relative } from "node:path";
 import { parse, parseExpressionAt } from "acorn";
 
-const types = {
-  ".js": "text/javascript; charset=utf-8",
-  ".mjs": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".avif": "image/avif",
-  ".ico": "image/x-icon",
-  ".woff": "font/woff",
-  ".woff2": "font/woff2",
-  ".ttf": "font/ttf",
-  ".otf": "font/otf",
-  ".wasm": "application/wasm",
-  ".txt": "text/plain; charset=utf-8",
-};
 export const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 export function collectAssets(directory, prefix = "") {
@@ -51,7 +32,8 @@ function references(path, text, assets) {
         end,
         target,
         encode,
-        suffix: value.includes("#") ? "#" + value.split("#").slice(1).join("#") : "",
+        // Retry query parameters distinguish a fresh module fetch after a browser caches an import failure.
+        suffix: value.slice(clean.length),
       });
     else if (
       /\.(?:m?js|css|wasm|woff2?|ttf|otf|png|svg|jpe?g|webp|avif)(?:[?#]|$)/i.test(value) &&

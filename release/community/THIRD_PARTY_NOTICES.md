@@ -6,7 +6,7 @@ PandaForce Free derives from [Codex WebUI (lezi-fun/codex-webui)](https://github
 
 ## CodeMirror 6
 
-The read-only source viewer uses the CodeMirror 6 packages, including `codemirror`, `@codemirror/*`, and Lezer language packages. They are distributed under the MIT License. Package-specific copyright and license files are retained in the installed npm packages.
+The source viewer and project-document code blocks use the CodeMirror 6 packages, including `codemirror`, `@codemirror/*`, and Lezer language packages. They are distributed under the MIT License. Package-specific copyright and license files are retained in the installed npm packages.
 
 MIT License
 
@@ -46,6 +46,22 @@ The repository includes a small MIT-preserving patch to urllib 2.44.1's optional
 
 Dependency-specific license texts must accompany distributed binary/container packages where required. This file does not replace the actual installed dependency notices.
 
+## Document conversion and export
+
+Read-only Hexo configuration inspection uses `yaml` 2.8.2 (ISC), copyright
+Eemeli Aro. Its complete notice is retained in [LICENSES/yaml-ISC.txt](./LICENSES/yaml-ISC.txt)
+and in the installed package. Project code is not executed while reading YAML.
+
+SFTP publication uses `ssh2` 1.17.0 (MIT). Its copyright and complete license remain in
+the installed package. SSH host keys are explicitly verified; no affiliation with
+OpenSSH or the ssh2 maintainers is implied.
+
+Channel adaptation uses `twitter-text` 3.1.0 (Apache-2.0) for X-compatible character counting,
+`entities` 6.0.1 (BSD-2-Clause) for HTML entity decoding, and `fflate` 0.8.2 (MIT) for asset bundles.
+The full dependency notices remain in installed packages. The twitter-text license is also
+retained in `LICENSES/twitter-text-Apache-2.0.txt`. X adapters are independent integrations;
+no endorsement by X or Twitter is implied.
+
 ## Internationalization
 
 PandaForce uses i18next 26.7.1 (MIT), i18next-icu 2.6.1 (MIT), and
@@ -56,3 +72,36 @@ packages and must accompany redistributed bundles and containers.
 ## Immer
 
 PandaForce uses Immer 11.2.9 for transactional state edits. Copyright (c) 2017 Michel Weststrate. The complete MIT grant is retained in [LICENSES/immer-MIT.txt](./LICENSES/immer-MIT.txt) and in the installed package.
+
+## Visual document editor
+
+The optional visual project-document editor uses Tiptap's open-source packages
+(version 3.33.0, MIT) and ProseMirror. Tiptap's complete MIT notice is retained in
+[LICENSES/tiptap-MIT.txt](./LICENSES/tiptap-MIT.txt); package-specific ProseMirror
+and transitive dependency notices remain in the installed packages distributed
+with container images. No hosted editor, commercial extension or cloud account
+is required. Markdown is a derived exchange format; the versioned rich source
+remains owned by PandaForce.
+
+## Native Office package inspection
+
+Authored HTML source inspection uses `parse5` 7.3.0 (MIT), copyright Ivan Nikulin.
+The complete notice is retained in [LICENSES/parse5-MIT.txt](./LICENSES/parse5-MIT.txt)
+and in the installed package. Parsing does not execute scripts or fetch linked resources.
+
+Native PowerPoint package inspection uses `@xmldom/xmldom` 0.9.12 (MIT).
+The complete upstream notice is retained in [LICENSES/xmldom-MIT.txt](./LICENSES/xmldom-MIT.txt)
+and in the installed dependency. XML parsing is bounded and does not fetch external
+relationships or execute document code.
+
+## Built-in full-text search
+
+The isolated local search worker uses MiniSearch 7.2.0 (MIT) and
+wink-porter2-stemmer 2.0.1 (MIT). Complete notices are retained in
+[LICENSES/minisearch-MIT.txt](./LICENSES/minisearch-MIT.txt) and
+[LICENSES/wink-porter2-stemmer-MIT.txt](./LICENSES/wink-porter2-stemmer-MIT.txt),
+and in the installed packages. Language recipe packages do not execute plugin code.
+
+## CSS syntax for authored web previews
+
+Packaged web previews use `@csstools/css-tokenizer` 3.0.4 (MIT) to decode CSS URL tokens. Its complete upstream notice is retained in [LICENSES/css-tokenizer-MIT.txt](./LICENSES/css-tokenizer-MIT.txt) and the checksum-verified vendored module in `src/server/creative/assets/vendor/`. CSS, image and font bytes are resolved only from the saved bundle.

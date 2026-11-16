@@ -1,0 +1,347 @@
+.social-dialog {
+  width: min(1120px, calc(100vw - 48px));
+}
+.social-dialog [hidden] {
+  display: none !important;
+}
+.social-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 0 28px 16px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--pf-line);
+}
+.social-workspace,
+#socialAccountSettings {
+  padding: 20px 28px;
+  overflow: auto;
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+#socialNotice {
+  margin: 0 28px 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--pf-soft);
+  overflow-wrap: anywhere;
+}
+.social-preparation > label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.social-preparation > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.social-preparation select {
+  min-width: 180px;
+  max-width: 100%;
+  flex: 1;
+  border: 1px solid var(--pf-line);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--pf-ink);
+  background: var(--pf-card);
+  font: inherit;
+}
+.social-preparation p,
+.social-history small,
+.social-confirmation-note {
+  color: var(--pf-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.social-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 20px;
+}
+.social-history summary,
+.social-steps summary {
+  font-weight: 600;
+  cursor: pointer;
+  padding: 10px 0;
+}
+#socialHistory {
+  display: grid;
+  gap: 8px;
+  max-height: 480px;
+  overflow: auto;
+}
+.social-history-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  text-align: left;
+  background: var(--pf-card);
+  border: 1px solid var(--pf-line);
+  border-radius: 10px;
+  color: var(--pf-ink);
+  font: inherit;
+  cursor: pointer;
+}
+.social-history-item[aria-pressed="true"] {
+  border-color: var(--pf-accent);
+  background: var(--pf-soft);
+}
+.social-history-item span {
+  color: var(--pf-muted);
+  font-size: 12px;
+}
+#socialPlan {
+  min-width: 0;
+}
+.social-plan-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.social-plan-heading h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.social-plan-heading > span {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--pf-soft);
+  font-size: 12px;
+}
+.social-metadata {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 16px;
+  font-size: 12px;
+  margin: 20px 0;
+}
+.social-metadata dt {
+  color: var(--pf-muted);
+}
+.social-metadata dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.social-content {
+  display: grid;
+  gap: 12px;
+}
+.social-content article {
+  border: 1px solid var(--pf-line);
+  border-radius: 10px;
+  padding: 16px;
+}
+.social-content pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 14px/1.7 var(--font-sans, system-ui);
+  margin: 8px 0 0;
+}
+.social-warning,
+#socialJobError {
+  padding: 12px;
+  border-inline-start: 3px solid var(--pf-accent);
+  background: var(--pf-soft);
+  line-height: 1.6;
+}
+.social-steps ol {
+  padding-left: 20px;
+}
+.social-steps li {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.social-steps li > div {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.social-steps a {
+  color: var(--pf-accent);
+}
+.social-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  border-top: 1px solid var(--pf-line);
+  padding-top: 16px;
+}
+.social-plan-actions label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-basis: 100%;
+  line-height: 1.6;
+  cursor: pointer;
+}
+.social-plan-actions input {
+  margin-top: 4px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: var(--pf-accent);
+}
+.social-media {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.social-media figure {
+  margin: 0;
+  min-width: 0;
+  border: 1px solid var(--pf-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.social-media img {
+  display: block;
+  width: 100%;
+  height: 132px;
+  object-fit: contain;
+}
+.social-media figcaption {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  .social-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    border-radius: 14px;
+  }
+  .social-dialog .delivery-heading {
+    padding: 16px;
+  }
+  .social-toolbar {
+    padding: 0 16px 12px;
+  }
+  .social-workspace,
+  #socialAccountSettings {
+    padding: 16px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  #socialNotice {
+    margin: 0 16px 12px;
+  }
+  .social-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #socialHistory {
+    max-height: 160px;
+  }
+  .social-metadata {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .social-metadata dd {
+    margin-bottom: 8px;
+  }
+  .social-dialog .wb-button {
+    min-height: 44px;
+  }
+  .social-plan-actions .wb-button {
+    flex: 1;
+    min-width: 140px;
+  }
+}
+
+.social-plan-actions [data-social-action="cancel"] {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--pf-line));
+}
+.social-stop-note {
+  padding: 12px;
+  border: 1px solid var(--pf-line);
+  border-radius: 8px;
+  color: var(--pf-muted);
+  line-height: 1.6;
+}
+.social-stop-note time {
+  display: block;
+  font-size: 12px;
+}
+
+.social-recovery {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.social-recovery summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.social-recovery p {
+  line-height: 1.55;
+}
+.social-recovery input[data-recovery-id] {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 360px;
+  margin: 8px 0;
+}
+.social-recovery-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0;
+  line-height: 1.5;
+}
+.social-recovery-check input {
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+.social-recovery-result {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.social-recovery-result time,
+.social-recovery-adopted time {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.social-recovery-result pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+}
+.social-recovery-adopted {
+  line-height: 1.5;
+}
+
+.social-continuation {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--pf-line);
+  border-radius: 10px;
+  line-height: 1.65;
+}
+.social-continuation h4 {
+  margin: 0 0 8px;
+}
+.social-continuation p {
+  margin: 8px 0 12px;
+}
+.social-inherited-note {
+  font-size: 12px;
+  color: var(--pf-muted);
+}
+.social-steps .social-related-plan {
+  display: block;
+  margin-top: 8px;
+}

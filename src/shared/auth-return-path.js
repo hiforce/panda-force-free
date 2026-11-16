@@ -13,7 +13,7 @@ export function safeAuthReturnPath(value) {
     const url = new URL(value, origin);
     if (
       url.origin !== origin ||
-      !/^\/(?:settings(?:\/[^/]+)?|workspace|tasks|projects|project|deliverables|connections|new|task\/[^/]+)?\/?$/.test(
+      !/^\/(?:settings(?:\/[^/]+)?|workspace|bots|tasks|projects|project|deliverables|connections|new|task\/[^/]+)?\/?$/.test(
         url.pathname,
       )
     )

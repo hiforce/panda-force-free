@@ -4,6 +4,8 @@ import { join, resolve } from "node:path";
 import packageInfo from "../../package.json";
 import { existingApplicationPath, pandaEnvironment } from "./environment.js";
 import { defaultBrowseRoots } from "./path-utils.js";
+import { productStateRoot } from "./state-root.js";
+import { inspectCompiledCdn } from "./http/cdn-policy.js";
 
 // Works both from source (src/server/config.ts) and from the bundled dist/server.js.
 function findProjectRoot(start: string) {
@@ -16,6 +18,15 @@ function findProjectRoot(start: string) {
 }
 
 const env = pandaEnvironment();
+if (env.PANDA_FORCE_AUTH_MODE && !["password", "none"].includes(env.PANDA_FORCE_AUTH_MODE))
+  throw new Error(
+    "Dedicated IDaaS login was removed. Prepare a local administrator and preserve the previous owner before switching authentication.",
+  );
+
+if (env.PANDA_FORCE_REQUIRE_CDN !== undefined && !["true", "false"].includes(env.PANDA_FORCE_REQUIRE_CDN))
+  throw new Error("PANDA_FORCE_REQUIRE_CDN must be true or false");
+if (env.PANDA_FORCE_AUTO_CONTINUE !== undefined && !["true", "false"].includes(env.PANDA_FORCE_AUTO_CONTINUE))
+  throw new Error("PANDA_FORCE_AUTO_CONTINUE must be true or false");
 const host = env.HOST || "127.0.0.1";
 const homeDir = env.HOME || process.cwd();
 const codexHome = env.CODEX_HOME || join(homeDir, ".codex");
@@ -30,7 +41,7 @@ const configuredDefaultCwd = resolve(
 );
 const legacyAttachmentRoot = existingApplicationPath(resolve(codexHome, "panda-force-uploads"));
 const attachmentRoot = resolve(env.PANDA_FORCE_ATTACHMENT_ROOT || legacyAttachmentRoot);
-const stateRoot = resolve(env.PANDA_FORCE_HOME || join(homeDir, ".panda-force"));
+const stateRoot = productStateRoot(env);
 const projectWorkspaceRoot = resolve(env.PANDA_FORCE_PROJECTS_ROOT || join(stateRoot, "projects"));
 if (
   env.PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES !== undefined &&
@@ -46,6 +57,7 @@ const browseRoots = allowExternalDirectories
 export const config = Object.freeze({
   version: packageInfo.version,
   engineId: env.PANDA_FORCE_ENGINE || "codex",
+  autoContinueAfterOverload: env.PANDA_FORCE_AUTO_CONTINUE === "true",
   host,
   port: Number(env.PORT || 8899),
   localhostOnly: host === "127.0.0.1" || host === "::1" || host === "localhost",
@@ -70,6 +82,10 @@ export const config = Object.freeze({
   browseRoots,
   attachmentRoot,
   stateRoot,
+  documentContentRoot: resolve(env.PANDA_FORCE_DOCUMENT_ROOT || join(stateRoot, "data", "document-content")),
+  documentAssetRoot: resolve(env.PANDA_FORCE_DOCUMENT_ASSET_ROOT || join(stateRoot, "data", "document-assets-files")),
+  buildExecutorUrl: env.PANDA_FORCE_BUILD_EXECUTOR_URL,
+  buildExecutorTokenFile: env.PANDA_FORCE_BUILD_EXECUTOR_TOKEN_FILE,
   projectWorkspaceRoot,
   projectWorkspaceRootConfigured: Boolean(env.PANDA_FORCE_PROJECTS_ROOT),
   allowExternalDirectories,
@@ -96,15 +112,18 @@ export const config = Object.freeze({
     : [projectWorkspaceRoot],
 });
 
+inspectCompiledCdn(config.publicDir, {
+  required: env.PANDA_FORCE_REQUIRE_CDN === "true",
+  baseUrl: env.PANDA_FORCE_CDN_BASE_URL,
+});
+
 /** Startup guardrails that need to know how authentication was resolved. */
-export function assertStartupAuth({ idaasEnabled }: { idaasEnabled: boolean }) {
+export function assertStartupAuth() {
   if (config.passwordInitialization && !config.localhostOnly) {
     throw new Error(
       "Password initialization must listen on localhost. Use HOST=127.0.0.1 bun run src/server/main.ts --setup-password",
     );
   }
-  if (config.passwordInitialization && idaasEnabled)
-    throw new Error("Password initialization is disabled in IDAAS mode");
   if (config.authMode === "none" && !config.localhostOnly) throw new Error("Unauthenticated mode requires localhost");
   // An unconfigured instance starts in the protected administrator installer.
   // Remote setup additionally requires the one-time code printed at startup.

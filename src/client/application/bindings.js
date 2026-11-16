@@ -138,6 +138,8 @@ export function assembleBindings({
           return;
         }
         if ($("#settingsDialog").open) {
+          // A child modal owns Escape; let its native cancel event close only that dialog.
+          if (e.target instanceof Element && closestElement("dialog[open]", e.target) !== $("#settingsDialog")) return;
           e.preventDefault();
           settingsPort.closeSettings();
           return;

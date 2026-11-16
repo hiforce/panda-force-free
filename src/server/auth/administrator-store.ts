@@ -1,9 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { linkSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname } from "node:path";
 import { isRecord } from "../../shared/records.js";
-import { existingApplicationPath, pandaEnvironment } from "../environment.js";
+import { localAuthPaths } from "./paths.js";
 import { errorCode } from "./../../shared/errors.js";
 import type { StoredPassword } from "./password-store.js";
 import { createStoredPassword, isStoredPassword } from "./security.js";
@@ -12,6 +11,7 @@ export type StoredAdministrator = {
   version: 1;
   username: string;
   role: "admin";
+  ownerId?: string;
   createdAt: number;
   password: StoredPassword;
 };
@@ -25,17 +25,15 @@ export function validAdministratorUsername(value: unknown): value is string {
 }
 
 export function administratorStorePath(env: NodeJS.ProcessEnv = process.env) {
-  env = pandaEnvironment(env);
-  if (env.PANDA_FORCE_ADMIN_STORE) return resolve(env.PANDA_FORCE_ADMIN_STORE);
-  if (env.PANDA_FORCE_AUTH_STORE) return `${resolve(env.PANDA_FORCE_AUTH_STORE)}.administrator.json`;
-  return existingApplicationPath(join(env.CODEX_HOME || join(homedir(), ".codex"), "panda-force-admin.json"));
+  return localAuthPaths(env).administrator;
 }
 
-function validRecord(value: unknown): value is StoredAdministrator {
+export function isStoredAdministrator(value: unknown): value is StoredAdministrator {
   return (
     isRecord(value) &&
     value.version === 1 &&
     value.role === "admin" &&
+    (value.ownerId === undefined || (typeof value.ownerId === "string" && /^[a-f0-9]{64}$/.test(value.ownerId))) &&
     validAdministratorUsername(value.username) &&
     value.username === normalizeAdministratorUsername(value.username) &&
     Number.isSafeInteger(value.createdAt) &&
@@ -53,7 +51,7 @@ export function createStoredAdministrator(username: string, password: string | S
     createdAt: Date.now(),
     password: typeof password === "string" ? (createStoredPassword(password) as StoredPassword) : password,
   };
-  if (!validRecord(administrator)) throw new Error("Invalid administrator account");
+  if (!isStoredAdministrator(administrator)) throw new Error("Invalid administrator account");
   return administrator;
 }
 
@@ -66,12 +64,12 @@ export function loadStoredAdministrator(path: string): StoredAdministrator | nul
     throw error;
   }
   const record = JSON.parse(raw);
-  if (!validRecord(record)) throw new Error(`Invalid PandaForce administrator store: ${path}`);
+  if (!isStoredAdministrator(record)) throw new Error(`Invalid PandaForce administrator store: ${path}`);
   return record;
 }
 
 export function saveStoredAdministrator(path: string, record: StoredAdministrator) {
-  if (!validRecord(record)) throw new Error("Invalid administrator account");
+  if (!isStoredAdministrator(record)) throw new Error("Invalid administrator account");
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = `${path}.${randomBytes(12).toString("hex")}.tmp`;
   writeFileSync(temporary, `${JSON.stringify(record, null, 2)}\n`, { flag: "wx", mode: 0o600 });

@@ -21,7 +21,7 @@ export async function localAuthFixture(options = {}) {
     configDir = join(stateRoot, "config");
   mkdirSync(bin);
   mkdirSync(configDir, { recursive: true, mode: 0o700 });
-  const legacyPath = join(configDir, "legacy.json"),
+  const legacyPath = join(configDir, options.defaultPaths ? "password.json" : "legacy.json"),
     adminPath = join(configDir, "administrator.json");
   if (options.legacyPassword) saveStoredPassword(legacyPath, createStoredPassword(options.legacyPassword));
   writeFileSync(
@@ -40,7 +40,7 @@ export async function localAuthFixture(options = {}) {
   Object.assign(env, {
     PATH: bin + ":" + env.PATH,
     HOME: dir,
-    CODEX_HOME: dir,
+    CODEX_HOME: join(dir, "model"),
     PANDA_FORCE_HOME: stateRoot,
     HOST: options.host || "127.0.0.1",
     PORT: String(port),
@@ -53,8 +53,9 @@ export async function localAuthFixture(options = {}) {
     PANDA_FORCE_AUTH_MODE: options.authMode || "",
     PANDA_FORCE_PASSWORD: options.environmentPassword || "",
     PANDA_FORCE_ACCESS_TOKEN: options.accessToken || "",
-    PANDA_FORCE_AUTH_STORE: legacyPath,
-    PANDA_FORCE_ADMIN_STORE: adminPath,
+    PANDA_FORCE_AUTH_STORE: options.defaultPaths ? "" : legacyPath,
+    PANDA_FORCE_ADMIN_STORE: options.defaultPaths ? "" : adminPath,
+    PANDA_FORCE_SESSION_STORE: "",
   });
   let child,
     logs = "",
@@ -108,7 +109,7 @@ export async function localAuthFixture(options = {}) {
     async post(path, data, headers = {}) {
       return fetch(fixture.base + path, {
         method: "POST",
-        headers: { "content-type": "application/json", ...headers },
+        headers: { "content-type": "application/json", origin: fixture.base, ...headers },
         body: JSON.stringify(data),
       });
     },

@@ -1,0 +1,222 @@
+/* Database administration owns its internal layout; settings owns the outer gutter. */
+.database-settings {
+  display: grid;
+  gap: var(--pf-space-4);
+  min-width: 0;
+  color: var(--pf-ink);
+  font-size: var(--pf-text-body);
+  line-height: 1.7;
+}
+.database-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--pf-space-4);
+}
+.database-settings :is(h2, h3, p),
+.database-setup :is(h2, h3, p) {
+  margin: 0;
+}
+.database-settings h2 {
+  font-size: var(--pf-text-title);
+  line-height: 1.5;
+}
+.database-settings h3,
+.database-setup h3 {
+  font-size: var(--pf-text-body);
+  line-height: 1.6;
+  font-weight: 600;
+}
+.database-heading p,
+.database-hint,
+.database-target-detail,
+.database-module-list span {
+  color: var(--pf-muted);
+}
+.database-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pf-space-3);
+  margin: 0;
+}
+.database-summary div {
+  min-width: 0;
+}
+.database-summary dt {
+  color: var(--pf-muted);
+}
+.database-summary dd {
+  margin: var(--pf-space-1) 0 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.database-target-detail {
+  display: block;
+  font-weight: 400;
+  font-size: var(--pf-text-meta);
+}
+.database-notice:empty {
+  display: none;
+}
+.database-notice,
+.database-preserved,
+.database-readiness {
+  padding: var(--pf-space-3);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-soft);
+}
+.database-settings :is(fieldset, .database-form, .database-plan, .database-operation) {
+  display: grid;
+  gap: var(--pf-space-4);
+  min-width: 0;
+}
+.database-settings fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.database-settings [data-database-configuration] {
+  display: grid;
+  gap: var(--pf-space-5);
+}
+.database-settings :is(.database-form, .database-plan, .database-operation) {
+  border-block-start: 1px solid var(--pf-line);
+  padding-block-start: var(--pf-space-4);
+}
+.database-settings details > summary {
+  cursor: pointer;
+  min-height: var(--pf-control-height);
+  align-content: center;
+}
+.database-settings details > .wb-form-grid {
+  margin-block: var(--pf-space-3);
+}
+.database-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pf-space-2);
+  align-items: center;
+}
+.database-module-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--pf-space-2);
+}
+.database-module-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--pf-space-3);
+  padding-block: var(--pf-space-2);
+  border-bottom: 1px solid var(--pf-line);
+}
+.database-module-list li > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.database-issues {
+  margin-block: var(--pf-space-2);
+  padding-inline-start: var(--pf-space-5);
+}
+.database-diagnostics code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.database-setup {
+  padding: var(--pf-space-5);
+}
+.database-setup[open] {
+  display: grid;
+  gap: var(--pf-space-4);
+}
+.database-default-choice {
+  padding: var(--pf-space-4);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-soft);
+}
+.database-default-choice > strong {
+  color: var(--pf-accent);
+}
+.database-setup .database-actions button {
+  flex: 1 1 auto;
+}
+.database-settings [hidden] {
+  display: none;
+}
+@media (max-width: 767px) {
+  .database-settings {
+    --pf-control-height: var(--pf-touch-target);
+  }
+  .database-heading {
+    display: grid;
+  }
+  .database-heading > button {
+    justify-self: start;
+  }
+  .database-summary,
+  .database-settings .wb-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .database-module-list li {
+    display: grid;
+    gap: var(--pf-space-1);
+  }
+  .database-actions > .wb-button {
+    flex: 1 1 100%;
+    min-height: var(--pf-touch-target);
+  }
+  .database-settings details > summary {
+    min-height: var(--pf-touch-target);
+  }
+  .database-setup {
+    padding: var(--pf-space-4);
+  }
+}
+
+.database-storage-notes {
+  margin: 0;
+  font-size: var(--pf-text-body);
+  line-height: 1.7;
+}
+.database-storage-notes dt {
+  margin-block-start: var(--pf-space-4);
+  font-weight: 600;
+}
+.database-storage-notes dd {
+  margin: var(--pf-space-1) 0 0;
+  padding-block-end: var(--pf-space-3);
+  border-bottom: 1px solid var(--pf-line);
+  color: var(--pf-muted);
+  overflow-wrap: anywhere;
+}
+/* The standalone restart shell has no application navigation or settings wrapper. */
+.database-maintenance-shell {
+  box-sizing: border-box;
+  width: min(var(--workspace-settings-width, 100%), 100%);
+  height: 100dvh;
+  overflow: auto;
+  padding-block: var(--pf-page-padding, var(--pf-space-5));
+  padding-inline: var(--pf-page-padding-inline, var(--pf-space-5));
+  color: var(--pf-ink);
+  background: var(--pf-canvas);
+}
+.database-maintenance-shell h1 {
+  margin: 0 0 var(--pf-space-2);
+  font-size: var(--pf-text-heading);
+  line-height: 1.4;
+}
+.database-maintenance-shell header > p {
+  color: var(--pf-muted);
+}
+.database-maintenance-shell [data-database-done] {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .database-maintenance-shell h1 {
+    font-size: 23px;
+  }
+}

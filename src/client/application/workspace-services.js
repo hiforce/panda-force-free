@@ -122,8 +122,9 @@ export function assembleSidebar({
     applyProjectVisibility,
   };
 }
-/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations" | "t" | "i18n" | "workspacePreparation", "navigation" | "workspace" | "settings" | "projects" | "sidebar" | "status" | "approvals" | "sidebarLayout" | "panels", "workbench">} options */
+/** @param {import("./ports.js").FeatureOptions<"identity" | "viewUpdates" | "state" | "mutations" | "t" | "i18n" | "workspacePreparation", "navigation" | "workspace" | "settings" | "projects" | "sidebar" | "status" | "approvals" | "sidebarLayout" | "panels", "workbench">} options */
 export function assembleWorkbench({
+  identity,
   viewUpdates,
   t,
   i18n,
@@ -142,6 +143,7 @@ export function assembleWorkbench({
 }) {
   let workbench;
   workbench = createWorkbench({
+    identityKey: identity,
     onViewChange: () => viewUpdates.request("sessionWorkspace"),
     t,
     i18n,
@@ -156,6 +158,7 @@ export function assembleWorkbench({
       workspacePort.selectWorkbenchProject(...args),
     setProjectless: /** @param {Parameters<typeof workspacePort.setProjectless>} args */ (...args) =>
       workspacePort.setProjectless(...args),
+    hideSettings: () => settingsPort.hideSettings(),
     showSettings: /** @param {Parameters<typeof settingsPort.openSettings>} args */ (...args) =>
       settingsPort.openSettings(...args),
     catalog: projectsPort.businessProjects,

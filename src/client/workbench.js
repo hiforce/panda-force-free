@@ -1,3 +1,11 @@
+import { captureRenderFocus, restoreRenderFocus } from "./render-focus.js";
+import { systemGadgetCapabilities, gadgetApplicationNavigation } from "../gadget/system/bindings.js";
+import { systemGadgetRegistry } from "../gadget/system/client.js";
+import { systemComposerMount } from "../gadget/system/composer/host.js";
+import { GadgetWorkspace } from "./gadget/workspace.js";
+import { createLazySettingsPage } from "./settings-pages/lazy.js";
+import { createLazyTemplateManager } from "./templates/lazy-settings.js";
+import { createLazyContentWorkspace } from "./creative/lazy-workspace.js";
 import { escapeHtml as escape } from "../shared/html.js";
 import { closestElement, findElement, findElements, requireElement } from "./dom.js";
 import {
@@ -9,13 +17,22 @@ import {
   setOpaqueText,
 } from "./i18n.js";
 import { createWorkbenchSearch } from "./workbench-search.js";
+import { createDocumentWorkspace } from "./documents/controller.js";
+import { createProjectDocumentWorkspace } from "./documents/authoring/controller.js";
+import { createDocumentPublicationWorkspace } from "./documents/publication/controller.js";
+import { createPackageManager } from "./plugins/controller.js";
+import { createPublishingWorkspace } from "./publishing/controller.js";
+import { createEditorialWorkspace } from "./editorial/controller.js";
+import { createSiteBuildWorkspace } from "./builds/controller.js";
+import { createDeliveryWorkspace } from "./delivery/controller.js";
+import { createSocialWorkspace } from "./social/controller.js";
 import { createWorkbenchViews } from "./workbench-views.js";
 
 import { codexIcon } from "./codex-icons.js";
 import { createProjectDialogs } from "./project-dialogs.js";
 import { storage } from "./storage.js";
 import { createWorkbenchFrame } from "./workbench-chrome/frame.js";
-import { parseWorkbenchRoute } from "./workbench-route.js";
+import { parseWorkbenchRoute, workbenchLinkPath } from "./workbench-route.js";
 export { parseWorkbenchRoute } from "./workbench-route.js";
 
 const INTRO_KEY = "panda-force-introduction-dismissed";
@@ -25,12 +42,14 @@ export function createWorkbench({
   t,
   i18n,
   preparation,
+  identityKey,
   openThread,
   newTask,
   chooseFolder,
   chooseProject,
   setProjectless,
   showSettings,
+  hideSettings = () => {},
   catalog,
   setProjectHidden,
   toggleProjectPinned,
@@ -49,14 +68,80 @@ export function createWorkbench({
   const view = document.createElement("section");
   view.id = "workbenchView";
   view.className = "workbench-view";
+  view.tabIndex = 0;
   setMessageHtml(
     view,
-    '<div id="workbenchHero"></div><div id="workbenchComposerSlot"></div><div id="workbenchContent"></div>',
+    '<div id="workbenchHero"></div><div id="workbenchComposerSlot" hidden></div><div id="workbenchContent"></div>',
   );
   shell.prepend(view);
-  const content = findElement("#workbenchContent", view),
+  const content = requireElement("#workbenchContent", view),
     hero = findElement("#workbenchHero", view),
     slot = requireElement("#workbenchComposerSlot", view);
+  const delivery = createDeliveryWorkspace(t);
+  const building = createSiteBuildWorkspace(t, delivery);
+  const publishing = createPublishingWorkspace(t, createSocialWorkspace(t));
+  const editorial = createEditorialWorkspace(t);
+  const documentSources = createDocumentWorkspace({
+    t,
+    identityKey,
+    publishing,
+    building,
+    delivery,
+    packages: createPackageManager(t),
+  });
+  const documents = createProjectDocumentWorkspace({
+    t,
+    identityKey,
+    sources: documentSources,
+    publishing: createDocumentPublicationWorkspace(t, {
+      building,
+      channels: publishing,
+      editorial,
+      identityKey,
+      destinations: {
+        open: (space, scope) =>
+          delivery.open(space, undefined, scope?.storage === "files" ? scope.projectId : undefined),
+        close: delivery.close,
+      },
+    }),
+  });
+  const creative = createLazyContentWorkspace(
+    "create",
+    t,
+    identityKey,
+    () => catalog.projects(),
+    (path) => navigate(path),
+    undefined,
+    (host, project, closed) => composerMount(host, project, closed),
+  );
+  const projectDocuments = createLazyContentWorkspace("directory", t, identityKey, () => catalog.projects(), navigate);
+  const projectContent = createLazyContentWorkspace(
+    "project",
+    t,
+    identityKey,
+    () => catalog.projects(),
+    (path) => navigate(path),
+    undefined,
+    (host, project, closed) => composerMount(host, project, closed),
+  );
+  const templateManager = createLazyTemplateManager(t, identityKey);
+  const skills = createLazyContentWorkspace(
+    "skills",
+    t,
+    identityKey,
+    () => catalog.projects(),
+    (path) => navigate(path),
+    templateManager,
+  );
+  const publish = createLazyContentWorkspace(
+    "publish",
+    t,
+    identityKey,
+    () => catalog.projects(),
+    (path) => navigate(path),
+    templateManager,
+  );
+  const bots = createLazySettingsPage(t, "botWorkspace");
   const navigation = document.createElement("nav");
   navigation.className = "workbench-navigation";
   localizeAttribute(navigation, "aria-label", "workbench.workspaceNavigation", undefined, t);
@@ -86,7 +171,6 @@ export function createWorkbench({
     unavailableId = "",
     signature = "",
     query = "",
-    projectQuery = "",
     filter = "all",
     scheduled = false,
     knownPreparation = null,
@@ -129,24 +213,35 @@ export function createWorkbench({
         }`,
       );
       findElement("select", projectContext)?.addEventListener("change", (event) =>
-        newTask({ projectId: requireElement("select", projectContext).value || null }),
+        newTask({
+          projectId: requireElement("select", projectContext).value || null,
+        }),
       );
     }
-    projectContext.hidden = !["workspace", "new", "task", "settings"].includes(route.page);
+    projectContext.hidden = !["new", "task", "settings"].includes(route.page);
   }
   const labels = {
     workspace: "common.workspace",
+    bots: "cli.botWorkspace",
     tasks: "common.sessions",
     projects: "common.projects",
     project: "common.projectDetails",
     deliverables: "common.deliverables",
     connections: "common.connections",
+    documents: "documents.title",
+    create: "creative.create",
+    skills: "creative.skills",
+    publish: "creative.publish",
     new: "common.newSession",
     task: "common.session",
     settings: "common.settings",
   };
   const iconNames = {
+    create: "pencil",
+    skills: "layout",
+    publish: "send",
     workspace: "monitor",
+    bots: "bot",
     tasks: "list",
     projects: "folderOpen",
     deliverables: "file",
@@ -159,11 +254,9 @@ export function createWorkbench({
     visibleThreads,
     status,
     heading,
-    renderHome,
     renderTasks,
     renderTaskResults,
     renderProjects,
-    renderProjectResults,
     renderProject,
     searchProjectSessions,
     filterProjectDirectory,
@@ -179,6 +272,7 @@ export function createWorkbench({
     content,
     hero,
     INTRO_KEY,
+    identityKey,
     viewState: {
       get route() {
         return route;
@@ -189,32 +283,92 @@ export function createWorkbench({
       get filter() {
         return filter;
       },
-      get projectQuery() {
-        return projectQuery;
-      },
     },
   });
+  const gadgetRegistry = systemGadgetRegistry();
+  const gadgetCapabilities = systemGadgetCapabilities({
+    identity: identityKey,
+    navigate,
+    creationProject: () => state.newSessionProjectId || "personal",
+    taskDraft: (project) =>
+      state.active || (state.newSessionProjectId || "personal") !== project ? "" : requireElement("#prompt").value,
+    startTask: (prompt, project) => {
+      const selected = project === "personal" ? null : project;
+      newTask({ projectId: selected, keepRoute: true });
+      const input = requireElement("#prompt");
+      input.value = prompt;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      navigate("/new" + (selected ? "?project=" + encodeURIComponent(selected) : ""));
+      requireElement("#composer").requestSubmit();
+    },
+    ready: () => catalog.ready,
+    sessions: visibleThreads,
+    projects: allProjects,
+    projectForSession: (id) => catalog.projectForSession(id),
+    status,
+  });
+  const composerMount = systemComposerMount(gadgetRegistry, gadgetCapabilities, t, () => i18n.locale);
+  const gadgetHome = new GadgetWorkspace(
+    t,
+    () => i18n.locale,
+    gadgetRegistry,
+    gadgetCapabilities,
+    gadgetApplicationNavigation(navigate),
+  );
+
   function render() {
-    const focused = view.contains(document.activeElement) ? document.activeElement : null,
-      focusedId = focused?.id,
-      caret =
-        focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement ? focused.selectionStart : null;
+    const focus = captureRenderFocus(view);
     const conversation =
       !(unavailableId && unavailableId === route.id) &&
       (route.page === "new" || route.page === "task" || route.page === "settings");
+    hideInactiveWorkspaces();
     document.body.dataset.workbenchPage = route.page;
     document.title = `PandaForce · ${t(labels[route.page] || "common.workspace")}`;
+    syncConversationSurfaces(conversation);
+    renderPage(conversation);
+    renderNavigation();
+    if (!conversation)
+      localizeText(requireElement("#threadTitle"), labels[route.page] || "common.workspace", undefined, t);
+    if (!conversation) setOpaqueText(requireElement("#threadPath"), "");
+    renderProjectContext();
+    renderPreparation();
+    onViewChange();
+    restoreRenderFocus(view, focus);
+  }
+  function hideInactiveWorkspaces() {
+    if (route.page !== "workspace") gadgetHome.hide();
+    if (route.page !== "documents") documents.hide();
+    if (route.page !== "create") creative.hide();
+    if (
+      route.page !== "project" ||
+      ["sessions", "documents"].includes(new URL(location.href).searchParams.get("tab") || "")
+    )
+      projectContent.hide();
+    if (route.page !== "project" || new URL(location.href).searchParams.get("tab") !== "documents")
+      projectDocuments.hide();
+    if (route.page !== "skills") skills.hide();
+    if (route.page !== "publish") publish.hide();
+    if (route.page !== "bots") bots.hide();
+  }
+  function syncConversationSurfaces(conversation) {
     view.hidden = conversation;
     viewport.hidden = !conversation;
-    dock.hidden = !conversation && route.page !== "workspace";
-    picker.hidden = Boolean(state.active) || (!conversation && route.page !== "workspace");
-    if (route.page === "workspace") {
-      for (const element of [projectContext, picker, dock]) if (element.parentNode !== slot) slot.append(element);
-      renderHome();
-    } else {
+    dock.hidden = !conversation;
+    picker.hidden = Boolean(state.active) || !conversation;
+    if (conversation) {
       if (picker.parentNode !== shell) shell.insertBefore(picker, viewport);
       if (projectContext.parentNode !== shell) shell.insertBefore(projectContext, picker);
       if (dock.parentNode !== shell) shell.append(dock);
+    } else {
+      // Native projections may update their own visibility while this entry uses the registered composer.
+      for (const item of [projectContext, picker, dock]) if (item.parentNode !== slot) slot.append(item);
+    }
+  }
+  function renderPage(conversation) {
+    if (route.page === "workspace") {
+      setMessageHtml(hero, "");
+      gadgetHome.show(content);
+    } else {
       setMessageHtml(hero, "");
       if (!conversation) {
         if (route.page === "task") {
@@ -228,65 +382,76 @@ export function createWorkbench({
           );
         } else if (route.page === "tasks") renderTasks();
         else if (route.page === "projects") renderProjects();
-        else if (route.page === "project") renderProject();
+        else if (route.page === "project") {
+          if (new URL(location.href).searchParams.get("tab") === "sessions") {
+            renderProject();
+          } else if (new URL(location.href).searchParams.get("tab") === "documents")
+            projectDocuments.show(content, route.id);
+          else projectContent.show(content, route.id);
+        } else if (route.page === "documents")
+          documents.show(
+            content,
+            route.projectId,
+            route.documentId,
+            new URL(location.href).searchParams.get("knowledge") || "",
+          );
+        else if (route.page === "create") creative.show(content);
+        else if (route.page === "skills")
+          skills.show(content, route.id || "all", new URL(location.href).searchParams.get("engine") || "");
+        else if (route.page === "publish") publish.show(content, route.id, route.projectId);
+        else if (route.page === "bots") bots.show(content);
         else if (route.page === "connections") renderConnections();
         else renderDeliverables();
       }
     }
+  }
+  function renderNavigation() {
     const nav = [
       ["workspace", "common.workspace"],
+      ["bots", "cli.botWorkspace"],
       ["tasks", "common.sessions"],
+      ["create", "creative.create"],
       ["projects", "common.projects"],
-      ["deliverables", "common.deliverables"],
-      ["connections", "common.connections"],
-      ["settings", "common.settings"],
-    ];
+      ["skills", "creative.skills"],
+      ["publish", "creative.publish"],
+    ].filter(
+      ([page]) => globalThis.__pandaForceIdentity?.role !== "member" || ["create", "projects", "skills"].includes(page),
+    );
+    const activePage =
+      ["project", "documents"].includes(route.page) || (route.page === "publish" && route.projectId)
+        ? "projects"
+        : route.page === "task"
+          ? "tasks"
+          : route.page;
     setMessageHtml(
       navigation,
       nav
         .map(
           ([key, label]) =>
-            `<button type="button" data-wb="route" data-route="${key}" class="${route.page === key || (key === "projects" && route.page === "project") || (key === "tasks" && route.page === "task") ? "active" : ""}" ${route.page === key ? 'aria-current="page"' : ""}><span class="icon-slot">${codexIcon(iconNames[key])}</span><span>${messageHtml(label, undefined, t)}</span></button>`,
+            `<button type="button" data-wb="route" data-route="${key}" class="${activePage === key ? "active" : ""}" ${activePage === key ? 'aria-current="page"' : ""}><span class="icon-slot">${codexIcon(iconNames[key])}</span><span>${messageHtml(label, undefined, t)}</span></button>`,
         )
         .join(""),
     );
     setMessageHtml(
       bottom,
       nav
-        .filter(([key]) => ["workspace", "tasks", "projects", "settings"].includes(key))
+        .filter(([key]) => ["create", "tasks", "projects", "skills", "publish"].includes(key))
+        .sort(
+          ([a], [b]) =>
+            ["create", "tasks", "projects", "skills", "publish"].indexOf(a) -
+            ["create", "tasks", "projects", "skills", "publish"].indexOf(b),
+        )
         .map(
           ([key, label]) =>
-            `<button type="button" data-wb="route" data-route="${key}" class="${route.page === key || (key === "projects" && route.page === "project") || (key === "tasks" && route.page === "task") ? "active" : ""}"><span class="icon-slot" aria-hidden="true">${codexIcon(iconNames[key])}</span>${messageHtml(label, undefined, t)}</button>`,
+            `<button type="button" data-wb="route" data-route="${key}" class="${activePage === key ? "active" : ""}"><span class="icon-slot" aria-hidden="true">${codexIcon(iconNames[key])}</span>${messageHtml(label, undefined, t)}</button>`,
         )
         .join(""),
     );
+    connection.hidden = globalThis.__pandaForceIdentity?.role === "member";
     setMessageHtml(
       connection,
       `<span class="status-dot ${state.connected ? "connected" : "error"}"></span><span>${messageHtml(state.connected ? "common.codexConnected" : "auth.connectionUnavailable", undefined, t)}</span>`,
     );
-    localizeText(
-      requireElement("#workbenchGlobalTitle"),
-      labels[route.page === "task" ? "tasks" : route.page] || "common.workspace",
-      undefined,
-      t,
-    );
-    if (!conversation)
-      localizeText(requireElement("#threadTitle"), labels[route.page] || "common.workspace", undefined, t);
-    if (!conversation) setOpaqueText(requireElement("#threadPath"), "");
-    renderProjectContext();
-    renderPreparation();
-    onViewChange();
-    const nextFocus = focusedId && document.getElementById(focusedId);
-    if (nextFocus && nextFocus !== focused) {
-      nextFocus.focus({ preventScroll: true });
-      if (
-        typeof caret === "number" &&
-        (nextFocus instanceof HTMLInputElement || nextFocus instanceof HTMLTextAreaElement)
-      )
-        try {
-          nextFocus.setSelectionRange(caret, caret);
-        } catch {}
-    }
   }
   function renderPreparation() {
     const snapshot = knownPreparation;
@@ -299,17 +464,21 @@ export function createWorkbench({
     );
   }
   function updateUrl(path, replace = false) {
-    if (location.pathname + location.search !== path)
+    if (location.pathname + location.search + location.hash !== path)
       history[replace ? "replaceState" : "pushState"]({ pandaForce: true }, "", path);
   }
   function navigate(path, { replace = false } = {}) {
+    path = { "/settings/templates": "/skills/writing", "/settings/publishing-styles": "/publish" }[path] || path;
     const url = new URL(path.startsWith("/") ? path : "/" + path, location.origin);
     if (url.origin !== location.origin) return;
     const next = parseWorkbenchRoute(url);
     routing = true;
     unavailableId = "";
     if (next.page === "workspace" && state.active) newTask();
-    if (next.page !== "settings") updateUrl(url.pathname + url.search, replace);
+    if (next.page !== "settings") {
+      hideSettings();
+      updateUrl(url.pathname + url.search + url.hash, replace);
+    }
     route = next;
     signature = "";
     closeSidebar();
@@ -346,13 +515,13 @@ export function createWorkbench({
   }
   function threadOpened(id) {
     if (routing && route.page !== "task") return;
-    route = { page: "task", id, cwd: "", projectId: "" };
+    route = { page: "task", id, cwd: "", projectId: "", documentId: "" };
     updateUrl("/task/" + encodeURIComponent(id));
     render();
   }
   function taskStarted() {
     if (routing) return;
-    route = { page: "new", id: "", cwd: "", projectId: "" };
+    route = { page: "new", id: "", cwd: "", projectId: "", documentId: "" };
     updateUrl("/new" + (state.newSessionProjectId ? "?project=" + encodeURIComponent(state.newSessionProjectId) : ""));
     render();
   }
@@ -385,8 +554,9 @@ export function createWorkbench({
       }
     });
   }
-  function modal(title, body) {
+  function modal(title, body, kind = "default") {
     returnFocus = document.activeElement;
+    dialog.classList.toggle("workbench-search-dialog", kind === "search");
     setMessageHtml(
       dialog,
       `<header><h2>${messageHtml(title, undefined, t)}</h2>${button("common.close", "close")}</header>${body}`,
@@ -480,7 +650,17 @@ export function createWorkbench({
     },
   };
   async function action(event) {
+    if (event.defaultPrevented) return;
     const el = event.target instanceof Element ? closestElement("[data-wb]", event.target) : null;
+    const anchor = event.target instanceof Element ? closestElement("a[href]", event.target) : null;
+    if (anchor instanceof HTMLAnchorElement && (!el || el.dataset.wb === "route")) {
+      const path = workbenchLinkPath(anchor, event);
+      if (!path) return;
+      event.preventDefault();
+      if (dialog.open) dialog.close();
+      navigate(path);
+      return;
+    }
     if (!el) return;
     const what = el.dataset.wb;
     if (dialog.open && what !== "close") dialog.close();
@@ -497,10 +677,6 @@ export function createWorkbench({
     if (event.target instanceof HTMLInputElement && event.target.id === "wbTaskSearch") {
       query = event.target.value;
       renderTaskResults();
-    }
-    if (event.target instanceof HTMLInputElement && event.target.id === "wbProjectSearch") {
-      projectQuery = event.target.value;
-      renderProjectResults();
     }
   });
   document.addEventListener("change", (event) => {
@@ -553,6 +729,7 @@ export function createWorkbench({
     // Bindings update owned copy in place, preserving search focus and selection.
     document.title = `PandaForce · ${t(labels[route.page] || "common.workspace")}`;
     i18n.bindings.refresh();
+    gadgetHome.refresh();
   });
   preparation.subscribe((snapshot) => {
     knownPreparation = snapshot;
@@ -574,7 +751,7 @@ export function createWorkbench({
     }
     return false;
   }
-  if (location.pathname !== "/" && ["workspace", "new"].includes(route.page)) {
+  if (location.pathname !== "/" && route.page === "new") {
     routing = true;
     newTask();
     routing = false;

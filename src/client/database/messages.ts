@@ -1,0 +1,68 @@
+import type { MessageId, Translate } from "../../shared/i18n/messages.js";
+export const databaseModuleMessages: Record<string, MessageId> = {
+  identity: "database.moduleIdentity",
+  projects: "database.moduleProjects",
+  "content-access": "database.moduleContentAccess",
+  documents: "database.moduleDocuments",
+  editorial: "database.moduleEditorial",
+  skills: "database.moduleSkills",
+  "skill-workspace": "database.moduleSkillWorkspace",
+  plugins: "database.modulePlugins",
+  templates: "database.moduleTemplates",
+  "package-sources": "database.modulePackageSources",
+  builds: "database.moduleBuilds",
+  creation: "database.moduleCreation",
+  publishing: "database.modulePublishing",
+  connections: "database.moduleConnections",
+  delivery: "database.moduleDelivery",
+  knowledge: "database.moduleKnowledge",
+  search: "database.moduleSearch",
+  "cli-auth": "database.moduleCliAuth",
+  settings: "database.moduleSettings",
+  bots: "database.moduleBots",
+};
+export const moduleLabel = (t: Translate, module: string) =>
+  t(databaseModuleMessages[module] ?? "database.moduleOther");
+const databaseErrorMessages: Record<string, MessageId> = {
+  administratorRequired: "database.administratorRequired",
+  invalidDatabaseConfiguration: "database.invalidDatabaseConfiguration",
+  databaseUnavailable: "database.databaseUnavailable",
+  unsupportedDatabaseServer: "database.unsupportedDatabaseServer",
+  unsupportedMigrationSource: "database.unsupportedMigrationSource",
+  certificateUnavailable: "database.certificateUnavailable",
+  connectionFailed: "database.connectionFailed",
+  incompleteDatabaseBackend: "database.incompleteDatabaseBackend",
+  databaseSchemaDrift: "database.databaseSchemaDrift",
+  migrationAlreadyRunning: "database.migrationAlreadyRunning",
+  migrationPlanExpired: "database.migrationPlanExpired",
+  migrationTargetAlreadyOwned: "database.migrationTargetAlreadyOwned",
+  migrationSourceChanged: "database.migrationSourceChanged",
+  migrationVerificationFailed: "database.migrationVerificationFailed",
+  migrationRecordTooLarge: "database.migrationRecordTooLarge",
+  migrationPacketLimitTooSmall: "database.migrationPacketLimitTooSmall",
+  restartUnavailable: "database.restartUnavailable",
+  operationNotFound: "database.operationNotFound",
+  operationTokenInvalid: "database.operationTokenInvalid",
+  migrationAlreadyActivated: "database.migrationAlreadyActivated",
+  cancelRequiresAdministrator: "database.cancelRequiresAdministrator",
+  rollbackRequiresMigration: "database.rollbackRequiresMigration",
+  botDatabaseTargetMismatch: "database.botDatabaseTargetMismatch",
+  migrationFailed: "database.migrationFailed",
+};
+export function databaseIssueMessage(t: Translate, code: string) {
+  return t(databaseErrorMessages[code] ?? "database.issueFallback");
+}
+export const stageMessages: Record<string, MessageId> = {
+  validate: "database.stageValidate",
+  schema: "database.stageSchema",
+  backup: "database.stageBackup",
+  copy: "database.stageCopy",
+  verify: "database.stageVerify",
+  activate: "database.stageActivate",
+  restart: "database.stageRestart",
+  complete: "database.stageComplete",
+  failed: "database.stageFailed",
+  canceled: "database.stageCanceled",
+  pending: "database.stagePending",
+  preserved: "database.stagePreserved",
+};

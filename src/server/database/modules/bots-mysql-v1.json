@@ -1,0 +1,551 @@
+[
+  {
+    "table": "panda_force_bot_control",
+    "columns": ["name", "value"],
+    "indexes": [],
+    "sql": "CREATE TABLE IF NOT EXISTS panda_force_bot_control (\n  name VARCHAR(191) COLLATE utf8mb4_bin PRIMARY KEY,\n  value LONGTEXT NOT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "definition": {
+      "name": "panda_force_bot_control",
+      "columns": [
+        {
+          "name": "name",
+          "type": "varchar(191)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "value",
+          "type": "longtext",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "PRIMARY",
+          "unique": true,
+          "columns": ["name"]
+        }
+      ]
+    }
+  },
+  {
+    "table": "panda_force_bots",
+    "columns": ["id", "owner", "code", "data"],
+    "indexes": ["bots_owner_code", "bots_owner"],
+    "sql": "CREATE TABLE IF NOT EXISTS panda_force_bots (\n  id VARCHAR(64) COLLATE utf8mb4_bin PRIMARY KEY,\n  owner VARCHAR(191) COLLATE utf8mb4_bin NOT NULL,\n  code VARCHAR(64) COLLATE utf8mb4_bin NOT NULL,\n  data LONGTEXT NOT NULL,\n  UNIQUE KEY bots_owner_code(owner,code), KEY bots_owner(owner)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "definition": {
+      "name": "panda_force_bots",
+      "columns": [
+        {
+          "name": "id",
+          "type": "varchar(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "owner",
+          "type": "varchar(191)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "code",
+          "type": "varchar(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "type": "longtext",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "bots_owner",
+          "unique": false,
+          "columns": ["owner"]
+        },
+        {
+          "name": "bots_owner_code",
+          "unique": true,
+          "columns": ["owner", "code"]
+        },
+        {
+          "name": "PRIMARY",
+          "unique": true,
+          "columns": ["id"]
+        }
+      ]
+    }
+  },
+  {
+    "table": "panda_force_bot_keys",
+    "columns": ["id", "owner", "digest", "data"],
+    "indexes": ["bot_keys_owner"],
+    "sql": "CREATE TABLE IF NOT EXISTS panda_force_bot_keys (\n  id VARCHAR(64) COLLATE utf8mb4_bin PRIMARY KEY,\n  owner VARCHAR(191) COLLATE utf8mb4_bin NOT NULL,\n  digest CHAR(64) COLLATE utf8mb4_bin NOT NULL,\n  data LONGTEXT NOT NULL, KEY bot_keys_owner(owner)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "definition": {
+      "name": "panda_force_bot_keys",
+      "columns": [
+        {
+          "name": "id",
+          "type": "varchar(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "owner",
+          "type": "varchar(191)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "digest",
+          "type": "char(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "type": "longtext",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "bot_keys_owner",
+          "unique": false,
+          "columns": ["owner"]
+        },
+        {
+          "name": "PRIMARY",
+          "unique": true,
+          "columns": ["id"]
+        }
+      ]
+    }
+  },
+  {
+    "table": "panda_force_bot_tasks",
+    "columns": [
+      "seq",
+      "id",
+      "owner",
+      "botId",
+      "idem",
+      "fingerprint",
+      "status",
+      "state",
+      "lease",
+      "leaseUntil",
+      "externalTaskId",
+      "title",
+      "summary",
+      "decision",
+      "failure",
+      "createdAt",
+      "updatedAt",
+      "data"
+    ],
+    "indexes": [
+      "bot_tasks_idempotency",
+      "bot_tasks_owner_page",
+      "bot_tasks_owner_state_page",
+      "bot_tasks_owner_bot_page",
+      "bot_tasks_owner_status",
+      "bot_tasks_bot_queue",
+      "bot_tasks_queue",
+      "bot_tasks_recovery"
+    ],
+    "sql": "CREATE TABLE IF NOT EXISTS panda_force_bot_tasks (\n  seq BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,\n  id VARCHAR(64) COLLATE utf8mb4_bin PRIMARY KEY,\n  owner VARCHAR(191) COLLATE utf8mb4_bin NOT NULL,\n  botId VARCHAR(64) COLLATE utf8mb4_bin NOT NULL,\n  idem VARCHAR(256) COLLATE utf8mb4_bin NOT NULL,\n  fingerprint CHAR(64) COLLATE utf8mb4_bin NOT NULL,\n  status VARCHAR(32) NOT NULL,\n  state VARCHAR(16) NOT NULL,\n  lease VARCHAR(64), leaseUntil BIGINT,\n  externalTaskId VARCHAR(256) NOT NULL,\n  title VARCHAR(240), summary VARCHAR(512) NOT NULL,\n  decision VARCHAR(16), failure VARCHAR(32),\n  createdAt BIGINT NOT NULL, updatedAt BIGINT NOT NULL,\n  data LONGTEXT NOT NULL,\n  UNIQUE KEY bot_tasks_idempotency(owner,botId,idem),\n  KEY bot_tasks_owner_page(owner,seq),\n  KEY bot_tasks_owner_state_page(owner,state,seq),\n  KEY bot_tasks_owner_bot_page(owner,botId,seq),\n  KEY bot_tasks_owner_status(owner,status),\n  KEY bot_tasks_bot_queue(botId,status,seq),\n  KEY bot_tasks_queue(status,seq),\n  KEY bot_tasks_recovery(status,leaseUntil)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "definition": {
+      "name": "panda_force_bot_tasks",
+      "columns": [
+        {
+          "name": "seq",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "collation": null,
+          "autoIncrement": true,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "type": "varchar(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "owner",
+          "type": "varchar(191)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "botId",
+          "type": "varchar(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "idem",
+          "type": "varchar(256)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "fingerprint",
+          "type": "char(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "status",
+          "type": "varchar(32)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "state",
+          "type": "varchar(16)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "lease",
+          "type": "varchar(64)",
+          "nullable": true,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "leaseUntil",
+          "type": "bigint",
+          "nullable": true,
+          "collation": null,
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "externalTaskId",
+          "type": "varchar(256)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "title",
+          "type": "varchar(240)",
+          "nullable": true,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "summary",
+          "type": "varchar(512)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "decision",
+          "type": "varchar(16)",
+          "nullable": true,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "failure",
+          "type": "varchar(32)",
+          "nullable": true,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "createdAt",
+          "type": "bigint",
+          "nullable": false,
+          "collation": null,
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "updatedAt",
+          "type": "bigint",
+          "nullable": false,
+          "collation": null,
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "data",
+          "type": "longtext",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "bot_tasks_bot_queue",
+          "unique": false,
+          "columns": ["botId", "status", "seq"]
+        },
+        {
+          "name": "bot_tasks_idempotency",
+          "unique": true,
+          "columns": ["owner", "botId", "idem"]
+        },
+        {
+          "name": "bot_tasks_owner_bot_page",
+          "unique": false,
+          "columns": ["owner", "botId", "seq"]
+        },
+        {
+          "name": "bot_tasks_owner_page",
+          "unique": false,
+          "columns": ["owner", "seq"]
+        },
+        {
+          "name": "bot_tasks_owner_state_page",
+          "unique": false,
+          "columns": ["owner", "state", "seq"]
+        },
+        {
+          "name": "bot_tasks_owner_status",
+          "unique": false,
+          "columns": ["owner", "status"]
+        },
+        {
+          "name": "bot_tasks_queue",
+          "unique": false,
+          "columns": ["status", "seq"]
+        },
+        {
+          "name": "bot_tasks_recovery",
+          "unique": false,
+          "columns": ["status", "leaseUntil"]
+        },
+        {
+          "name": "PRIMARY",
+          "unique": true,
+          "columns": ["id"]
+        },
+        {
+          "name": "seq",
+          "unique": true,
+          "columns": ["seq"]
+        }
+      ]
+    }
+  },
+  {
+    "table": "panda_force_bot_events",
+    "columns": ["seq", "taskId", "createdAt", "kind", "detail"],
+    "indexes": ["bot_events_task_order"],
+    "sql": "CREATE TABLE IF NOT EXISTS panda_force_bot_events (\n  seq BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,\n  taskId VARCHAR(64) COLLATE utf8mb4_bin NOT NULL,\n  createdAt BIGINT NOT NULL, kind VARCHAR(64) NOT NULL, detail TEXT NOT NULL,\n  KEY bot_events_task_order(taskId,seq)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "definition": {
+      "name": "panda_force_bot_events",
+      "columns": [
+        {
+          "name": "seq",
+          "type": "bigint unsigned",
+          "nullable": false,
+          "collation": null,
+          "autoIncrement": true,
+          "defaultValue": null
+        },
+        {
+          "name": "taskId",
+          "type": "varchar(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "createdAt",
+          "type": "bigint",
+          "nullable": false,
+          "collation": null,
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "kind",
+          "type": "varchar(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "detail",
+          "type": "text",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "bot_events_task_order",
+          "unique": false,
+          "columns": ["taskId", "seq"]
+        },
+        {
+          "name": "PRIMARY",
+          "unique": true,
+          "columns": ["seq"]
+        }
+      ]
+    }
+  },
+  {
+    "table": "panda_force_bot_sessions",
+    "columns": ["id"],
+    "indexes": [],
+    "sql": "CREATE TABLE IF NOT EXISTS panda_force_bot_sessions (\n  id VARCHAR(191) COLLATE utf8mb4_bin PRIMARY KEY\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "definition": {
+      "name": "panda_force_bot_sessions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "varchar(191)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "PRIMARY",
+          "unique": true,
+          "columns": ["id"]
+        }
+      ]
+    }
+  },
+  {
+    "table": "panda_force_bot_avatars",
+    "columns": ["owner", "id", "bytes"],
+    "indexes": [],
+    "sql": "CREATE TABLE IF NOT EXISTS panda_force_bot_avatars (\n  owner VARCHAR(191) COLLATE utf8mb4_bin NOT NULL,\n  id CHAR(64) COLLATE utf8mb4_bin NOT NULL,\n  bytes MEDIUMBLOB NOT NULL, PRIMARY KEY(owner,id)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "definition": {
+      "name": "panda_force_bot_avatars",
+      "columns": [
+        {
+          "name": "owner",
+          "type": "varchar(191)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "id",
+          "type": "char(64)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "bytes",
+          "type": "mediumblob",
+          "nullable": false,
+          "collation": null,
+          "autoIncrement": false,
+          "defaultValue": null
+        }
+      ],
+      "indexes": [
+        {
+          "name": "PRIMARY",
+          "unique": true,
+          "columns": ["owner", "id"]
+        }
+      ]
+    }
+  },
+  {
+    "table": "panda_force_bot_settings",
+    "columns": ["owner", "retentionDays"],
+    "indexes": [],
+    "sql": "CREATE TABLE IF NOT EXISTS panda_force_bot_settings (\n  owner VARCHAR(191) COLLATE utf8mb4_bin PRIMARY KEY,\n  retentionDays INT NOT NULL DEFAULT 5,\n  CHECK(retentionDays BETWEEN 1 AND 365)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    "definition": {
+      "name": "panda_force_bot_settings",
+      "columns": [
+        {
+          "name": "owner",
+          "type": "varchar(191)",
+          "nullable": false,
+          "collation": "utf8mb4_bin",
+          "autoIncrement": false,
+          "defaultValue": null
+        },
+        {
+          "name": "retentionDays",
+          "type": "int",
+          "nullable": false,
+          "collation": null,
+          "autoIncrement": false,
+          "defaultValue": "5"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "PRIMARY",
+          "unique": true,
+          "columns": ["owner"]
+        }
+      ]
+    }
+  }
+]

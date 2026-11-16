@@ -1,6 +1,7 @@
-import { administratorStorePath, loadStoredAdministrator, type StoredAdministrator } from "./administrator-store.js";
-import { loadStoredPassword, passwordStorePath, type StoredPassword } from "./password-store.js";
+import { loadStoredAdministrator, type StoredAdministrator } from "./administrator-store.js";
+import { loadStoredPassword, type StoredPassword } from "./password-store.js";
 import { createStoredPassword, storedPasswordSessionSecret } from "./security.js";
+import { localAuthPaths } from "./paths.js";
 
 /**
  * Holds administrator credentials and the legacy password used during migration.
@@ -9,16 +10,19 @@ import { createStoredPassword, storedPasswordSessionSecret } from "./security.js
 export interface AuthState {
   readonly managedPasswordPath: string;
   readonly administratorPath: string;
+  readonly revocationsPath: string;
+  readonly legacyRevocationsPath: string;
   readonly administrator: StoredAdministrator | null;
   readonly managedPassword: StoredPassword | null;
   readonly secret: string | null;
   setupInProgress: boolean;
-  refreshAdministrator(): void;
+  refreshAdministrator(): void | Promise<void>;
+  saveAdministrator?(record: StoredAdministrator): Promise<void>;
   adoptAdministrator(record: StoredAdministrator): void;
   legacyCredential(): StoredPassword | null;
   browserPasswordConfigured(): boolean;
   adoptManagedPassword(record: StoredPassword): void;
-  reloadManagedPassword(): void;
+  reloadManagedPassword(): void | Promise<void>;
 }
 
 export function createAuthState({
@@ -30,8 +34,9 @@ export function createAuthState({
   accessToken: string | null;
   managedPasswordDisabled: boolean;
 }): AuthState {
-  const managedPasswordPath = passwordStorePath();
-  const administratorPath = administratorStorePath();
+  const paths = localAuthPaths();
+  const managedPasswordPath = paths.password;
+  const administratorPath = paths.administrator;
   let administrator = managedPasswordDisabled ? null : loadStoredAdministrator(administratorPath);
   let managedPassword: StoredPassword | null =
     managedPasswordDisabled || environmentPassword || accessToken ? null : loadStoredPassword(managedPasswordPath);
@@ -40,6 +45,8 @@ export function createAuthState({
   return {
     managedPasswordPath,
     administratorPath,
+    revocationsPath: paths.revocations,
+    legacyRevocationsPath: paths.legacyRevocations,
     get administrator() {
       return administrator;
     },

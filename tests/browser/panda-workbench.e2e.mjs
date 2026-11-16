@@ -25,6 +25,12 @@ try {
   });
   await fixture.signIn(context);
   const page = await context.newPage();
+  page.setDefaultTimeout(20000);
+  const report = result.checks.push.bind(result.checks);
+  result.checks.push = (...checks) => {
+    console.log(...checks);
+    return report(...checks);
+  };
   page.on("pageerror", (e) => result.errors.push(e.message));
   const originalWait = page.waitForFunction.bind(page);
   page.waitForFunction = async (...args) => {
@@ -51,7 +57,13 @@ try {
   await page.locator(".wb-task-row").first().waitFor();
   result.timings.coldWorkspaceMs = Date.now() - start;
   assert.equal(await page.title(), "PandaForce · Workspace");
-  assert.equal(await page.locator(".workbench-navigation>button").count(), 6);
+  assert.equal(await page.locator(".workbench-navigation>button").count(), 7);
+  assert.deepEqual(
+    await page
+      .locator(".workbench-navigation>button")
+      .evaluateAll((buttons) => buttons.map((button) => button.dataset.route)),
+    ["workspace", "bots", "tasks", "create", "projects", "skills", "publish"],
+  );
   assert.equal(await page.locator(".window-brand strong").isVisible(), true);
   assert.equal(await page.locator(".wb-metrics button").count(), 3);
   assert.equal(await page.locator("#workbenchComposerSlot #composer").isVisible(), true);
@@ -86,6 +98,7 @@ try {
   const betaProject = catalog.projects.find((p) => p.code === "beta-product");
   await page.locator(".workbench-navigation [data-route=projects]").click();
   await page.locator(`[data-wb=project][data-project-id="${alphaProject.id}"]`).click();
+  await page.locator('[data-route$="tab=sessions"]').click();
   await page.locator("[data-wb=project-new]").click();
   await page.locator("#prompt").fill("Alpha project draft");
   await page.locator("#sessionProjectSelect").selectOption(betaProject.id);
@@ -137,17 +150,41 @@ try {
   await page.locator("#projectDialog").waitFor({ state: "hidden" });
   await page.reload();
   await page.getByRole("heading", { name: "A manually created project", exact: true }).waitFor();
+  await page.locator('[data-route$="tab=sessions"]').click();
   await page.locator('[data-wb="project-new"]').first().click();
   assert.equal(await page.locator("#composerProjectButton").isDisabled(), true);
   assert.equal(await page.locator("#composerProjectButton").getAttribute("aria-label"), "Project folder");
   assert.equal(await page.locator("#projectPath").textContent(), "~/panda-state/projects/manual-project");
   await page.locator("#sessionProjectSelect").selectOption("");
   assert.equal(await page.locator("#composerProjectButton").isEnabled(), true);
+  let releaseFolderResponse;
+  const folderResponse = new Promise((resolve) => (releaseFolderResponse = resolve));
+  let initialFolderRequest;
+  const folderRequest = new Promise((resolve) => (initialFolderRequest = resolve));
+  await page.route("**/api/folders?*", async (route) => {
+    const response = await route.fetch();
+    initialFolderRequest();
+    await folderResponse;
+    await route.fulfill({ response });
+  });
   await page.locator("#composerProjectButton").click();
+  await folderRequest;
+  await page.locator("#folderPathInput").focus();
+  await page.locator("#folderPathInput").evaluate((input) => input.select());
+  releaseFolderResponse();
   await page.waitForFunction(() => !document.querySelector("#folderConfirm").disabled);
+  const selection = await page.locator("#folderPathInput").evaluate((input) => ({
+    start: input.selectionStart,
+    end: input.selectionEnd,
+    length: input.value.length,
+  }));
+  assert.equal(selection.start, 0, "A delayed folder response preserves the active edit selection");
+  assert.equal(selection.end, selection.length);
   const readableFolder = join(fixture.dir, "panda-workspace");
   await mkdir(readableFolder);
-  await page.locator("#folderPathInput").fill(readableFolder);
+  await page.keyboard.insertText(readableFolder);
+  assert.equal(await page.locator("#folderPathInput").inputValue(), readableFolder);
+  await page.unroute("**/api/folders?*");
   await page.locator("#folderGo").click();
   await page.waitForFunction((path) => document.querySelector("#folderSelection").textContent === path, readableFolder);
   await page.locator("#folderConfirm").click();
@@ -178,12 +215,46 @@ try {
   );
   assert.ok([400, 403].includes(traversal.status()));
   result.checks.push("Server-enforced project path and traversal boundary");
-  await page.locator(".workbench-navigation [data-route=settings]").click();
+  await page.locator("#accountButton").click();
   await page.locator("#settingsDialog").waitFor();
-  assert.equal(await page.locator("[data-settings-group]:visible").count(), 5);
-  assert.equal(await page.locator("[data-settings-page]").count(), 18);
-  await page.locator("[data-settings-group=appearance] summary").click();
-  await page.locator("[data-settings-page=appearance]").click();
+  assert.equal(await page.locator("[data-settings-group]:visible").count(), 2);
+  assert.deepEqual(
+    await page
+      .locator("[data-settings-page]")
+      .evaluateAll((nodes) => nodes.map((node) => node.dataset.settingsPage).sort()),
+    [
+      "agent",
+      "bots",
+      "client-access",
+      "general-settings",
+      "plugins-settings",
+      "profile",
+      "search-settings",
+      "storage",
+    ].sort(),
+  );
+  await page.locator("[data-settings-group]").evaluateAll((groups) => groups.forEach((group) => (group.open = true)));
+  await page.locator("[data-settings-page=bots]").click();
+  await page.locator("[data-new-bot]").waitFor();
+  assert.equal(await page.locator(".settings-page [data-filter]").count(), 0);
+  assert.equal(await page.locator("[data-create-bot]").count(), 0);
+  await page.locator("[data-new-bot]").click();
+  await page.locator("dialog.bot-dialog[open] [data-create-bot]").waitFor();
+  await page.locator("[data-create-bot] details.bot-form-section > summary").click();
+  assert.equal(await page.locator('[name="pf-bot-name"]').isVisible(), true);
+  assert.equal(await page.locator('[name="pf-bot-code"]').isVisible(), true);
+  assert.equal(await page.locator('select[name="pf-bot-model"]').isVisible(), true);
+  assert.equal(await page.locator('[name="pf-bot-instructions"]').isVisible(), true);
+  assert.equal(await page.locator('[name="pf-bot-hosts"]').isVisible(), true);
+  await page.screenshot({ path: join(artifacts, "bot-management-en-1440.png") });
+  await page.locator("dialog.bot-dialog [data-close]").click();
+  await page.locator("dialog.bot-dialog").waitFor({ state: "detached" });
+  result.checks.push(
+    "Authenticated Bot list and create dialog remain reachable without daily task controls in settings",
+  );
+  await page.locator("[data-settings-page=client-access]").click();
+  await page.locator("[data-cli-form]").waitFor();
+  await page.locator("[data-settings-page=general-settings]").click();
   await page.locator("#themeSelect").selectOption("dark");
   assert.equal(await page.locator("html").getAttribute("data-theme"), "dark");
   await page.locator("#languageSelect").selectOption("zh-CN");
@@ -194,9 +265,7 @@ try {
   await page.reload();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
   await page.getByRole("heading", { name: "项目", exact: true }).waitFor();
-  result.checks.push(
-    "All legacy settings retained in five groups; real language/theme persistence and return navigation",
-  );
+  result.checks.push("Preferences, services and account groups; real language/theme persistence and return navigation");
   await page.goto(fixture.base + "/settings/profile");
   await page.locator("#settingsProductIdentity").waitFor();
   assert.equal(await page.locator("#settingsProductIdentity").innerText(), "fixture-owner");
@@ -245,6 +314,37 @@ try {
   await mobilePin.getByText("置顶项目", { exact: true }).waitFor();
   assert.equal(await mobilePin.getAttribute("aria-pressed"), "false");
   result.checks.push("Mobile project cards support touch pin/unpin with immediate Chinese labels");
+  await mp.goto(fixture.base + "/settings/bot-tasks");
+  await mp.locator("[data-new-bot]").waitFor();
+  assert.equal(await mp.locator(".settings-page [data-filter]").count(), 0);
+  await mp.locator("[data-new-bot]").tap();
+  await mp.locator("dialog.bot-dialog[open] [data-create-bot]").waitFor();
+  await mp.locator("[data-create-bot] .bot-personality > summary").tap();
+  await mp.locator("[data-create-bot] details.bot-form-section > summary").tap();
+  const botFields = await mp.locator("[data-create-bot] .wb-field").evaluateAll((fields) =>
+    fields.map((field) => {
+      const caption = field.querySelector("span").getBoundingClientRect();
+      const control = field.querySelector("input, select, textarea").getBoundingClientRect();
+      return {
+        name: field.querySelector("input, select, textarea").name,
+        captionBottom: caption.bottom,
+        controlTop: control.top,
+        controlWidth: control.width,
+        width: field.clientWidth,
+      };
+    }),
+  );
+  for (const name of ["name", "code", "model", "instructions", "hosts", "role", "traits", "voice", "motto"])
+    assert.ok(
+      botFields.some((field) => field.name === "pf-bot-" + name),
+      "Missing Bot field: " + name,
+    );
+  assert.ok(
+    botFields.every((field) => field.captionBottom <= field.controlTop && field.controlWidth >= field.width - 1),
+  );
+  assert.equal(await mp.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await mp.screenshot({ path: join(artifacts, "bot-management-zh-390.png") });
+  result.checks.push("Mobile Bot fields use captions above full-width controls without submitting model work");
   await mp.goto(fixture.base + "/task/old-alpha");
   await mp.locator("#workspacePreparation").waitFor({ state: "hidden" });
   await mp.waitForFunction(
@@ -288,7 +388,7 @@ try {
         };
       });
       const detail = JSON.stringify({ locale, width, layout });
-      assert.equal(layout.labels.length, 4, detail);
+      assert.equal(layout.labels.length, 5, detail);
       assert.equal(layout.navHidden, true, "A session uses drawer navigation and a compact composer");
       for (const label of layout.text) {
         assert.equal(label.box.width, 0, detail);
@@ -345,9 +445,10 @@ try {
   await mp.getByRole("heading", { name: "项目", exact: true }).waitFor();
   await mp.locator("#workspacePreparation").waitFor({ state: "hidden" });
   await mp.screenshot({ path: join(artifacts, "projects-mobile.png") });
-  await mp.locator(".workbench-mobile-nav [data-route=settings]").click();
+  await mp.locator("#workspaceNavigationToggle").click();
+  await mp.locator("#accountButton").click();
   await mp.locator("#settingsSearch").fill("语言");
-  await mp.locator("[data-settings-page=appearance]").click();
+  await mp.locator("[data-settings-page=general-settings]").click();
   await mp.locator("#languageSelect").waitFor({ state: "visible" });
   await mp.screenshot({ path: join(artifacts, "settings-mobile.png") });
   result.checks.push("Touch/mobile navigation and settings flow");

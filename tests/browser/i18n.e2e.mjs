@@ -34,7 +34,7 @@ await page.evaluate(() => {
 await page.waitForFunction(
   () =>
     document.querySelector("#settingsDialog")?.open &&
-    document.querySelector("#settingsPageTitle")?.textContent === "通用",
+    document.querySelector("#settingsPageTitle")?.textContent === "偏好设置",
 );
 
 const chinese = await page.evaluate(() => ({
@@ -56,7 +56,7 @@ await page.selectOption("#languageSelect", "en");
 await page.waitForFunction(
   () =>
     document.documentElement.lang === "en" &&
-    document.querySelector("#settingsPageTitle")?.textContent === "Appearance",
+    document.querySelector("#settingsPageTitle")?.textContent === "Preferences",
 );
 const english = await page.evaluate(() => ({
   lang: document.documentElement.lang,
@@ -88,7 +88,7 @@ await browser.close();
   qualityAssert.equal(chinese.newChat, "新建会话", "Condition: chinese.newChat!=='新建会话'");
   qualityAssert.equal(chinese.threadTitle, "新建会话", "Condition: chinese.threadTitle!=='新建会话'");
   qualityAssert.equal(chinese.settings, "设置", "Condition: chinese.settings!=='设置'");
-  qualityAssert.equal(chinese.page, "通用", "Condition: chinese.page!=='通用'");
+  qualityAssert.equal(chinese.page, "偏好设置", "Condition: chinese.page!=='偏好设置'");
   qualityAssert.equal(chinese.language, "zh-CN", "Condition: chinese.language!=='zh-CN'");
   qualityAssert.equal(chinese.systemOption, "跟随系统", "Condition: chinese.systemOption!=='跟随系统'");
   qualityAssert.equal(chinese.effort, "低", "Condition: chinese.effort!=='低'");
@@ -101,7 +101,7 @@ await browser.close();
   qualityAssert.equal(english.preference, "en", "Condition: english.preference!=='en'");
   qualityAssert.equal(english.newChat, "New session", "Condition: english.newChat!=='New session'");
   qualityAssert.equal(english.threadTitle, "New session", "Condition: english.threadTitle!=='New session'");
-  qualityAssert.equal(english.page, "Appearance", "Condition: english.page!=='Appearance'");
+  qualityAssert.equal(english.page, "Preferences", "Condition: english.page!=='Preferences'");
   qualityAssert.equal(english.language, "en", "Condition: english.language!=='en'");
   qualityAssert.equal(english.effort, "Low", "Condition: english.effort!=='Low'");
   qualityAssert.equal(
@@ -112,5 +112,5 @@ await browser.close();
   qualityAssert.equal(persisted.lang, "zh-CN", "Condition: persisted.lang!=='zh-CN'");
   qualityAssert.equal(persisted.preference, "zh-CN", "Condition: persisted.preference!=='zh-CN'");
   qualityAssert.equal(persisted.language, "zh-CN", "Condition: persisted.language!=='zh-CN'");
-  qualityAssert.equal(persisted.page, "外观", "Condition: persisted.page!=='外观'");
+  qualityAssert.equal(persisted.page, "偏好设置", "Condition: persisted.page!=='偏好设置'");
 }

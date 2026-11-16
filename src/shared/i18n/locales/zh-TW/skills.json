@@ -1,0 +1,23 @@
+{
+  "unavailable": "技能庫暫時不可用，請稍後重試。",
+  "invalidInput": "技能庫請求無效。",
+  "identityRequired": "請重新登入以檢視技能庫。",
+  "unsupportedSchema": "此技能庫需要更新版本的應用程式。",
+  "registryConflict": "技能庫已發生變化，請重新整理後重試。",
+  "reviewChanged": "來源、選擇或權限已改變，請重新審閱。",
+  "immutableVersion": "現有版本不能覆蓋，請建立新版本。",
+  "notInstalled": "此技能包尚未安裝。",
+  "skillDisabled": "此技能已停用。",
+  "approvalRequired": "請先審閱並批准所需的應用程式權限。",
+  "operationConflict": "此操作屬於其他請求，請重新整理後重試。",
+  "notFound": "未找到此技能。",
+  "readDocuments": "讀取專案文件",
+  "createDocuments": "建立專案文件",
+  "proposeChanges": "提出文件修改供審閱",
+  "readAssets": "讀取專案附件",
+  "webResearch": "檢索公開網頁資料",
+  "generateImages": "產生圖片",
+  "generateSlides": "產生簡報",
+  "generateVideo": "產生影片",
+  "generateWeb": "產生網頁"
+}

@@ -1,4 +1,17 @@
 {
   "noProject": "无项目",
-  "authenticatedPandaforceAccount": "已登录的 PandaForce 账号"
+  "authenticatedPandaforceAccount": "已登录的 PandaForce 账号",
+  "preferences": "偏好设置",
+  "preferencesHint": "集中管理界面、会话操作与提醒。",
+  "appearanceHint": "选择适合你的主题与界面语言。",
+  "conversation": "会话与权限",
+  "conversationHint": "设置新会话的默认行为与可用操作。",
+  "notificationsHint": "任务完成时，及时收到提醒。",
+  "shortcutsHint": "用键盘快速完成常用操作。",
+  "jumpTo": "快速定位设置分区",
+  "conversationShort": "会话",
+  "shortcuts": "快捷键",
+  "pageLoading": "正在加载设置…",
+  "pageLoadFailed": "设置暂时无法加载，请重试。",
+  "pageReloadRequired": "请重新加载工作区以打开设置。"
 }

@@ -1,0 +1,46 @@
+{
+  "id": "system.attention",
+  "apiVersion": 1,
+  "version": "1.0.0",
+  "configVersion": 1,
+  "title": {
+    "zh-CN": "需要你决定",
+    "en": "Your decisions",
+    "zh-HK": "需要你決定",
+    "zh-TW": "需要你決定"
+  },
+  "description": {
+    "zh-CN": "把需要人工确认的问题集中在一起。",
+    "en": "Bring pending questions into one place.",
+    "zh-HK": "集中需要人工確認的問題。",
+    "zh-TW": "集中需要人工確認的問題。"
+  },
+  "icon": "messageSquare",
+  "singleton": true,
+  "source": "system",
+  "layout": {
+    "w": 4,
+    "h": 6,
+    "minW": 4,
+    "minH": 4
+  },
+  "config": {
+    "limit": {
+      "type": "number",
+      "default": 2,
+      "min": 1,
+      "max": 20,
+      "label": {
+        "en": "Items shown",
+        "zh-CN": "显示条数",
+        "zh-HK": "顯示筆數",
+        "zh-TW": "顯示筆數"
+      }
+    }
+  },
+  "services": ["summary"],
+  "actions": ["open"],
+  "minRefreshSeconds": 60,
+  "permissions": ["sessions.read"],
+  "clientCapabilities": ["panda.sessions"]
+}

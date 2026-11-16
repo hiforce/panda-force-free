@@ -16,7 +16,10 @@ import type { ReviewDiffStore } from "./review/state.js";
 
 export interface RuntimeServices {
   browserWire: import("./bridge/browser-wire.js").BrowserWire;
-  watchPasswordSession?: (request: import("node:http").IncomingMessage, onRevoke: () => void) => () => void;
+  watchPasswordSession?: (
+    request: import("node:http").IncomingMessage,
+    onRevoke: () => void,
+  ) => (() => void) | Promise<() => void>;
   cluster?: ClusterWorker | null;
   appRoot: string;
   homeDir: string;

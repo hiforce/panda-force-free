@@ -1,4 +1,17 @@
 {
   "noProject": "No project",
-  "authenticatedPandaforceAccount": "Authenticated PandaForce account"
+  "authenticatedPandaforceAccount": "Authenticated PandaForce account",
+  "preferences": "Preferences",
+  "preferencesHint": "Appearance, conversation controls, and notifications.",
+  "appearanceHint": "Choose your theme and interface language.",
+  "conversation": "Conversation & permissions",
+  "conversationHint": "Defaults and controls for new conversations.",
+  "notificationsHint": "Get a reminder when a task finishes.",
+  "shortcutsHint": "Quick access to frequent actions.",
+  "jumpTo": "Jump to a settings section",
+  "conversationShort": "Conversation",
+  "shortcuts": "Shortcuts",
+  "pageLoading": "Loading settings…",
+  "pageLoadFailed": "Couldn't load settings. Try again.",
+  "pageReloadRequired": "Reload the workspace to load these settings."
 }

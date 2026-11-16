@@ -24,10 +24,10 @@ export function createWorkbenchFrame(t) {
   requireElement(".conversation-shell").prepend(heading);
 
   const context = document.createElement("div");
-  context.className = "workbench-global-context";
+  context.className = "workbench-global-actions";
   setMessageHtml(
     context,
-    `<span id="workbenchGlobalTitle">${messageHtml("common.workspace", undefined, t)}</span><button type="button" id="workbenchExitFocus" hidden>${codexIcon("columns2")}${messageHtml("shell.exitFocus", undefined, t)}</button>`,
+    `<button type="button" id="workbenchExitFocus" hidden>${codexIcon("columns2")}${messageHtml("shell.exitFocus", undefined, t)}</button>`,
   );
   requireElement(".top-actions").before(context);
   const launch = document.createElement("div");
@@ -35,6 +35,14 @@ export function createWorkbenchFrame(t) {
   const newTask = requireElement("#newTask");
   newTask.before(launch);
   launch.append(newTask, requireElement("#toggleSidebar"));
+  const resize = document.createElement("div");
+  resize.id = "workspaceSidebarResize";
+  resize.className = "workspace-sidebar-resizer";
+  resize.tabIndex = 0;
+  resize.setAttribute("role", "separator");
+  resize.setAttribute("aria-orientation", "vertical");
+  resize.setAttribute("aria-controls", "sidebar");
+  requireElement("#sidebar").after(resize);
   const restore = document.createElement("button");
   restore.id = "workspaceNavigationToggle";
   restore.type = "button";

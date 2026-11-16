@@ -5,26 +5,29 @@ import { join } from "node:path";
 import { createServer } from "node:net";
 import WebSocket from "ws";
 
-async function waitFor(check: () => any) {
-  for (let i = 0; i < 400; i++) {
+async function waitFor(check: () => any, diagnostic = () => "") {
+  for (let i = 0; i < 800; i++) {
     const value = await check();
     if (value) return value;
     await Bun.sleep(25);
   }
-  throw new Error("Bridge test timed out");
+  throw new Error("Bridge test timed out" + diagnostic());
 }
 
 test("pending approvals replay over WS/SSE and only one client answer reaches Codex", async () => {
   const dir = mkdtempSync(join(tmpdir(), "session-bridge-"));
   const sockets: WebSocket[] = [];
   let proc: any, reader: any;
+  let startupLogs = "",
+    lastHealth = "not requested",
+    logPump: Promise<void> | undefined;
   try {
     // Deterministic app-server fixture: count answers instead of executing a command.
     writeFileSync(
       join(dir, "codex"),
       `#!${process.execPath}
 import { createInterface } from 'node:readline';
-let answers=0,queueStarts=0,queued=false,goalEdit=null,goalSet=null;
+let answers=0,queueStarts=0,queued=false,goalEdit=null,goalSet=null,parallel=[];
 const send=value=>process.stdout.write(JSON.stringify(value)+'\\n');
 createInterface({input:process.stdin}).on('line',line=>{
  const m=JSON.parse(line);
@@ -39,6 +42,9 @@ createInterface({input:process.stdin}).on('line',line=>{
   queued=true;
   send({method:'turn/completed',params:{threadId:'A',turn:{id:'turn-A',status:'interrupted'}}});
   send({id:m.id,result:{}});
+ }else if(m.method==='turn/start'){
+  parallel.push(m);
+  if(parallel.length===2)for(const request of parallel)send({id:request.id,result:{turn:{id:request.params.threadId,status:'inProgress'}}});
  }else if(m.method==='thread/queue/list')send({id:m.id,result:{data:queued?[{id:'queued-A'}]:[]}});
  else if(m.method==='thread/queue/start'){
   if(m.params.threadId!=='A'||m.params.queuedSubmissionId!=='queued-A')throw new Error('Wrong queued submission');
@@ -62,8 +68,17 @@ createInterface({input:process.stdin}).on('line',line=>{
     proc = Bun.spawn(["bun", "run", "src/server/main.ts"], {
       cwd: new URL("../..", import.meta.url).pathname,
       env: {
-        ...process.env,
+        ...Object.fromEntries(
+          Object.entries(process.env).filter(
+            ([key]) => !/^(?:PANDA_FORCE_|CODEX_WEBUI_|IDAAS_|OSS_|ALIYUN_)/.test(key),
+          ),
+        ),
         PANDA_FORCE_APP_SERVER_MODE: "isolated",
+        PANDA_FORCE_AUTO_CONTINUE: "true",
+        PANDA_FORCE_ATTACHMENT_STORAGE: "local",
+        SHELL: "/bin/bash",
+        BASH_ENV: "",
+        ENV: "",
         PATH: `${dir}:${process.env.PATH}`,
         HOME: dir,
         CODEX_HOME: dir,
@@ -75,16 +90,26 @@ createInterface({input:process.stdin}).on('line',line=>{
         PANDA_FORCE_ACCESS_TOKEN: "bridge-test",
       },
       stdout: "ignore",
-      stderr: "ignore",
+      stderr: "pipe",
     });
+    logPump = (async () => {
+      for await (const chunk of proc.stderr) startupLogs = (startupLogs + Buffer.from(chunk).toString()).slice(-8192);
+    })();
     const headers = { authorization: `Basic ${Buffer.from("codex:bridge-test").toString("base64")}` };
-    await waitFor(async () => {
-      try {
-        return (await fetch(`${base}/api/health`, { headers })).ok;
-      } catch {
-        return false;
-      }
-    });
+    await waitFor(
+      async () => {
+        if (proc.exitCode !== null) throw new Error(`Bridge fixture exited (${proc.exitCode}): ${startupLogs}`);
+        try {
+          const response = await fetch(`${base}/api/health`, { headers });
+          lastHealth = String(response.status);
+          return response.ok;
+        } catch {
+          lastHealth = "connection unavailable";
+          return false;
+        }
+      },
+      () => `; last health: ${lastHealth}; startup: ${startupLogs}`,
+    );
     async function connect(current = true) {
       const messages: any[] = [];
       const ws = new WebSocket(`ws://127.0.0.1:${port}/ws`, current ? "panda-engine-v1" : undefined, { headers });
@@ -159,6 +184,13 @@ createInterface({input:process.stdin}).on('line',line=>{
       return result.thread.queueStarts === 1 && result;
     });
     expect(recovered.thread.queueStarts).toBe(1);
+    // The fixture acknowledges neither start until both conversations reach the engine.
+    const parallel = await Promise.all(
+      ["parallel-a", "parallel-b"].map((threadId) =>
+        rpc("turn/start", { threadId, input: [{ type: "text", text: "Independent user work" }] }),
+      ),
+    );
+    expect(parallel.map((value) => value.turn.id)).toEqual(["parallel-a", "parallel-b"]);
     const edited = await rpc("thread/goal/set", {
       threadId: "A",
       objective: " New target ",
@@ -173,6 +205,7 @@ createInterface({input:process.stdin}).on('line',line=>{
     for (const socket of sockets) socket.close();
     proc?.kill();
     if (proc) await proc.exited;
+    await logPump;
     rmSync(dir, { recursive: true, force: true });
   }
-}, 20_000);
+}, 30_000);

@@ -9,6 +9,7 @@ migrateBrowserState();
 export const STORAGE_KEYS = {
   layout: "panda-force-layout",
   sidebarOpen: "panda-force-sidebar-open",
+  sidebarWidth: "panda-force-sidebar-width",
   sessionDetailsOpen: "panda-force-session-details-open",
   composerDrafts: "panda-force-composer-drafts",
   activeThread: "panda-force-active-thread",
@@ -24,13 +25,42 @@ export const STORAGE_KEYS = {
   permissionMode: "panda-force-permission-mode",
   permissionFullAccess: "panda-force-permission-full-access",
   reviewPreferences: "panda-force-review-preferences",
+  projectDirectoryFor: (identity) => `panda-force-project-directory:${encodeURIComponent(identity)}`,
   sessionToolsFor: (identity) => `panda-force-session-tools:${encodeURIComponent(identity)}`,
   sessionToolDataFor: (identity, session) =>
     `panda-force-session-tool-data:${encodeURIComponent(identity)}:${encodeURIComponent(session)}`,
+  documentDraftFor: (identity, document) =>
+    `panda-force-document-draft:${encodeURIComponent(identity)}:${encodeURIComponent(document)}`,
+  documentTreeFor: (identity, project) =>
+    `panda-force-document-tree:${encodeURIComponent(identity)}:${encodeURIComponent(project)}`,
+  documentSelectionFor: (identity, project) =>
+    `panda-force-document-selection:${encodeURIComponent(identity)}:${encodeURIComponent(project)}`,
+  documentTreeCommandFor: (identity, project) =>
+    `panda-force-document-tree-command:${encodeURIComponent(identity)}:${encodeURIComponent(project)}`,
+  documentPublicationCommandFor: (identity, project) =>
+    `panda-force-document-publication-command:${encodeURIComponent(identity)}:${encodeURIComponent(project)}`,
   effortFor: (model) => `panda-force-effort:${model}`,
 };
 
 export const storage = {
+  getSessionJson(key, fallback) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      return raw == null ? fallback : JSON.parse(raw);
+    } catch {
+      return fallback;
+    }
+  },
+  setSessionJson(key, value) {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    } catch {}
+  },
+  removeSession(key) {
+    try {
+      sessionStorage.removeItem(key);
+    } catch {}
+  },
   get(key) {
     try {
       return localStorage.getItem(key);
@@ -60,5 +90,18 @@ export const storage = {
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch {}
+  },
+};
+
+/** Document mutation recovery must fail visibly before a request when browser storage is unavailable. */
+export const documentRecoveryStorage = {
+  getItem(key) {
+    return sessionStorage.getItem(key);
+  },
+  setItem(key, value) {
+    sessionStorage.setItem(key, value);
+  },
+  removeItem(key) {
+    sessionStorage.removeItem(key);
   },
 };

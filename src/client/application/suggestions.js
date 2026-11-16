@@ -1,5 +1,5 @@
-import { isMessageId } from "../../shared/i18n/message-id.js";
-import { localizeAttribute, localizeText, messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { isMessageId, localizeAttribute, localizeText, messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+
 import { errorMessage } from "./../../shared/errors.js";
 import { findElement, requireElement } from "./../dom.js";
 import { request as fetch } from "./../http-client.js";

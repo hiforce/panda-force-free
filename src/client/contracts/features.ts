@@ -302,9 +302,11 @@ export interface NavigationPort {
   startNewTask: ({
     saveCurrentDraft,
     projectId,
+    keepRoute,
   }?: {
     saveCurrentDraft?: boolean | undefined;
     projectId?: string | null;
+    keepRoute?: boolean;
   }) => void;
   threadNavigationGeneration: number;
   invalidateNavigation: () => number;

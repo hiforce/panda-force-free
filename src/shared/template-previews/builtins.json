@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "source": "Fixed public samples rendered through the pinned site engines; no project documents or private themes.",
+  "renderer": "template-preview/v1-chromium-1248",
+  "entries": [
+    {
+      "key": "builtin:site-theme:panda.reader:1.0.0:46614f932c61ce375bb465b8cee91e575a5c196d30830e4edcf2a2caafbc5f12",
+      "images": {
+        "home": {
+          "path": "/template-previews/reader-home.webp",
+          "sha256": "bd02431f6af8f2b8210f590274bfde723199288fb55d84c7181414b112d91dbc",
+          "width": 1440,
+          "height": 960
+        },
+        "article": {
+          "path": "/template-previews/reader-article.webp",
+          "sha256": "99033984daa373302c2daca90375d37a685cc63c9005df9ecf5698dc4e51f9dd",
+          "width": 1440,
+          "height": 960
+        },
+        "mobile": {
+          "path": "/template-previews/reader-mobile.webp",
+          "sha256": "f3d836a38b29527e67cab60df7d723bc911c1d349374b933315108d916e593b3",
+          "width": 390,
+          "height": 844
+        }
+      },
+      "provenance": {
+        "sourceArtifactSha256": "da2817f770f7a5deef6b4df189eb671bbe0a1617f1f0813624ecbe0b3debba8d",
+        "engine": "hexo",
+        "theme": "panda.reader@1.0.0",
+        "renderer": "156.0.8078.4",
+        "sampleTitle": "Fieldnotes",
+        "realUserData": false
+      }
+    },
+    {
+      "key": "builtin:site-theme:panda.journal:1.0.0:caed823ac3e31e48b81ee88cef7c52b2ea043f77aaf521c7358d985ac2bb8e80",
+      "images": {
+        "home": {
+          "path": "/template-previews/journal-home.webp",
+          "sha256": "51f9fb73d2761ccafabae878dcb872bc089cc9c80735aff8f9b524c64aacd5a0",
+          "width": 1440,
+          "height": 960
+        },
+        "article": {
+          "path": "/template-previews/journal-article.webp",
+          "sha256": "548a256484f90b55a428367006fcbf574044208eaec919c3f6cbe330e0f50fb5",
+          "width": 1440,
+          "height": 960
+        },
+        "mobile": {
+          "path": "/template-previews/journal-mobile.webp",
+          "sha256": "29fa9f0322c4bf64580d89913034f2d05fd4d70ca3765c99f18267ef5e1d7937",
+          "width": 390,
+          "height": 844
+        }
+      },
+      "provenance": {
+        "sourceArtifactSha256": "6d3ca718dba57aea33eb218f3f3b00425195943cda9004eeb9ed96058ba941e4",
+        "engine": "hexo",
+        "theme": "panda.journal@1.0.0",
+        "renderer": "156.0.8078.4",
+        "sampleTitle": "Fieldnotes",
+        "realUserData": false
+      }
+    },
+    {
+      "key": "builtin:site-theme:panda.handbook:1.0.0:49222fb322dfeced6b0be62a97831628245c9ccf17939ac27fc459bb73129502",
+      "images": {
+        "home": {
+          "path": "/template-previews/handbook-home.webp",
+          "sha256": "1be3ef439f4c6ed081303a54a2d524ff88f7337bea55f5a9f4c088e33d1c463a",
+          "width": 1440,
+          "height": 960
+        },
+        "article": {
+          "path": "/template-previews/handbook-article.webp",
+          "sha256": "875c13b6978f642662202654b3e0464443fc8757f2d9a9255ba6a40ef9efbedc",
+          "width": 1440,
+          "height": 960
+        },
+        "mobile": {
+          "path": "/template-previews/handbook-mobile.webp",
+          "sha256": "e40bcbd2aecf61e27450fbd8b635ec95671e16ce514f3fef0df1c9354a25c454",
+          "width": 390,
+          "height": 844
+        }
+      },
+      "provenance": {
+        "sourceArtifactSha256": "d653d1ceb4a3f502d143be39e035dab55095bf6d39ececa466a7db818f9ae772",
+        "engine": "docusaurus",
+        "theme": "panda.handbook@1.0.0",
+        "renderer": "156.0.8078.4",
+        "sampleTitle": "Fieldnotes",
+        "realUserData": false
+      }
+    }
+  ]
+}

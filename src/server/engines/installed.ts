@@ -23,6 +23,7 @@ export function createInstalledEngine({
   isShuttingDown,
   authorize,
   broadcast,
+  autoContinueAfterOverload = false,
 }: {
   id: string;
   connection: CodexConnection;
@@ -34,6 +35,7 @@ export function createInstalledEngine({
   isShuttingDown(): boolean;
   authorize(): void;
   broadcast(data: object): void;
+  autoContinueAfterOverload?: boolean;
 }): InstalledEngine {
   const registry = createEngineRegistry();
   registry.register(createCodexDriver({ connection, defaultCwd, version, isShuttingDown }));
@@ -56,6 +58,17 @@ export function createInstalledEngine({
     connection.mode === "shared" && method === "thread/read"
       ? readSharedRecoveryState(request, params.threadId)
       : request(method, params);
+  // Shared engines already own native retries and may have other application clients.
+  if (autoContinueAfterOverload && connection.mode !== "isolated")
+    console.warn("[PandaForce] Additional continuation is disabled for shared engines; use the native retry policy");
+  const recovery = createAutoContinueRecovery(
+    recoveryRequest,
+    (error: Error) => console.error("[PandaForce] engine/recovery", error.message),
+    { enabled: autoContinueAfterOverload && connection.mode === "isolated" },
+  );
+  driver.subscribe((event) => {
+    if (event.kind === "disconnected") recovery.reset();
+  });
   return {
     driver,
     request,
@@ -70,9 +83,7 @@ export function createInstalledEngine({
         if (payload) broadcast({ type: "engine/notification", payload });
       },
     }),
-    recovery: createAutoContinueRecovery(recoveryRequest, (error: Error) =>
-      console.error("[PandaForce] engine/recovery", error.message),
-    ),
+    recovery,
     recoverQueue: createQueueRecovery(recoveryRequest, (error: Error) =>
       console.error("[PandaForce] engine/queue-recovery", error.message),
     ),

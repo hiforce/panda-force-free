@@ -2,7 +2,13 @@ import { createInstance } from "i18next";
 import ICU from "i18next-icu";
 import { englishMessages } from "./catalogs.js";
 import { createFormatters } from "./formatters.js";
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES, resolveLocale, validPreference } from "./locale-policy.js";
+import {
+  DEFAULT_LOCALE,
+  SUPPORTED_LOCALES,
+  REQUIRED_LOCALE_CODES,
+  resolveLocale,
+  validPreference,
+} from "./locale-policy.js";
 import { validateNamespace } from "./message-contract.js";
 
 const messageParts = (resources, id) => {
@@ -31,6 +37,7 @@ export function createI18nRuntime({
   const dictionaries = Object.fromEntries(
     Object.entries({ en: englishMessages, ...resources }).map(([code, messages]) => [code, copyCatalog(messages)]),
   );
+  const coreMessages = copyCatalog(dictionaries.en);
   const loading = new Map(),
     listeners = new Set();
   let browserLanguages = [...languages];
@@ -69,6 +76,16 @@ export function createI18nRuntime({
           .then((messages) => {
             if (!messages || typeof messages !== "object" || Array.isArray(messages))
               throw new Error("Invalid language pack");
+            if (REQUIRED_LOCALE_CODES.includes(code))
+              for (const [namespace, entries] of Object.entries(coreMessages)) {
+                if (
+                  !messages[namespace] ||
+                  Object.keys(entries).some(
+                    (key) => typeof messages[namespace][key] !== "string" || !messages[namespace][key].trim(),
+                  )
+                )
+                  throw new Error("Incomplete language pack");
+              }
             for (const [namespace, entries] of Object.entries(messages)) {
               if (!Object.hasOwn(dictionaries.en, namespace)) throw new Error("Unknown language namespace");
               validateNamespace(dictionaries.en[namespace], { [code]: entries });

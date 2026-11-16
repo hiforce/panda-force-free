@@ -1,0 +1,51 @@
+# Optional standalone vector storage. This file does not change the default application installation.
+services:
+  panda-milvus:
+    image: ${PANDA_FORCE_MILVUS_IMAGE:-milvusdb/milvus:v2.6.27}
+    pull_policy: ${PANDA_FORCE_MILVUS_PULL_POLICY:-missing}
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        milvus_password="$$(cat /run/secrets/milvus_password)"
+        test -n "$$milvus_password"
+        exec env COMMON_SECURITY_DEFAULTROOTPASSWORD="$$milvus_password" milvus run standalone
+    environment:
+      ETCD_USE_EMBED: "true"
+      ETCD_DATA_DIR: /var/lib/milvus/etcd
+      ETCD_CONFIG_PATH: /milvus/configs/embedEtcd.yaml
+      COMMON_STORAGETYPE: local
+      COMMON_SECURITY_AUTHORIZATIONENABLED: "true"
+      DEPLOY_MODE: STANDALONE
+      MQ_TYPE: rocksmq
+    configs:
+      - source: panda-milvus-etcd
+        target: /milvus/configs/embedEtcd.yaml
+    secrets:
+      - source: panda-milvus-password
+        target: milvus_password
+    volumes:
+      - panda-milvus-data:/var/lib/milvus
+    ports:
+      - "127.0.0.1:${PANDA_FORCE_MILVUS_PORT:-19530}:19530"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:9091/healthz"]
+      start_period: 120s
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    cpus: ${PANDA_FORCE_MILVUS_CPUS:-4}
+    mem_limit: ${PANDA_FORCE_MILVUS_MEMORY:-8g}
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+configs:
+  panda-milvus-etcd:
+    file: ./deploy/search/embed-etcd.yaml
+secrets:
+  panda-milvus-password:
+    file: ${PANDA_FORCE_MILVUS_PASSWORD_FILE:?Set PANDA_FORCE_MILVUS_PASSWORD_FILE to a private nonempty password file}
+volumes:
+  panda-milvus-data:

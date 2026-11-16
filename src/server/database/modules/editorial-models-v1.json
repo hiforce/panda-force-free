@@ -1,0 +1,361 @@
+[
+  {
+    "name": "panda_force_editorial_mutex",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_editorial_proposals",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "varchar(2048)",
+        "nullable": false
+      },
+      {
+        "name": "payload",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "sourceProjectId",
+        "type": "varchar(128)",
+        "nullable": true
+      },
+      {
+        "name": "sequence",
+        "type": "bigint",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "editorial_sequence",
+        "unique": true,
+        "columns": ["sequence"]
+      },
+      {
+        "name": "editorial_by_source",
+        "unique": false,
+        "columns": ["owner", "documentId", "createdAt", "sequence"]
+      },
+      {
+        "name": "editorial_scoped_proposals",
+        "unique": false,
+        "columns": ["owner", "sourceProjectId", "documentId", "createdAt", "sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_editorial_applications",
+    "columns": [
+      {
+        "name": "proposalId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "selection",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "payload",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "varchar(64)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["proposalId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_editorial_jobs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "request",
+        "type": "varchar(2048)",
+        "nullable": false
+      },
+      {
+        "name": "payload",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "state",
+        "type": "varchar(16)",
+        "nullable": false
+      },
+      {
+        "name": "attempts",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "generation",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 0
+      },
+      {
+        "name": "budget",
+        "type": "bigint",
+        "nullable": false,
+        "defaultValue": 3
+      },
+      {
+        "name": "leaseToken",
+        "type": "varchar(128)",
+        "nullable": true
+      },
+      {
+        "name": "leaseUntil",
+        "type": "bigint",
+        "nullable": true
+      },
+      {
+        "name": "proposalId",
+        "type": "varchar(128)",
+        "nullable": true
+      },
+      {
+        "name": "failure",
+        "type": "varchar(64)",
+        "nullable": true
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "updatedAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "sourceProjectId",
+        "type": "varchar(128)",
+        "nullable": true
+      },
+      {
+        "name": "sequence",
+        "type": "bigint",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "editorial_sequence",
+        "unique": true,
+        "columns": ["sequence"]
+      },
+      {
+        "name": "editorial_jobs_queue",
+        "unique": false,
+        "columns": ["state", "createdAt", "sequence"]
+      },
+      {
+        "name": "editorial_jobs_owner",
+        "unique": false,
+        "columns": ["owner", "documentId", "createdAt", "sequence"]
+      },
+      {
+        "name": "editorial_scoped_jobs",
+        "unique": false,
+        "columns": ["owner", "sourceProjectId", "documentId", "createdAt", "sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_editorial_job_retries",
+    "columns": [
+      {
+        "name": "jobId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "retryId",
+        "type": "varchar(128)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["jobId", "retryId"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_editorial_history",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "owner",
+        "type": "varchar(200)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "payload",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "varchar(64)",
+        "nullable": false
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "sequence",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "sourceProjectId",
+        "type": "varchar(128)",
+        "nullable": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "editorial_history_page",
+        "unique": false,
+        "columns": ["owner", "documentId", "createdAt", "sequence"]
+      },
+      {
+        "name": "editorial_scoped_history",
+        "unique": false,
+        "columns": ["owner", "sourceProjectId", "documentId", "createdAt", "sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_editorial_application_intents",
+    "columns": [
+      {
+        "name": "proposalId",
+        "type": "varchar(128)",
+        "nullable": false
+      },
+      {
+        "name": "payload",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "varchar(64)",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["proposalId"]
+      }
+    ]
+  }
+]

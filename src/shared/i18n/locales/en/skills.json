@@ -1,0 +1,23 @@
+{
+  "unavailable": "The skill library is temporarily unavailable. Please retry.",
+  "invalidInput": "The skill library request is invalid.",
+  "identityRequired": "Sign in again to view the skill library.",
+  "unsupportedSchema": "This skill library requires a newer application version.",
+  "registryConflict": "The skill library changed. Refresh before trying again.",
+  "reviewChanged": "The source, selection or permissions changed. Review it again.",
+  "immutableVersion": "An existing version cannot be replaced. Create a new version.",
+  "notInstalled": "This skill package is not installed.",
+  "skillDisabled": "This skill is disabled.",
+  "approvalRequired": "Review and approve the required application permissions first.",
+  "operationConflict": "This operation belongs to a different request. Refresh and retry.",
+  "notFound": "This skill was not found.",
+  "readDocuments": "Read project documents",
+  "createDocuments": "Create project documents",
+  "proposeChanges": "Propose document changes for review",
+  "readAssets": "Read project attachments",
+  "webResearch": "Research public web sources",
+  "generateImages": "Generate images",
+  "generateSlides": "Generate presentations",
+  "generateVideo": "Generate video",
+  "generateWeb": "Generate web pages"
+}

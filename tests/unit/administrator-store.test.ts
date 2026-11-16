@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -44,11 +44,36 @@ test("legacy migration preserves the existing credential and corrupt admin files
   }
 });
 test("administrator paths keep custom and test state isolated", () => {
-  expect(administratorStorePath({ CODEX_HOME: "/tmp/isolated" })).toBe("/tmp/isolated/panda-force-admin.json");
+  expect(administratorStorePath({ CODEX_HOME: "/tmp/isolated", PANDA_FORCE_HOME: "/tmp/product-state" })).toBe(
+    "/tmp/product-state/config/administrator.json",
+  );
   expect(administratorStorePath({ PANDA_FORCE_AUTH_STORE: "/tmp/legacy.json" })).toBe(
     "/tmp/legacy.json.administrator.json",
   );
   expect(administratorStorePath({ PANDA_FORCE_ADMIN_STORE: "/tmp/administrator.json" })).toBe(
     "/tmp/administrator.json",
   );
+});
+test("upgrades reuse the product's legacy administrator without replacing it or the canonical owner", () => {
+  const root = mkdtempSync(join(tmpdir(), "administrator-legacy-product-")),
+    legacy = join(root, ".webui", "administrator.json"),
+    canonical = join(root, "config", "administrator.json"),
+    env = { PANDA_FORCE_HOME: root, CODEX_HOME: join(root, "model-home") },
+    password = "legacy product owner password";
+  try {
+    saveStoredAdministrator(legacy, createStoredAdministrator("existing-owner", password));
+    const original = readFileSync(legacy, "utf8");
+    expect(administratorStorePath(env)).toBe(legacy);
+    expect(verifyStoredPassword(password, loadStoredAdministrator(administratorStorePath(env))!.password)).toBe(true);
+    expect(readFileSync(legacy, "utf8")).toBe(original);
+    saveStoredAdministrator(canonical, createStoredAdministrator("canonical-owner", "canonical owner password"));
+    expect(loadStoredAdministrator(administratorStorePath(env))!.username).toBe("canonical-owner");
+    expect(readFileSync(legacy, "utf8")).toBe(original);
+    const explicit = join(root, "explicit.json");
+    expect(administratorStorePath({ ...env, PANDA_FORCE_ADMIN_STORE: explicit })).toBe(explicit);
+    mkdirSync(join(root, "other-product"));
+    expect(administratorStorePath({ ...env, PANDA_FORCE_HOME: join(root, "other-product") })).not.toBe(legacy);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

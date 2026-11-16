@@ -75,14 +75,20 @@ try {
   assert.equal(await page.locator("#windowCodexMark [data-panda-force-mark]").count(), 1);
   assert.equal(setupRequests, 1);
   assert.deepEqual((await (await context.request.get(f.base + "/api/auth/status")).json()).identity, {
+    id: "installation",
     username: "owner",
     role: "admin",
   });
   assert.equal(readFileSync(f.adminPath, "utf8").includes(password), false);
+  const databaseSetup = page.locator("[data-database-setup][open]");
+  await databaseSetup.waitFor();
+  await databaseSetup.locator("[data-database-sqlite]").click();
+  await databaseSetup.waitFor({ state: "detached" });
   await page.setViewportSize({ width: 1280, height: 900 });
   if (await page.locator("#workspacePreparation").isVisible())
     await page.locator("#workspacePreparationContinue").click();
   await page.locator("#accountButton").click();
+  await page.locator("[data-settings-page=profile]").click();
   await page.locator("#pandaLogout").click();
   await page.getByRole("heading", { name: "Welcome back", exact: true }).waitFor();
   assert.equal(await page.locator("#passwordGate").getAttribute("aria-label"), "PandaForce login");

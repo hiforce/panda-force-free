@@ -1,8 +1,8 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { NativeInput } from "../../shared/data-contracts.js";
 import type { ProjectSnapshot, ProjectVisibility, SessionSummary } from "../../shared/engine/types.js";
-import type { AttachmentStorage } from "../workspace/attachment-types.js";
 import type { AccountIdentity } from "../misc/profile.js";
+import type { AttachmentStorage } from "../workspace/attachment-types.js";
 export interface IdentitySession {
   id: string;
   identity: unknown;
@@ -35,18 +35,18 @@ export interface AccountLoader {
   invalidate(): void;
 }
 export interface ProjectVisibilityRepository {
-  snapshot(): ProjectVisibility;
-  setHidden(project: unknown, hidden: boolean, expectedHiddenAt?: unknown): boolean;
+  snapshot(): ProjectVisibility | Promise<ProjectVisibility>;
+  setHidden(project: unknown, hidden: boolean, expectedHiddenAt?: unknown): boolean | Promise<boolean>;
 }
 export interface ProjectRepository {
-  snapshot(): ProjectSnapshot;
+  snapshot(): ProjectSnapshot | Promise<ProjectSnapshot>;
   project(id: string): unknown;
-  save(input: unknown, revision: unknown): ProjectSnapshot;
+  save(input: unknown, revision: unknown): ProjectSnapshot | Promise<ProjectSnapshot>;
   assign(
     projectId: string | null,
     sessions: readonly { id: string; name?: string; cwd?: string }[],
     revision: unknown,
-  ): ProjectSnapshot;
-  refreshSessions(sessions: readonly SessionSummary[]): ProjectSnapshot | null;
-  forgetSession(id: string): ProjectSnapshot | null;
+  ): ProjectSnapshot | Promise<ProjectSnapshot>;
+  refreshSessions(sessions: readonly SessionSummary[]): ProjectSnapshot | null | Promise<ProjectSnapshot | null>;
+  forgetSession(id: string): ProjectSnapshot | null | Promise<ProjectSnapshot | null>;
 }

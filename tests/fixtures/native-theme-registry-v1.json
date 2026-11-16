@@ -1,0 +1,651 @@
+{
+  "format": 1,
+  "synthetic": true,
+  "generatedByCommit": "5e71b5897a7710c6211720315f79935f5339bf62",
+  "schema": [
+    {
+      "type": "index",
+      "name": "sqlite_autoindex_native_theme_heads_1",
+      "tbl_name": "native_theme_heads",
+      "sql": null
+    },
+    {
+      "type": "index",
+      "name": "sqlite_autoindex_native_theme_operations_1",
+      "tbl_name": "native_theme_operations",
+      "sql": null
+    },
+    {
+      "type": "index",
+      "name": "sqlite_autoindex_native_theme_owners_1",
+      "tbl_name": "native_theme_owners",
+      "sql": null
+    },
+    {
+      "type": "index",
+      "name": "sqlite_autoindex_native_theme_versions_1",
+      "tbl_name": "native_theme_versions",
+      "sql": null
+    },
+    {
+      "type": "table",
+      "name": "native_theme_audit",
+      "tbl_name": "native_theme_audit",
+      "sql": "CREATE TABLE native_theme_audit(sequence INTEGER PRIMARY KEY AUTOINCREMENT,actor TEXT NOT NULL,revision INTEGER NOT NULL,action TEXT NOT NULL,id TEXT NOT NULL,version TEXT NOT NULL,digest TEXT NOT NULL,createdAt INTEGER NOT NULL)"
+    },
+    {
+      "type": "table",
+      "name": "native_theme_heads",
+      "tbl_name": "native_theme_heads",
+      "sql": "CREATE TABLE native_theme_heads(actor TEXT NOT NULL,id TEXT NOT NULL,version TEXT NOT NULL,PRIMARY KEY(actor,id),FOREIGN KEY(actor,id,version) REFERENCES native_theme_versions(actor,id,version))"
+    },
+    {
+      "type": "table",
+      "name": "native_theme_operations",
+      "tbl_name": "native_theme_operations",
+      "sql": "CREATE TABLE native_theme_operations(actor TEXT NOT NULL,operationId TEXT NOT NULL,signature TEXT NOT NULL,state TEXT NOT NULL CHECK(state IN('pending','committed','failed')),expectedRevision INTEGER NOT NULL,descriptor TEXT,digest TEXT NOT NULL,settingsDigest TEXT NOT NULL,receipt TEXT,cleaned INTEGER NOT NULL CHECK(cleaned IN(0,1)),createdAt INTEGER NOT NULL,PRIMARY KEY(actor,operationId),CHECK(state!='pending' OR descriptor IS NOT NULL),CHECK((state='committed')=(receipt IS NOT NULL)))"
+    },
+    {
+      "type": "table",
+      "name": "native_theme_owners",
+      "tbl_name": "native_theme_owners",
+      "sql": "CREATE TABLE native_theme_owners(actor TEXT PRIMARY KEY,revision INTEGER NOT NULL CHECK(revision>=0))"
+    },
+    {
+      "type": "table",
+      "name": "native_theme_versions",
+      "tbl_name": "native_theme_versions",
+      "sql": "CREATE TABLE native_theme_versions(actor TEXT NOT NULL,id TEXT NOT NULL,version TEXT NOT NULL,digest TEXT NOT NULL,descriptor TEXT NOT NULL,sourceId TEXT NOT NULL,enabled INTEGER NOT NULL CHECK(enabled IN(0,1)),installedAt INTEGER NOT NULL,PRIMARY KEY(actor,id,version))"
+    },
+    {
+      "type": "table",
+      "name": "sqlite_sequence",
+      "tbl_name": "sqlite_sequence",
+      "sql": "CREATE TABLE sqlite_sequence(name,seq)"
+    }
+  ],
+  "tables": {
+    "native_theme_owners": [
+      {
+        "actor": "owner",
+        "revision": 4
+      },
+      {
+        "actor": "other",
+        "revision": 1
+      }
+    ],
+    "native_theme_versions": [
+      {
+        "actor": "owner",
+        "id": "example.native",
+        "version": "1.0.0",
+        "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+        "descriptor": "{\"schema\":\"panda.native-site-theme/v1\",\"settings\":{\"schema\":1,\"id\":\"example.native\",\"version\":\"1.0.0\",\"name\":{\"en\":\"Native theme\"},\"description\":{\"en\":\"A native fixture\"},\"publisher\":\"Example\",\"license\":{\"expression\":\"MIT\",\"file\":\"LICENSE\"},\"readme\":\"README.md\",\"engine\":\"hexo\",\"entry\":null,\"dependencies\":{}},\"source\":{\"digest\":\"a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe\",\"origin\":{\"kind\":\"zip-upload\",\"name\":\"native-theme.zip\",\"archiveSha256\":\"b352f9481063ca04d94b081bafd50e1f4c9136d067ad7fba669f835b0bc2a54d\"}},\"root\":\"theme\",\"projection\":{\"digest\":\"c33c1aa34602a3a762809ecb9db85d75bb12c3435ab299c86314c6151eaae902\",\"treeDigest\":\"0e496c4c201db9cbf3cf0f595cd99e1378826e5b6f6ba0f362049c93c44ef1a0\",\"files\":[{\"path\":\"layout/index.ejs\",\"bytes\":26,\"sha256\":\"73620f8df1aa1b05a00840ee59da83eb368609215cabdf1c590330300824ec1b\"},{\"path\":\"source/logo.bin\",\"bytes\":3,\"sha256\":\"a0956176ad28cadf4a54b314f9fcd6143d7007957454286ff24580445304b558\"}]},\"license\":{\"path\":\"LICENSE\",\"bytes\":19,\"sha256\":\"5b507d28e249d252fd0f54763683a19a8514e019702ac8608c5db68ef2995cff\"}}",
+        "sourceId": "10000000-0000-4000-8000-000000000001",
+        "enabled": 0,
+        "installedAt": 1700000000000
+      },
+      {
+        "actor": "owner",
+        "id": "example.native",
+        "version": "2.0.0",
+        "digest": "305b06dde2cf6b9d20ff8c0fc5dfd8cedbde8609d41e16ec19aa666aae79b5d4",
+        "descriptor": "{\"schema\":\"panda.native-site-theme/v1\",\"settings\":{\"schema\":1,\"id\":\"example.native\",\"version\":\"2.0.0\",\"name\":{\"en\":\"Native theme\"},\"description\":{\"en\":\"A native fixture\"},\"publisher\":\"Example\",\"license\":{\"expression\":\"MIT\",\"file\":\"LICENSE\"},\"readme\":\"README.md\",\"engine\":\"hexo\",\"entry\":null,\"dependencies\":{}},\"source\":{\"digest\":\"a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe\",\"origin\":{\"kind\":\"zip-upload\",\"name\":\"native-theme.zip\",\"archiveSha256\":\"b352f9481063ca04d94b081bafd50e1f4c9136d067ad7fba669f835b0bc2a54d\"}},\"root\":\"theme\",\"projection\":{\"digest\":\"c33c1aa34602a3a762809ecb9db85d75bb12c3435ab299c86314c6151eaae902\",\"treeDigest\":\"0e496c4c201db9cbf3cf0f595cd99e1378826e5b6f6ba0f362049c93c44ef1a0\",\"files\":[{\"path\":\"layout/index.ejs\",\"bytes\":26,\"sha256\":\"73620f8df1aa1b05a00840ee59da83eb368609215cabdf1c590330300824ec1b\"},{\"path\":\"source/logo.bin\",\"bytes\":3,\"sha256\":\"a0956176ad28cadf4a54b314f9fcd6143d7007957454286ff24580445304b558\"}]},\"license\":{\"path\":\"LICENSE\",\"bytes\":19,\"sha256\":\"5b507d28e249d252fd0f54763683a19a8514e019702ac8608c5db68ef2995cff\"}}",
+        "sourceId": "10000000-0000-4000-8000-000000000002",
+        "enabled": 1,
+        "installedAt": 1700000000000
+      },
+      {
+        "actor": "other",
+        "id": "example.native",
+        "version": "1.0.0",
+        "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+        "descriptor": "{\"schema\":\"panda.native-site-theme/v1\",\"settings\":{\"schema\":1,\"id\":\"example.native\",\"version\":\"1.0.0\",\"name\":{\"en\":\"Native theme\"},\"description\":{\"en\":\"A native fixture\"},\"publisher\":\"Example\",\"license\":{\"expression\":\"MIT\",\"file\":\"LICENSE\"},\"readme\":\"README.md\",\"engine\":\"hexo\",\"entry\":null,\"dependencies\":{}},\"source\":{\"digest\":\"a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe\",\"origin\":{\"kind\":\"zip-upload\",\"name\":\"native-theme.zip\",\"archiveSha256\":\"b352f9481063ca04d94b081bafd50e1f4c9136d067ad7fba669f835b0bc2a54d\"}},\"root\":\"theme\",\"projection\":{\"digest\":\"c33c1aa34602a3a762809ecb9db85d75bb12c3435ab299c86314c6151eaae902\",\"treeDigest\":\"0e496c4c201db9cbf3cf0f595cd99e1378826e5b6f6ba0f362049c93c44ef1a0\",\"files\":[{\"path\":\"layout/index.ejs\",\"bytes\":26,\"sha256\":\"73620f8df1aa1b05a00840ee59da83eb368609215cabdf1c590330300824ec1b\"},{\"path\":\"source/logo.bin\",\"bytes\":3,\"sha256\":\"a0956176ad28cadf4a54b314f9fcd6143d7007957454286ff24580445304b558\"}]},\"license\":{\"path\":\"LICENSE\",\"bytes\":19,\"sha256\":\"5b507d28e249d252fd0f54763683a19a8514e019702ac8608c5db68ef2995cff\"}}",
+        "sourceId": "10000000-0000-4000-8000-000000000003",
+        "enabled": 1,
+        "installedAt": 1700000000000
+      }
+    ],
+    "native_theme_heads": [
+      {
+        "actor": "owner",
+        "id": "example.native",
+        "version": "2.0.0"
+      },
+      {
+        "actor": "other",
+        "id": "example.native",
+        "version": "1.0.0"
+      }
+    ],
+    "native_theme_operations": [
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000001",
+        "signature": "0000000000000000000000000000000000000000000000000000000000000000",
+        "state": "committed",
+        "expectedRevision": 0,
+        "descriptor": null,
+        "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+        "settingsDigest": "0702965235e2dd14f60391b81d6aa649b8bddebb8498062b6ef48b7fb2f503e2",
+        "receipt": "{\"operationId\":\"00000000-0000-4000-8000-000000000001\",\"revision\":1,\"sourceDigest\":\"a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe\",\"root\":\"theme\",\"settingsDigest\":\"0702965235e2dd14f60391b81d6aa649b8bddebb8498062b6ef48b7fb2f503e2\",\"id\":\"example.native\",\"version\":\"1.0.0\",\"digest\":\"9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1\",\"status\":\"installed\"}",
+        "cleaned": 1,
+        "createdAt": 1700000000000
+      },
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000002",
+        "signature": "1111111111111111111111111111111111111111111111111111111111111111",
+        "state": "committed",
+        "expectedRevision": 1,
+        "descriptor": null,
+        "digest": "305b06dde2cf6b9d20ff8c0fc5dfd8cedbde8609d41e16ec19aa666aae79b5d4",
+        "settingsDigest": "64a4209741e4974092658f6929431ea91f6e9289bed8cc09878f44f51863689c",
+        "receipt": "{\"operationId\":\"00000000-0000-4000-8000-000000000002\",\"revision\":2,\"sourceDigest\":\"a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe\",\"root\":\"theme\",\"settingsDigest\":\"64a4209741e4974092658f6929431ea91f6e9289bed8cc09878f44f51863689c\",\"id\":\"example.native\",\"version\":\"2.0.0\",\"digest\":\"305b06dde2cf6b9d20ff8c0fc5dfd8cedbde8609d41e16ec19aa666aae79b5d4\",\"status\":\"installed\"}",
+        "cleaned": 1,
+        "createdAt": 1700000000000
+      },
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000003",
+        "signature": "2222222222222222222222222222222222222222222222222222222222222222",
+        "state": "pending",
+        "expectedRevision": 4,
+        "descriptor": "{\"schema\":\"panda.native-site-theme/v1\",\"settings\":{\"schema\":1,\"id\":\"example.native\",\"version\":\"3.0.0\",\"name\":{\"en\":\"Native theme\"},\"description\":{\"en\":\"A native fixture\"},\"publisher\":\"Example\",\"license\":{\"expression\":\"MIT\",\"file\":\"LICENSE\"},\"readme\":\"README.md\",\"engine\":\"hexo\",\"entry\":null,\"dependencies\":{}},\"source\":{\"digest\":\"a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe\",\"origin\":{\"kind\":\"zip-upload\",\"name\":\"native-theme.zip\",\"archiveSha256\":\"b352f9481063ca04d94b081bafd50e1f4c9136d067ad7fba669f835b0bc2a54d\"}},\"root\":\"theme\",\"projection\":{\"digest\":\"c33c1aa34602a3a762809ecb9db85d75bb12c3435ab299c86314c6151eaae902\",\"treeDigest\":\"0e496c4c201db9cbf3cf0f595cd99e1378826e5b6f6ba0f362049c93c44ef1a0\",\"files\":[{\"path\":\"layout/index.ejs\",\"bytes\":26,\"sha256\":\"73620f8df1aa1b05a00840ee59da83eb368609215cabdf1c590330300824ec1b\"},{\"path\":\"source/logo.bin\",\"bytes\":3,\"sha256\":\"a0956176ad28cadf4a54b314f9fcd6143d7007957454286ff24580445304b558\"}]},\"license\":{\"path\":\"LICENSE\",\"bytes\":19,\"sha256\":\"5b507d28e249d252fd0f54763683a19a8514e019702ac8608c5db68ef2995cff\"}}",
+        "digest": "503e837b3e75ff14824890d8320c4151bbad981f41e8f3f6e4f4ddb9c2dd56cd",
+        "settingsDigest": "8d49259b347c3fe449c73cec2543ec5a12e4794d66f1592c1e4fdc869fd058d1",
+        "receipt": null,
+        "cleaned": 0,
+        "createdAt": 1700000000000
+      },
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000004",
+        "signature": "3333333333333333333333333333333333333333333333333333333333333333",
+        "state": "failed",
+        "expectedRevision": 4,
+        "descriptor": null,
+        "digest": "393ec52f61d5da398175175f949f12e76aead615bbd8acd5424986cc6a7db048",
+        "settingsDigest": "3654df63ff1f982e6e4acb51d3b8f6147c7f1bac379a0207288e344bc69de5f2",
+        "receipt": null,
+        "cleaned": 0,
+        "createdAt": 1700000000000
+      },
+      {
+        "actor": "other",
+        "operationId": "00000000-0000-4000-8000-000000000005",
+        "signature": "4444444444444444444444444444444444444444444444444444444444444444",
+        "state": "committed",
+        "expectedRevision": 0,
+        "descriptor": null,
+        "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+        "settingsDigest": "0702965235e2dd14f60391b81d6aa649b8bddebb8498062b6ef48b7fb2f503e2",
+        "receipt": "{\"operationId\":\"00000000-0000-4000-8000-000000000005\",\"revision\":1,\"sourceDigest\":\"a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe\",\"root\":\"theme\",\"settingsDigest\":\"0702965235e2dd14f60391b81d6aa649b8bddebb8498062b6ef48b7fb2f503e2\",\"id\":\"example.native\",\"version\":\"1.0.0\",\"digest\":\"9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1\",\"status\":\"installed\"}",
+        "cleaned": 1,
+        "createdAt": 1700000000000
+      }
+    ],
+    "native_theme_audit": [
+      {
+        "sequence": 1,
+        "actor": "owner",
+        "revision": 1,
+        "action": "install",
+        "id": "example.native",
+        "version": "1.0.0",
+        "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+        "createdAt": 1700000000000
+      },
+      {
+        "sequence": 2,
+        "actor": "owner",
+        "revision": 2,
+        "action": "install",
+        "id": "example.native",
+        "version": "2.0.0",
+        "digest": "305b06dde2cf6b9d20ff8c0fc5dfd8cedbde8609d41e16ec19aa666aae79b5d4",
+        "createdAt": 1700000000000
+      },
+      {
+        "sequence": 3,
+        "actor": "owner",
+        "revision": 3,
+        "action": "activate",
+        "id": "example.native",
+        "version": "2.0.0",
+        "digest": "305b06dde2cf6b9d20ff8c0fc5dfd8cedbde8609d41e16ec19aa666aae79b5d4",
+        "createdAt": 1700000000000
+      },
+      {
+        "sequence": 4,
+        "actor": "owner",
+        "revision": 4,
+        "action": "disable",
+        "id": "example.native",
+        "version": "1.0.0",
+        "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+        "createdAt": 1700000000000
+      },
+      {
+        "sequence": 5,
+        "actor": "other",
+        "revision": 1,
+        "action": "install",
+        "id": "example.native",
+        "version": "1.0.0",
+        "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+        "createdAt": 1700000000000
+      }
+    ],
+    "sqlite_sequence": [
+      {
+        "name": "native_theme_audit",
+        "seq": 5
+      }
+    ]
+  },
+  "expected": {
+    "owner": {
+      "revision": 4,
+      "themes": [
+        {
+          "id": "example.native",
+          "version": "1.0.0",
+          "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+          "descriptor": {
+            "schema": "panda.native-site-theme/v1",
+            "settings": {
+              "schema": 1,
+              "id": "example.native",
+              "version": "1.0.0",
+              "name": {
+                "en": "Native theme"
+              },
+              "description": {
+                "en": "A native fixture"
+              },
+              "publisher": "Example",
+              "license": {
+                "expression": "MIT",
+                "file": "LICENSE"
+              },
+              "readme": "README.md",
+              "engine": "hexo",
+              "entry": null,
+              "dependencies": {}
+            },
+            "source": {
+              "digest": "a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe",
+              "origin": {
+                "kind": "zip-upload",
+                "name": "native-theme.zip",
+                "archiveSha256": "b352f9481063ca04d94b081bafd50e1f4c9136d067ad7fba669f835b0bc2a54d"
+              }
+            },
+            "root": "theme",
+            "projection": {
+              "digest": "c33c1aa34602a3a762809ecb9db85d75bb12c3435ab299c86314c6151eaae902",
+              "treeDigest": "0e496c4c201db9cbf3cf0f595cd99e1378826e5b6f6ba0f362049c93c44ef1a0",
+              "files": [
+                {
+                  "path": "layout/index.ejs",
+                  "bytes": 26,
+                  "sha256": "73620f8df1aa1b05a00840ee59da83eb368609215cabdf1c590330300824ec1b"
+                },
+                {
+                  "path": "source/logo.bin",
+                  "bytes": 3,
+                  "sha256": "a0956176ad28cadf4a54b314f9fcd6143d7007957454286ff24580445304b558"
+                }
+              ]
+            },
+            "license": {
+              "path": "LICENSE",
+              "bytes": 19,
+              "sha256": "5b507d28e249d252fd0f54763683a19a8514e019702ac8608c5db68ef2995cff"
+            }
+          },
+          "enabled": false,
+          "active": false,
+          "installedAt": 1700000000000
+        },
+        {
+          "id": "example.native",
+          "version": "2.0.0",
+          "digest": "305b06dde2cf6b9d20ff8c0fc5dfd8cedbde8609d41e16ec19aa666aae79b5d4",
+          "descriptor": {
+            "schema": "panda.native-site-theme/v1",
+            "settings": {
+              "schema": 1,
+              "id": "example.native",
+              "version": "2.0.0",
+              "name": {
+                "en": "Native theme"
+              },
+              "description": {
+                "en": "A native fixture"
+              },
+              "publisher": "Example",
+              "license": {
+                "expression": "MIT",
+                "file": "LICENSE"
+              },
+              "readme": "README.md",
+              "engine": "hexo",
+              "entry": null,
+              "dependencies": {}
+            },
+            "source": {
+              "digest": "a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe",
+              "origin": {
+                "kind": "zip-upload",
+                "name": "native-theme.zip",
+                "archiveSha256": "b352f9481063ca04d94b081bafd50e1f4c9136d067ad7fba669f835b0bc2a54d"
+              }
+            },
+            "root": "theme",
+            "projection": {
+              "digest": "c33c1aa34602a3a762809ecb9db85d75bb12c3435ab299c86314c6151eaae902",
+              "treeDigest": "0e496c4c201db9cbf3cf0f595cd99e1378826e5b6f6ba0f362049c93c44ef1a0",
+              "files": [
+                {
+                  "path": "layout/index.ejs",
+                  "bytes": 26,
+                  "sha256": "73620f8df1aa1b05a00840ee59da83eb368609215cabdf1c590330300824ec1b"
+                },
+                {
+                  "path": "source/logo.bin",
+                  "bytes": 3,
+                  "sha256": "a0956176ad28cadf4a54b314f9fcd6143d7007957454286ff24580445304b558"
+                }
+              ]
+            },
+            "license": {
+              "path": "LICENSE",
+              "bytes": 19,
+              "sha256": "5b507d28e249d252fd0f54763683a19a8514e019702ac8608c5db68ef2995cff"
+            }
+          },
+          "enabled": true,
+          "active": true,
+          "installedAt": 1700000000000
+        }
+      ]
+    },
+    "other": {
+      "revision": 1,
+      "themes": [
+        {
+          "id": "example.native",
+          "version": "1.0.0",
+          "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+          "descriptor": {
+            "schema": "panda.native-site-theme/v1",
+            "settings": {
+              "schema": 1,
+              "id": "example.native",
+              "version": "1.0.0",
+              "name": {
+                "en": "Native theme"
+              },
+              "description": {
+                "en": "A native fixture"
+              },
+              "publisher": "Example",
+              "license": {
+                "expression": "MIT",
+                "file": "LICENSE"
+              },
+              "readme": "README.md",
+              "engine": "hexo",
+              "entry": null,
+              "dependencies": {}
+            },
+            "source": {
+              "digest": "a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe",
+              "origin": {
+                "kind": "zip-upload",
+                "name": "native-theme.zip",
+                "archiveSha256": "b352f9481063ca04d94b081bafd50e1f4c9136d067ad7fba669f835b0bc2a54d"
+              }
+            },
+            "root": "theme",
+            "projection": {
+              "digest": "c33c1aa34602a3a762809ecb9db85d75bb12c3435ab299c86314c6151eaae902",
+              "treeDigest": "0e496c4c201db9cbf3cf0f595cd99e1378826e5b6f6ba0f362049c93c44ef1a0",
+              "files": [
+                {
+                  "path": "layout/index.ejs",
+                  "bytes": 26,
+                  "sha256": "73620f8df1aa1b05a00840ee59da83eb368609215cabdf1c590330300824ec1b"
+                },
+                {
+                  "path": "source/logo.bin",
+                  "bytes": 3,
+                  "sha256": "a0956176ad28cadf4a54b314f9fcd6143d7007957454286ff24580445304b558"
+                }
+              ]
+            },
+            "license": {
+              "path": "LICENSE",
+              "bytes": 19,
+              "sha256": "5b507d28e249d252fd0f54763683a19a8514e019702ac8608c5db68ef2995cff"
+            }
+          },
+          "enabled": true,
+          "active": true,
+          "installedAt": 1700000000000
+        }
+      ]
+    },
+    "stranger": {
+      "revision": 0,
+      "themes": []
+    },
+    "operations": [
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000001",
+        "signature": "0000000000000000000000000000000000000000000000000000000000000000",
+        "state": "committed",
+        "expectedRevision": 0,
+        "descriptor": null,
+        "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+        "receipt": {
+          "operationId": "00000000-0000-4000-8000-000000000001",
+          "revision": 1,
+          "sourceDigest": "a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe",
+          "root": "theme",
+          "settingsDigest": "0702965235e2dd14f60391b81d6aa649b8bddebb8498062b6ef48b7fb2f503e2",
+          "id": "example.native",
+          "version": "1.0.0",
+          "digest": "9d0f4c73666241aa3d1765a58b7b6eac55cc5b54db949aa95cd7e368bf8eb3e1",
+          "status": "installed"
+        },
+        "cleaned": true,
+        "recoverAfter": 1700000180000
+      },
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000002",
+        "signature": "1111111111111111111111111111111111111111111111111111111111111111",
+        "state": "committed",
+        "expectedRevision": 1,
+        "descriptor": null,
+        "digest": "305b06dde2cf6b9d20ff8c0fc5dfd8cedbde8609d41e16ec19aa666aae79b5d4",
+        "receipt": {
+          "operationId": "00000000-0000-4000-8000-000000000002",
+          "revision": 2,
+          "sourceDigest": "a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe",
+          "root": "theme",
+          "settingsDigest": "64a4209741e4974092658f6929431ea91f6e9289bed8cc09878f44f51863689c",
+          "id": "example.native",
+          "version": "2.0.0",
+          "digest": "305b06dde2cf6b9d20ff8c0fc5dfd8cedbde8609d41e16ec19aa666aae79b5d4",
+          "status": "installed"
+        },
+        "cleaned": true,
+        "recoverAfter": 1700000180000
+      },
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000003",
+        "signature": "2222222222222222222222222222222222222222222222222222222222222222",
+        "state": "pending",
+        "expectedRevision": 4,
+        "descriptor": {
+          "schema": "panda.native-site-theme/v1",
+          "settings": {
+            "schema": 1,
+            "id": "example.native",
+            "version": "3.0.0",
+            "name": {
+              "en": "Native theme"
+            },
+            "description": {
+              "en": "A native fixture"
+            },
+            "publisher": "Example",
+            "license": {
+              "expression": "MIT",
+              "file": "LICENSE"
+            },
+            "readme": "README.md",
+            "engine": "hexo",
+            "entry": null,
+            "dependencies": {}
+          },
+          "source": {
+            "digest": "a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe",
+            "origin": {
+              "kind": "zip-upload",
+              "name": "native-theme.zip",
+              "archiveSha256": "b352f9481063ca04d94b081bafd50e1f4c9136d067ad7fba669f835b0bc2a54d"
+            }
+          },
+          "root": "theme",
+          "projection": {
+            "digest": "c33c1aa34602a3a762809ecb9db85d75bb12c3435ab299c86314c6151eaae902",
+            "treeDigest": "0e496c4c201db9cbf3cf0f595cd99e1378826e5b6f6ba0f362049c93c44ef1a0",
+            "files": [
+              {
+                "path": "layout/index.ejs",
+                "bytes": 26,
+                "sha256": "73620f8df1aa1b05a00840ee59da83eb368609215cabdf1c590330300824ec1b"
+              },
+              {
+                "path": "source/logo.bin",
+                "bytes": 3,
+                "sha256": "a0956176ad28cadf4a54b314f9fcd6143d7007957454286ff24580445304b558"
+              }
+            ]
+          },
+          "license": {
+            "path": "LICENSE",
+            "bytes": 19,
+            "sha256": "5b507d28e249d252fd0f54763683a19a8514e019702ac8608c5db68ef2995cff"
+          }
+        },
+        "digest": "503e837b3e75ff14824890d8320c4151bbad981f41e8f3f6e4f4ddb9c2dd56cd",
+        "receipt": null,
+        "cleaned": false,
+        "recoverAfter": 1700000180000
+      },
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000004",
+        "signature": "3333333333333333333333333333333333333333333333333333333333333333",
+        "state": "failed",
+        "expectedRevision": 4,
+        "descriptor": null,
+        "digest": "393ec52f61d5da398175175f949f12e76aead615bbd8acd5424986cc6a7db048",
+        "receipt": null,
+        "cleaned": false,
+        "recoverAfter": 1700000180000
+      }
+    ],
+    "recoverable": [
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000003",
+        "signature": "2222222222222222222222222222222222222222222222222222222222222222",
+        "state": "pending",
+        "expectedRevision": 4,
+        "descriptor": {
+          "schema": "panda.native-site-theme/v1",
+          "settings": {
+            "schema": 1,
+            "id": "example.native",
+            "version": "3.0.0",
+            "name": {
+              "en": "Native theme"
+            },
+            "description": {
+              "en": "A native fixture"
+            },
+            "publisher": "Example",
+            "license": {
+              "expression": "MIT",
+              "file": "LICENSE"
+            },
+            "readme": "README.md",
+            "engine": "hexo",
+            "entry": null,
+            "dependencies": {}
+          },
+          "source": {
+            "digest": "a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe",
+            "origin": {
+              "kind": "zip-upload",
+              "name": "native-theme.zip",
+              "archiveSha256": "b352f9481063ca04d94b081bafd50e1f4c9136d067ad7fba669f835b0bc2a54d"
+            }
+          },
+          "root": "theme",
+          "projection": {
+            "digest": "c33c1aa34602a3a762809ecb9db85d75bb12c3435ab299c86314c6151eaae902",
+            "treeDigest": "0e496c4c201db9cbf3cf0f595cd99e1378826e5b6f6ba0f362049c93c44ef1a0",
+            "files": [
+              {
+                "path": "layout/index.ejs",
+                "bytes": 26,
+                "sha256": "73620f8df1aa1b05a00840ee59da83eb368609215cabdf1c590330300824ec1b"
+              },
+              {
+                "path": "source/logo.bin",
+                "bytes": 3,
+                "sha256": "a0956176ad28cadf4a54b314f9fcd6143d7007957454286ff24580445304b558"
+              }
+            ]
+          },
+          "license": {
+            "path": "LICENSE",
+            "bytes": 19,
+            "sha256": "5b507d28e249d252fd0f54763683a19a8514e019702ac8608c5db68ef2995cff"
+          }
+        },
+        "digest": "503e837b3e75ff14824890d8320c4151bbad981f41e8f3f6e4f4ddb9c2dd56cd",
+        "receipt": null,
+        "cleaned": false,
+        "recoverAfter": 1700000180000
+      },
+      {
+        "actor": "owner",
+        "operationId": "00000000-0000-4000-8000-000000000004",
+        "signature": "3333333333333333333333333333333333333333333333333333333333333333",
+        "state": "failed",
+        "expectedRevision": 4,
+        "descriptor": null,
+        "digest": "393ec52f61d5da398175175f949f12e76aead615bbd8acd5424986cc6a7db048",
+        "receipt": null,
+        "cleaned": false,
+        "recoverAfter": 1700000180000
+      }
+    ],
+    "source": {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "digest": "a47a7b13e1ab66eb801f048cffa3bd564d5b1d7f04f7b2b2c51b9dc79d8defbe"
+    }
+  }
+}

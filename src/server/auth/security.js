@@ -1,4 +1,13 @@
+import { CREATION_STYLES, TEMPLATE_PREVIEW_ASSETS } from "../../shared/template-previews/assets.js";
 import { INSTALL_ASSETS } from "../../shared/install-assets.js";
+import {
+  KNOWLEDGE_STYLES,
+  CLI_STYLES,
+  BOT_STYLES,
+  DATABASE_STYLES,
+  GADGET_STYLES,
+  GADGET_RUNTIME_ASSETS,
+} from "../../shared/interface-assets.js";
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { SUPPORTED_LOCALES } from "../../shared/i18n/locale-policy.js";
 import { resolveSafeRegularFile } from "../path-utils.js";
@@ -33,13 +42,35 @@ const BROWSER_RPC_METHODS = new Set([
 ]);
 
 const PUBLIC_ASSETS = new Set([
+  ...CREATION_STYLES,
+  ...TEMPLATE_PREVIEW_ASSETS,
   ...SUPPORTED_LOCALES.map((locale) => `/locales/${locale.code}.json`),
   "/index.html",
   "/style.css",
   "/workbench.css",
+  "/documents.css",
+  "/document-authoring.css",
+  "/document-workspace.css",
+  "/document-code.css",
+  "/document-publication.css",
+  "/packages.css",
+  "/workbench-forms.css",
+  ...KNOWLEDGE_STYLES,
+  ...CLI_STYLES,
+  ...BOT_STYLES,
+  ...DATABASE_STYLES,
+  ...GADGET_STYLES,
+  ...GADGET_RUNTIME_ASSETS,
+  "/source-import.css",
+  "/publishing.css",
+  "/builds.css",
+  "/delivery.css",
+  "/social.css",
   "/session-workspace.css",
+  "/settings-workspace.css",
   "/workbench-chrome.css",
   "/workbench-layout.css",
+  "/creative.css",
   "/appearance.css",
   "/file-preview.css",
   "/favicon.svg",
@@ -48,8 +79,19 @@ const PUBLIC_ASSETS = new Set([
   "/http-client.js",
   "/panda-brand.js",
   "/app.bundle.js",
+  "/database-maintenance.bundle.js",
   "/file-preview.bundle.js",
   "/terminal-runtime.bundle.js",
+  "/settings-pages.bundle.js",
+  "/knowledge.bundle.js",
+  "/content-workspace.bundle.js",
+  "/creative-assets.bundle.js",
+  "/template-details.bundle.js",
+  "/template-settings.bundle.js",
+  "/writing-skill.bundle.js",
+  "/document-creation.bundle.js",
+  "/document-code-runtime.bundle.js",
+  "/document-rich-runtime.bundle.js",
   "/assets/panda-icon.png",
   "/assets/panda-mark.svg",
   ...INSTALL_ASSETS,
@@ -236,12 +278,12 @@ export function unauthorizedResponse(res) {
   res.end(JSON.stringify({ error: "Authentication required" }));
 }
 
-export function isAuthorizedHttpRequest(req, accessToken, allowLoopback = true) {
+export function isAuthorizedHttpRequest(req, accessToken, allowLoopback = true, allowCookie = true) {
   return isRequestAuthorized({
     remoteAddress: req.socket.remoteAddress,
     hostHeader: req.headers.host,
     authorization: req.headers.authorization,
-    cookie: req.headers.cookie,
+    cookie: allowCookie ? req.headers.cookie : null,
     accessToken,
     origin: req.headers.origin,
     fetchSite: req.headers["sec-fetch-site"],

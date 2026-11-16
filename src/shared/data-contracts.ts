@@ -36,6 +36,8 @@ export interface ProductProject {
   name: string;
   code: string;
   description?: string;
+  createdAt?: number;
+  updatedAt?: number;
   workspace?: { path: string; state: "preparing" | "ready" };
 }
 

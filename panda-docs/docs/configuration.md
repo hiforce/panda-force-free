@@ -43,3 +43,16 @@ text. Additional language packs are published after translation and review.
 ## Third-party model providers
 
 See [Model providers](model-providers.md) for Codex CLI configuration with Zhipu GLM, Ollama and DeepSeek, including Docker environment variables and model catalogs.
+
+## Local members and email
+
+The first administrator chooses a username and password. An email address is optional at installation.
+Configure **Settings → Members and email → Email delivery (SMTP)** before binding an administrator email or inviting members. TLS or STARTTLS is required. Supply your own SMTP account, sender address and the public HTTPS application address. Credentials are encrypted with a private persistent application key; a successful connection test confirms SMTP authentication, not inbox delivery.
+
+Invite a member by email and role. Administrators never choose member passwords: recipients use a single-use, 24-hour email link to set their own password. The sign-in page offers password recovery after SMTP is configured. Administrator email binding requires confirmation from the recipient. Password recovery revokes old passwords and browser sessions only when the new password is successfully committed.
+
+Explicit administrators can use the shared host workspace, terminal and native sessions. Ordinary members can only use their authorized business content. Model API keys and native model login remain independent from application accounts.
+
+Back up the complete application configuration, `data/users.sqlite` (or the MySQL identity tables), and `config/local-users.key`. Keep the encryption key private and persistent. A backup of `administrator.json` alone does not include later password recovery or email settings.
+
+Dedicated IDaaS login is no longer provided by new versions. Existing IDaaS installations must complete an operator-controlled local-account migration before upgrading; unsupported authentication modes fail startup instead of silently exposing the application. No third-party directory or organization service is required.

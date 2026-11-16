@@ -1,10 +1,30 @@
 /* Appearance presets preserve the light/dark contract used by native engine views. */
 :root[data-appearance] {
+  --pf-skill-art-paper: #fffdf8;
+  --pf-skill-art-ink: #293c45;
+  --pf-skill-art-writing-bg: #ede9e0;
+  --pf-skill-art-writing-accent: #ad593f;
+  --pf-skill-art-slides-bg: #dfe6ef;
+  --pf-skill-art-slides-accent: #5577a4;
+  --pf-skill-art-image-bg: #e4eadd;
+  --pf-skill-art-image-accent: #7c9465;
+  --pf-skill-art-web-bg: #dfeae7;
+  --pf-skill-art-web-accent: #447f77;
+  --pf-skill-art-video-bg: #e7e1ed;
+  --pf-skill-art-video-accent: #8b729e;
+  --pf-skill-art-research-bg: #ece6dc;
+  --pf-skill-art-research-accent: #9c8156;
+
   --pf-primary-on: #fff;
   --pf-success: #287654;
   --pf-warning: #916623;
   --pf-shadow: 0 16px 50px #16162c1a, 0 2px 8px #16162c08;
   --pf-composer-shadow: 0 4px 18px #23244007;
+  --pf-frame-shadow: 0 0 48px #00000008;
+  --pf-preview-shadow: 0 1px 9px #0000000a;
+  --pf-scrollbar-size: 8px;
+  --pf-scrollbar-thumb: color-mix(in srgb, var(--pf-muted) 30%, transparent);
+  --pf-scrollbar-thumb-hover: color-mix(in srgb, var(--pf-muted) 55%, transparent);
   --app-success: var(--pf-success);
   --app-danger: var(--pf-danger);
   --app-link: var(--pf-accent);
@@ -19,6 +39,7 @@
 
 /* Light remains neutral white; choosing Spark-inspired styles is explicit. */
 :root[data-appearance="light"] {
+  --pf-backdrop: #f0f1f4;
   --pf-card: #fff;
   --pf-canvas: #fff;
   --pf-sidebar: #f7f7f8;
@@ -34,6 +55,7 @@
 
 /* Graphite uses solid, low-saturation surfaces for long engineering sessions. */
 :root[data-appearance="graphite"] {
+  --pf-backdrop: #111316;
   --pf-card: #202225;
   --pf-canvas: #181a1d;
   --pf-sidebar: #16181b;
@@ -53,6 +75,7 @@
 
 /* Silk introduces warm paper surfaces without tinting the default Light preset. */
 :root[data-appearance="silk"] {
+  --pf-backdrop: #eae5dd;
   --pf-card: #fffdfb;
   --pf-canvas: #fcfaf7;
   --pf-sidebar: #f1ede7;
@@ -72,6 +95,7 @@
 
 /* Aurora keeps restrained cyan emphasis on dark blue surfaces. */
 :root[data-appearance="aurora"] {
+  --pf-backdrop: #040e1a;
   --pf-card: #0d2034;
   --pf-canvas: #071423;
   --pf-sidebar: #091a2b;
@@ -100,4 +124,23 @@
 
 :root[data-appearance] .session-layout .composer {
   box-shadow: var(--pf-composer-shadow);
+}
+
+/* Syntax colors follow the product's existing light/dark contract across every appearance preset. */
+:root {
+  --pf-code-keyword: #943a93;
+  --pf-code-string: #26773c;
+  --pf-code-number: #925714;
+  --pf-code-type: #246899;
+  --pf-code-function: #7445a2;
+  --pf-code-property: #925714;
+  --pf-code-comment: var(--pf-muted);
+}
+:root[data-theme="dark"] {
+  --pf-code-keyword: #d6b4f9;
+  --pf-code-string: #b2dba1;
+  --pf-code-number: #f2c580;
+  --pf-code-type: #8dcdea;
+  --pf-code-function: #d2b2f4;
+  --pf-code-property: #eccb91;
 }

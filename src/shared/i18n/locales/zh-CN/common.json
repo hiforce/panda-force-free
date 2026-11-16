@@ -593,5 +593,8 @@
   "noUrlCredentials": "不支持带有凭据的网址",
   "applicationSessionExpired": "应用会话已失效，当前页面和草稿已保留。请通过登录服务恢复连接。",
   "historyRequiresSignIn": "请恢复登录后加载此会话，历史记录未被删除。",
-  "historyLoadFailed": "暂时无法加载会话历史，请重试。"
+  "historyLoadFailed": "暂时无法加载会话历史，请重试。",
+  "pageLoading": "正在加载…",
+  "pageLoadFailed": "页面暂时无法加载，请重试。",
+  "pageReloadRequired": "请刷新页面后继续。"
 }

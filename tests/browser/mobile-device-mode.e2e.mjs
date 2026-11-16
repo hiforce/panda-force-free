@@ -23,18 +23,21 @@ const before = await page.evaluate(() => ({
   sidebarX: document.querySelector("#sidebar").getBoundingClientRect().x,
   sidebarPosition: getComputedStyle(document.querySelector("#sidebar")).position,
   sidebarShadow: getComputedStyle(document.querySelector("#sidebar")).boxShadow,
+  frameContentX:
+    document.querySelector("#app").getBoundingClientRect().x +
+    parseFloat(getComputedStyle(document.querySelector("#app")).borderLeftWidth),
 }));
 // A touch-capable tablet follows the desktop breakpoint, rather than the pointer type.
 await assertTabletDesktop();
 async function assertTabletDesktop() {
   qualityAssert.equal(before.sidebarPosition, "static");
-  qualityAssert.ok(Math.abs(before.sidebarX) < 1);
+  qualityAssert.ok(Math.abs(before.sidebarX - before.frameContentX) < 1);
   await page.click("#toggleSidebar");
   await page.waitForFunction(() => document.body.classList.contains("sidebar-hidden"));
   await page.click("#workspaceNavigationToggle");
 }
 await page.waitForFunction(
-  () => Math.abs(document.querySelector("#sidebar").getBoundingClientRect().width - 232) < 0.01,
+  () => Math.abs(document.querySelector("#sidebar").getBoundingClientRect().width - 264) < 0.01,
 );
 const after = await page.evaluate(() => {
   const sidebar = document.querySelector("#sidebar"),
@@ -62,8 +65,8 @@ await browser.close();
   qualityAssert.equal(after.position, "static");
   qualityAssert.equal(after.mobileOpen, false);
   qualityAssert.equal(after.bodyHidden, false);
-  qualityAssert.ok(Math.abs(after.x) < 0.5);
-  qualityAssert.ok(Math.abs(after.width - 232) < 0.01);
+  qualityAssert.ok(Math.abs(after.x - before.frameContentX) < 0.5);
+  qualityAssert.ok(Math.abs(after.width - 264) < 0.01);
   qualityAssert.equal(after.shadow, "none");
   qualityAssert.ok(after.topElement, "Condition: !after.topElement");
 }

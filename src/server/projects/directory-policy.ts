@@ -7,6 +7,10 @@ import type { ProjectSnapshot, ProjectVisibility } from "../../shared/engine/typ
 
 /** Browser visibility is independent of engine sandbox permissions and never relocates native history. */
 export class ProjectDirectoryPolicy {
+  private protectedSession: (id: string) => boolean = () => false;
+  protectSessions(predicate: (id: string) => boolean) {
+    this.protectedSession = predicate;
+  }
   private readonly sessions = new Map<string, string>();
   private readonly approvals = new Set<string | number>();
   constructor(
@@ -29,6 +33,7 @@ export class ProjectDirectoryPolicy {
     }
   }
   remember(value: unknown): boolean {
+    if (isRecord(value) && typeof value.id === "string" && this.protectedSession(value.id)) return false;
     if (this.allowExternal) return true;
     if (!isRecord(value) || typeof value.id !== "string") return false;
     this.sessions.delete(value.id);
@@ -43,6 +48,8 @@ export class ProjectDirectoryPolicy {
     flags: Record<string, unknown>,
     getSession: (id: string) => Promise<unknown>,
   ): Promise<void> {
+    if (typeof params.threadId === "string" && this.protectedSession(params.threadId))
+      throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
     if (this.allowExternal) return;
     if (method === "thread/start" && flags.pandaProjectId !== undefined) return;
     if (typeof params.threadId === "string") {
@@ -59,6 +66,14 @@ export class ProjectDirectoryPolicy {
       throw new ProjectError(403, "projects.errorDirectoryOutsideRoot");
   }
   async list(method: string, value: unknown, getSession: (id: string) => Promise<unknown>): Promise<unknown> {
+    if (["thread/list", "thread/loaded/list"].includes(method) && isRecord(value) && Array.isArray(value.data))
+      value = {
+        ...value,
+        data: value.data.filter((entry) => {
+          const id = typeof entry === "string" ? entry : isRecord(entry) ? entry.id : null;
+          return typeof id !== "string" || !this.protectedSession(id);
+        }),
+      };
     if (
       this.allowExternal ||
       !["thread/list", "thread/loaded/list"].includes(method) ||
@@ -103,6 +118,12 @@ export class ProjectDirectoryPolicy {
     };
   }
   envelope(input: unknown): boolean {
+    if (isRecord(input) && isRecord(input.params)) {
+      const params = input.params,
+        thread = isRecord(params.thread) ? params.thread : null;
+      const id = params.threadId ?? params.conversationId ?? thread?.id;
+      if (typeof id === "string" && this.protectedSession(id)) return false;
+    }
     if (this.allowExternal) return true;
     if (!isRecord(input) || typeof input.method !== "string") return false;
     const params = isRecord(input.params) ? input.params : {};
@@ -127,6 +148,10 @@ export class ProjectDirectoryPolicy {
     return true;
   }
   event(input: object): object | null {
+    if (isRecord(input)) {
+      if (typeof input.threadId === "string" && this.protectedSession(input.threadId)) return null;
+      if (input.type === "engine/notification" && isRecord(input.payload) && !this.envelope(input.payload)) return null;
+    }
     if (this.allowExternal || !isRecord(input)) return input;
     // The local goal reader emits outside the native notification pipeline.
     if (

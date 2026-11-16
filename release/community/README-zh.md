@@ -70,3 +70,17 @@ PandaForce Free 衍生自 MIT 许可的 [lezi-fun/codex-webui](https://github.co
 ## 其他模型配置
 
 [Codex CLI：智谱 GLM、Ollama 和 DeepSeek](panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md)
+
+## 开发分支
+
+`develop` 分支包含当前公开应用源码，容器镜像标签单独发布。使用该分支时，从源码构建：
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
+
+默认构建执行编译和打包。源码检查与回归测试单独执行：使用 `bun run check` 及对应测试命令。管理员可通过 `PANDA_FORCE_BUILD_BASE` 和 `PANDA_FORCE_RUNTIME_BASE` 选择兼容的构建和运行基础镜像，包括自己的镜像仓库。
+
+### 本地成员账号
+
+首次在浏览器中创建管理员，邮箱可以稍后补充。先在管理设置中配置 SMTP，再绑定邮箱或邀请成员。管理员填写成员邮箱发送邀请，成员自行设置密码。找回密码使用邮件验证码，并提供重新发送倒计时。应用账号与 Codex／模型供应商认证分别管理。

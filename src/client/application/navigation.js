@@ -44,7 +44,7 @@ export function assembleNavigation({
       ? projectsPort.businessProjects.projectForSession(state.active.id)?.id || null
       : state.newSessionProjectId || null;
   }
-  function startNewTask({ saveCurrentDraft = true, projectId = defaultNewSessionProject() } = {}) {
+  function startNewTask({ saveCurrentDraft = true, projectId = defaultNewSessionProject(), keepRoute = false } = {}) {
     if (saveCurrentDraft) composerPort.saveComposerDraft();
     mutations.set("newSessionProjectId", projectId);
     goalsPort.closeGoalDialog();
@@ -53,7 +53,7 @@ export function assembleNavigation({
     synchronizationPort.resetActiveThreadSync();
     rememberActiveThread(null);
     sessions.replaceActive(null);
-    viewUpdates.request("newTask");
+    if (!keepRoute) viewUpdates.request("newTask");
     viewUpdates.request("workspaceContext");
     mutations.set("composerMentions", []);
     mutations.set("composerAttachments", []);
@@ -244,7 +244,8 @@ export function assembleNavigation({
   function bind() {
     $("#newTask").onclick = () => startNewTask();
     globalThis.addEventListener("panda-force:authenticated", () => {
-      if (state.active?.id) void openThread(state.active.id);
+      const route = parseWorkbenchRoute();
+      if (route.page === "task" && route.id === state.active?.id) void openThread(route.id);
     });
   }
   return {

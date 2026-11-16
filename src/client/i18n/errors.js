@@ -6,7 +6,7 @@ import { isMessageId } from "../../shared/i18n/message-id.js";
 export function errorText(payload, t, fallback = "errors.unexpectedError") {
   if (typeof payload === "string") return payload || t(fallback);
   if (!payload || typeof payload !== "object") return t(fallback);
-  if ("messageId" in payload && isMessageId(payload.messageId) && /^(auth|errors|projects)\./.test(payload.messageId)) {
+  if ("messageId" in payload && isMessageId(payload.messageId)) {
     // Server error envelopes carry runtime-validated parameters, not compile-time literals.
     const translate = /** @type {(id: string, values: object) => string} */ (t);
     return translate(

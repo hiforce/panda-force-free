@@ -1,11 +1,21 @@
+import { CLIENT_ENTRYPOINTS, CLIENT_BUNDLES } from "../src/shared/client-entrypoints.js";
 import { syncCatalogModules } from "./i18n/catalog-modules.mjs";
 import { mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { SUPPORTED_LOCALES } from "../src/shared/i18n/locale-policy.js";
+import { assertPublishedCatalogs } from "./i18n/published-catalogs.mjs";
 
 rmSync("dist/cdn-public", { recursive: true, force: true });
 syncCatalogModules();
+assertPublishedCatalogs();
+const gadgetStyles = [
+  "src/client/gadget/style.css",
+  ...Array.from(new Bun.Glob("**/*.css").scanSync({ cwd: "src/gadget/system" }))
+    .sort()
+    .map((path) => "src/gadget/system/" + path),
+];
+writeFileSync("public/gadget.css", gadgetStyles.map((path) => readFileSync(path, "utf8")).join("\n"));
 const revision = createHash("sha256");
 mkdirSync("public/locales", { recursive: true });
 for (const locale of SUPPORTED_LOCALES) {
@@ -43,22 +53,14 @@ const sharedRuntime = {
     });
   },
 };
-for (const [entry, output] of Object.entries({
-  "i18n.js": "i18n.js",
-  "http-client.js": "http-client.js",
-  "auth-bootstrap.js": "auth-bootstrap.js",
-  "panda-brand.js": "panda-brand.js",
-  "app.js": "app.bundle.js",
-  "file-preview.js": "file-preview.bundle.js",
-  "terminal-runtime.js": "terminal-runtime.bundle.js",
-})) {
+for (const [entry, output] of Object.entries(CLIENT_ENTRYPOINTS)) {
   const result = await Bun.build({
     ...options,
     entrypoints: ["src/client/" + entry],
     outdir: "public",
     naming: output,
     plugins: ["i18n.js", "http-client.js"].includes(entry) ? [] : [sharedRuntime],
-    external: ["/app.bundle.js", "/file-preview.bundle.js", "/terminal-runtime.bundle.js"],
+    external: [...CLIENT_BUNDLES, ...CLIENT_BUNDLES.map((path) => path + "?retry=1")],
   });
   if (!result.success) throw new AggregateError(result.logs, "Client build failed: " + entry);
 }

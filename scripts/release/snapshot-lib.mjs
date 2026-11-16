@@ -11,6 +11,8 @@ export function assertReleasePath(path) {
   if (path.includes("\\") || path.split("/").some((p) => !p || p === "." || p === ".."))
     throw new Error("Unsafe release path: " + path);
   const parts = path.split("/");
+  if (/^(?:docs\/|scripts\/internal\/|tests\/ops\/)/.test(path) || /(?:^|[/.])private(?:[/.]|$)/i.test(path))
+    throw new Error("Internal release path: " + path);
   if (/^(?:release\/community|panda-docs)\/(?:\.gitignore|\.dockerignore|\.env.example)$/.test(path)) return;
   const permittedDot = [".gitignore", ".dockerignore", ".env.example"].includes(path);
   if (parts.some((p) => p.startsWith(".")) && !permittedDot) throw new Error("Private metadata path: " + path);
@@ -74,7 +76,7 @@ export function verifySnapshot(root) {
     if (mode !== item.mode) throw new Error("Snapshot mode changed: " + item.path);
     if (bytes.length !== item.bytes || sha256(bytes) !== item.sha256)
       throw new Error("Snapshot file changed: " + item.path);
-    if (!/\.(png|jpg|jpeg|woff2?|ttf|ico)$/i.test(item.path)) inspectText(item.path, bytes);
+    if (!/\.(png|jpg|jpeg|webp|avif|gif|woff2?|ttf|ico)$/i.test(item.path)) inspectText(item.path, bytes);
   }
   if (sha256(JSON.stringify(manifest.files)) !== manifest.contentSha256) throw new Error("Snapshot digest differs");
   return manifest;

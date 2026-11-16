@@ -2,6 +2,7 @@ import { once } from "node:events";
 import { StringDecoder } from "node:string_decoder";
 import { errorCode, errorMessage } from "./../../shared/errors.js";
 import { createRotatingLog } from "./rotating-file.js";
+import { createDiagnosticTail } from "./diagnostic-tail.js";
 
 export async function runLoggedProcess({
   command,
@@ -12,6 +13,7 @@ export async function runLoggedProcess({
   stderr = process.stderr,
 }) {
   const writer = logging.enabled ? createRotatingLog(logging) : null;
+  const diagnostic = createDiagnosticTail(writer ? Math.min(16384, Math.max(0, logging.maxFileBytes - 256)) : 0);
   let fileFailed = false;
   const record = (stream, text) => {
     if (!writer) return;
@@ -57,10 +59,14 @@ export async function runLoggedProcess({
     };
     for await (const chunk of source) {
       if (!destination.write(chunk)) await once(destination, "drain");
-      pending += decoder.write(chunk);
+      const decoded = decoder.write(chunk);
+      if (stream === "stderr") diagnostic.append(decoded);
+      pending += decoded;
       flush(false);
     }
-    pending += decoder.end();
+    const decoded = decoder.end();
+    if (stream === "stderr") diagnostic.append(decoded);
+    pending += decoded;
     flush(true);
   }
   try {
@@ -69,7 +75,8 @@ export async function runLoggedProcess({
       copy(child.stderr, stderr, "stderr"),
       child.exited,
     ]);
-    record("lifecycle", `Service exited with code ${code}`);
+    const failure = code !== 0 ? diagnostic.text() : "";
+    record("lifecycle", `Service exited with code ${code}${failure ? "\nLast stderr before exit:\n" + failure : ""}`);
     return code;
   } finally {
     clearTimeout(timer);

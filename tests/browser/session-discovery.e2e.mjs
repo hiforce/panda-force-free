@@ -34,14 +34,14 @@ try {
       folder: font(".sidebar-session-directory strong"),
       metadata: font(".sidebar-session-directory-path"),
       overflow: getComputedStyle(path).textOverflow,
-      connection: document.querySelector('.workbench-navigation [data-route="connections"] svg').innerHTML,
-      settings: document.querySelector('.workbench-navigation [data-route="settings"] svg').innerHTML,
+      skills: document.querySelector('.workbench-navigation [data-route="skills"] svg').innerHTML,
+      publish: document.querySelector('.workbench-navigation [data-route="publish"] svg').innerHTML,
     };
   });
   assert.ok(typography.navigation > typography.session && typography.session > typography.metadata);
   assert.equal(typography.folder, typography.session);
   assert.equal(typography.overflow, "ellipsis");
-  assert.notEqual(typography.connection, typography.settings);
+  assert.notEqual(typography.skills, typography.publish);
   await page.keyboard.press("ArrowLeft");
   assert.equal(await alphaFolder.getAttribute("aria-expanded"), "false");
   assert.equal(await unassigned.locator(".thread-item").count(), 0);
@@ -83,6 +83,7 @@ try {
   await page.locator("#projectCodeInput").fill("discovery");
   await page.locator('#projectForm [type="submit"]').click();
   await page.locator("#projectDialog").waitFor({ state: "hidden" });
+  await page.locator('[data-route$="tab=sessions"]').click();
   await page.locator('[data-wb="project-link"]').click();
   await page.locator("#associationDirectory").waitFor({ state: "visible" });
   await page.waitForFunction(() => !document.querySelector("#associationDirectory").disabled);
@@ -110,6 +111,7 @@ try {
   const countBefore = Number(await alphaCount.innerText());
   const olderLinkSnapshot = await (await context.request.get(fixture.base + "/api/projects")).json();
   const olderLinked = await context.request.post(fixture.base + "/api/projects/assign", {
+    headers: { Origin: fixture.base },
     data: {
       projectId: olderLinkSnapshot.projects[0].id,
       revision: olderLinkSnapshot.revision,
@@ -129,6 +131,7 @@ try {
   const history = await (await context.request.get(fixture.base + "/api/projects/history")).json();
   const current = await (await context.request.get(fixture.base + "/api/projects")).json();
   const linked = await context.request.post(fixture.base + "/api/projects/assign", {
+    headers: { Origin: fixture.base },
     data: {
       projectId: current.projects[0].id,
       revision: current.revision,

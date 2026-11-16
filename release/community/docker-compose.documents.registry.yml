@@ -1,0 +1,10 @@
+# Optional private registry credentials. The daemon, not the worker, uses them for image pulls.
+services:
+  panda-executor:
+    environment:
+      PANDA_FORCE_REGISTRY_CONFIG_FILE: /run/secrets/panda-registry
+    secrets:
+      - panda-registry
+secrets:
+  panda-registry:
+    file: ${PANDA_FORCE_REGISTRY_CONFIG_HOST:?Set the path to a dedicated Docker auth config.json}

@@ -1,0 +1,150 @@
+[
+  {
+    "name": "panda_force_publication_reviews",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      },
+      {
+        "name": "variantId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "payload",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "reviewedAt",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "publication_reviews_lookup_0",
+        "unique": false,
+        "columns": ["variantId", "reviewedAt"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publication_variants",
+    "columns": [
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "documentId",
+        "type": "varchar(191)",
+        "nullable": false
+      },
+      {
+        "name": "revisionId",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "payload",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "digest",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "review",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "createdAt",
+        "type": "bigint",
+        "nullable": false
+      },
+      {
+        "name": "sourceSnapshot",
+        "type": "longtext",
+        "nullable": false
+      },
+      {
+        "name": "sourceProjectId",
+        "type": "varchar(191)",
+        "nullable": true
+      },
+      {
+        "name": "summary",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "summaryDigest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "referenceDigest",
+        "type": "longtext",
+        "nullable": true
+      },
+      {
+        "name": "sequence",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": true
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      },
+      {
+        "name": "variants_by_scoped_document",
+        "unique": false,
+        "columns": ["sourceProjectId", "documentId", "createdAt"]
+      },
+      {
+        "name": "variants_by_document",
+        "unique": false,
+        "columns": ["documentId", "createdAt"]
+      },
+      {
+        "name": "publication_variants_sequence",
+        "unique": true,
+        "columns": ["sequence"]
+      }
+    ]
+  },
+  {
+    "name": "panda_force_publishing_guard",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint",
+        "nullable": false
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["id"]
+      }
+    ]
+  }
+]

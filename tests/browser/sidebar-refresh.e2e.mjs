@@ -19,7 +19,7 @@ try {
     prefetched = new Set();
   page.on("pageerror", (error) => errors.push(error.message));
   let bundle;
-  await page.route("**/app.bundle.js", (route) => {
+  await page.route("**/app.bundle.js*", (route) => {
     bundle = route;
   });
   await page.route("**/api/config", (route) => {
@@ -42,7 +42,7 @@ try {
     "API reads must start before the main bundle is evaluated",
   );
   await bundle.continue();
-  await page.unroute("**/app.bundle.js");
+  await page.unroute("**/app.bundle.js*");
   await page.locator('.thread-item[data-id="old-alpha"]').waitFor();
   assert.equal(
     await page.evaluate(() =>

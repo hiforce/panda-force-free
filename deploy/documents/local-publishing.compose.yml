@@ -1,0 +1,8 @@
+# Optional overlay for a dedicated host directory. The application still needs no Docker socket.
+# Compose resolves paths against the first compose file in the command.
+services:
+  panda-force:
+    environment:
+      PANDA_FORCE_PUBLICATION_ROOTS: '{"sites":"/var/lib/panda-published"}'
+    volumes:
+      - ${PANDA_FORCE_PUBLICATION_HOST:?Set an absolute path to a dedicated writable host directory}:/var/lib/panda-published

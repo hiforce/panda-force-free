@@ -310,9 +310,31 @@
     <link rel="icon" href="/favicon.svg?v=redflame-1" type="image/svg+xml" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/workbench.css" />
+    <link rel="stylesheet" href="/gadget.css" />
+    <link rel="stylesheet" href="/documents.css" />
+    <link rel="stylesheet" href="/document-authoring.css" />
+    <link rel="stylesheet" href="/document-code.css" />
+    <link rel="stylesheet" href="/document-workspace.css" />
+    <link rel="stylesheet" href="/document-publication.css" />
+    <link rel="stylesheet" href="/packages.css" />
+    <link rel="stylesheet" href="/template-previews.css" />
+    <link rel="stylesheet" href="/creation.css" />
+    <link rel="stylesheet" href="/knowledge.css" />
+    <link rel="stylesheet" href="/cli.css" />
+    <link rel="stylesheet" href="/bots.css" />
+    <link rel="stylesheet" href="/bots.css" />
+    <link rel="stylesheet" href="/workbench-forms.css" />
+    <link rel="stylesheet" href="/source-import.css" />
+    <link rel="stylesheet" href="/publishing.css" />
+    <link rel="stylesheet" href="/builds.css" />
+    <link rel="stylesheet" href="/delivery.css" />
+    <link rel="stylesheet" href="/social.css" />
     <link rel="stylesheet" href="/session-workspace.css" />
+    <link rel="stylesheet" href="/settings-workspace.css" />
+    <link rel="stylesheet" href="/database.css" />
     <link rel="stylesheet" href="/workbench-chrome.css" />
     <link rel="stylesheet" href="/workbench-layout.css" />
+    <link rel="stylesheet" href="/creative.css" />
     <link rel="stylesheet" href="/appearance.css" />
     <link rel="modulepreload" href="/panda-brand.js" />
     <script src="/auth-bootstrap.js" type="module"></script>
@@ -724,7 +746,7 @@
           </button>
         </div>
         <div class="conversation-viewport">
-          <section class="conversation" id="conversation">
+          <section class="conversation" id="conversation" tabindex="0">
             <div class="empty-state" id="emptyState">
               <span id="emptyCodexMark"></span>
               <h1 data-pf-message="common.whatCanIHelp">What can I help?</h1>
@@ -1510,78 +1532,38 @@
               <span class="icon-slot" data-icon="x"></span></button
           ></label>
           <div class="settings-nav-scroll" id="settingsNavScroll">
-            <details class="settings-nav-group" data-settings-group="general" open="">
-              <summary data-pf-message="common.general">General</summary>
-              <button type="button" class="active" data-settings-page="general-settings">
-                <span class="icon-slot" data-icon="wrench"></span
-                ><span data-pf-message="common.general">General</span></button
-              ><button type="button" data-settings-page="keyboard-shortcuts">
-                <span class="icon-slot" data-icon="command"></span
-                ><span data-pf-message="common.keyboardShortcuts">Keyboard shortcuts</span></button
-              ><button type="button" data-settings-page="data-controls">
-                <span class="icon-slot" data-icon="list"></span
-                ><span data-pf-message="common.archivedChats">Archived chats</span>
-              </button>
-            </details>
-            <details class="settings-nav-group" data-settings-group="appearance">
-              <summary data-pf-message="common.appearance">Appearance</summary>
-              <button type="button" data-settings-page="appearance">
-                <span class="icon-slot" data-icon="monitor"></span
-                ><span data-pf-message="common.appearance">Appearance</span>
-              </button>
-            </details>
-            <details class="settings-nav-group" data-settings-group="engine">
-              <summary data-pf-message="common.enginesAndTools">Engines and tools</summary>
+            <button type="button" data-settings-page="general-settings">
+              <span class="icon-slot" data-icon="slidersHorizontal"></span
+              ><span data-pf-message="settings.preferences"></span>
+            </button>
+            <div class="settings-search-results" id="settingsSearchResults" hidden></div>
+            <details class="settings-nav-group" data-settings-group="services" open>
+              <summary data-pf-message="creative.system"></summary>
               <button type="button" data-settings-page="agent">
-                <span class="icon-slot" data-icon="terminal"></span
-                ><span data-pf-message="common.configuration">Configuration</span></button
+                <span class="icon-slot" data-icon="plug"></span
+                ><span data-pf-message="creative.connections"></span></button
               ><button type="button" data-settings-page="plugins-settings">
-                <span class="icon-slot" data-icon="wrench"></span
-                ><span data-pf-message="common.plugins">Plugins</span></button
-              ><button type="button" data-settings-page="skills-settings">
-                <span class="icon-slot" data-icon="file"></span
-                ><span data-pf-message="common.skills">Skills</span></button
-              ><button type="button" data-settings-page="browser-use">
-                <span class="icon-slot" data-icon="globe"></span
-                ><span data-pf-message="common.browser">Browser</span></button
-              ><button type="button" data-settings-page="computer-use">
-                <span class="icon-slot" data-icon="monitor"></span
-                ><span data-pf-message="common.computerUse2">Computer use</span></button
-              ><button type="button" data-settings-page="connections">
-                <span class="icon-slot" data-icon="monitor"></span
-                ><span data-pf-message="common.connections">Connections</span></button
-              ><button type="button" data-settings-page="cloud-settings">
-                <span class="icon-slot" data-icon="globe"></span
-                ><span data-pf-message="common.cloudPreferences">Cloud preferences</span></button
-              ><button type="button" data-settings-page="cloud-environments">
-                <span class="icon-slot" data-icon="globe"></span
-                ><span data-pf-message="common.cloudEnvironments">Cloud environments</span></button
-              ><button type="button" data-settings-page="code-review">
-                <span class="icon-slot" data-icon="fileDiff"></span
-                ><span data-pf-message="common.codeReview">Code review</span></button
-              ><button type="button" data-settings-page="git-settings">
-                <span class="icon-slot" data-icon="gitBranch"></span
-                ><span data-pf-message="common.git">Git</span></button
-              ><button type="button" data-settings-page="hooks-settings">
-                <span class="icon-slot" data-icon="wrench"></span
-                ><span data-pf-message="common.hooks">Hooks</span></button
-              ><button type="button" data-settings-page="worktrees">
-                <span class="icon-slot" data-icon="list"></span
-                ><span data-pf-message="common.worktrees">Worktrees</span>
+                <span class="icon-slot" data-icon="settings"></span
+                ><span data-pf-message="creative.extensions"></span></button
+              ><button type="button" data-settings-page="search-settings">
+                <span class="icon-slot" data-icon="search"></span
+                ><span data-pf-message="search.settingsTitle"></span></button
+              ><button type="button" data-settings-page="bots">
+                <span class="icon-slot" data-icon="bot"></span
+                ><span data-pf-message="cli.botSettingsTitle"></span></button
+              ><button type="button" data-settings-page="client-access">
+                <span class="icon-slot" data-icon="shield"></span><span data-pf-message="cli.title"></span></button
+              ><button type="button" data-settings-page="storage">
+                <span class="icon-slot" data-icon="file"></span><span data-pf-message="creative.storage"></span>
               </button>
             </details>
-            <details class="settings-nav-group" data-settings-group="storage">
-              <summary data-pf-message="common.storageAndLogs">Storage and logs</summary>
-              <button type="button" data-settings-page="storage">
-                <span class="icon-slot" data-icon="file"></span
-                ><span data-pf-message="common.storageAndLogs">Storage and logs</span>
+            <details class="settings-nav-group" data-settings-group="identity" open>
+              <summary data-pf-message="creative.account"></summary>
+              <button type="button" data-settings-page="users">
+                <span class="icon-slot" data-icon="shield"></span><span data-pf-message="users.title"></span>
               </button>
-            </details>
-            <details class="settings-nav-group" data-settings-group="identity">
-              <summary data-pf-message="common.accountAndSecurity">Account and security</summary>
               <button type="button" data-settings-page="profile">
-                <span class="icon-slot" data-icon="userRound"></span
-                ><span data-pf-message="common.profile">Profile</span>
+                <span class="icon-slot" data-icon="userRound"></span><span data-pf-message="common.profile"></span>
               </button>
             </details>
             <div id="settingsNavEmpty" class="settings-nav-empty" hidden="" data-pf-message="common.noResultsFound">
@@ -1589,8 +1571,16 @@
             </div>
           </div>
         </aside>
-        <main class="settings-content" id="settingsContent">
-          <section class="settings-page" data-settings-content="general-settings">
+        <div
+          id="settingsSidebarResize"
+          class="workspace-sidebar-resizer"
+          role="separator"
+          tabindex="0"
+          aria-orientation="vertical"
+          aria-controls="settingsNavScroll"
+        ></div>
+        <main class="settings-content" id="settingsContent" tabindex="0">
+          <section class="settings-page settings-preferences" data-settings-content="general-settings">
             <header class="settings-page-heading">
               <button
                 class="settings-mobile-back icon-button"
@@ -1601,58 +1591,161 @@
               >
                 <span class="icon-slot" data-icon="chevronLeft"></span>
               </button>
-              <h1 id="settingsPageTitle" data-pf-message="common.general">General</h1>
+              <h1 id="settingsPageTitle" data-pf-message="settings.preferences">Preferences</h1>
             </header>
-            <div class="settings-section-title" data-pf-message="common.permissions">Permissions</div>
-            <label class="settings-row settings-toggle-row" id="settingsAutoReviewRow">
-              <span
-                ><strong data-pf-message="common.autoReview">Auto-review</strong
-                ><small data-pf-message="common.showApproveForMeInTheComposer"
-                  >Show “Approve for me” in the composer</small
-                ></span
-              >
-              <input id="settingsAutoReviewToggle" type="checkbox" />
-              <span class="settings-switch" aria-hidden="true"></span>
-            </label>
-            <label class="settings-row settings-toggle-row" id="settingsFullAccessRow">
-              <span
-                ><strong data-pf-message="common.fullAccess">Full access</strong
-                ><small data-pf-message="common.showUnrestrictedAccessInTheComposer"
-                  >Show unrestricted access in the composer</small
-                ></span
-              >
-              <input id="settingsFullAccessToggle" type="checkbox" />
-              <span class="settings-switch" aria-hidden="true"></span>
-            </label>
-            <div class="settings-row">
-              <span
-                ><strong data-pf-message="common.selectedMode">Selected mode</strong
-                ><small data-pf-message="common.permissionModeUsedForNewTurns"
-                  >Permission mode used for new turns</small
-                ></span
-              ><span id="settingsPermissionValue" data-pf-message="common.askForApproval">Ask for approval</span>
-            </div>
-            <div class="settings-row">
-              <span
-                ><strong data-pf-message="common.workingFolder">Working folder</strong
-                ><small data-pf-message="common.workingFolderUsedForNewSessions"
-                  >Working folder used for new sessions</small
-                ></span
-              ><span id="settingsProjectValue"></span>
-            </div>
-            <div class="settings-section-title settings-section-spaced" data-pf-message="common.notifications">
-              Notifications
-            </div>
-            <label class="settings-row settings-toggle-row" id="settingsTaskNotifyRow">
-              <span
-                ><strong data-pf-message="common.taskNotifications">Task notifications</strong
-                ><small data-pf-message="common.showABrowserNotificationWhenATaskCompletesPermissionIs"
-                  >Show a browser notification when a task completes. Permission is requested when enabled.</small
-                ></span
-              >
-              <input id="settingsTaskNotifyToggle" type="checkbox" />
-              <span class="settings-switch" aria-hidden="true"></span>
-            </label>
+            <p class="settings-page-description" data-pf-message="settings.preferencesHint"></p>
+            <nav class="settings-section-links" data-pf-aria-label="settings.jumpTo" aria-label="Jump to">
+              <button type="button" data-preferences-jump="appearance" data-pf-message="shell.appearance"></button
+              ><button
+                type="button"
+                data-preferences-jump="conversation"
+                data-pf-message="settings.conversationShort"
+              ></button
+              ><button
+                type="button"
+                data-preferences-jump="notifications"
+                data-pf-message="common.notifications"
+              ></button
+              ><button type="button" data-preferences-jump="shortcuts" data-pf-message="settings.shortcuts"></button>
+            </nav>
+            <section
+              class="settings-preference-section"
+              data-preference-section="appearance"
+              aria-labelledby="settings-appearance-heading"
+            >
+              <header>
+                <h2 id="settings-appearance-heading" tabindex="-1" data-pf-message="creative.appearance"></h2>
+                <p data-pf-message="settings.appearanceHint"></p>
+              </header>
+              <div class="settings-preference-fields">
+                <label class="settings-row settings-select-row"
+                  ><span
+                    ><strong data-pf-message="common.theme">Theme</strong
+                    ><small data-pf-message="common.chooseLightDarkOrFollowYourSystem"
+                      >Choose light, dark, or follow your system</small
+                    ></span
+                  ><select class="settings-select wb-select" id="themeSelect">
+                    <option value="system" data-pf-message="common.systemDefault">System default</option>
+                    <option value="light" data-pf-message="common.light">Light</option>
+                    <option value="dark" data-pf-message="shell.graphite">Graphite</option>
+                    <option value="silk" data-pf-message="shell.silk">Silk</option>
+                    <option value="aurora" data-pf-message="shell.aurora">Aurora</option>
+                  </select></label
+                ><label class="settings-row settings-select-row"
+                  ><span
+                    ><strong data-pf-message="common.language">Language</strong
+                    ><small data-pf-message="common.interfaceLanguage">Interface language</small></span
+                  ><select class="settings-select wb-select" id="languageSelect">
+                    <option value="system" data-pf-message="common.systemDefault">System default</option>
+                    <option value="zh-CN">简体中文</option>
+                    <option value="en" data-pf-message="common.english">English</option>
+                  </select></label
+                >
+              </div>
+            </section>
+            <section
+              class="settings-preference-section"
+              data-preference-section="conversation"
+              aria-labelledby="settings-conversation-heading"
+            >
+              <header>
+                <h2 id="settings-conversation-heading" tabindex="-1" data-pf-message="settings.conversation"></h2>
+                <p data-pf-message="settings.conversationHint"></p>
+              </header>
+              <div class="settings-preference-fields">
+                <label class="settings-row settings-toggle-row" id="settingsAutoReviewRow">
+                  <span
+                    ><strong data-pf-message="common.autoReview">Auto-review</strong
+                    ><small data-pf-message="common.showApproveForMeInTheComposer"
+                      >Show “Approve for me” in the composer</small
+                    ></span
+                  >
+                  <input id="settingsAutoReviewToggle" type="checkbox" />
+                  <span class="settings-switch" aria-hidden="true"></span>
+                </label>
+                <label class="settings-row settings-toggle-row" id="settingsFullAccessRow">
+                  <span
+                    ><strong data-pf-message="common.fullAccess">Full access</strong
+                    ><small data-pf-message="common.showUnrestrictedAccessInTheComposer"
+                      >Show unrestricted access in the composer</small
+                    ></span
+                  >
+                  <input id="settingsFullAccessToggle" type="checkbox" />
+                  <span class="settings-switch" aria-hidden="true"></span>
+                </label>
+                <div class="settings-row">
+                  <span
+                    ><strong data-pf-message="common.selectedMode">Selected mode</strong
+                    ><small data-pf-message="common.permissionModeUsedForNewTurns"
+                      >Permission mode used for new turns</small
+                    ></span
+                  ><span id="settingsPermissionValue" data-pf-message="common.askForApproval">Ask for approval</span>
+                </div>
+                <div class="settings-row">
+                  <span
+                    ><strong data-pf-message="common.workingFolder">Working folder</strong
+                    ><small data-pf-message="common.workingFolderUsedForNewSessions"
+                      >Working folder used for new sessions</small
+                    ></span
+                  ><span id="settingsProjectValue"></span>
+                </div>
+              </div>
+            </section>
+            <section
+              class="settings-preference-section"
+              data-preference-section="notifications"
+              aria-labelledby="settings-notifications-heading"
+            >
+              <header>
+                <h2 id="settings-notifications-heading" tabindex="-1" data-pf-message="common.notifications"></h2>
+                <p data-pf-message="settings.notificationsHint"></p>
+              </header>
+              <div class="settings-preference-fields">
+                <label class="settings-row settings-toggle-row" id="settingsTaskNotifyRow">
+                  <span
+                    ><strong data-pf-message="common.taskNotifications">Task notifications</strong
+                    ><small data-pf-message="common.showABrowserNotificationWhenATaskCompletesPermissionIs"
+                      >Show a browser notification when a task completes. Permission is requested when enabled.</small
+                    ></span
+                  >
+                  <input id="settingsTaskNotifyToggle" type="checkbox" />
+                  <span class="settings-switch" aria-hidden="true"></span>
+                </label>
+              </div>
+            </section>
+            <section
+              class="settings-preference-section"
+              data-preference-section="shortcuts"
+              aria-labelledby="settings-shortcuts-heading"
+            >
+              <header>
+                <h2 id="settings-shortcuts-heading" tabindex="-1" data-pf-message="common.keyboardShortcuts"></h2>
+                <p data-pf-message="settings.shortcutsHint"></p>
+              </header>
+              <div class="settings-preference-fields">
+                <div class="shortcut-row">
+                  <span data-pf-message="common.newChat">New chat</span
+                  ><kbd data-pf-message="common.ctrlK">⌘ / Ctrl ⇧ K</kbd>
+                </div>
+                <div class="shortcut-row">
+                  <span data-pf-message="common.toggleSidebar">Toggle sidebar</span><kbd>⌘ B</kbd>
+                </div>
+                <div class="shortcut-row">
+                  <span data-pf-message="common.searchAnything">Search anything</span
+                  ><kbd data-pf-message="common.ctrlK2">⌘ / Ctrl K</kbd>
+                </div>
+              </div>
+            </section>
+          </section>
+          <section class="settings-page" data-settings-content="users" hidden>
+            <header class="settings-page-heading">
+              <button type="button" class="settings-mobile-back icon-button" data-pf-aria-label="common.backToSettings">
+                <span class="icon-slot" data-icon="chevronLeft"></span>
+              </button>
+              <h1 data-pf-message="users.title"></h1>
+            </header>
+            <p class="settings-page-description" data-pf-message="users.subtitle"></p>
+            <div data-settings-view="users"></div>
           </section>
           <section class="settings-page" data-settings-content="profile" hidden="">
             <header class="settings-page-heading">
@@ -1682,30 +1775,7 @@
               ></span>
             </div>
           </section>
-          <section class="settings-page" data-settings-content="keyboard-shortcuts" hidden="">
-            <header class="settings-page-heading">
-              <button
-                class="settings-mobile-back icon-button"
-                type="button"
-                aria-label="Back to settings"
-                data-pf-aria-label="common.backToSettings"
-              >
-                <span class="icon-slot" data-icon="chevronLeft"></span>
-              </button>
-              <h1 data-pf-message="common.keyboardShortcuts">Keyboard shortcuts</h1>
-            </header>
-            <div class="shortcut-row">
-              <span data-pf-message="common.newChat">New chat</span
-              ><kbd data-pf-message="common.ctrlK">⌘ / Ctrl ⇧ K</kbd>
-            </div>
-            <div class="shortcut-row">
-              <span data-pf-message="common.toggleSidebar">Toggle sidebar</span><kbd>⌘ B</kbd>
-            </div>
-            <div class="shortcut-row">
-              <span data-pf-message="common.searchAnything">Search anything</span
-              ><kbd data-pf-message="common.ctrlK2">⌘ / Ctrl K</kbd>
-            </div>
-          </section>
+
           <section class="settings-page" data-settings-content="placeholder" hidden="">
             <header class="settings-page-heading">
               <button
@@ -1721,42 +1791,65 @@
             <small id="settingsPlaceholderDescription" hidden=""></small>
             <div id="settingsPlaceholderRows"></div>
           </section>
-          <section class="settings-page" data-settings-content="appearance" hidden="">
-            <header class="settings-page-heading">
-              <button
-                class="settings-mobile-back icon-button"
-                type="button"
-                aria-label="Back to settings"
-                data-pf-aria-label="common.backToSettings"
-              >
-                <span class="icon-slot" data-icon="chevronLeft"></span>
-              </button>
-              <h1 data-pf-message="common.appearance">Appearance</h1>
-            </header>
-            <label class="settings-row settings-select-row"
-              ><span
-                ><strong data-pf-message="common.theme">Theme</strong
-                ><small data-pf-message="common.chooseLightDarkOrFollowYourSystem"
-                  >Choose light, dark, or follow your system</small
-                ></span
-              ><select class="settings-select" id="themeSelect">
-                <option value="system" data-pf-message="common.systemDefault">System default</option>
-                <option value="light" data-pf-message="common.light">Light</option>
-                <option value="dark" data-pf-message="shell.graphite">Graphite</option>
-                <option value="silk" data-pf-message="shell.silk">Silk</option>
-                <option value="aurora" data-pf-message="shell.aurora">Aurora</option>
-              </select></label
-            ><label class="settings-row settings-select-row"
-              ><span
-                ><strong data-pf-message="common.language">Language</strong
-                ><small data-pf-message="common.interfaceLanguage">Interface language</small></span
-              ><select class="settings-select" id="languageSelect">
-                <option value="system" data-pf-message="common.systemDefault">System default</option>
-                <option value="zh-CN">简体中文</option>
-                <option value="en" data-pf-message="common.english">English</option>
-              </select></label
-            >
+          <section class="settings-page" data-settings-content="plugins-settings" hidden>
+            <div data-settings-view="plugins-settings"></div>
           </section>
+          <section class="settings-page" data-settings-content="bots" hidden>
+            <button
+              class="settings-mobile-back icon-button"
+              type="button"
+              data-settings-mobile-back
+              data-pf-aria-label="common.back"
+            >
+              <span class="icon-slot" data-icon="chevronLeft"></span>
+            </button>
+            <div data-settings-view="bots"></div>
+          </section>
+          <section class="settings-page" data-settings-content="client-access" hidden>
+            <button
+              class="settings-mobile-back icon-button"
+              type="button"
+              data-settings-mobile-back
+              data-pf-aria-label="common.back"
+            >
+              <span class="icon-slot" data-icon="chevronLeft"></span>
+            </button>
+            <div data-settings-view="client-access"></div>
+          </section>
+          <section class="settings-page" data-settings-content="search-settings" hidden>
+            <button
+              class="settings-mobile-back icon-button"
+              type="button"
+              data-pf-aria-label="common.backToSettings"
+              aria-label="Back to settings"
+            >
+              <span class="icon-slot" data-icon="chevronLeft"></span>
+            </button>
+            <div data-settings-view="search-settings"></div>
+          </section>
+          <section class="settings-page styles-settings-page" data-settings-content="templates" hidden="">
+            <button
+              class="settings-mobile-back icon-button"
+              type="button"
+              aria-label="Back to settings"
+              data-pf-aria-label="common.backToSettings"
+            >
+              <span class="icon-slot" data-icon="chevronLeft"></span>
+            </button>
+            <div data-settings-view="templates"></div>
+          </section>
+          <section class="settings-page styles-settings-page" data-settings-content="publishing-styles" hidden="">
+            <button
+              class="settings-mobile-back icon-button"
+              type="button"
+              aria-label="Back to settings"
+              data-pf-aria-label="common.backToSettings"
+            >
+              <span class="icon-slot" data-icon="chevronLeft"></span>
+            </button>
+            <div data-settings-view="publishing-styles"></div>
+          </section>
+
           <section class="settings-page" data-settings-content="storage" hidden="">
             <header class="settings-page-heading">
               <button
@@ -1769,32 +1862,21 @@
               </button>
               <h1 data-pf-message="common.storageAndLogs">Storage and logs</h1>
             </header>
-            <div class="settings-row">
-              <span
-                ><strong data-pf-message="common.persistentStorage">Persistent storage</strong
-                ><small
-                  data-pf-message="common.configurationAttachmentsLogsPluginsCacheAndBackupsUseSeparateDirectories"
-                  >Configuration, attachments, logs, plugins, cache and backups use separate directories.</small
-                ></span
-              >
-            </div>
-            <div class="settings-row">
-              <span
-                ><strong data-pf-message="common.logRetention">Log retention</strong
-                ><small data-pf-message="common.logsAreWrittenToTheConsoleAndRollingFilesRetention2"
-                  >Logs are written to the console and rolling files. Retention is managed by instance
-                  configuration.</small
-                ></span
-              >
-            </div>
-            <div class="settings-row">
-              <span
-                ><strong data-pf-message="common.storageConfiguration">Storage configuration</strong
-                ><small data-pf-message="common.readOnlyHereYourAdministratorManagesStorageAndLogSettings"
-                  >Read only here. Your administrator manages storage and log settings for this instance.</small
-                ></span
-              >
-            </div>
+            <div data-settings-view="storage"></div>
+            <dl class="database-storage-notes">
+              <dt data-pf-message="common.persistentStorage">Persistent storage</dt>
+              <dd data-pf-message="common.configurationAttachmentsLogsPluginsCacheAndBackupsUseSeparateDirectories">
+                Configuration, attachments, logs, plugins, cache and backups use separate directories.
+              </dd>
+              <dt data-pf-message="common.logRetention">Log retention</dt>
+              <dd data-pf-message="common.logsAreWrittenToTheConsoleAndRollingFilesRetention2">
+                Logs are written to the console and rolling files. Retention is managed by instance configuration.
+              </dd>
+              <dt data-pf-message="database.filesAndLogs">Files and logs</dt>
+              <dd data-pf-message="database.filesHint">
+                File locations and log retention remain managed by this instance’s configuration.
+              </dd>
+            </dl>
           </section>
         </main>
       </div>

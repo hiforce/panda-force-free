@@ -33,7 +33,10 @@ export function assembleWorkspace({
   const icons = { file: codexIcon("file") };
   async function loadFolders(path = folderBrowse.path) {
     const generation = folderRequestGate.next();
-    const list = $("#folderList");
+    const list = $("#folderList"),
+      input = $("#folderPathInput");
+    // Seed navigation synchronously; a late response must not reset an editor's selection or caret.
+    if (input.value !== path) input.value = path;
     $("#folderConfirm").disabled = true;
     setMessageHtml(
       list,
@@ -45,7 +48,7 @@ export function assembleWorkspace({
       if (!folderRequestGate.isCurrent(generation)) return;
       if (!response.ok) throw new Error(data.error || "Cannot browse folder");
       folderBrowse = { path: data.path, parent: data.parent, selected: data.path };
-      $("#folderPathInput").value = data.path;
+      if (input.ownerDocument.activeElement !== input) input.value = data.path;
       setOpaqueText($("#folderSelection"), data.path);
       $("#folderConfirm").disabled = false;
       $("#folderUp").disabled = !data.parent;

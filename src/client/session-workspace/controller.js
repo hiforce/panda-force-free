@@ -2,7 +2,7 @@ import { storage, STORAGE_KEYS } from "../storage.js";
 import { codexIcon } from "../codex-icons.js";
 import { escapeHtml } from "../../shared/html.js";
 import { closestElement, requireElement } from "../dom.js";
-import { localizeAttribute, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { localizeAttribute, localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
 import { createSessionWorkspaceView } from "./view.js";
 import { renderSessionUsage } from "./usage-view.js";
 import { createSessionToolsView } from "./tools-view.js";
@@ -166,6 +166,8 @@ export function createSessionWorkspace(options) {
     localizeAttribute(actionButton, "aria-label", "sessionview.sessionActions", undefined, t);
     localizeAttribute(actionButton, "title", "sessionview.sessionActions", undefined, t);
     setOpaqueText(requireElement("#sessionHeadingProject"), view.project?.name || t("common.unassigned"));
+    if (view.title) setOpaqueText(requireElement("#threadTitle"), view.title);
+    else localizeText(requireElement("#threadTitle"), "common.newSession", undefined, t);
     requireElement("#threadTitle").title = view.title;
     setOpaqueText(requireElement("#sessionProjectName"), view.project?.name || t("common.unassigned"));
     setOpaqueText(requireElement("#sessionProjectCode"), view.project?.code || "—");

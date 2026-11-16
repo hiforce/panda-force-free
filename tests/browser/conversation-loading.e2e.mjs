@@ -449,6 +449,26 @@ try {
   await page.locator("#conversation").getByRole("button", { name: "Sign in again", exact: true }).click();
   assert.equal(await page.evaluate(() => window.reauthenticationRequested), true);
 
+  await Promise.all([
+    page.waitForRequest((request) => {
+      if (!request.url().endsWith("/api/rpc") || request.method() !== "POST") return false;
+      const call = request.postDataJSON();
+      return call.method === "host/thread/history" && call.params.threadId === "expired-history";
+    }),
+    page.evaluate(() => dispatchEvent(new Event("panda-force:authenticated"))),
+  ]);
+  assert.equal(new URL(page.url()).pathname, "/task/expired-history");
+
+  await page.evaluate(() => globalThis.__pandaForceDebug.workbench.navigate("/projects"));
+  const recoveredRoute = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        dispatchEvent(new Event("panda-force:authenticated"));
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(location.pathname)));
+      }),
+  );
+  assert.equal(recoveredRoute, "/projects", "Background authentication recovery must retain the current view");
+
   console.log(
     JSON.stringify({
       boundedHistory: true,

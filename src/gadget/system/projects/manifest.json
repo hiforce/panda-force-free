@@ -1,0 +1,51 @@
+{
+  "id": "system.projects",
+  "apiVersion": 1,
+  "version": "1.0.0",
+  "configVersion": 1,
+  "title": {
+    "zh-CN": "常用项目",
+    "en": "Frequent projects",
+    "zh-HK": "常用項目",
+    "zh-TW": "常用專案"
+  },
+  "description": {
+    "zh-CN": "置顶或最近使用的项目，随时继续。",
+    "en": "Pinned and recent projects, ready to continue.",
+    "zh-HK": "隨時繼續置頂及最近使用的項目。",
+    "zh-TW": "隨時繼續釘選及最近使用的專案。"
+  },
+  "icon": "folderOpen",
+  "singleton": true,
+  "source": "system",
+  "layout": {
+    "w": 4,
+    "h": 7,
+    "minW": 4,
+    "minH": 4
+  },
+  "config": {
+    "limit": {
+      "type": "number",
+      "default": 3,
+      "min": 1,
+      "max": 20,
+      "label": {
+        "en": "Items shown",
+        "zh-CN": "显示条数",
+        "zh-HK": "顯示筆數",
+        "zh-TW": "顯示筆數"
+      }
+    }
+  },
+  "services": ["summary"],
+  "actions": ["open"],
+  "minRefreshSeconds": 60,
+  "defaultPlacement": {
+    "x": 8,
+    "y": 0,
+    "order": 3
+  },
+  "permissions": ["projects.read"],
+  "clientCapabilities": ["panda.projects"]
+}

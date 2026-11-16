@@ -19,3 +19,18 @@ export function matchesRequestOrigin({
     return false;
   }
 }
+
+/** Cookie-authenticated writes require browser origin evidence; explicit API credentials have a separate gate.
+ * @param {import("node:http").IncomingMessage} req
+ */
+export function matchesCookieMutationOrigin(req) {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method || "")) return true;
+  return (
+    Boolean(req.headers.origin || req.headers["sec-fetch-site"] === "same-origin") &&
+    matchesRequestOrigin({
+      hostHeader: req.headers.host,
+      origin: req.headers.origin,
+      fetchSite: req.headers["sec-fetch-site"],
+    })
+  );
+}

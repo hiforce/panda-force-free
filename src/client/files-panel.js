@@ -1,8 +1,5 @@
-import { isMessageId } from "../shared/i18n/message-id.js";
-import { errorMessage } from "./../shared/errors.js";
-import { closestElement, findElement, findElements, requireElement } from "./dom.js";
-import { request as fetch } from "./http-client.js";
 import {
+  isMessageId,
   getBrowserI18n,
   localizeAttribute,
   localizeText,
@@ -10,6 +7,9 @@ import {
   setOpaqueAttribute,
   setOpaqueText,
 } from "./i18n.js";
+import { errorMessage } from "./../shared/errors.js";
+import { closestElement, findElement, findElements, requireElement } from "./dom.js";
+import { request as fetch } from "./http-client.js";
 
 import { codexIcon } from "./codex-icons.js";
 

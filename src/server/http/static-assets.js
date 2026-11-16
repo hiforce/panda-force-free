@@ -4,14 +4,34 @@ import { gzipSync } from "node:zlib";
 
 // Only resolved application assets enter this cache; API and session data do not.
 const assets = new Map();
-export function serveStaticAsset(req, res, file, contentType) {
+/** @param {import("./interface-assets.js").InterfaceAssetRepresentation | undefined} [representation] */
+export function serveStaticAsset(req, res, file, contentType, representation) {
   const stat = statSync(file);
-  const signature = `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`;
+  const signature = `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}:${representation?.key || ""}`;
   let asset = assets.get(file);
   if (!asset || asset.signature !== signature) {
-    const body = readFileSync(file);
-    asset = { signature, body, etag: `W/"${createHash("sha256").update(body).digest("hex")}"` };
+    const body = representation?.body || readFileSync(file);
+    const version = createHash("sha256").update(body).digest("hex");
+    asset = { signature, body, version, etag: `W/"${version}"` };
     assets.set(file, asset);
+  }
+  const requestedVersion = new URL(req.url || "/", "http://static.invalid").searchParams.get("v");
+  if (
+    /^(?:text\/(?:css|javascript)|application\/javascript)/.test(contentType) &&
+    /^[a-f0-9]{64}$/.test(requestedVersion || "") &&
+    requestedVersion !== asset.version
+  ) {
+    res.writeHead(409, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" });
+    res.end(req.method === "HEAD" ? undefined : "The interface version changed. Reload the page.");
+    return;
+  }
+  if (representation?.location) {
+    const target = new URL(representation.location);
+    const retry = new URL(req.url || "/", "http://static.invalid").searchParams.get("retry");
+    if (retry === "1") target.searchParams.set("retry", retry);
+    res.writeHead(302, { location: target.href, "cache-control": "private, no-cache" });
+    res.end();
+    return;
   }
   const headers = {
     "content-type": contentType,

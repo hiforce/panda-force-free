@@ -81,7 +81,18 @@ try {
   await page.keyboard.press("Control+x");
   await page.keyboard.press("A");
   await page.keyboard.type(" CTRL_C_OK");
+  const waitVimMode = (inserting) =>
+    page.waitForFunction((inserting) => {
+      const term = globalThis.__codexTerminals?.side?.term;
+      if (!term || term.buffer.active.type !== "alternate") return false;
+      const rows = [...Array(term.buffer.active.length)]
+        .map((_, index) => term.buffer.active.getLine(index)?.translateToString(true))
+        .join("\n");
+      return rows.includes("value=9 CTRL_C_OK") && rows.includes("-- INSERT --") === inserting;
+    }, inserting);
+  await waitVimMode(true);
   await page.keyboard.press("Control+c");
+  await waitVimMode(false);
   await page.keyboard.type(":wq");
   await page.keyboard.press("Enter");
   await page.waitForFunction(() => globalThis.__codexTerminals?.side?.term?.buffer.active.type === "normal");

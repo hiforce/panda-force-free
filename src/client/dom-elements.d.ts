@@ -153,6 +153,9 @@ export interface InterfaceElements {
   "#projectCodeInput": HTMLElementTagNameMap["input"];
   "#projectDescriptionInput": HTMLElementTagNameMap["textarea"];
   "#projectDialog": HTMLElementTagNameMap["dialog"];
+  "#projectDirectoryPagination": HTMLElementTagNameMap["footer"];
+  "#projectDirectorySort": HTMLElementTagNameMap["select"];
+  "#projectDirectoryTopPages": HTMLElementTagNameMap["div"];
   "#projectForm": HTMLElementTagNameMap["form"];
   "#projectlessOption": HTMLElementTagNameMap["button"];
   "#projectName": HTMLElementTagNameMap["span"];
@@ -235,6 +238,10 @@ export interface InterfaceElements {
   "#sessionUsageView": HTMLElementTagNameMap["div"];
   "#sessionWorkingFolder": HTMLElementTagNameMap["span"];
   "#sessionWorkspaceSearch": HTMLElementTagNameMap["button"];
+  "#settings-appearance-heading": HTMLElementTagNameMap["h2"];
+  "#settings-conversation-heading": HTMLElementTagNameMap["h2"];
+  "#settings-notifications-heading": HTMLElementTagNameMap["h2"];
+  "#settings-shortcuts-heading": HTMLElementTagNameMap["h2"];
   "#settingsAccountAvatar": HTMLElementTagNameMap["span"];
   "#settingsAccountMeta": HTMLElementTagNameMap["small"];
   "#settingsAccountName": HTMLElementTagNameMap["strong"];
@@ -255,6 +262,8 @@ export interface InterfaceElements {
   "#settingsProductIdentity": HTMLElementTagNameMap["p"];
   "#settingsProjectValue": HTMLElementTagNameMap["span"];
   "#settingsSearch": HTMLElementTagNameMap["input"];
+  "#settingsSearchResults": HTMLElementTagNameMap["div"];
+  "#settingsSidebarResize": HTMLElementTagNameMap["div"];
   "#settingsTaskNotifyRow": HTMLElementTagNameMap["label"];
   "#settingsTaskNotifyToggle": HTMLElementTagNameMap["input"];
   "#settingsTitle": HTMLElementTagNameMap["strong"];
@@ -323,7 +332,6 @@ export interface InterfaceElements {
   "#workbenchContent": HTMLElementTagNameMap["div"];
   "#workbenchDialog": HTMLElementTagNameMap["dialog"];
   "#workbenchExitFocus": HTMLElementTagNameMap["button"];
-  "#workbenchGlobalTitle": HTMLElementTagNameMap["span"];
   "#workbenchHero": HTMLElementTagNameMap["div"];
   "#workbenchPreferences": HTMLElementTagNameMap["dialog"];
   "#workbenchPreferencesTitle": HTMLElementTagNameMap["h2"];
@@ -340,5 +348,6 @@ export interface InterfaceElements {
   "#workspacePreparationReload": HTMLElementTagNameMap["button"];
   "#workspacePreparationRetry": HTMLElementTagNameMap["button"];
   "#workspacePreparationTitle": HTMLElementTagNameMap["h2"];
+  "#workspaceSidebarResize": HTMLElementTagNameMap["div"];
 }
 export type SelectedElement<S extends string> = S extends keyof InterfaceElements ? InterfaceElements[S] : S extends keyof HTMLElementTagNameMap ? HTMLElementTagNameMap[S] : S extends `${infer T extends keyof HTMLElementTagNameMap}${"[" | "." | "#"}${string}` ? HTMLElementTagNameMap[T] : S extends `${string}[type="submit"]${string}` ? HTMLButtonElement | HTMLInputElement : HTMLElement;

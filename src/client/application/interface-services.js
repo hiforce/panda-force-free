@@ -1,9 +1,11 @@
+import { createLazySettingsPage } from "../settings-pages/lazy.js";
 import { createAccountView } from "../account-view.js";
 import { createActivityRenderer } from "../activity-renderer.js";
 import { createComposerUploads } from "../composer-uploads.js";
 import { localizeText } from "../i18n.js";
 import { createReviewController } from "../review-controller.js";
 import { createSettingsPanel } from "../settings.js";
+import { createExtensionSettings } from "../creative/extensions.js";
 import { createUsagePanel } from "../usage-panel.js";
 import { findElement, findElements, requireElement } from "./../dom.js";
 /** @param {import("./ports.js").FeatureOptions<"renderBatch" | "state" | "mutations" | "$" | "escapeHtml" | "shortPath", "notices" | "panels", "review">} options */
@@ -123,7 +125,7 @@ export function assembleUsage({ transportPort, $, t, i18n, state, mutations }) {
     applyPushedUsageLimits: panel.applyPushedLimits,
   };
 }
-/** @param {import("./ports.js").FeatureOptions<"state" | "mutations" | "$" | "t" | "shortPath" | "viewUpdates", "models" | "panels", "settings">} options */
+/** @param {import("./ports.js").FeatureOptions<"identity" | "state" | "mutations" | "$" | "t" | "shortPath" | "viewUpdates", "models" | "panels", "settings">} options */
 export function assembleSettings({ $, t, shortPath, modelsPort, panelsPort, viewUpdates, state, mutations }) {
   const {
     openSettings,
@@ -147,6 +149,17 @@ export function assembleSettings({ $, t, shortPath, modelsPort, panelsPort, view
     openUsageSummary: () => panelsPort.openUsageSummary(),
     toggleAccountMenu: (force) => viewUpdates.request("accountMenu", force),
     syncPermissionSettings: () => modelsPort.syncPermissionSettings(),
+    pageViews: {
+      users: createLazySettingsPage(t, "users"),
+      "plugins-settings": createExtensionSettings(t),
+      "search-settings": createLazySettingsPage(t, "search"),
+      storage: createLazySettingsPage(t, "database"),
+      bots: createLazySettingsPage(t, "bots", {
+        read: () => modelsPort.sessionControlView(),
+        load: () => modelsPort.loadModels(),
+      }),
+      "client-access": createLazySettingsPage(t, "clients"),
+    },
     state,
   });
   function bind() {
