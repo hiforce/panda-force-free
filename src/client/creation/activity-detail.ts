@@ -156,7 +156,7 @@ export class CreationActivityDetail {
   }
   private loadingIndicator() {
     const phase =
-      this.historyReading && this.tab === "conversation"
+      this.historyReading && !this.conversationMarkup && this.tab === "conversation"
         ? "history"
         : this.reading && this.showRefresh
           ? this.task
@@ -273,8 +273,13 @@ export class CreationActivityDetail {
       }
       this.historyKey = key;
       this.renderVersions(rounds);
-    } catch {
+    } catch (error) {
       if (epoch !== this.epoch) return;
+      // A transient background read must not replace content that is already being read.
+      if (this.conversationMarkup && !(error instanceof CreationApiError && [401, 403, 404].includes(error.status)))
+        return;
+      this.conversationMarkup = "";
+      this.historyKey = "";
       localizeText(host, "creation.historyUnavailable", {}, this.t);
       const retry = document.createElement("button");
       retry.className = "wb-button";

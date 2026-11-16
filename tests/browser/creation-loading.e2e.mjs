@@ -6,9 +6,11 @@ import { createAppFixture } from "../support/app-fixture.mjs";
 const out = ".artifacts/creation-loading";
 await mkdir(out, { recursive: true });
 const records = [];
-for (const [engine, width] of [
-  [chromium, 1440],
-  [webkit, 390],
+for (const [engine, width, locale] of [
+  [chromium, 1440, "en"],
+  [webkit, 390, "zh-CN"],
+  [webkit, 390, "zh-HK"],
+  [webkit, 320, "zh-TW"],
 ]) {
   const app = await createAppFixture({
     applicationCreation: true,
@@ -25,11 +27,19 @@ for (const [engine, width] of [
   });
   const browser = await engine.launch();
   try {
-    const context = await browser.newContext({ viewport: { width, height: 1000 }, locale: "zh-CN" });
-    await app.signIn(context);
-    await context.addInitScript(() => {
-      if (/^https?:$/.test(location.protocol)) localStorage.setItem("panda-force-theme", "aurora");
+    const context = await browser.newContext({
+      viewport: { width, height: 1000 },
+      locale,
+      isMobile: width < 768,
+      hasTouch: width < 768,
     });
+    await app.signIn(context);
+    await context.addInitScript((locale) => {
+      if (/^https?:$/.test(location.protocol)) {
+        localStorage.setItem("panda-force-theme", "dark");
+        localStorage.setItem("panda-force-locale", locale);
+      }
+    }, locale);
     await context.request.post(app.base + "/api/system/database/selection", {
       data: { driver: "sqlite" },
       headers: { Origin: app.base },
@@ -55,7 +65,7 @@ for (const [engine, width] of [
     await picker.locator("[data-skill-category-retry]").waitFor();
     assert.equal(await picker.locator(".creation-skill-options").getAttribute("aria-busy"), "false");
     assert.equal(await picker.locator('[data-skill-category="all"]').getAttribute("aria-pressed"), "true");
-    await page.screenshot({ path: `${out}/category-recovery-${width}.png` });
+    await page.screenshot({ path: `${out}/category-recovery-${width}-${locale}.png` });
     await picker.locator('[data-skill-id="software-prd"]').click();
     await picker.locator("footer [data-skill-browser-close]").click();
     let release;
@@ -108,19 +118,22 @@ for (const [engine, width] of [
     });
     await page.goto(app.base + "/creation/" + id + "?creationScope=personal");
     await page.locator('[data-detail-loading][data-phase="loading"]:visible').waitFor({ timeout: 1000 });
-    await page.screenshot({ path: `${out}/initial-indicator-${width}.png` });
+    await page.screenshot({ path: `${out}/initial-indicator-${width}-${locale}.png` });
     refreshRelease();
-    await page.locator(".creation-detail-page [data-detail-meta]").filter({ hasText: /个人/ }).waitFor();
+    await page
+      .locator(".creation-detail-page [data-detail-meta]")
+      .filter({ hasText: /个人|個人|Personal/ })
+      .waitFor();
     await page.locator("[data-detail-loading]").waitFor({ state: "hidden" });
     refreshPaused = new Promise((resolve) => (refreshRelease = resolve));
     await page.reload();
     await page
       .locator(".creation-detail-page [data-detail-meta]")
-      .filter({ hasText: /个人/ })
+      .filter({ hasText: /个人|個人|Personal/ })
       .waitFor({ timeout: 1000 });
     assert.equal(await page.locator("[data-detail-notice]").innerText(), "");
     await page.locator('[data-detail-loading][data-phase="refreshing"]:visible').waitFor({ timeout: 1000 });
-    await page.screenshot({ path: `${out}/cached-indicator-${width}.png` });
+    await page.screenshot({ path: `${out}/cached-indicator-${width}-${locale}.png` });
     assert(
       !requests.some((url) => url.includes("/document-creations/detail") && !new URL(url).searchParams.has("view")),
       "Restoring cached progress must not load chat history",
@@ -131,7 +144,87 @@ for (const [engine, width] of [
     historyRelease();
     await page.locator('[data-conversation-role="user"]').waitFor();
     await page.locator("[data-detail-loading]").waitFor({ state: "hidden" });
-    await page.screenshot({ path: `${out}/conversation-${width}.png`, fullPage: true });
+    await page.screenshot({ path: `${out}/conversation-${width}-${locale}.png`, fullPage: true });
+    let releaseBackground;
+    const backgroundHeld = new Promise((resolve) => (releaseBackground = resolve));
+    const holdBackground = async (route) => {
+      if (!new URL(route.request().url()).searchParams.has("view")) await backgroundHeld;
+      await route.continue();
+    };
+    await page.route("**/document-creations/detail?*", holdBackground);
+    const beforePolling = await page.locator(".creation-detail-layout").boundingBox();
+    const scrollBeforePolling = await page.evaluate(() => scrollY);
+    const jitter = await page.evaluateHandle(() => {
+      const phases = [];
+      const indicator = document.querySelector("[data-detail-loading]");
+      const observer = new MutationObserver(() => {
+        if (!indicator.hidden) phases.push(indicator.dataset.phase);
+      });
+      observer.observe(indicator, { attributes: true });
+      return { phases, observer };
+    });
+    try {
+      await page.waitForRequest(
+        (request) =>
+          request.url().includes("/document-creations/detail?") && !new URL(request.url()).searchParams.has("view"),
+        { timeout: 6000 },
+      );
+      await page.waitForTimeout(150);
+      await page.screenshot({ path: `${out}/background-refresh-${width}-${locale}.png` });
+      const duringPolling = await page.locator(".creation-detail-layout").boundingBox();
+      const observed = {
+        scroll: await page.evaluate(() => scrollY),
+        phases: await jitter.evaluate((value) => value.phases),
+      };
+      assert.equal(
+        await page.locator("[data-detail-loading]").isVisible(),
+        false,
+        "Background conversation reads must not toggle the foreground loading row",
+      );
+      assert(
+        Math.abs(duringPolling.y - beforePolling.y) < 1,
+        "Background polling must not shift the conversation panel",
+      );
+      assert.equal(observed.scroll, scrollBeforePolling, "Polling must retain the reader position");
+      assert.deepEqual(observed.phases, []);
+    } finally {
+      releaseBackground();
+      await page.unroute("**/document-creations/detail?*", holdBackground);
+      await jitter.evaluate((value) => value.observer.disconnect());
+      await jitter.dispose();
+    }
+    const visibleConversation = await page.locator('[data-conversation-role="user"]').first().elementHandle();
+    let failedRead = false;
+    const failOneBackgroundRead = (route) => {
+      if (!failedRead && !new URL(route.request().url()).searchParams.has("view")) {
+        failedRead = true;
+        return route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ messageId: "creation.unavailable" }),
+        });
+      }
+      return route.continue();
+    };
+    await page.route("**/document-creations/detail?*", failOneBackgroundRead);
+    const fullHistoryResponse = (response) =>
+      response.url().includes("/document-creations/detail?") && !new URL(response.url()).searchParams.has("view");
+    await page.waitForResponse((response) => fullHistoryResponse(response) && response.status() === 503, {
+      timeout: 6000,
+    });
+    assert(
+      await visibleConversation.evaluate((node) => node.isConnected),
+      "A failed background read must retain the visible conversation",
+    );
+    assert.equal(await page.locator("[data-detail-loading]").isVisible(), false);
+    await page.waitForResponse((response) => fullHistoryResponse(response) && response.status() === 200, {
+      timeout: 6000,
+    });
+    assert(
+      await visibleConversation.evaluate((node) => node.isConnected),
+      "Recovering an unchanged conversation must retain its DOM and reading position",
+    );
+    await page.unroute("**/document-creations/detail?*", failOneBackgroundRead);
     const historyReads = requests.filter(
       (url) => url.includes("/document-creations/detail") && !new URL(url).searchParams.has("view"),
     ).length;
@@ -171,6 +264,7 @@ for (const [engine, width] of [
     assert.deepEqual(errors, []);
     records.push({
       width,
+      locale,
       categoriesFailureKeepsSkillsSelectable: true,
       progressFrameBeforeSlowPreparation: true,
       cancelledPreparationDoesNotSubmit: true,
@@ -180,6 +274,8 @@ for (const [engine, width] of [
       onDemandConversationIndicator: true,
       listSnapshotBeforeDetailResponse: true,
       deniedRefreshClearsCachedContentAndRecovers: true,
+      backgroundChatRefreshKeepsGeometryAndReaderPosition: true,
+      backgroundHistoryFailureRetainsContentAndRecovers: true,
     });
     await context.close();
   } finally {

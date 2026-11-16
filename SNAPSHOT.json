@@ -2327,8 +2327,8 @@
     },
     {
       "path": "src/client/creation/activity-detail.ts",
-      "bytes": 18235,
-      "sha256": "274575bff092079f829d15dde8ed57d395296bd9fba738d660ee36168ff59b2f",
+      "bytes": 18558,
+      "sha256": "2a95eff399f25523be467e546391dfbd580c7e90e08442cd94a35a8ac862927a",
       "mode": "100644"
     },
     {
@@ -15335,8 +15335,8 @@
     },
     {
       "path": "tests/browser/creation-loading.e2e.mjs",
-      "bytes": 9006,
-      "sha256": "3e0d20a63e11d2b9350098ab9ab3a1315b515c970129debb94dfcebf39d9ff7f",
+      "bytes": 13196,
+      "sha256": "87dbc998f9a0783c256ac2c898994f6df9622b35e989acb1294dd5e8b5de0b77",
       "mode": "100644"
     },
     {
@@ -19954,5 +19954,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "208e8f2688db829b97b411c348e0cc42fb66228a169725c21c3e4b2039df1d99"
+  "contentSha256": "bf8506062242b6fecb6a71ddd85ba7a765d7b0a5d37841ad07fc58042c983779"
 }
