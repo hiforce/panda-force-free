@@ -24,24 +24,36 @@
 
 [完整功能清单](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md) 覆盖 18 个功能领域、服务前提和当前限制。不同发布适配器的覆盖范围不同；企业成员沙箱、模型网关配额计费及通用 SSO 尚未交付。
 
+## 使用案例：从供应商素材到商品发布上架
+
+收到原始素材包后，企业商品系统先整理事实与版本，再提交 Bot 任务，完成**主题方案、商品卖点提炼和详情编写**。依据不足时进入**人工复核**；已审批动作连接企业已有的发布作业，最后单独**核验上架回执**。
+
+![匿名素材到商品上架流程](./panda-docs/static/img/bot-usecase-flow-zh-CN.svg)
+
+![深色助理界面的匿名商品任务队列](./panda-docs/static/img/bot-usecase-queue-zh-CN.webp)
+
+**[查看完整案例：助理配置、受限访问密钥、API任务示例、复核、回调与上架回执 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-product-publishing.md)**
+
+企业系统负责素材解包、主题图片制作、审批、商品落库和最终上架；Panda 串联其中的 AI 任务与已声明动作。截图使用虚构任务和模拟结果，没有执行生产上架，案例不出现具体商品品牌或销售渠道名称。
+
 ## 当前界面
 
 以下为当前源码的真实界面渲染，使用虚构演示数据，不含生产账号、业务任务或凭据。
 
 **工作台：直接进入项目与创作**
 
-![PandaForce 当前工作台、导航与创作输入区](./panda-docs/static/img/workspace-zh-CN.webp)
+![PandaForce 当前工作台、导航与创作输入区](./panda-docs/static/img/workspace-zh-CN.webp?v=aurora-20261116)
 
 **项目文档：目录、富文本内容与编辑工具**
 
-![PandaForce 项目文档编辑器](./panda-docs/static/img/documents-zh-CN.webp)
+![PandaForce 项目文档编辑器](./panda-docs/static/img/documents-zh-CN.webp?v=aurora-20261116)
 
 <details>
 <summary>查看技能库和手机界面</summary>
 
-![PandaForce 技能库](./panda-docs/static/img/skills-zh-CN.webp)
+![PandaForce 技能库](./panda-docs/static/img/skills-zh-CN.webp?v=aurora-20261116)
 
-<img src="./panda-docs/static/img/mobile-zh-CN.webp" width="320" alt="PandaForce 手机窄屏文档阅读界面" />
+<img src="./panda-docs/static/img/mobile-zh-CN.webp?v=aurora-20261116" width="320" alt="PandaForce 手机窄屏文档阅读界面" />
 
 </details>
 

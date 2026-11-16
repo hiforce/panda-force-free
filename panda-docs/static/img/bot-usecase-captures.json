@@ -1,0 +1,146 @@
+{
+  "simulatedTaskOutcomes": true,
+  "productionPublishing": false,
+  "captures": [
+    {
+      "file": "bot-usecase-config-en.webp",
+      "locale": "en",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-keys-en.webp",
+      "locale": "en",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-queue-en.webp",
+      "locale": "en",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-review-en.webp",
+      "locale": "en",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-callback-en.webp",
+      "locale": "en",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-result-en.webp",
+      "locale": "en",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-mobile-en.webp",
+      "locale": "en",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-config-zh-CN.webp",
+      "locale": "zh-CN",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-keys-zh-CN.webp",
+      "locale": "zh-CN",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-queue-zh-CN.webp",
+      "locale": "zh-CN",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-review-zh-CN.webp",
+      "locale": "zh-CN",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-callback-zh-CN.webp",
+      "locale": "zh-CN",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-result-zh-CN.webp",
+      "locale": "zh-CN",
+      "viewport": {
+        "width": 1440,
+        "height": 1050
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    },
+    {
+      "file": "bot-usecase-mobile-zh-CN.webp",
+      "locale": "zh-CN",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "aurora",
+      "fictionalData": true
+    }
+  ]
+}

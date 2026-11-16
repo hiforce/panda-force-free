@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" role="img" aria-labelledby="title desc">
+<title id="title">商品发布自动化流程</title>
+<desc id="desc">Anonymous demonstration. The enterprise application orchestrates stages; Bot actions never select arbitrary destinations.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="#68dbea"/></marker></defs><rect width="1440" height="320" rx="20" fill="#081827"/>
+<text x="30" y="46" fill="#edf7fc" font-family="Arial,sans-serif" font-size="25" font-weight="700">从原始素材到商品上架</text>
+<path d="M242 157H259" stroke="#68dbea" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="28" y="83" width="214" height="155" rx="14" fill="#102d40" stroke="#2d5367"/>
+<circle cx="53" cy="111" r="13" fill="#65dce9"/>
+<text x="53" y="116" text-anchor="middle" fill="#102330" font-family="Arial,sans-serif" font-size="14" font-weight="700">1</text>
+<text x="44" y="159" fill="#edf7fc" font-family="Arial,sans-serif" font-size="17" font-weight="700">供应商素材包</text>
+<text x="44" y="196" fill="#b5ccda" font-family="Arial,sans-serif" font-size="13">图片、属性、洗护说明</text>
+<path d="M478 157H495" stroke="#68dbea" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="264" y="83" width="214" height="155" rx="14" fill="#102d40" stroke="#2d5367"/>
+<circle cx="289" cy="111" r="13" fill="#65dce9"/>
+<text x="289" y="116" text-anchor="middle" fill="#102330" font-family="Arial,sans-serif" font-size="14" font-weight="700">2</text>
+<text x="280" y="159" fill="#edf7fc" font-family="Arial,sans-serif" font-size="17" font-weight="700">整理事实与版本</text>
+<text x="280" y="196" fill="#b5ccda" font-family="Arial,sans-serif" font-size="13">企业商品系统</text>
+<path d="M714 157H731" stroke="#68dbea" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="500" y="83" width="214" height="155" rx="14" fill="#102d40" stroke="#2d5367"/>
+<circle cx="525" cy="111" r="13" fill="#65dce9"/>
+<text x="525" y="116" text-anchor="middle" fill="#102330" font-family="Arial,sans-serif" font-size="14" font-weight="700">3</text>
+<text x="516" y="159" fill="#edf7fc" font-family="Arial,sans-serif" font-size="17" font-weight="700">主题、卖点与详情</text>
+<text x="516" y="196" fill="#b5ccda" font-family="Arial,sans-serif" font-size="13">Panda Bot 分阶段任务</text>
+<path d="M950 157H967" stroke="#68dbea" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="736" y="83" width="214" height="155" rx="14" fill="#102d40" stroke="#2d5367"/>
+<circle cx="761" cy="111" r="13" fill="#65dce9"/>
+<text x="761" y="116" text-anchor="middle" fill="#102330" font-family="Arial,sans-serif" font-size="14" font-weight="700">4</text>
+<text x="752" y="159" fill="#edf7fc" font-family="Arial,sans-serif" font-size="17" font-weight="700">存疑复核与审批</text>
+<text x="752" y="196" fill="#b5ccda" font-family="Arial,sans-serif" font-size="13">人工确认与版本留痕</text>
+<path d="M1186 157H1203" stroke="#68dbea" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="972" y="83" width="214" height="155" rx="14" fill="#102d40" stroke="#2d5367"/>
+<circle cx="997" cy="111" r="13" fill="#65dce9"/>
+<text x="997" y="116" text-anchor="middle" fill="#102330" font-family="Arial,sans-serif" font-size="14" font-weight="700">5</text>
+<text x="988" y="159" fill="#edf7fc" font-family="Arial,sans-serif" font-size="17" font-weight="700">接收已授权动作</text>
+<text x="988" y="196" fill="#b5ccda" font-family="Arial,sans-serif" font-size="13">企业集成适配器</text>
+<rect x="1208" y="83" width="214" height="155" rx="14" fill="#102d40" stroke="#2d5367"/>
+<circle cx="1233" cy="111" r="13" fill="#65dce9"/>
+<text x="1233" y="116" text-anchor="middle" fill="#102330" font-family="Arial,sans-serif" font-size="14" font-weight="700">6</text>
+<text x="1224" y="159" fill="#edf7fc" font-family="Arial,sans-serif" font-size="17" font-weight="700">上架并核验回执</text>
+<text x="1224" y="196" fill="#b5ccda" font-family="Arial,sans-serif" font-size="13">目标销售系统</text>
+<text x="30" y="281" fill="#afcbd9" font-family="Arial,sans-serif" font-size="16">示例流程由企业系统编排；图片制作、价格库存与最终上架由对应业务服务执行。</text></svg>

@@ -25,7 +25,7 @@ for (const locale of ["en", "zh-CN"]) {
   let mobileBrowser;
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 960 }, locale }),
-      theme = zh ? "aurora" : "silk";
+      theme = "aurora";
     await context.addInitScript(
       ({ locale, theme }) => {
         if (/^https?:$/.test(location.protocol)) {

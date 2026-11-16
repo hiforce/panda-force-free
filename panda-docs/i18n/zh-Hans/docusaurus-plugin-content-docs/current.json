@@ -10,5 +10,9 @@
   "sidebar.guides.category.Development": {
     "message": "开发维护",
     "description": "The label for category Development in sidebar guides"
+  },
+  "sidebar.guides.category.Use cases": {
+    "message": "使用案例",
+    "description": "The label for category Use cases in sidebar guides"
   }
 }

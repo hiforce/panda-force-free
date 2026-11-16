@@ -60,3 +60,5 @@ After building the client assets, run `bun scripts/release/capture-readme.mjs` f
 ## Build the help website
 
 The optional help website in `panda-docs` requires Node.js 20 or later. Install its own locked dependencies and build from that directory with `bun install --frozen-lockfile` followed by `bun run build`. Keep its dependency directory and generated `.docusaurus` cache separate from another checkout. The main application source build uses the repository-root Docker/Compose instructions.
+
+For the anonymous enterprise Bot example, run `bun scripts/release/capture-bot-usecase.mjs` after the client build. It exercises scoped submission, idempotent replay and review against a disposable application, then renders explicitly simulated task outcomes. It blocks worker dispatch and never publishes a real product. Both screenshot scripts use the dark Aurora appearance.

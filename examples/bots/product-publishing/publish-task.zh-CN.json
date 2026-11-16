@@ -1,0 +1,33 @@
+{
+  "title": "05 · 自动发布已审批版本",
+  "externalTaskId": "item-001-publish-v4",
+  "instructions": "当前阶段：publish。仅依据所附事实，在判断结果中返回简明结构化产物。依据或审批缺失时请求复核。由企业应用编排下一阶段，不得跳步。",
+  "input": {
+    "text": "{\n  \"jobId\": \"JOB-001\",\n  \"productId\": \"ITEM-001\",\n  \"sourceVersion\": \"materials-v1\",\n  \"draftVersion\": \"v4\",\n  \"product\": \"轻量日常外套\",\n  \"supplierFacts\": {\n    \"fabric\": \"100%聚酯纤维\",\n    \"sampleWeight\": \"260 g (size M)\",\n    \"pockets\": 2,\n    \"sizes\": [\n      \"S\",\n      \"M\",\n      \"L\",\n      \"XL\"\n    ],\n    \"care\": \"30°C轻柔机洗，以提供的洗标为准\"\n  },\n  \"assets\": {\n    \"bundleId\": \"BUNDLE-001\",\n    \"images\": [\n      \"ASSET-FRONT\",\n      \"ASSET-BACK\"\n    ],\n    \"rightsConfirmed\": true\n  },\n  \"artifactRef\": \"DRAFT-001-v4\",\n  \"approvalRef\": \"APPROVAL-001\",\n  \"removedUnsupportedClaims\": true,\n  \"approvedTitle\": \"轻量日常外套｜双侧口袋\",\n  \"approvedContent\": {\n    \"highlights\": [\n      \"M码样衣260g\",\n      \"双侧口袋\",\n      \"S–XL可选\"\n    ],\n    \"description\": \"采用100%聚酯纤维面料，配备双侧口袋。M码样衣重量260g，其他尺码可能不同。提供S–XL尺码；按洗标采用30°C轻柔机洗。\",\n    \"sourceRefs\": [\n      \"materials-v1/facts\",\n      \"materials-v1/care-label\"\n    ]\n  }\n}",
+    "images": []
+  },
+  "actions": [
+    {
+      "id": "publish_listing",
+      "label": "发布已审批 v4",
+      "when": "仅当固定 v4 产物、审批单与已核验事实一致时。",
+      "callback": {
+        "url": "https://jobs.enterprise.example/bot-results/accept",
+        "method": "POST",
+        "body": {
+          "externalTaskId": "item-001-publish-v4",
+          "productId": "ITEM-001",
+          "stage": "publish",
+          "draftVersion": "v4",
+          "artifactRef": "DRAFT-001-v4",
+          "approvalRef": "APPROVAL-001",
+          "receiptProof": "<runtime-per-job-proof>"
+        },
+        "success": {
+          "path": "accepted",
+          "equals": true
+        }
+      }
+    }
+  ]
+}

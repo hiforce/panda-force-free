@@ -24,24 +24,36 @@ Built on [Codex WebUI](https://github.com/lezi-fun/codex-webui) by [lezi-fun](ht
 
 See the [complete feature catalog](./panda-docs/docs/features.md) for all 18 areas, service prerequisites and current limits. Optional publishing adapters have different coverage; enterprise member sandboxes, model-gateway quotas/billing and generic SSO are not shipped features.
 
+## Use case: from supplier assets to a published product
+
+A supplier sends an original material bundle. Your enterprise product system turns it into versioned facts, then submits Bot tasks for a **theme brief, evidence-backed selling points and product details**. Missing evidence goes to **human review**. An approved action connects to your existing publication job, followed by a separate **listing-receipt check**.
+
+![Anonymous supplier-to-listing workflow](./panda-docs/static/img/bot-usecase-flow-en.svg)
+
+![Dark-theme Bot queue showing anonymous product jobs](./panda-docs/static/img/bot-usecase-queue-en.webp)
+
+**[Walk through Bot setup, scoped access keys, task/API examples, review, callbacks and final receipt verification →](./panda-docs/docs/bot-product-publishing.md)**
+
+The enterprise system owns material extraction, theme-image rendering, approvals, product records and final listing execution. Panda manages the AI tasks and declared actions between them. The screenshots use fictional tasks and simulated outcomes; no production listing was performed. All product and destination names are anonymous.
+
 ## Current interface
 
 The current source rendered with fictional demonstration data; no production accounts, tasks or credentials are shown.
 
 **Workspace — a direct starting point for projects and creation**
 
-![PandaForce workspace with the current navigation and creation composer](./panda-docs/static/img/workspace-en.webp)
+![PandaForce workspace with the current navigation and creation composer](./panda-docs/static/img/workspace-en.webp?v=aurora-20261116)
 
 **Project documents — outline, rich-text content and editing tools**
 
-![PandaForce project document editor](./panda-docs/static/img/documents-en.webp)
+![PandaForce project document editor](./panda-docs/static/img/documents-en.webp?v=aurora-20261116)
 
 <details>
 <summary>Skills and the mobile interface</summary>
 
-![PandaForce skill library](./panda-docs/static/img/skills-en.webp)
+![PandaForce skill library](./panda-docs/static/img/skills-en.webp?v=aurora-20261116)
 
-<img src="./panda-docs/static/img/mobile-en.webp" width="320" alt="PandaForce document reading on a narrow mobile viewport" />
+<img src="./panda-docs/static/img/mobile-en.webp?v=aurora-20261116" width="320" alt="PandaForce document reading on a narrow mobile viewport" />
 
 </details>
 

@@ -129,6 +129,8 @@ Most workspace/document capabilities are built in. AI operations need a configur
 
 ## Bots and external task automation
 
+Explore the [anonymous product-publishing use case](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/bot-product-publishing.md), including Bot configuration, scoped caller keys and enterprise-system integration.
+
 - Create Bots with instructions, name/code, avatar and persona; enable or pause them independently.
 - Issue and revoke Bot access keys for external callers; keep Bot sessions distinct from interactive conversations.
 - Accept idempotent external task submissions into a durable queue and inspect queued/running/review/completed/error states.

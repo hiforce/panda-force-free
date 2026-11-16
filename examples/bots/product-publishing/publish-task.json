@@ -1,0 +1,33 @@
+{
+  "title": "05 · Publish the approved revision",
+  "externalTaskId": "item-001-publish-v4",
+  "instructions": "Stage: publish. Use only the supplied facts. Return a concise, structured result in the decision reason. Request review if evidence or approval is missing. The enterprise application orchestrates the next stage; do not skip it.",
+  "input": {
+    "text": "{\n  \"jobId\": \"JOB-001\",\n  \"productId\": \"ITEM-001\",\n  \"sourceVersion\": \"materials-v1\",\n  \"draftVersion\": \"v4\",\n  \"product\": \"Lightweight everyday jacket\",\n  \"supplierFacts\": {\n    \"fabric\": \"100% polyester\",\n    \"sampleWeight\": \"260 g (size M)\",\n    \"pockets\": 2,\n    \"sizes\": [\n      \"S\",\n      \"M\",\n      \"L\",\n      \"XL\"\n    ],\n    \"care\": \"Gentle wash at 30°C; follow the supplied care label\"\n  },\n  \"assets\": {\n    \"bundleId\": \"BUNDLE-001\",\n    \"images\": [\n      \"ASSET-FRONT\",\n      \"ASSET-BACK\"\n    ],\n    \"rightsConfirmed\": true\n  },\n  \"artifactRef\": \"DRAFT-001-v4\",\n  \"approvalRef\": \"APPROVAL-001\",\n  \"removedUnsupportedClaims\": true,\n  \"approvedTitle\": \"Lightweight everyday jacket · two side pockets\",\n  \"approvedContent\": {\n    \"highlights\": [\n      \"260 g sample in size M\",\n      \"Two side pockets\",\n      \"Sizes S–XL\"\n    ],\n    \"description\": \"An everyday jacket made from 100% polyester with two side pockets. The size-M sample weighs 260 g; other sizes may vary. Choose from S–XL. Gentle wash at 30°C, following the supplied care label.\",\n    \"sourceRefs\": [\n      \"materials-v1/facts\",\n      \"materials-v1/care-label\"\n    ]\n  }\n}",
+    "images": []
+  },
+  "actions": [
+    {
+      "id": "publish_listing",
+      "label": "Publish approved v4",
+      "when": "Only when the immutable v4 artifact and approval reference match verified facts.",
+      "callback": {
+        "url": "https://jobs.enterprise.example/bot-results/accept",
+        "method": "POST",
+        "body": {
+          "externalTaskId": "item-001-publish-v4",
+          "productId": "ITEM-001",
+          "stage": "publish",
+          "draftVersion": "v4",
+          "artifactRef": "DRAFT-001-v4",
+          "approvalRef": "APPROVAL-001",
+          "receiptProof": "<runtime-per-job-proof>"
+        },
+        "success": {
+          "path": "accepted",
+          "equals": true
+        }
+      }
+    }
+  ]
+}

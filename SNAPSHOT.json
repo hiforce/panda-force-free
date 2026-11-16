@@ -95,14 +95,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 8415,
-      "sha256": "d9a8a97a0d21ce97c5a00256095e398c851c8eab0df57889b8c1657fc863ec76",
+      "bytes": 9508,
+      "sha256": "417e76f72f76b1cb4fde0c347e646ef54f3c76d36c50f6a606dc48b1dfd2ae1e",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 9221,
-      "sha256": "af22c7a0d118401c6ce8a540370f512f4e25e50cdf15b1e1574f30d993278568",
+      "bytes": 10416,
+      "sha256": "826ea57f3d98b093da22f2576aa9657aa09f08df358d2467dea42f3279d33825",
       "mode": "100644"
     },
     {
@@ -214,6 +214,24 @@
       "mode": "100644"
     },
     {
+      "path": "examples/bots/product-publishing/publish-task.json",
+      "bytes": 2404,
+      "sha256": "f01f9f06038b1907aabdcdf3e4ea0ea77074330332ea28ec9ca1b4cc3747b681",
+      "mode": "100644"
+    },
+    {
+      "path": "examples/bots/product-publishing/publish-task.zh-CN.json",
+      "bytes": 2265,
+      "sha256": "4bda9539eb06d60aae74a5076f6309ae59fb90169c3f4dd18468e9942d97e5b8",
+      "mode": "100644"
+    },
+    {
+      "path": "examples/bots/product-publishing/scenario.mjs",
+      "bytes": 9488,
+      "sha256": "d6882e40b263a26a11da3546ec87d6b064adb8faad5ace28edf964b6abec3229",
+      "mode": "100644"
+    },
+    {
       "path": "examples/gadget/batch-summary/README.html",
       "bytes": 1641,
       "sha256": "163e5dc7db9e7acd6ac84c0d61ebd1ef07ff681d357e0c608577eef867c534cf",
@@ -256,9 +274,15 @@
       "mode": "100644"
     },
     {
+      "path": "panda-docs/docs/bot-product-publishing.md",
+      "bytes": 14693,
+      "sha256": "8b03f659e0a6148e380a840bd490736797a9696cc369214f5f2d5cdce7e1b6de",
+      "mode": "100644"
+    },
+    {
       "path": "panda-docs/docs/building.md",
-      "bytes": 5959,
-      "sha256": "2d9a0b242f335260b20b55aa0e71b7764c4ce61f54a23f68e20c18cf402be67d",
+      "bytes": 6338,
+      "sha256": "94286b3c9ee2d9f1484cbb488652cdafca92b5e2f7b8a1428c4838a0f1d01f59",
       "mode": "100644"
     },
     {
@@ -281,8 +305,8 @@
     },
     {
       "path": "panda-docs/docs/features.md",
-      "bytes": 15119,
-      "sha256": "756c394e638ed58793cdb0c3566a6c697359b35c36f38c9536490edb64f52466",
+      "bytes": 15356,
+      "sha256": "7c896cbefac888def64ddb41b9fcd8a02a58a04d85e25fa0b96b058fac2b05c8",
       "mode": "100644"
     },
     {
@@ -353,8 +377,14 @@
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current.json",
-      "bytes": 476,
-      "sha256": "25fc6aad2ded7e6879ebe78d5f7640c960b630a08f6abdacdc698377759774e4",
+      "bytes": 625,
+      "sha256": "1ac934708519cde2174f6c5ca47d9258ad48c3639ac2b593863159f1215e282a",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-product-publishing.md",
+      "bytes": 12883,
+      "sha256": "5dab8eab4319147fa798dd8eb3b3dff5144cea5e48c7991996ccf174649d5517",
       "mode": "100644"
     },
     {
@@ -365,8 +395,8 @@
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md",
-      "bytes": 12957,
-      "sha256": "edbcda8f5019dfac689b8429451953d86ee528bacecdfe05acbd15403980eb16",
+      "bytes": 13204,
+      "sha256": "f70587052f116858e0a5cc0eb7a1f4fcbeb8136ec29e15a2256217249e7b4b62",
       "mode": "100644"
     },
     {
@@ -383,8 +413,8 @@
     },
     {
       "path": "panda-docs/sidebars.js",
-      "bytes": 450,
-      "sha256": "ec8ee7681b3b5f818ec05ff5b94e48db04f8b0471ac96e797978705ef07b1c30",
+      "bytes": 531,
+      "sha256": "e0407d6706f15723cbdf2818e691a0136ebf7f2c6f7e7be11eb81682510b2462",
       "mode": "100644"
     },
     {
@@ -412,6 +442,108 @@
       "mode": "100644"
     },
     {
+      "path": "panda-docs/static/img/bot-usecase-callback-en.webp",
+      "bytes": 76324,
+      "sha256": "00b51f50f4d5289720e3344a59d150e6585ddb9abb51a96ac206bd881b4e8402",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-callback-zh-CN.webp",
+      "bytes": 69590,
+      "sha256": "6f5712d65349c649ad60b61a64c636b72bec77f72c2508fab8c101022bafd859",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-captures.json",
+      "bytes": 3023,
+      "sha256": "471ee829a24f1a470d0aa2cc00da423c1ee74bb354a83a70ea6d97a7b7e44b54",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-config-en.webp",
+      "bytes": 58704,
+      "sha256": "8e84ae56aaded8eaefc643d06de6e61bb1f2c2699a30610b58540615170b9247",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-config-zh-CN.webp",
+      "bytes": 55436,
+      "sha256": "58217f54a4fda31f649a9f06a7468c11d20a06a77f2053a1aa312130c8350c3e",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-flow-en.svg",
+      "bytes": 4353,
+      "sha256": "b7f22850f7a532a5115edb0431f53de479925091a03a3fcae9a9fdc30afd319a",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-flow-zh-CN.svg",
+      "bytes": 4347,
+      "sha256": "4c1cfdbf2cddbdc7fbf58e7715fcb81940ba5cb82a3079934e8d73e7fe937523",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-keys-en.webp",
+      "bytes": 34534,
+      "sha256": "37e78c2c69af20c1473a9772c02ae0edee946dcad8566b764ac08fe1f4fab286",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-keys-zh-CN.webp",
+      "bytes": 34038,
+      "sha256": "fd5f93e8ebc50fad503cba218607a799bc91152c65b6988564bc2979e82f8308",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-mobile-en.webp",
+      "bytes": 28352,
+      "sha256": "b9667ff6867db38ebf4da5b9758d55d999f44ac70aa3b7b5c260ebc735401876",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-mobile-zh-CN.webp",
+      "bytes": 27312,
+      "sha256": "0ae2ecb089348295bf9e05eb118ff3a175cfeb5aecce9eebdb26bbfb344c85d9",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-queue-en.webp",
+      "bytes": 59840,
+      "sha256": "0e5162e0dd0a3bbdb89551cde7ededff28a43fb6be2665b5abcd6db97116a900",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-queue-zh-CN.webp",
+      "bytes": 60830,
+      "sha256": "0534ccc961252812748c63149295c824cdd12eadee6bcd008436ba1461396db7",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-result-en.webp",
+      "bytes": 78314,
+      "sha256": "341ed260734679e14ff96e3c1b6169e45dbc1235f168125188e1dd74ca528086",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-result-zh-CN.webp",
+      "bytes": 68708,
+      "sha256": "5b90aec474b3d1a64a2b2eb894ba86a39552672922712aa8f4d75daeb703a4b9",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-review-en.webp",
+      "bytes": 70806,
+      "sha256": "f77746bb347c471d567567df15511630191349306d0d1aca99c5b9ecde980c84",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/bot-usecase-review-zh-CN.webp",
+      "bytes": 64082,
+      "sha256": "36f81ac4fd34f311ab7d10f63e53803c594413f5d16dc21c342438a7a91c63bc",
+      "mode": "100644"
+    },
+    {
       "path": "panda-docs/static/img/buy-me-a-coffee.svg",
       "bytes": 570,
       "sha256": "d693de81f257933400cef4fd85023a1a02f89cb1cda3de2819b765c027b57d0b",
@@ -419,8 +551,8 @@
     },
     {
       "path": "panda-docs/static/img/documents-en.webp",
-      "bytes": 66632,
-      "sha256": "f9d32388bb2ddb0b5c79cc6a09c19de634d12a7c90151c756c0e22b6d88dfc19",
+      "bytes": 69682,
+      "sha256": "ff2ae5f75e1c2ad8eeba921193fa817d7eb82b200df88d67deba16fff1a48605",
       "mode": "100644"
     },
     {
@@ -431,8 +563,8 @@
     },
     {
       "path": "panda-docs/static/img/mobile-en.webp",
-      "bytes": 28484,
-      "sha256": "d2ca49b4d7ae7f970a463e637bbf93dda52c7a7cb6908da38bd81c724cc3ecce",
+      "bytes": 30480,
+      "sha256": "ef774d6635dd6777cdbb2e58b2a9577d3aaf7831db94e3d24549effb42a9b809",
       "mode": "100644"
     },
     {
@@ -467,14 +599,14 @@
     },
     {
       "path": "panda-docs/static/img/readme-captures.json",
-      "bytes": 1639,
-      "sha256": "bab6abdcb9e21e447d1c6a225e23edd410355116ef5e0d4b438c45d3cf275b20",
+      "bytes": 1647,
+      "sha256": "1cea0f4c37d078df2d45327f8c56572ac6ec3d797a22dc8da6cfb302eb4a16c4",
       "mode": "100644"
     },
     {
       "path": "panda-docs/static/img/skills-en.webp",
-      "bytes": 60158,
-      "sha256": "19baf3c95472c1696910b1ffa4a1f626e8d498bd978fd888b3f23b47f521bb42",
+      "bytes": 66098,
+      "sha256": "77b44fbeee5bb3d62b686628fd090f8f85007ba8476c59246aca9125739914de",
       "mode": "100644"
     },
     {
@@ -485,8 +617,8 @@
     },
     {
       "path": "panda-docs/static/img/workspace-en.webp",
-      "bytes": 44070,
-      "sha256": "d0fa6049bb059d50039987226181cca783625017bdf140c434f93acc2bf46e15",
+      "bytes": 46644,
+      "sha256": "239124c56196f65fbe29fe63cb3d702b755d938846f2eef8732967083c123f7c",
       "mode": "100644"
     },
     {
@@ -1073,14 +1205,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 8415,
-      "sha256": "d9a8a97a0d21ce97c5a00256095e398c851c8eab0df57889b8c1657fc863ec76",
+      "bytes": 9508,
+      "sha256": "417e76f72f76b1cb4fde0c347e646ef54f3c76d36c50f6a606dc48b1dfd2ae1e",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 9221,
-      "sha256": "af22c7a0d118401c6ce8a540370f512f4e25e50cdf15b1e1574f30d993278568",
+      "bytes": 10416,
+      "sha256": "826ea57f3d98b093da22f2576aa9657aa09f08df358d2467dea42f3279d33825",
       "mode": "100644"
     },
     {
@@ -1109,8 +1241,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 147748,
-      "sha256": "326bb6a1f69fc8c404a10c81bbc968df54a5817b0348d5e864e06f36016926b3",
+      "bytes": 149036,
+      "sha256": "7c2225f67ebb49345b792c6b7a8bda09bf9be1a8dae6a2c208ae0b3551a9df2b",
       "mode": "100644"
     },
     {
@@ -1276,9 +1408,15 @@
       "mode": "100644"
     },
     {
+      "path": "scripts/release/capture-bot-usecase.mjs",
+      "bytes": 13933,
+      "sha256": "8c9a6039fa93130f334de77cef11f6e75b9ad399bb030a6ab4fb57adcfbf491d",
+      "mode": "100644"
+    },
+    {
       "path": "scripts/release/capture-readme.mjs",
-      "bytes": 10139,
-      "sha256": "a2745e6b713732fefc0246fc08bc37ccafe373fb9596eb8dd98ca35b60e283c1",
+      "bytes": 10125,
+      "sha256": "346be9a43dbacb7c9f08797d7e0dc4f6ca8e4cbbfd9ef0e9847addab36cb5192",
       "mode": "100644"
     },
     {
@@ -19654,5 +19792,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "2b1d4e1400a6aabbddf759dc78a0437b0d3a9bdb6473131f80b5bf490ee08f24"
+  "contentSha256": "670d34f66b331c145aeed76572c43665d173ce88ae41cd43a93af754e1b432f6"
 }

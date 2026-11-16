@@ -129,6 +129,8 @@ title: 完整功能清单
 
 ## 助理与外部任务自动化
 
+参见[匿名商品发布案例](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-product-publishing.md)，了解助理配置、受限调用密钥及企业系统集成。
+
 - 创建具有指令、名称、code、头像和人设的助理，并独立启停。
 - 为外部调用方分配和撤销助理访问密钥，将助理会话与交互会话分开。
 - 幂等接收外部任务并进入持久队列，查看排队、执行、复核、完成及错误状态。
