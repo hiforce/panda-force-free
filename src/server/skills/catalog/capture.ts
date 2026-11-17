@@ -43,7 +43,13 @@ export class InstalledSkillCapture {
         parameters: parameters(row.parameters),
       };
     });
-    const request = requestHash({ id, requestBinding: binding, selections, outputType: authority.outputType }),
+    const request = requestHash({
+        id,
+        requestBinding: binding,
+        selections,
+        outputType: authority.outputType,
+        ...(authority.workflowRequired === false ? { compositionMode: "conversation-guidance" } : {}),
+      }),
       prior = await this.registry.captured(ownerId, id, request);
     if (prior) return prior;
     const registryRevision = await this.registry.revision(),

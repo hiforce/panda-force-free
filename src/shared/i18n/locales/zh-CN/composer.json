@@ -47,5 +47,12 @@
   "compactionStarted": "已开始压缩上下文",
   "reviewStarted": "已开始审查",
   "noActiveTask": "没有活动会话",
-  "taskIdentity": "会话 {id}"
+  "taskIdentity": "会话 {id}",
+  "followUpHint": "补充要求、添加附件或技能，继续对话…",
+  "collapseInput": "收起输入框",
+  "expandInput": "展开输入框",
+  "collapsedInputHint": "输入框已收起，展开后继续对话",
+  "collapsedInputContents": "{files, number} 个附件 · {skills, number} 个技能",
+  "manageFilesCount": "附件 {count, number}",
+  "manageSkillsCount": "技能 {count, number}"
 }

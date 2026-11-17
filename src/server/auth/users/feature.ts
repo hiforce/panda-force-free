@@ -14,6 +14,7 @@ import { LocalPasswordRecovery } from "./reset.js";
 import { MemberInvitations } from "./invitations.js";
 import { AccountError, type LocalUserRepository } from "./contracts.js";
 import { memberFields, memberId } from "./records.js";
+import { reportDiagnostic } from "../../../shared/diagnostics.js";
 
 /** One local account feature owns HTTP, bounded delivery scheduling and its store lifetime. */
 export function createLocalAccountFeature(options: {
@@ -77,6 +78,8 @@ export function createLocalAccountFeature(options: {
         if (!principal || (admin && principal.role !== "admin")) throw new AccountError("forbidden", 403);
         await work(req, res);
       } catch (error) {
+        if (!(error instanceof AccountError) || error.code === "unavailable")
+          reportDiagnostic("local-users.request", error);
         respondError(
           res,
           error instanceof AccountError ? error.status : 503,

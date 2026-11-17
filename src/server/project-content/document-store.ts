@@ -140,4 +140,14 @@ export class ProjectDocumentFiles {
     if (!rows.length) throw new ProjectContentError("notFound");
     return rows.map((row) => row.revision);
   }
+
+  /** Ownership transfers page the complete immutable history, rather than treating the UI's recent list as complete. */
+  async revisionPage(id: string, limit = 100, commit?: string) {
+    const selected = commit ?? (await this.snapshots.head()),
+      rows = await this.history.list(id, undefined, limit, selected);
+    if (!rows.length) throw new ProjectContentError("notFound");
+    const last = rows.at(-1)!,
+      nextCommit = rows.length === limit && last.revision.number > 1 ? await this.snapshots.parent(last.commit) : null;
+    return { commit: selected, revisions: rows, nextCommit };
+  }
 }

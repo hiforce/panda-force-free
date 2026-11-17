@@ -1,3 +1,5 @@
+import { CLIENT_ENTRYPOINTS } from "../../src/shared/client-entrypoints.js";
+import { BUILTIN_SKILL_COVERS } from "../../src/shared/skills/cover-assets.js";
 import { CREATION_STYLES, TEMPLATE_PREVIEW_ASSETS } from "../../src/shared/template-previews/assets.js";
 import { INSTALL_ASSETS } from "../../src/shared/install-assets.js";
 import { KNOWLEDGE_STYLES, CLI_STYLES, BOT_STYLES, DATABASE_STYLES } from "../../src/shared/interface-assets.js";
@@ -6,6 +8,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 const roots = [
   "src",
+  "public",
   "scripts",
   "tests",
   "release/community",
@@ -38,10 +41,11 @@ const files = [
 const publicFiles = [
   ...CREATION_STYLES.map((path) => path.slice(1)),
   ...TEMPLATE_PREVIEW_ASSETS.map((path) => path.slice(1)),
+  ...Object.values(BUILTIN_SKILL_COVERS).map((path) => path.slice(1)),
   "index.html",
   "style.css",
   "workbench.css",
-  "gadget.css",
+  // Gadget CSS is generated from stylesheet inputs under src, already included below.
   "documents.css",
   "document-authoring.css",
   "document-workspace.css",
@@ -59,6 +63,7 @@ const publicFiles = [
   "delivery.css",
   "social.css",
   "session-workspace.css",
+  "message-composer.css",
   "settings-workspace.css",
   "workbench-chrome.css",
   "workbench-layout.css",
@@ -70,6 +75,10 @@ const publicFiles = [
   "assets/panda-icon.png",
   ...INSTALL_ASSETS.map((path) => path.slice(1)),
 ];
+const generatedPublicFiles = new Set([
+  "public/gadget.css",
+  ...Object.values(CLIENT_ENTRYPOINTS).map((name) => "public/" + name),
+]);
 export function verificationFiles(root = process.cwd()): string[] {
   const result = files.filter((path) => existsSync(join(root, path)));
   for (const path of publicFiles) if (existsSync(join(root, "public", path))) result.push("public/" + path);
@@ -77,6 +86,12 @@ export function verificationFiles(root = process.cwd()): string[] {
     for (const entry of readdirSync(join(root, prefix), { withFileTypes: true })) {
       if (entry.name.startsWith(".") || ["node_modules", "__pycache__"].includes(entry.name)) continue;
       const path = prefix + "/" + entry.name;
+      if (
+        generatedPublicFiles.has(path) ||
+        path === "public/locales" ||
+        (path.startsWith("public/") && path.endsWith(".map"))
+      )
+        continue;
       if (entry.isSymbolicLink()) throw new Error("Verification inputs must be regular files: " + path);
       if (entry.isDirectory()) walk(path);
       else if (entry.isFile() && !/\.(?:log|pyc|sqlite(?:-wal|-shm)?)$/.test(path)) result.push(path);

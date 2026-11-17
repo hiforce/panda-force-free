@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   sidebarWidth: "panda-force-sidebar-width",
   sessionDetailsOpen: "panda-force-session-details-open",
   composerDrafts: "panda-force-composer-drafts",
+  composerDisclosureFor: (identity) => `panda-force-composer-disclosure:${encodeURIComponent(identity)}`,
   creationSnapshotFor: (identity, key) =>
     `panda-force-creation-snapshot:${encodeURIComponent(identity)}:${encodeURIComponent(key)}`,
   skillCategoriesFor: (identity) => `panda-force-skill-categories:${encodeURIComponent(identity)}`,

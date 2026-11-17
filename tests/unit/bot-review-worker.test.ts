@@ -140,6 +140,8 @@ test("tasks without declared actions can ask multiple changing questions and con
       properties: { decision: { enum: string[] } };
     };
     expect(schema.properties.decision.enum).toEqual(["complete", "review"]);
+    expect(f.inputs[0]!.instructions).not.toMatch(/\bproduct\b|\bclothing\b|\bfootwear\b|\bshoe\b/i);
+    expect(f.inputs[0]!.instructions).toContain("The submitter defines the task domain");
     f.store.setSession(owner, f.bot.id, "newer-shared-bot-session");
     const answer = { reviewId: firstId, optionId: "primary" };
     expect(f.store.review(owner, submitted.id, answer)).toMatchObject({
@@ -496,3 +498,28 @@ for (const [name, invalid] of [
       await f.close();
     }
   });
+
+test("caller-defined report actions complete with their own result labels and no product decisions", async () => {
+  const f = await fixture(async () => ({
+    decision: "archive-report",
+    reason: "Archived the report with its supporting sources.",
+  }));
+  try {
+    const task = f.submit([{ id: "archive-report", label: "Archive report", when: "The report is ready." }]);
+    await f.worker.tick();
+    await until(() => f.store.task(owner, task.id).status === "completed");
+    const result = f.store.task(owner, task.id);
+    expect(result.decision).toBe("archive-report");
+    expect(result.decisionLabel).toBe("Archive report");
+    expect(result.reason).toBe("Archived the report with its supporting sources.");
+    const tool = f.inputs[0]!.tools.find((tool) => tool.name === "panda_bot_decide")!;
+    expect((tool.inputSchema as { properties: { decision: { enum: string[] } } }).properties.decision.enum).toEqual([
+      "complete",
+      "review",
+      "archive-report",
+    ]);
+    expect(f.networkCalls).toBe(0);
+  } finally {
+    await f.close();
+  }
+});

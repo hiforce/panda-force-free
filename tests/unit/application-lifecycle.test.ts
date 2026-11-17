@@ -51,6 +51,9 @@ test("application shutdown drains dependents before their template sources or pe
     closeCreativeText: () => {
       events.push("creative");
     },
+    closeMaterialText: () => {
+      events.push("materials");
+    },
   });
   await Bun.sleep(0);
   expect(events[0]).toBe("cli");
@@ -58,6 +61,8 @@ test("application shutdown drains dependents before their template sources or pe
   expect(events).not.toContain("samples");
   release();
   await draining;
+  expect(events.indexOf("creation")).toBeLessThan(events.indexOf("materials"));
+  expect(events.indexOf("personal")).toBeLessThan(events.indexOf("materials"));
   expect(events.indexOf("preview-end")).toBeLessThan(events.indexOf("builds"));
   expect(events.indexOf("samples")).toBeLessThan(events.indexOf("themes"));
   expect(events.indexOf("slides")).toBeLessThan(events.indexOf("sources"));

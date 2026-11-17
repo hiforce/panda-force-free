@@ -52,6 +52,7 @@ test("source identity binds code, dependency patches and executable modes while 
     const initial = sourceIdentity(root).sha256;
     writeFileSync(join(root, "dist", "server.js"), "generated");
     writeFileSync(join(root, "public", "app.bundle.js"), "generated");
+    writeFileSync(join(root, "public", "gadget.css"), "generated gadget styles");
     writeFileSync(join(root, "public", "gadget-document.bundle.js"), "generated optional document runtime");
     expect(sourceIdentity(root).sha256).toBe(initial);
     writeFileSync(join(root, "patches", "dependency.patch"), "changed");
@@ -74,7 +75,13 @@ test("every application stylesheet in the HTML shell participates in the image s
     shell = readFileSync("public/index.html", "utf8");
   const styles = [...shell.matchAll(/href="\/([^"?]+\.css)"/g)].map((match) => "public/" + match[1]);
   expect(styles.length).toBeGreaterThan(5);
-  for (const path of styles) expect(files.has(path)).toBe(true);
+  for (const path of styles) {
+    if (path === "public/gadget.css") {
+      expect(files.has("src/client/gadget/style.css")).toBe(true);
+      for (const style of new Bun.Glob("**/*.css").scanSync({ cwd: "src/gadget/system" }))
+        expect(files.has("src/gadget/system/" + style)).toBe(true);
+    } else expect(files.has(path)).toBe(true);
+  }
 });
 
 test("optional vector installation inputs participate in the release source identity", () => {
@@ -89,6 +96,59 @@ test("optional vector installation inputs participate in the release source iden
       writeFileSync(join(root, path), "changed installation configuration");
       expect(sourceIdentity(root).sha256).not.toBe(before);
     }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("gadget source styles change the certificate while regenerated CSS does not", () => {
+  const root = mkdtempSync(join(tmpdir(), "panda-gadget-source-proof-"));
+  try {
+    mkdirSync(join(root, "src/client/gadget"), { recursive: true });
+    mkdirSync(join(root, "src/gadget/system/composer"), { recursive: true });
+    mkdirSync(join(root, "public"));
+    const paths = ["src/client/gadget/style.css", "src/gadget/system/composer/style.css"];
+    for (const path of paths) writeFileSync(join(root, path), ".gadget { display: grid; }");
+    writeFileSync(join(root, "public/gadget.css"), "previous generated bundle");
+    const before = sourceIdentity(root).sha256;
+    writeFileSync(join(root, "public/gadget.css"), "regenerated bundle");
+    expect(sourceIdentity(root).sha256).toBe(before);
+    for (const path of paths) {
+      const identity = sourceIdentity(root).sha256;
+      writeFileSync(join(root, path), ".gadget { display: flex; }");
+      expect(sourceIdentity(root).sha256).not.toBe(identity);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("prepared CDN source identity includes every built-in skill cover byte", () => {
+  const root = mkdtempSync(join(tmpdir(), "panda-cover-source-"));
+  try {
+    const path = "public/assets/skill-cover-software-prd-v1.webp";
+    mkdirSync(join(root, "public/assets"), { recursive: true });
+    writeFileSync(join(root, path), "Original cover bytes");
+    expect(verificationFiles(root)).toContain(path);
+    const before = sourceIdentity(root).sha256;
+    writeFileSync(join(root, path), "Updated cover bytes");
+    expect(sourceIdentity(root).sha256).not.toBe(before);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("new static assets enter the source certificate while generated locale packs remain excluded", () => {
+  const root = mkdtempSync(join(tmpdir(), "panda-static-source-"));
+  try {
+    mkdirSync(join(root, "public/assets"), { recursive: true });
+    mkdirSync(join(root, "public/locales"));
+    const before = sourceIdentity(root).sha256;
+    writeFileSync(join(root, "public/locales/en.json"), "{}");
+    expect(sourceIdentity(root).sha256).toBe(before);
+    writeFileSync(join(root, "public/assets/future-cover.webp"), "Source cover");
+    expect(sourceIdentity(root).sha256).not.toBe(before);
+    expect(verificationFiles(root)).toContain("public/assets/future-cover.webp");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

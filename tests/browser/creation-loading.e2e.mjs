@@ -107,97 +107,53 @@ for (const [engine, width, locale] of [
       },
     });
     assert.equal(submitted.status(), 202);
-    let refreshRelease;
-    let refreshPaused = new Promise((resolve) => (refreshRelease = resolve));
-    let historyRelease;
-    const historyPaused = new Promise((resolve) => (historyRelease = resolve));
+    let releaseRead;
+    let held = new Promise((resolve) => (releaseRead = resolve));
     await page.route("**/document-creations/detail?*", async (route) => {
-      if (new URL(route.request().url()).searchParams.get("view") === "progress") await refreshPaused;
-      else await historyPaused;
+      await held;
       await route.continue();
     });
     await page.goto(app.base + "/creation/" + id + "?creationScope=personal");
-    await page.locator('[data-detail-loading][data-phase="loading"]:visible').waitFor({ timeout: 1000 });
+    await page.locator('.creation-session-notice[data-phase="loading"]').waitFor({ timeout: 1000 });
     await page.screenshot({ path: `${out}/initial-indicator-${width}-${locale}.png` });
-    refreshRelease();
-    await page
-      .locator(".creation-detail-page [data-detail-meta]")
-      .filter({ hasText: /个人|個人|Personal/ })
-      .waitFor();
-    await page.locator("[data-detail-loading]").waitFor({ state: "hidden" });
-    refreshPaused = new Promise((resolve) => (refreshRelease = resolve));
+    releaseRead();
+    const message = page.locator("#conversation .user-message").first();
+    await message.waitFor();
+    await page.locator(".creation-session-status .user-input-card").waitFor();
+    await page.locator("#prompt").fill("保留等待网络恢复时的新输入");
+    held = new Promise((resolve) => (releaseRead = resolve));
     await page.reload();
-    await page
-      .locator(".creation-detail-page [data-detail-meta]")
-      .filter({ hasText: /个人|個人|Personal/ })
-      .waitFor({ timeout: 1000 });
-    assert.equal(await page.locator("[data-detail-notice]").innerText(), "");
-    await page.locator('[data-detail-loading][data-phase="refreshing"]:visible').waitFor({ timeout: 1000 });
+    await message.waitFor({ timeout: 1000 });
+    await page.locator('.creation-session-notice[data-phase="refreshing"]').waitFor({ timeout: 1000 });
+    assert.equal(await page.locator("#prompt").inputValue(), "保留等待网络恢复时的新输入");
     await page.screenshot({ path: `${out}/cached-indicator-${width}-${locale}.png` });
-    assert(
-      !requests.some((url) => url.includes("/document-creations/detail") && !new URL(url).searchParams.has("view")),
-      "Restoring cached progress must not load chat history",
-    );
-    refreshRelease();
-    await page.locator('[data-detail-tab="conversation"]').click();
-    await page.locator('[data-detail-loading][data-phase="history"]:visible').waitFor();
-    historyRelease();
-    await page.locator('[data-conversation-role="user"]').waitFor();
-    await page.locator("[data-detail-loading]").waitFor({ state: "hidden" });
-    await page.screenshot({ path: `${out}/conversation-${width}-${locale}.png`, fullPage: true });
+    releaseRead();
+    await page.locator('.creation-session-notice[data-phase="idle"]').waitFor({ state: "hidden" });
+    const retained = await message.elementHandle();
     let releaseBackground;
-    const backgroundHeld = new Promise((resolve) => (releaseBackground = resolve));
-    const holdBackground = async (route) => {
-      if (!new URL(route.request().url()).searchParams.has("view")) await backgroundHeld;
+    const waiting = new Promise((resolve) => (releaseBackground = resolve));
+    const hold = async (route) => {
+      await waiting;
       await route.continue();
     };
-    await page.route("**/document-creations/detail?*", holdBackground);
-    const beforePolling = await page.locator(".creation-detail-layout").boundingBox();
-    const scrollBeforePolling = await page.evaluate(() => scrollY);
-    const jitter = await page.evaluateHandle(() => {
-      const phases = [];
-      const indicator = document.querySelector("[data-detail-loading]");
-      const observer = new MutationObserver(() => {
-        if (!indicator.hidden) phases.push(indicator.dataset.phase);
-      });
-      observer.observe(indicator, { attributes: true });
-      return { phases, observer };
-    });
-    try {
-      await page.waitForRequest(
-        (request) =>
-          request.url().includes("/document-creations/detail?") && !new URL(request.url()).searchParams.has("view"),
-        { timeout: 6000 },
-      );
-      await page.waitForTimeout(150);
-      await page.screenshot({ path: `${out}/background-refresh-${width}-${locale}.png` });
-      const duringPolling = await page.locator(".creation-detail-layout").boundingBox();
-      const observed = {
-        scroll: await page.evaluate(() => scrollY),
-        phases: await jitter.evaluate((value) => value.phases),
-      };
-      assert.equal(
-        await page.locator("[data-detail-loading]").isVisible(),
-        false,
-        "Background conversation reads must not toggle the foreground loading row",
-      );
-      assert(
-        Math.abs(duringPolling.y - beforePolling.y) < 1,
-        "Background polling must not shift the conversation panel",
-      );
-      assert.equal(observed.scroll, scrollBeforePolling, "Polling must retain the reader position");
-      assert.deepEqual(observed.phases, []);
-    } finally {
-      releaseBackground();
-      await page.unroute("**/document-creations/detail?*", holdBackground);
-      await jitter.evaluate((value) => value.observer.disconnect());
-      await jitter.dispose();
-    }
-    const visibleConversation = await page.locator('[data-conversation-role="user"]').first().elementHandle();
-    let failedRead = false;
-    const failOneBackgroundRead = (route) => {
-      if (!failedRead && !new URL(route.request().url()).searchParams.has("view")) {
-        failedRead = true;
+    await page.route("**/document-creations/detail?*", hold);
+    const before = await message.boundingBox();
+    await page.waitForRequest((request) => request.url().includes("/document-creations/detail?"), { timeout: 6000 });
+    await page.waitForTimeout(250);
+    assert.equal(
+      await page
+        .locator('.creation-session-notice[data-phase="loading"],.creation-session-notice[data-phase="refreshing"]')
+        .isVisible(),
+      false,
+    );
+    const during = await message.boundingBox();
+    assert(Math.abs(before.y - during.y) < 2, "Background polling must not replace content with a loading layout");
+    releaseBackground();
+    await page.unroute("**/document-creations/detail?*", hold);
+    let failed = false;
+    const fail = (route) => {
+      if (!failed) {
+        failed = true;
         return route.fulfill({
           status: 503,
           contentType: "application/json",
@@ -206,46 +162,35 @@ for (const [engine, width, locale] of [
       }
       return route.continue();
     };
-    await page.route("**/document-creations/detail?*", failOneBackgroundRead);
-    const fullHistoryResponse = (response) =>
-      response.url().includes("/document-creations/detail?") && !new URL(response.url()).searchParams.has("view");
-    await page.waitForResponse((response) => fullHistoryResponse(response) && response.status() === 503, {
-      timeout: 6000,
-    });
-    assert(
-      await visibleConversation.evaluate((node) => node.isConnected),
-      "A failed background read must retain the visible conversation",
+    await page.route("**/document-creations/detail?*", fail);
+    await page.waitForResponse(
+      (response) => response.url().includes("/document-creations/detail?") && response.status() === 503,
+      { timeout: 6000 },
     );
-    assert.equal(await page.locator("[data-detail-loading]").isVisible(), false);
-    await page.waitForResponse((response) => fullHistoryResponse(response) && response.status() === 200, {
-      timeout: 6000,
-    });
-    assert(
-      await visibleConversation.evaluate((node) => node.isConnected),
-      "Recovering an unchanged conversation must retain its DOM and reading position",
+    assert(await retained.evaluate((node) => node.isConnected), "A transient read failure preserves visible history");
+    await page.locator(".creation-session-notice button").click();
+    await page.waitForResponse(
+      (response) => response.url().includes("/document-creations/detail?") && response.status() === 200,
+      { timeout: 6000 },
     );
-    await page.unroute("**/document-creations/detail?*", failOneBackgroundRead);
-    const historyReads = requests.filter(
-      (url) => url.includes("/document-creations/detail") && !new URL(url).searchParams.has("view"),
-    ).length;
+    assert(await retained.evaluate((node) => node.isConnected), "Recovery preserves stable message nodes");
+    await page.unroute("**/document-creations/detail?*", fail);
     await page.goto(app.base + "/create");
-    await page.locator(`[data-activity-task="${id}"]`).waitFor();
+    await page.locator(`[data-activity-task="${id}"]`).first().waitFor();
     await page.evaluate((id) => {
       for (const key of Object.keys(sessionStorage))
-        if (key.startsWith("panda-force-creation-snapshot:") && key.endsWith(encodeURIComponent("personal:" + id)))
+        if (
+          key.startsWith("panda-force-creation-snapshot:") &&
+          key.includes(encodeURIComponent("conversation:creation:personal:" + id))
+        )
           sessionStorage.removeItem(key);
     }, id);
-    refreshPaused = new Promise((resolve) => (refreshRelease = resolve));
-    await page.locator(`[data-activity-task="${id}"]`).click();
-    await page.locator("[data-detail-excerpt]").filter({ hasText: "缓存优先的创作测试" }).waitFor({ timeout: 1000 });
-    await page.locator('[data-detail-loading][data-phase="refreshing"]:visible').waitFor({ timeout: 1000 });
-    assert.equal(
-      requests.filter((url) => url.includes("/document-creations/detail") && !new URL(url).searchParams.has("view"))
-        .length,
-      historyReads,
-    );
-    refreshRelease();
-    await page.locator("[data-detail-loading]").waitFor({ state: "hidden" });
+    held = new Promise((resolve) => (releaseRead = resolve));
+    await page.locator(`[data-activity-task="${id}"]`).first().click();
+    await message.filter({ hasText: "缓存优先的创作测试" }).waitFor({ timeout: 1000 });
+    await page.locator('.creation-session-notice[data-phase="refreshing"]').waitFor({ timeout: 1000 });
+    releaseRead();
+    await page.locator(".creation-session-status .user-input-card").waitFor();
     const deny = (route) =>
       route.fulfill({
         status: 403,
@@ -254,12 +199,12 @@ for (const [engine, width, locale] of [
       });
     await page.route("**/document-creations/detail?*", deny);
     await page.reload();
-    await page.locator(".creation-detail-layout").waitFor({ state: "hidden" });
-    assert.equal(await page.locator("[data-detail-open]:visible").count(), 0);
-    assert.equal(await page.locator("[data-detail-meta]").innerText(), "");
+    await page.locator('.creation-session-notice[data-phase="error"]').waitFor();
+    assert.equal(await page.locator("#conversation .user-message").count(), 0, "Revoked access clears cached history");
+    assert.equal(await page.locator("[data-creation-open]:visible").count(), 0);
     await page.unroute("**/document-creations/detail?*", deny);
-    await page.locator("[data-detail-notice] button").click();
-    await page.locator(".creation-detail-layout").waitFor({ state: "visible" });
+    await page.locator(".creation-session-notice button").click();
+    await message.waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(errors, []);
     records.push({
@@ -268,14 +213,11 @@ for (const [engine, width, locale] of [
       categoriesFailureKeepsSkillsSelectable: true,
       progressFrameBeforeSlowPreparation: true,
       cancelledPreparationDoesNotSubmit: true,
-      noConversationPrefetch: true,
       initialLoadingIndicator: true,
-      cachedProgressDuringRefresh: true,
-      onDemandConversationIndicator: true,
+      cachedHistoryDuringRefresh: true,
       listSnapshotBeforeDetailResponse: true,
       deniedRefreshClearsCachedContentAndRecovers: true,
-      backgroundChatRefreshKeepsGeometryAndReaderPosition: true,
-      backgroundHistoryFailureRetainsContentAndRecovers: true,
+      backgroundRefreshPreservesGeometryAndNodes: true,
     });
     await context.close();
   } finally {

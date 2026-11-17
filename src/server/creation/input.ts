@@ -16,6 +16,8 @@ export interface CreationInputSnapshot {
   prompt: string;
   profile: CreationEngineProfile;
   skills: SkillCapture;
+  materials?: readonly import("../../shared/creation/contracts.js").CreationMaterial[];
+  recoveryFrom?: { taskId: string; inputDigest: string };
   previous?: {
     prompt: string;
     document: { title: string; body: import("../../shared/documents/rich-body.js").RichDocumentBody };

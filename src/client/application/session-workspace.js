@@ -1,3 +1,4 @@
+import { creationSessionRoute } from "../creation/session-route.js";
 import { createSessionWorkspace } from "../session-workspace/controller.js";
 import { createSessionSettingsDialog } from "../session-workspace/settings-dialog.js";
 import { createSessionToolRegistry } from "../session-workspace/tool-registry.js";
@@ -24,14 +25,23 @@ export function assembleSessionWorkspace({
   noticesPort,
   sidebarLayoutPort,
 }) {
+  const creation = () => (creationSessionRoute() ? workbenchPort.workbench?.creationSession() || null : null);
   const isSessionPage = () => {
+    if (creation()) return true;
     const route = parseWorkbenchRoute();
     return route.page === "task" && route.id === state.active?.id;
   };
   const settings = createSessionSettingsDialog({
     t,
-    read: () => modelsPort.sessionControlView(),
-    applyModel: (...args) => modelsPort.applyModelSelection(...args),
+    read: () => creation()?.controls() || modelsPort.sessionControlView(),
+    applyModel: (id, model, effort) => {
+      const domain = creation();
+      if (domain) {
+        if (domain.key !== id) throw new Error(t("sessionview.sessionChanged"));
+        domain.applyModel(model, effort);
+        panel.refresh();
+      } else modelsPort.applyModelSelection(id, model, effort);
+    },
     applyPermission: (...args) => modelsPort.applyPermissionSelection(...args),
     reloadModels: () => modelsPort.loadModels(),
     onError: (message) => noticesPort.addPersistentError(message),
@@ -103,6 +113,8 @@ export function assembleSessionWorkspace({
   }
   /** @returns {import('../contracts/session-workspace.js').SessionWorkspaceView} */
   function read() {
+    const domain = creation();
+    if (domain) return domain.read();
     const active = state.active,
       id = active?.id || "";
     const project = id ? projectsPort.businessProjects.projectForSession(id) : null;
@@ -147,6 +159,7 @@ export function assembleSessionWorkspace({
     t,
     i18n,
     read,
+    renderSections: (host) => creation()?.renderSections(host),
     isSessionPage,
     registry,
     store,
@@ -168,6 +181,16 @@ export function assembleSessionWorkspace({
       panelsPort.setSummaryPanelOpen(false);
     },
     pendingAction: () => {
+      if (creation()) {
+        const card = document.querySelector(".creation-session-status .user-input-card");
+        if (card) {
+          card.scrollIntoView({ block: "center" });
+          findElement("button:not(:disabled), input:not(:disabled), textarea:not(:disabled)", card)?.focus({
+            preventScroll: true,
+          });
+        }
+        return;
+      }
       const card = approvalsPort.pendingCard(state.active?.id || "") || pendingQuestion();
       if (!card) return;
       if (card instanceof HTMLDetailsElement) card.open = true;

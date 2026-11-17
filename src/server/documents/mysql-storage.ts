@@ -9,6 +9,7 @@ import { MySQLSourceProfileRepository } from "./source-profile/mysql-repository.
 import { MySQLDocumentPlacementRepository } from "./placements/mysql-repository.js";
 import { MySQLDocumentNavigationRepository } from "./navigation/mysql-repository.js";
 import { MySQLDocumentIngestionRepository } from "./ingestion/mysql-repository.js";
+import { MySQLDocumentOwnershipRepository } from "./ownership/mysql-repository.js";
 /** Inject the returned native async repositories; callers retain ownership of the SQL pool and file adapters. */
 export function createMySQLDocumentStorage(pool: SQL) {
   const session = new MySQLDocumentSession(pool),
@@ -20,6 +21,7 @@ export function createMySQLDocumentStorage(pool: SQL) {
     spaces,
     documents,
     assets,
+    ownership: new MySQLDocumentOwnershipRepository(session),
     folders: new MySQLDocumentFolderRepository(session),
     library: new MySQLProjectLibraryRepository(session, spaces),
     profiles: new MySQLSourceProfileRepository(session, spaces),

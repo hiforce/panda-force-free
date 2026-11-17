@@ -1,3 +1,4 @@
+import { BUILTIN_SKILL_COVERS } from "../../shared/skills/cover-assets.js";
 import { CREATION_STYLES, TEMPLATE_PREVIEW_ASSETS } from "../../shared/template-previews/assets.js";
 import { INSTALL_ASSETS } from "../../shared/install-assets.js";
 import {
@@ -42,6 +43,7 @@ const BROWSER_RPC_METHODS = new Set([
 ]);
 
 const PUBLIC_ASSETS = new Set([
+  ...Object.values(BUILTIN_SKILL_COVERS),
   ...CREATION_STYLES,
   ...TEMPLATE_PREVIEW_ASSETS,
   ...SUPPORTED_LOCALES.map((locale) => `/locales/${locale.code}.json`),
@@ -67,6 +69,7 @@ const PUBLIC_ASSETS = new Set([
   "/delivery.css",
   "/social.css",
   "/session-workspace.css",
+  "/message-composer.css",
   "/settings-workspace.css",
   "/workbench-chrome.css",
   "/workbench-layout.css",

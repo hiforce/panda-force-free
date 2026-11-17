@@ -128,6 +128,9 @@ function boundary(from, to, kind, features) {
       "server/creation/ports.ts",
       "server/creation/validation.ts",
       "server/creation/questions/contracts.ts",
+      "server/creation/messages/contracts.ts",
+      "server/creation/goals/contracts.ts",
+      "server/creation/history/contracts.ts",
     ].includes(to)
   )
     return "Creation persistence cannot depend on application tool dispatch or output orchestration";

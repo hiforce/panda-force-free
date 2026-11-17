@@ -63,6 +63,7 @@ export function createTemplateCommands(
               async () => commands,
               writing,
               async () => ({ previewSkill, previewPortable }),
+              callbacks.applySkill,
             ),
           callbacks.refresh,
         );

@@ -1,8 +1,6 @@
-import { skillDisplayDefinition, skillDisplayPackName } from "../../shared/presentation/skill-display.js";
+import { creationSkillEntries } from "./skill-entries.js";
 import { CreationSkillBrowser } from "./skill-browser.js";
 import { openCreationSkillDetails } from "./skill-details.js";
-import { internalExecutionSkill } from "../../shared/skills/presentation.js";
-import { availableInstalledSkill } from "../../shared/skills/availability.js";
 import { coverFailed } from "../templates/covers.js";
 import {
   creationSkillKey as key,
@@ -19,6 +17,7 @@ import { escapeHtml as e } from "../../shared/html.js";
 import { setMessageHtml } from "../i18n.js";
 import { codexIcon } from "../codex-icons.js";
 import { creationApi } from "./api.js";
+import { canonicalData } from "../../shared/read-model.js";
 
 export class CreationSkills {
   private entries: CreationSkillEntry[] = [];
@@ -40,7 +39,7 @@ export class CreationSkills {
     private readonly error: (value: unknown) => void,
     private readonly presentation: "form" | "composer" = "form",
   ) {
-    this.selected = structuredClone([...initial]);
+    this.selected = canonicalData(initial);
     host.addEventListener("error", coverFailed, true);
     this.browser = new CreationSkillBrowser(
       t,
@@ -126,7 +125,9 @@ export class CreationSkills {
         focus ||
         this.host.querySelector<HTMLElement>("[data-skill-browser-open]") ||
         (this.presentation === "composer"
-          ? this.host.closest("form")?.querySelector<HTMLElement>("[data-creative-skill]")
+          ? this.host
+              .closest("form")
+              ?.querySelector<HTMLElement>("[data-composer-skill-trigger], [data-creative-skill]")
           : null)
       )?.focus({
         preventScroll: true,
@@ -177,31 +178,8 @@ export class CreationSkills {
     }
   }
   private collect(pack: InstalledSkillPack) {
-    for (const original of pack.manifest.skills) {
-      const definition = skillDisplayDefinition(pack, original);
-      if (!definition.outputTypes.includes("document") || !definition.composition.appliesTo.includes("document"))
-        continue;
-      const reference = {
-        packageId: pack.id,
-        version: pack.version,
-        digest: pack.digest,
-        id: definition.id,
-        parameters: {},
-      };
-      if (this.entries.some((entry) => key(entry.reference) === key(reference))) continue;
-      this.entries.push({
-        reference,
-        definition,
-        name: skillDisplayPackName(pack),
-        origin: pack.origin,
-        publisher: pack.manifest.publisher.name,
-        license: pack.manifest.license.expression,
-        visible: !internalExecutionSkill(pack, definition),
-        enabled:
-          availableInstalledSkill(pack, definition) &&
-          definition.capabilities.every((value) => this.capabilities.includes(value)),
-      });
-    }
+    for (const entry of creationSkillEntries(pack, this.capabilities))
+      if (!this.entries.some((existing) => key(existing.reference) === key(entry.reference))) this.entries.push(entry);
   }
   private readParameters() {
     for (const node of this.host.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-skill-parameter]")) {
@@ -303,7 +281,7 @@ export class CreationSkills {
   }
   setSelected(value: readonly CreationSkillSelection[], fresh = false) {
     if (fresh) this.browser.reset();
-    this.selected = structuredClone([...value]);
+    this.selected = canonicalData(value);
     this.render();
   }
   browse(trigger: HTMLElement) {

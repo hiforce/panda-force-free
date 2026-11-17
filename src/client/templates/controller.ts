@@ -37,7 +37,11 @@ export interface TemplateManagerScope {
 }
 
 /** Owns one gallery and query generation. Native commands, details and draft editing have separate lifetimes. */
-export function createTemplateManager(t: Translate, identity: string | undefined) {
+export function createTemplateManager(
+  t: Translate,
+  identity: string | undefined,
+  applySkill?: (selection: import("../../shared/creation/contracts.js").CreationSkillSelection) => void,
+) {
   let host: HTMLElement | null = null,
     epoch = 0,
     busy = false,
@@ -100,6 +104,7 @@ export function createTemplateManager(t: Translate, identity: string | undefined
       },
       notice,
       creationStatus,
+      applySkill,
     });
     notice("");
     return commands;
@@ -138,6 +143,7 @@ export function createTemplateManager(t: Translate, identity: string | undefined
             getCommands,
             getAuthoring,
             loadTemplateCommands,
+            applySkill,
           ),
         () => {
           cache.clear();

@@ -1,8 +1,9 @@
 import { SUPPORTED_LOCALES, localizeText, setOpaqueText } from "../i18n.js";
 import { findElement } from "./../dom.js";
+import { refreshSessionSkillLabels } from "../session-skill-labels.js";
 
 // Refreshes localized UI surfaces while preserving conversation content.
-/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "$" | "i18n" | "state" | "t", "workspace" | "account" | "models" | "usage" | "notices" | "settings", "localization">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "$" | "i18n" | "state" | "t", "workspace" | "account" | "models" | "usage" | "notices" | "settings" | "composer", "localization">} options */
 export function assembleLocalization({
   viewUpdates,
   $,
@@ -15,6 +16,7 @@ export function assembleLocalization({
   usagePort,
   noticesPort,
   settingsPort,
+  composerPort,
 }) {
   function refreshLocalizedRuntime() {
     $("#languageSelect").value = i18n.preference;
@@ -28,6 +30,8 @@ export function assembleLocalization({
         localizeText($(`#${id}`), "common.settings", undefined, t);
     modelsPort.syncPermissionControl();
     modelsPort.syncModelLabel();
+    composerPort.renderComposerSkills();
+    refreshSessionSkillLabels($("#conversation"), i18n.locale);
     viewUpdates.request("composerPlaceholder");
     viewUpdates.request("contextUsage");
     viewUpdates.request("review");

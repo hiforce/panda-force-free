@@ -47,5 +47,12 @@
   "compactionStarted": "已開始壓縮上下文",
   "reviewStarted": "已開始審查",
   "noActiveTask": "沒有活動對話",
-  "taskIdentity": "對話 {id}"
+  "taskIdentity": "對話 {id}",
+  "followUpHint": "補充需求、加入附件或技能，繼續對話…",
+  "collapseInput": "收合輸入框",
+  "expandInput": "展開輸入框",
+  "collapsedInputHint": "輸入框已收合，展開後繼續對話",
+  "collapsedInputContents": "{files, number} 個附件 · {skills, number} 項技能",
+  "manageFilesCount": "附件 {count, number}",
+  "manageSkillsCount": "技能 {count, number}"
 }

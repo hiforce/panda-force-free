@@ -97,3 +97,23 @@ describe("conversation repository lifecycle", () => {
     expect(repository.get("a")).toBe(fresh);
   });
 });
+
+test("blocked or rejected disk reads cannot block navigation or replace live history later", async () => {
+  const read = deferred();
+  const persistent = { get: () => read.promise, put: async () => true };
+  const repository = createConversationRepository({ persistent, cacheReadTimeoutMs: 5 });
+  expect(await repository.load("a")).toBeNull();
+  const live = thread("a", "inProgress");
+  repository.remember(live);
+  read.resolve(thread());
+  await Promise.resolve();
+  expect(repository.get("a")).toBe(live);
+  const failed = createConversationRepository({
+    persistent: {
+      get: async () => {
+        throw Error("storage unavailable");
+      },
+    },
+  });
+  expect(await failed.load("a")).toBeNull();
+});

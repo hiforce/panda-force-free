@@ -1,3 +1,4 @@
+import { BUILTIN_SKILL_COVERS } from "../../shared/skills/cover-assets.js";
 import type { TemplateNativeReference } from "../../shared/templates/catalog.js";
 
 const heading = '<path class="art-ink" d="M0 0h160v11H0z"/><path class="art-stroke" d="M0 30h206"/>';
@@ -29,5 +30,12 @@ const motifs: Record<string, string> = {
 export function builtinSkillCoverMotif(reference: TemplateNativeReference) {
   return reference.registry === "skills" && reference.packageId === "panda-force.essentials"
     ? motifs[reference.exportId]
+    : undefined;
+}
+
+/** Application artwork does not mutate immutable installed bundles or override publisher covers. */
+export function builtinSkillCoverImage(reference: TemplateNativeReference) {
+  return reference.registry === "skills" && reference.packageId === "panda-force.essentials"
+    ? BUILTIN_SKILL_COVERS[reference.exportId]
     : undefined;
 }

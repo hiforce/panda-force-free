@@ -1,10 +1,11 @@
+import { staticAssetUrl } from "../static-assets.js";
 import { coverIllustration, skillCoverKinds, skillCoverVariants, type SkillCoverKind } from "./cover-artwork.js";
 import { setMessageHtml } from "../i18n.js";
 import type { ManagedTemplate } from "../../shared/templates/catalog.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { localizedText } from "../../shared/presentation/localized.js";
 import { includedTemplatePreview } from "../template-previews/builtins.js";
-import { builtinSkillCoverMotif } from "./builtin-cover-artwork.js";
+import { builtinSkillCoverMotif, builtinSkillCoverImage } from "./builtin-cover-artwork.js";
 
 export type CoverPresentation = Pick<ManagedTemplate, "key" | "reference" | "templateType" | "artwork"> & {
   categories: readonly string[];
@@ -22,7 +23,7 @@ export function skillCoverKind(item: CoverPresentation): SkillCoverKind {
 function imageUrl(item: CoverPresentation): string | undefined {
   const builtin = includedTemplatePreview(item.key)?.images.home.path;
   if (builtin) return builtin;
-  if (!item.artwork) return;
+  if (!item.artwork) return builtinSkillCoverImage(item.reference);
   const ref = item.reference;
   if (ref.registry === "skills")
     return (
@@ -49,7 +50,7 @@ export function managedCover(item: CoverPresentation, detail = false) {
     url = imageUrl(item),
     variant = coverVariant(item);
   const alt = detail && item.artwork ? localizedText(item.artwork.alt, document.documentElement.lang) : "";
-  return `<span class="template-cover" data-type="${e(item.templateType)}" data-cover-kind="${kind}" data-cover-variant="${variant}" data-cover-tone="${variant === 1 ? "ink" : "paper"}">${url ? `<img class="template-cover-image" src="${e(url)}" loading="lazy" decoding="async" width="960" height="600" alt="${e(alt)}">` : coverIllustration(kind, variant, builtinSkillCoverMotif(item.reference))}</span>`;
+  return `<span class="template-cover" data-type="${e(item.templateType)}" data-cover-kind="${kind}" data-cover-variant="${variant}" data-cover-tone="${variant === 1 ? "ink" : "paper"}">${url ? `<img class="template-cover-image" src="${e(staticAssetUrl(url))}" loading="lazy" decoding="async" width="960" height="600" alt="${e(alt)}">` : coverIllustration(kind, variant, builtinSkillCoverMotif(item.reference))}</span>`;
 }
 export function coverFailed(event: Event) {
   if (!(event.target instanceof HTMLImageElement) || !event.target.classList.contains("template-cover-image")) return;

@@ -75,6 +75,8 @@ test.skipIf(!path)(
         .query("UPDATE bot_tasks SET status=?,data=? WHERE id=?")
         .run(generic.status, JSON.stringify(generic), generic.id);
       const snapshotPath = join(directory, "snapshot.sqlite");
+      const recoveryRequest = { id: randomUUID(), taskIds: [done.id] };
+      const recoveryReceipt = source.retryFailed(owner, recoveryRequest);
       source.db.query("VACUUM INTO ?").run(snapshotPath);
       await chmod(snapshotPath, 0o400);
       const migrationId = randomUUID();
@@ -105,7 +107,7 @@ test.skipIf(!path)(
           migrationId,
           module: "bots",
           tables: botMigrationTables,
-          converterVersion: 3,
+          converterVersion: 4,
         }),
       ).rejects.toThrow("migrationMappingChanged");
       expect((await sql`SELECT state FROM panda_force_data_migration_runs WHERE id=${migrationId}`)[0].state).toBe(
@@ -114,6 +116,8 @@ test.skipIf(!path)(
       expect((await sql`SELECT COUNT(*) n FROM panda_force_bot_tasks`)[0].n).toBe(5);
       expect((await sql`SELECT value FROM existing_business WHERE id=42`)[0].value).toBe("preserved");
       target = await MySQLBotStore.open(sql);
+      expect(await target.retryFailed(owner, recoveryRequest)).toEqual(recoveryReceipt);
+      expect((await sql`SELECT COUNT(*) n FROM panda_force_bot_recoveries WHERE owner=${owner}`)[0].n).toBe(1);
       expect((await target.authenticate(key.secret)).botIds).toEqual([bot.id]);
       expect((await target.task(owner, done.id)).input).toEqual(source.task(owner, done.id).input);
       expect((await target.task(owner, pending.id)).title).toBe(input.title);

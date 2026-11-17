@@ -1,3 +1,4 @@
+import { mysqlOwnershipVisible } from "../ownership/sql-policy.js";
 import { documentKeyHash } from "../mysql-session.js";
 import type { MySQLDocumentSession } from "../mysql-session.js";
 import type { DocumentRecord } from "../../../shared/documents/contracts.js";
@@ -8,6 +9,8 @@ import type {
 } from "../../../shared/documents/navigation.js";
 import { validateDocumentTree } from "../../../shared/documents/navigation.js";
 import { DocumentError } from "../errors.js";
+import { MySQLDocumentOwnershipRepository } from "../ownership/mysql-repository.js";
+import { assertOwnershipVisible } from "../ownership/record.js";
 export interface DocumentTreeRow extends DocumentTreePlacement {
   document: DocumentRecord;
   trashed: boolean;
@@ -212,7 +215,10 @@ export class MySQLDocumentNavigationRepository {
   }
   async revive(ids: string[]) {
     const remove = this.db.statement("DELETE FROM panda_force_document_trash WHERE documentId=?");
-    for (const id of ids) await remove.run(id);
+    for (const id of ids) {
+      assertOwnershipVisible(await new MySQLDocumentOwnershipRepository(this.db).forDocument(id));
+      await remove.run(id);
+    }
     await this.forgetTombstones(ids);
   }
   async trashList(spaceId: string): Promise<DocumentTreeTrashItem[]> {
@@ -231,7 +237,7 @@ export class MySQLDocumentNavigationRepository {
         operationId: string | null;
       }
     >(
-      `SELECT d.*,x.deletedAt,t.operationId FROM panda_force_documents d JOIN panda_force_document_trash x ON x.documentId=d.id LEFT JOIN panda_force_document_tree_trash t ON t.documentId=d.id WHERE d.spaceId=? AND (t.documentId IS NULL OR NOT EXISTS(SELECT 1 FROM panda_force_document_tree_trash p JOIN panda_force_document_trash z ON z.documentId=p.documentId WHERE p.documentId=t.parentId AND p.operationId=t.operationId AND p.spaceId=t.spaceId)) AND (? IS NULL OR x.deletedAt<? OR (x.deletedAt=? AND d.id>?)) ORDER BY x.deletedAt DESC,d.id LIMIT 201`,
+      `SELECT d.*,x.deletedAt,t.operationId FROM panda_force_documents d JOIN panda_force_document_trash x ON x.documentId=d.id LEFT JOIN panda_force_document_tree_trash t ON t.documentId=d.id WHERE d.spaceId=? AND ${mysqlOwnershipVisible("d")} AND (t.documentId IS NULL OR NOT EXISTS(SELECT 1 FROM panda_force_document_tree_trash p JOIN panda_force_document_trash z ON z.documentId=p.documentId WHERE p.documentId=t.parentId AND p.operationId=t.operationId AND p.spaceId=t.spaceId)) AND (? IS NULL OR x.deletedAt<? OR (x.deletedAt=? AND d.id>?)) ORDER BY x.deletedAt DESC,d.id LIMIT 201`,
       [spaceId, after?.deletedAt ?? null, after?.deletedAt ?? null, after?.deletedAt ?? null, after?.documentId ?? ""],
     );
     const page = roots.slice(0, 200),

@@ -1,7 +1,15 @@
+import {
+  creationHistoryCommand,
+  historyDocument,
+  historyReceipt,
+  historySignature,
+  type CreationHistoryCommand,
+} from "../history/contracts.js";
+import { stableJson } from "../../../shared/stable-json.js";
 import type { Database } from "bun:sqlite";
 import type { CreationLease, CreationFailure } from "../contracts.js";
 import { CreationError } from "../contracts.js";
-import { creationId, creationInteger, creationUuid } from "../validation.js";
+import { creationId, creationInteger, creationUuid, creationText } from "../validation.js";
 import type { CreationTaskRepository } from "./repository.js";
 import { readCreationTask, creationTask, creationSignature, type CreationTaskRow } from "./records.js";
 
@@ -116,15 +124,69 @@ export class CreationQueue {
       })
       .immediate();
   }
+  clearHistory(owner: string, command: CreationHistoryCommand, now: number) {
+    command = creationHistoryCommand(command);
+    owner = creationText(owner, 200);
+    creationInteger(now);
+    const signature = historySignature(command);
+    return this.db
+      .transaction(() => {
+        const prior = this.db
+          .query<{ owner: string; request: string; result: string }, [string]>(
+            "SELECT owner,request,result FROM creation_history_actions WHERE id=?",
+          )
+          .get(command.id);
+        if (prior) {
+          if (prior.owner !== owner) throw new CreationError("notFound");
+          if (prior.request !== signature) throw new CreationError("conflict");
+          return historyReceipt(prior.result, command.id);
+        }
+        const task = command.taskId ? this.tasks.get(owner, command.taskId) : null,
+          document = task ? historyDocument(task) : null;
+        const rows = this.db
+          .query<{ id: string }, (string | number)[]>(
+            `SELECT id FROM creation_tasks WHERE owner=?` +
+              (task
+                ? ` AND projectId=? AND ` +
+                  (document
+                    ? `(json_extract(spec,'$.target.document.documentId')=? OR json_extract(artifact,'$.documentId')=?)`
+                    : `id=?`)
+                : "") +
+              (command.before === undefined ? "" : " AND createdAt<?"),
+          )
+          .all(
+            ...(task
+              ? document
+                ? [owner, task.spec.projectId, document, document]
+                : [owner, task.spec.projectId, task.spec.id]
+              : [owner]),
+            ...(command.before === undefined ? [] : [command.before]),
+          );
+        let hidden = 0;
+        const hide = this.db.query("INSERT OR IGNORE INTO creation_history_hidden(id,owner) VALUES(?,?)");
+        for (const row of rows) hidden += hide.run(row.id, owner).changes;
+        const result = { id: command.id, hidden };
+        this.db
+          .query("INSERT INTO creation_history_actions(id,owner,request,result,createdAt) VALUES(?,?,?,?,?)")
+          .run(command.id, owner, signature, stableJson(result), now);
+        return result;
+      })
+      .immediate();
+  }
   list(owner: string, projectId?: string) {
     if (projectId !== undefined) creationId(projectId);
     return this.db
       .query<CreationTaskRow, string[]>(
-        "SELECT * FROM creation_tasks WHERE owner=?" +
+        `SELECT * FROM (
+      SELECT t.*,ROW_NUMBER() OVER(PARTITION BY projectId,COALESCE(json_extract(spec,'$.target.document.documentId'),json_extract(artifact,'$.documentId'),id) ORDER BY createdAt DESC,id DESC) AS historyRank
+      FROM creation_tasks t WHERE owner=? AND NOT EXISTS(SELECT 1 FROM creation_history_hidden h WHERE h.id=t.id AND h.owner=t.owner)` +
           (projectId === undefined ? "" : " AND projectId=?") +
+          `) ranked WHERE historyRank=1 ORDER BY ` +
           (projectId === undefined
-            ? " ORDER BY CASE WHEN state IN ('queued','running','committing') THEN 0 ELSE 1 END,createdAt DESC,id DESC LIMIT 50"
-            : " ORDER BY createdAt DESC,id DESC LIMIT 20"),
+            ? `CASE WHEN state IN ('queued','running','committing') AND failure IS NULL THEN 0 ELSE 1 END,`
+            : "") +
+          `createdAt DESC,id DESC LIMIT ` +
+          (projectId === undefined ? "50" : "20"),
       )
       .all(...(projectId === undefined ? [owner] : [owner, projectId]))
       .map(creationTask);

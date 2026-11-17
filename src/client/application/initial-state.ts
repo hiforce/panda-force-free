@@ -20,6 +20,7 @@ export function createInitialState(): ApplicationState {
     planMode: false,
     composerMentions: [],
     composerAttachments: [],
+    composerSkills: [],
     models: [],
     modelLoadStatus: "loading",
     selectedModel: "",

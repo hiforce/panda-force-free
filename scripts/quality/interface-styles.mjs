@@ -16,6 +16,7 @@ export const interfaceStyleFiles = [
   "public/style.css",
   "public/packages.css",
   "public/session-workspace.css",
+  "public/message-composer.css",
   "public/document-workspace.css",
   "public/document-authoring.css",
   "public/file-preview.css",

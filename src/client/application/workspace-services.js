@@ -122,7 +122,7 @@ export function assembleSidebar({
     applyProjectVisibility,
   };
 }
-/** @param {import("./ports.js").FeatureOptions<"identity" | "viewUpdates" | "state" | "mutations" | "t" | "i18n" | "workspacePreparation", "navigation" | "workspace" | "settings" | "projects" | "sidebar" | "status" | "approvals" | "sidebarLayout" | "panels", "workbench">} options */
+/** @param {import("./ports.js").FeatureOptions<"identity" | "viewUpdates" | "state" | "mutations" | "t" | "i18n" | "workspacePreparation", "navigation" | "workspace" | "settings" | "projects" | "sidebar" | "status" | "approvals" | "sidebarLayout" | "panels" | "composer" | "timeline" | "viewport" | "messages" | "models" | "goals", "workbench">} options */
 export function assembleWorkbench({
   identity,
   viewUpdates,
@@ -138,11 +138,58 @@ export function assembleWorkbench({
   approvalsPort,
   sidebarLayoutPort,
   panelsPort,
+  composerPort,
+  timelinePort,
+  viewportPort,
+  messagesPort,
+  modelsPort,
+  goalsPort,
   state,
   mutations,
 }) {
   let workbench;
   workbench = createWorkbench({
+    creationBridge: {
+      controls: () => modelsPort.sessionControlView(),
+      openGoal: (draft) => goalsPort.openGoalDialog(undefined, draft),
+      cwd: () => state.workspaceContext?.cwd || state.config.defaultCwd || "",
+      clear: () => timelinePort.clearConversationRuntime(),
+      restoreDraft: () => composerPort.restoreComposerDraft(),
+      saveDraft: (scope) => composerPort.saveComposerDraft(scope),
+      accepted: (scope, nextScope, prompt, materialIds) =>
+        composerPort.acceptCreationSubmission(scope, nextScope, prompt, materialIds),
+      seedDraft: (text, selections, allowEmpty = false) => {
+        const draft = composerPort.getComposerDraft();
+        if (
+          draft?.skills !== undefined &&
+          (!allowEmpty || draft.text || draft.attachments.length || draft.skills.length)
+        )
+          return;
+        const key = workbench?.creationSession()?.key;
+        if (!key) return;
+        composerPort.setComposerDraft(key, {
+          text: draft?.text || text,
+          attachments: draft?.attachments || [],
+          mentions: [],
+          skills: [...selections],
+        });
+        composerPort.restoreComposerDraft();
+      },
+      render: (item, turn) => messagesPort.upsertItem(item, turn),
+      preserve: (render) => viewportPort.preserveReadingPosition(render),
+      reset: (discovery = false) => {
+        viewportPort.setConversationMode(discovery ? "discovery" : "conversation");
+        viewportPort.resetAutoScroll();
+      },
+      changed: () => {
+        viewUpdates.request("sessionWorkspace");
+        viewUpdates.request("goals");
+        viewUpdates.request("composerSubmit");
+        viewUpdates.request("composerPlaceholder");
+      },
+      selections: () => composerPort.readComposerSkills(),
+      selectSkill: (selection) => composerPort.selectComposerSkill(selection),
+    },
     identityKey: identity,
     onViewChange: () => viewUpdates.request("sessionWorkspace"),
     t,

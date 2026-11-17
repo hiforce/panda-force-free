@@ -373,6 +373,40 @@ test("the engine-neutral document tool binds one task and returns its real artif
     expect(JSON.stringify(tools.definitions)).not.toContain(f.spec.projectId);
     tools.started(scope);
     lease.owner = "operator:changed-caller";
+    const unchangedHead = await f.snapshots.head(),
+      rejected = await tools.call({
+        ...call,
+        arguments: {
+          title: "Invalid draft",
+          body: {
+            schema: 1,
+            format: "richtext",
+            document: {
+              type: "doc",
+              content: [
+                {
+                  type: "blockquote",
+                  content: [
+                    {
+                      type: "listItem",
+                      content: [{ type: "paragraph", content: [{ type: "text", text: "Private document content" }] }],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      });
+    expect(rejected.success).toBe(false);
+    expect(JSON.parse(rejected.text)).toMatchObject({
+      error: "invalidOutput",
+      retryable: true,
+      expectedBody: { schema: 1, format: "richtext", document: { type: "doc" } },
+    });
+    expect(rejected.text).not.toContain("Private document content");
+    expect(await f.snapshots.head()).toBe(unchangedHead);
+    expect(f.tasks().get(owner, f.spec.id).outputDigest).toBeNull();
     const result = await tools.call(call),
       artifact = JSON.parse(result.text);
     expect(result.success).toBe(true);

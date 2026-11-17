@@ -13,6 +13,7 @@
   --pf-page-padding: 24px;
   --pf-page-padding-inline: 48px;
   --workspace-session-width: 800px;
+  --workspace-creation-width: 1040px;
   --workspace-document-width: 900px;
   --workspace-settings-width: 1200px;
   --workspace-template-width: 1320px;
@@ -27,6 +28,7 @@
 }
 :root:is([data-workbench-width="wide"], [data-workbench-width="fill"]) {
   --workspace-session-width: 100cqw;
+  --workspace-creation-width: 100cqw;
   --workspace-document-width: 100%;
   --workspace-settings-width: 100%;
   --workspace-template-width: var(--workspace-frame-width);
@@ -37,6 +39,9 @@
   --session-content-gutter: var(--pf-page-padding-inline);
   --session-content-rail: min(var(--session-content-width), calc(100cqw - var(--session-content-gutter) * 2));
   background: var(--pf-backdrop, var(--pf-sidebar));
+}
+.panda-workspace.creation-entry-layout {
+  --session-content-width: var(--workspace-creation-width);
 }
 .panda-workspace .app-shell {
   width: var(--workspace-frame-width);
@@ -402,7 +407,7 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 56px minmax(0, 1fr) var(--pf-mobile-nav-height);
   }
-  .panda-workspace.session-layout .app-shell {
+  .panda-workspace.session-layout:not(.creation-entry-layout) .app-shell {
     grid-template-rows: 56px minmax(0, 1fr);
   }
   .panda-workspace .topbar {
@@ -500,4 +505,34 @@
   .panda-workspace .sidebar {
     transition: none;
   }
+}
+
+/* Shared manual carousel interactions leave touch scrolling to the browser. */
+.horizontal-carousel-track {
+  cursor: grab;
+}
+.horizontal-carousel-track.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+  scroll-snap-type: none;
+}
+.horizontal-carousel-track:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: -2px;
+}
+.horizontal-carousel-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pf-space-1);
+}
+.horizontal-carousel-controls[hidden] {
+  display: none;
+}
+.horizontal-carousel-controls .icon-button {
+  min-width: var(--pf-touch-target);
+  min-height: var(--pf-touch-target);
+}
+.horizontal-carousel-controls .icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
 }

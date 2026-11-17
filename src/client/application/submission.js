@@ -1,12 +1,16 @@
+import { creationSessionRoute } from "../creation/session-route.js";
 import { threadInputErrorMessage } from "../../shared/bridge-errors.js";
 import { isTransportSwitch } from "../../shared/errors.js";
 import { buildComposerInput } from "../composer-attachments.js";
 import { errorCode, errorMessage } from "./../../shared/errors.js";
 import { deliveryIsUncertain } from "./input-errors.js";
 import { steerOrStart } from "./turn-input.js";
+import { prepareSessionSkillInput } from "../session-skills-api.js";
+import { CreationApiError } from "../creation/api.js";
+import { errorText } from "../i18n.js";
 
 // Coordinates a single explicit input transaction while preserving draft and acknowledgement semantics.
-/** @param {import("./ports.js").FeatureOptions<"selection" | "viewUpdates" | "mutations" | "state" | "t" | "$", "transport" | "delivery" | "suggestions" | "models" | "composer" | "commands" | "uploads" | "notices" | "synchronization" | "inputSessions", "submission">} options */
+/** @param {import("./ports.js").FeatureOptions<"selection" | "viewUpdates" | "mutations" | "state" | "t" | "$", "transport" | "delivery" | "suggestions" | "models" | "composer" | "commands" | "uploads" | "notices" | "synchronization" | "inputSessions" | "workbench", "submission">} options */
 export function assembleSubmission({
   transportPort,
   selection,
@@ -24,10 +28,46 @@ export function assembleSubmission({
   noticesPort,
   synchronizationPort,
   inputSessionsPort,
+  workbenchPort,
 }) {
+  const domainSending = new Set();
   /** @param {{preventDefault(): void}} event @param {{text: string; threadId: string} | null} questionAnswer */
   async function submitPrompt(event, questionAnswer = null) {
     event.preventDefault();
+    const creation = creationSessionRoute() ? workbenchPort.workbench?.creationSession() : null;
+    if (creation && !questionAnswer) {
+      if (domainSending.has(creation.key) || !uploadsPort.composerAttachmentsReady()) return;
+      const key = creation.key,
+        text = $("#prompt").value.trim(),
+        attachments = [...state.composerAttachments],
+        selections = composerPort.readComposerSkills();
+      if (!text && !attachments.length && !creation.running) return;
+      domainSending.add(key);
+      try {
+        const goalCommand = !attachments.length ? commandsPort.parseGoalCommand(text) : null;
+        if (goalCommand) {
+          await commandsPort.submitGoalCommand(state.active, goalCommand, { preserveDraft: true });
+          if (creation.key === key && $("#prompt").value.trim() === text) {
+            $("#prompt").value = "";
+            composerPort.saveComposerDraft(key);
+            viewUpdates.request("composerLayout");
+          }
+        } else if (!text && !attachments.length) await creation.stop();
+        else {
+          await creation.submit({ text, attachments, selections });
+        }
+      } catch (error) {
+        noticesPort.addPersistentError(
+          error instanceof CreationApiError
+            ? errorText(error.payload, t, "creation.taskActionFailed")
+            : errorMessage(error),
+        );
+      } finally {
+        domainSending.delete(key);
+        composerPort.syncComposerSubmitState();
+      }
+      return;
+    }
     const submissionKey = deliveryPort.pendingMessageOwner();
     if (questionAnswer && (!questionAnswer.threadId || questionAnswer.threadId !== state.active?.id))
       throw new Error(t("workbench.conversationChangedReopenTheQuestionBeforeSubmitting"));
@@ -40,6 +80,7 @@ export function assembleSubmission({
     const input = $("#prompt"),
       text = questionAnswer ? questionAnswer.text.trim() : input.value.trim(),
       attachments = questionAnswer ? [] : [...state.composerAttachments],
+      skillSelections = questionAnswer ? [] : composerPort.readComposerSkills(),
       content = buildComposerInput(text, attachments),
       hasContent = content.length > 0,
       turnId = composerPort.activeTurnId();
@@ -121,6 +162,11 @@ export function assembleSubmission({
         suggestionsPort.renderContextTray();
         viewUpdates.request("composerLayout");
       }
+      const preparedContent = questionAnswer
+        ? content
+        : await prepareSessionSkillInput(content, skillSelections, thread?.id || submissionKey, t);
+      optimistic.content = preparedContent;
+      if (isCurrent()) viewUpdates.request("item", { item: optimistic, turnId: optimistic.turnId });
       if (turnId && thread) {
         const currentThread = thread;
         const result = await steerOrStart({
@@ -129,8 +175,8 @@ export function assembleSubmission({
             inputSessionsPort.resumeActiveThread(...args),
           thread,
           turnId,
-          input: content,
-          clientUserMessageId: attachments.length ? optimisticId : null,
+          input: preparedContent,
+          clientUserMessageId: optimisticId,
           startOptions: { model, effort, cwd, ...turnPolicy },
           onDispatch: (value) => {
             dispatchStarted = value;
@@ -152,7 +198,7 @@ export function assembleSubmission({
         if (result?.turn?.id) optimistic.turnId = result.turn.id;
         sent = true;
         deliveryPort.setPendingMessageDelivery(optimisticId, "sent");
-        if (!questionAnswer) composerPort.clearComposerDraft(thread.id);
+        if (!questionAnswer) composerPort.clearComposerDraft(thread.id, skillSelections);
         modelsPort.commitSessionModelSettings(thread.id);
         if (isCurrent()) synchronizationPort.scheduleActiveThreadSync(0);
         return { sent: true };
@@ -177,8 +223,8 @@ export function assembleSubmission({
       const result = await transportPort.rpc("turn/start", {
         threadId: thread.id,
         ...(thread.canAcceptDirectInput !== true ? { pandaPrepareInput: true } : {}),
-        input: content,
-        ...(attachments.length ? { clientUserMessageId: optimisticId } : {}),
+        input: preparedContent,
+        clientUserMessageId: optimisticId,
         model,
         effort,
         cwd,
@@ -187,7 +233,7 @@ export function assembleSubmission({
       if (result?.turn?.id) optimistic.turnId = result.turn.id;
       sent = true;
       deliveryPort.setPendingMessageDelivery(optimisticId, "sent");
-      if (!questionAnswer) composerPort.clearComposerDraft(thread.id);
+      if (!questionAnswer) composerPort.clearComposerDraft(thread.id, skillSelections);
       modelsPort.commitSessionModelSettings(thread.id);
       return { sent: true };
     } catch (error) {
@@ -234,7 +280,7 @@ export function assembleSubmission({
         !composerPort.getComposerDraft(thread.id)?.text &&
         !composerPort.getComposerDraft(thread.id)?.attachments?.length
       ) {
-        composerPort.setComposerDraft(thread.id, { text, mentions, attachments });
+        composerPort.setComposerDraft(thread.id, { text, mentions, attachments, skills: skillSelections });
         if (state.active?.id === thread.id && !input.value) {
           composerPort.restoreComposerDraft();
           suggestionsPort.renderContextTray();

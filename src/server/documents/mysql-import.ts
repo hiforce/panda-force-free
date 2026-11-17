@@ -55,11 +55,18 @@ export function importDocumentsSQLite(options: {
   snapshotPath: string;
   migrationId: string;
   progress?: (value: MigrationProgress) => void | Promise<void>;
+  ownershipWillFollow?: true;
 }) {
   const source = new Database(options.snapshotPath, { readonly: true, strict: true });
   try {
     if (source.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version !== 6)
       throw Error("unsupportedDocumentMigrationSchema");
+    if (
+      !options.ownershipWillFollow &&
+      source.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='document_ownership_records'").get() &&
+      source.query<{ count: number }, []>("SELECT count(*) count FROM document_ownership_records").get()!.count > 0
+    )
+      throw Error("documentOwnershipMigrationRequired");
   } finally {
     source.close();
   }

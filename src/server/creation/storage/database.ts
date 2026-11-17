@@ -12,7 +12,7 @@ export function openCreationDatabase(path: string): Database {
     db.exec("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;");
     db.transaction(() => {
       const version = db.query<{ user_version: number }, []>("PRAGMA user_version").get()!.user_version;
-      if (version > 3) throw new CreationError("unavailable");
+      if (version > 6) throw new CreationError("unavailable");
       if (!version)
         db.exec(`
           CREATE TABLE creation_tasks (
@@ -57,6 +57,29 @@ export function openCreationDatabase(path: string): Database {
         );
         CREATE INDEX creation_progress_task ON creation_progress(taskId,createdAt,id);
         PRAGMA user_version=3;
+      `);
+      if (version < 4)
+        db.exec(`
+        CREATE TABLE creation_messages (
+          id TEXT PRIMARY KEY, owner TEXT NOT NULL, taskId TEXT NOT NULL REFERENCES creation_tasks(id), generation INTEGER NOT NULL,
+          requestDigest TEXT NOT NULL, payloadDigest TEXT NOT NULL,
+          state TEXT NOT NULL CHECK(state IN ('received','dispatching','delivered','uncertain')), dispatchGeneration INTEGER,
+          createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL
+        );
+        CREATE INDEX creation_messages_task ON creation_messages(taskId,createdAt,id);
+        PRAGMA user_version=4;
+      `);
+      if (version < 5)
+        db.exec(`
+        CREATE TABLE creation_goals(id TEXT PRIMARY KEY REFERENCES creation_tasks(id),owner TEXT NOT NULL,event TEXT NOT NULL);
+        PRAGMA user_version=5;
+      `);
+      if (version < 6)
+        db.exec(`
+        CREATE TABLE creation_history_hidden(id TEXT PRIMARY KEY REFERENCES creation_tasks(id),owner TEXT NOT NULL);
+        CREATE INDEX creation_history_owner ON creation_history_hidden(owner,id);
+        CREATE TABLE creation_history_actions(id TEXT PRIMARY KEY,owner TEXT NOT NULL,request TEXT NOT NULL,result TEXT NOT NULL,createdAt INTEGER NOT NULL);
+        PRAGMA user_version=6;
       `);
     }).immediate();
     return db;

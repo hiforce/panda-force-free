@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 const generated = new Set([
   "src/server/creative/assets/vendor/css-tokenizer.js",
+  "src/server/materials/vendor/pdf-parser.mjs",
   "src/server/creative/assets/vendor/css-tokenizer.d.ts",
   "src/client/dom-elements.d.ts",
   "src/client/contracts/state-grants.d.ts",

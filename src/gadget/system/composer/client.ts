@@ -11,6 +11,7 @@ import { isModuleNetworkError } from "../../../client/documents/module-network-e
 import { prepareDocumentModule } from "../../../client/documents/module-transfer.js";
 import { staticAssetUrl } from "../../../client/static-assets.js";
 import { reportDiagnostic } from "../../../shared/diagnostics.js";
+import { createComposerDisclosure } from "../../../client/message-composer-disclosure.js";
 const entries = [
   "/gadget-document.bundle.js",
   "/gadget-document.bundle.js?retry=1",
@@ -44,6 +45,7 @@ export function register(registry: ClientGadgetRegistry) {
         deferred: typeof import("./document.js") | null = null,
         retryTimer: ReturnType<typeof setTimeout> | undefined,
         composer: ReturnType<typeof import("./document.js").createDocumentComposer> | null = null;
+      let disclosure: ReturnType<typeof createComposerDisclosure> | null = null;
       const access = context.capability<ComposerCapability>("panda.composer"),
         project = access.creationProject() || "personal",
         store = new CreationDrafts(access.identity, project),
@@ -86,7 +88,14 @@ export function register(registry: ClientGadgetRegistry) {
         retry.textContent = context.t(reload ? "common.reloadWorkspace" : "common.retry");
       }
       function shell() {
+        disclosure?.dispose();
         setMessageHtml(root, composerFrame(context, draft().prompt));
+        disclosure = createComposerDisclosure(
+          root.querySelector<HTMLFormElement>("form")!,
+          context.t,
+          access.identity,
+          "entry:" + project,
+        );
         const textarea = root.querySelector<HTMLTextAreaElement>("textarea")!;
         textarea.oninput = () => {
           const value = draft();
@@ -143,6 +152,8 @@ export function register(registry: ClientGadgetRegistry) {
           focused = document.activeElement === input,
           start = input.selectionStart,
           end = input.selectionEnd;
+        disclosure?.dispose();
+        disclosure = null;
         composer = loaded.createDocumentComposer(root, context);
         if (focused) {
           const next = root.querySelector<HTMLTextAreaElement>("textarea")!;
@@ -186,10 +197,12 @@ export function register(registry: ClientGadgetRegistry) {
       return {
         update(next: GadgetContext) {
           context = next;
+          disclosure?.refresh();
           if (composer) composer.update(next);
           else status();
         },
         dispose() {
+          disclosure?.dispose();
           live = false;
           generation++;
           clearTimeout(retryTimer);

@@ -14,6 +14,15 @@ export class SQLiteCreationProgress implements CreationProgressStore {
       .transaction(() => {
         const task = readCreationTask(this.db, lease.owner, lease.taskId);
         if (task.generation !== lease.generation || event.generation !== lease.generation) return;
+        if (event.id) {
+          const current = this.db
+            .query("SELECT id FROM creation_progress WHERE id=? AND taskId=? AND generation=?")
+            .get(event.id, lease.taskId, lease.generation);
+          if (current) {
+            this.db.query("UPDATE creation_progress SET event=? WHERE id=?").run(JSON.stringify(event), event.id);
+            return;
+          }
+        }
         const count = this.db
           .query<{ n: number }, [string, number]>(
             "SELECT COUNT(*) n FROM creation_progress WHERE taskId=? AND generation=?",
@@ -22,7 +31,7 @@ export class SQLiteCreationProgress implements CreationProgressStore {
         if (count >= 64) return;
         this.db
           .query("INSERT INTO creation_progress(id,taskId,generation,createdAt,ordinal,event) VALUES(?,?,?,?,?,?)")
-          .run(randomUUID(), lease.taskId, lease.generation, event.at, count, JSON.stringify(event));
+          .run(event.id || randomUUID(), lease.taskId, lease.generation, event.at, count, JSON.stringify(event));
       })
       .immediate();
   }

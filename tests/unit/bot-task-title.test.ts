@@ -66,3 +66,26 @@ test("legacy structured task content extracts a readable nested product summary"
   };
   expect(taskSummary(task).summary).toBe("RAB Talus Windstopper Tight");
 });
+
+test("queue summaries include bounded business evidence for historical complete decisions", () => {
+  const store = new BotStore(":memory:");
+  try {
+    const bot = store.createBot("alice", { code: "business-results", name: "Reviewer" });
+    const task = store.submit(
+      bot,
+      botTaskInput({ externalTaskId: "item-1", instructions: "Audit", input: { text: "Jacket" } }),
+      "item-1",
+    ).task;
+    task.status = "completed";
+    task.decision = "complete";
+    task.reason = "保留｜商品为女士夹克，属于允许上架的服装。" + "证据".repeat(300);
+    store.db.query("UPDATE bot_tasks SET status=?,data=? WHERE id=?").run(task.status, JSON.stringify(task), task.id);
+    const summary = store.taskSummaries("alice")[0]!;
+    expect(summary.reason).toStartWith("保留｜商品为女士夹克");
+    expect(summary.reason!.length).toBe(400);
+    expect(summary.decision).toBe("complete");
+    expect(store.task("alice", task.id).reason).toBe(task.reason);
+  } finally {
+    store.close();
+  }
+});

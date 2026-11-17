@@ -5,6 +5,8 @@ import { codexIcon } from "../codex-icons.js";
 import { attachmentsFromInput, composerInputKey, composerTextFromInput } from "../composer-attachments.js";
 import { renderItemImages } from "../rendering.js";
 import { setConversationContent } from "./content.js";
+import { sessionSkillsFromInput } from "../../shared/session-skills.js";
+import { bindSessionSkillLabel } from "../session-skill-labels.js";
 
 // Owns this element type; identity, transactions and lifecycle belong to the caller.
 /** @param {Pick<import("./types.js").ConversationRendererServices, "state" | "turnFramesPort" | "queuePort" | "timingPort" | "identityPort" | "clipboardPort" | "t">} services */
@@ -60,6 +62,24 @@ export function createUserMessageRenderer({
       el.dataset.messageTimestamp = String(timingPort.timestampSeconds(userTimestamp) || Date.now() / 1000);
       timingPort.setMessageTime(el, el.dataset.messageTimestamp, "Sent at {time}");
       setOpaqueText(findElement(".user-message", el), composerTextFromInput(item.content));
+      const selectedSkills = sessionSkillsFromInput(item.content);
+      let skillList = findElement(".user-message-skills", el);
+      if (selectedSkills.length) {
+        if (!skillList) {
+          skillList = document.createElement("div");
+          skillList.className = "user-message-skills";
+          requireElement(".user-message", el).after(skillList);
+        }
+        skillList.replaceChildren(
+          ...selectedSkills.map((skill) => {
+            const label = document.createElement("span");
+            setOpaqueText(label, skill.selection.id);
+            bindSessionSkillLabel(label, skill.name, document.documentElement.lang);
+            label.title = `${skill.selection.packageId}/${skill.selection.id}@${skill.selection.version}`;
+            return label;
+          }),
+        );
+      } else skillList?.remove();
       let copyButton = findElement("button.user-message-copy", el);
       if (!copyButton) {
         copyButton = document.createElement("button");
@@ -121,13 +141,17 @@ export function createUserMessageRenderer({
           el.prepend(status);
         }
         const label =
-          el.dataset.delivery === "sending"
-            ? "common.sending"
-            : el.dataset.delivery === "failed"
-              ? "common.sendFailed"
-              : el.dataset.delivery === "unconfirmed"
-                ? "workbench.deliveryUnconfirmed"
-                : "common.sent";
+          el.dataset.delivery === "creation-received"
+            ? "creation.messageReceived"
+            : el.dataset.delivery === "creation-delivering"
+              ? "creation.messageDelivering"
+              : el.dataset.delivery === "sending"
+                ? "common.sending"
+                : el.dataset.delivery === "failed"
+                  ? "common.sendFailed"
+                  : el.dataset.delivery === "unconfirmed"
+                    ? "workbench.deliveryUnconfirmed"
+                    : "common.sent";
         setMessageHtml(
           status,
           (el.dataset.steer === "true"

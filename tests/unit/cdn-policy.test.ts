@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { CLIENT_BUNDLES } from "../../src/shared/client-entrypoints.js";
 import { inspectCompiledCdn } from "../../src/server/http/cdn-policy.js";
 import { publishAssets, writeCdnOutput } from "../../scripts/cdn/publish.mjs";
-import { renderCdnDockerfile } from "../../scripts/build/cdn-image.js";
+import { renderCdnDockerfile } from "../../scripts/build/prepare-cdn-image.js";
+import { cdnSourceImage } from "../../scripts/build/cdn-image.js";
 
 test("local installation remains the default and explicit CDN mode rejects a missing build", () => {
   const root = mkdtempSync(join(tmpdir(), "cdn-policy-local-"));
@@ -73,11 +74,23 @@ test("the reusable CDN build follows each source revision and verifies its artif
     sourceSha256: "b".repeat(64),
   };
   const first = renderCdnDockerfile(options);
-  expect(first).toContain("FROM registry.example/app:cdn-aaaaaaaaaaaa");
+  expect(first).toContain(
+    "FROM " + cdnSourceImage(options.repository, options.baseUrl, "pandaforce/static", options.sourceSha256),
+  );
   expect(first).toContain(options.sourceSha256);
   expect(first).toContain("inspectCompiledCdn");
-  expect(renderCdnDockerfile({ ...options, commit: "c".repeat(40) })).toContain(
-    "FROM registry.example/app:cdn-cccccccccccc",
+  const documentationOnly = renderCdnDockerfile({ ...options, commit: "c".repeat(40) });
+  expect(documentationOnly.split("\n")[0]).toBe(first.split("\n")[0]);
+  expect(documentationOnly).toContain('revision="' + "c".repeat(40) + '"');
+  expect(renderCdnDockerfile({ ...options, sourceSha256: "d".repeat(64) }).split("\n")[0]).not.toBe(
+    first.split("\n")[0],
+  );
+  expect(renderCdnDockerfile({ ...options, prefix: "owner/custom" }).split("\n")[0]).not.toBe(first.split("\n")[0]);
+  expect(renderCdnDockerfile({ ...options, baseUrl: "https://other.example.com" }).split("\n")[0]).not.toBe(
+    first.split("\n")[0],
+  );
+  expect(renderCdnDockerfile({ ...options, configurationKey: "e".repeat(64) }).split("\n")[0]).not.toBe(
+    first.split("\n")[0],
   );
   expect(() => renderCdnDockerfile({ ...options, repository: "bad\nRUN echo injected" })).toThrow();
   expect(() => renderCdnDockerfile({ ...options, baseUrl: "https://user:secret@cdn.example.com" })).toThrow();

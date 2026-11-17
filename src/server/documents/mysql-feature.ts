@@ -19,6 +19,9 @@ import { mysqlProjectLibraryRoutes } from "./mysql-library-routes.js";
 import { mysqlDocumentPlacementRoutes } from "./placements/mysql-routes.js";
 import { projectDocumentTreeRoutes } from "./navigation/routes.js";
 import { sourceImagePolicy } from "./source-profile/image-policy.js";
+import { assertOwnershipVisible } from "./ownership/record.js";
+import { mysqlOwnershipBatch } from "./ownership/sql-batch.js";
+import { createSQLDocumentOwnershipTransfers } from "./ownership/sql-application.js";
 /** Explicit native MySQL composition. The caller upgrades/imports the module before injection and owns the pool. */
 export function createMySQLDocumentFeature(options: {
   sql: SQL;
@@ -35,6 +38,7 @@ export function createMySQLDocumentFeature(options: {
     const value = await documents.get(id),
       space = await spaces.get(value.document.spaceId);
     await options.requireProject(space.projectId);
+    assertOwnershipVisible(await storage.ownership.get(space.id, id));
     return { ...value, engine: space.engine, sourceMode: space.sourceMode };
   };
   const assets = new MySQLDocumentAssets(storage.assets, join(options.stateRoot, "data", "document-assets"), detail),
@@ -70,6 +74,14 @@ export function createMySQLDocumentFeature(options: {
     }),
     navigation = new MySQLProjectDocumentNavigation(storage.navigation, library, service);
   return {
+    transfers: createSQLDocumentOwnershipTransfers({
+      batch: mysqlOwnershipBatch(session),
+      library,
+      navigation,
+      assetRoot: join(options.stateRoot, "data", "document-assets"),
+      authorize: options.requireProject,
+    }),
+    ownership: storage.ownership,
     persistence: session,
     storage,
     ingestion,

@@ -159,7 +159,7 @@ export interface GoalsPort {
   closeGoalDialog: () => void;
   clearGoal: (threadId: string) => void;
   applyGoalStatusEvent: (method: string, payload?: {}) => void;
-  openGoalDialog: (threadId?: string) => void;
+  openGoalDialog: (threadId?: string, draft?: import("../../shared/engine/types.js").Goal | null) => void;
 }
 
 export interface ApprovalsPort {
@@ -223,10 +223,14 @@ export interface ModelsPort {
 }
 
 export interface ComposerPort {
+  acceptCreationSubmission(scope: string, nextScope: string, prompt: string, materialIds: readonly string[]): void;
+  selectComposerSkill: (selection: import("../../shared/creation/contracts.js").CreationSkillSelection) => void;
+  readComposerSkills: () => import("../../shared/creation/contracts.js").CreationSkillSelection[];
+  renderComposerSkills: () => void;
   setPlanMode: (active: boolean) => void;
   setComposing: (value: unknown) => void;
   syncQueueButton: () => void;
-  saveComposerDraft: () => void;
+  saveComposerDraft: (scope?: string) => void;
   syncComposerSubmitState: () => void;
   persistComposerDraft: () => void;
   composerHistory: ComposerHistory;
@@ -239,7 +243,10 @@ export interface ComposerPort {
   setComposerDraft: (threadId: string, draft: import("./repositories.js").ComposerDraft) => void;
   loadComposerHistory: () => Promise<void>;
   setActiveTurnId: (turnId?: string) => void;
-  clearComposerDraft: (threadId?: string) => void;
+  clearComposerDraft: (
+    threadId: string,
+    skills?: readonly import("../../shared/creation/contracts.js").CreationSkillSelection[],
+  ) => void;
 }
 
 export interface DetailsPort {
@@ -275,6 +282,7 @@ export interface StartupPort {
 }
 
 export interface ViewportPort {
+  setConversationMode: (mode: "conversation" | "discovery") => void;
   bind: () => void;
   scrollBottom: ({ force }?: { force?: boolean | undefined }) => void;
   resetAutoScroll: () => void;
@@ -619,6 +627,7 @@ export interface SidebarPort {
 
 export interface WorkbenchPort {
   workbench: {
+    creationSession: () => import("./session-workspace.js").CreationSessionDomain | null;
     refresh: () => void;
     navigate: (path: string, { replace }?: { replace?: boolean | undefined }) => void;
     threadOpened: (id: string) => void;

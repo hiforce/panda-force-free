@@ -1,4 +1,6 @@
-import { CreationActivityDetail } from "./creation/activity-detail.js";
+import { CreationSessionWorkspace } from "./creation/session-workspace.js";
+import { parkMessageComposer } from "./message-composer-placement.js";
+import { creationSessionRoute } from "./creation/session-route.js";
 import { createCreationHome } from "./creation/home.js";
 import { captureRenderFocus, restoreRenderFocus } from "./render-focus.js";
 import { systemGadgetCapabilities, gadgetApplicationNavigation } from "../gadget/system/bindings.js";
@@ -61,6 +63,7 @@ export function createWorkbench({
   closeSidebar,
   openFiles,
   onViewChange = () => {},
+  creationBridge,
 }) {
   createWorkbenchFrame(t);
   const shell = requireElement(".conversation-shell"),
@@ -126,7 +129,15 @@ export function createWorkbench({
     undefined,
     (host, project, closed, options) => composerMount(host, project, closed, options),
   );
-  const templateManager = createLazyTemplateManager(t, identityKey);
+  const templateManager = createLazyTemplateManager(t, identityKey, (selection) => {
+    navigate("/create");
+    queueMicrotask(() => {
+      if (creationSessionRoute()?.key === "creation:personal:new") {
+        creationBridge.selectSkill(selection);
+        creationWorkspace.update();
+      }
+    });
+  });
   const skills = createLazyContentWorkspace(
     "skills",
     t,
@@ -288,11 +299,18 @@ export function createWorkbench({
       },
     },
   });
-  const creationDetail = new CreationActivityDetail(t, identityKey, navigate);
+  const creationWorkspace = new CreationSessionWorkspace(
+    t,
+    identityKey,
+    navigate,
+    () => catalog.projects(),
+    creationBridge,
+  );
   const gadgetRegistry = systemGadgetRegistry();
   const gadgetCapabilities = systemGadgetCapabilities({
     identity: identityKey,
     navigate,
+    openSession,
     creationProject: () => state.newSessionProjectId || "personal",
     taskDraft: (project) =>
       state.active || (state.newSessionProjectId || "personal") !== project ? "" : requireElement("#prompt").value,
@@ -325,7 +343,7 @@ export function createWorkbench({
     const focus = captureRenderFocus(view);
     const conversation =
       !(unavailableId && unavailableId === route.id) &&
-      (route.page === "new" || route.page === "task" || route.page === "settings");
+      (Boolean(creationSessionRoute()) || route.page === "new" || route.page === "task" || route.page === "settings");
     hideInactiveWorkspaces();
     document.body.dataset.workbenchPage = route.page;
     document.title = `PandaForce · ${t(labels[route.page] || "common.workspace")}`;
@@ -342,9 +360,9 @@ export function createWorkbench({
   }
   function hideInactiveWorkspaces() {
     if (route.page !== "workspace") gadgetHome.hide();
-    if (route.page !== "creation") creationDetail.hide();
+    if (!creationSessionRoute()) creationWorkspace.hide();
     if (route.page !== "documents") documents.hide();
-    if (route.page !== "create") creative.hide();
+    if (route.page !== "create" || creationSessionRoute()) creative.hide();
     if (
       route.page !== "project" ||
       ["sessions", "documents"].includes(new URL(location.href).searchParams.get("tab") || "")
@@ -364,13 +382,21 @@ export function createWorkbench({
     if (conversation) {
       if (picker.parentNode !== shell) shell.insertBefore(picker, viewport);
       if (projectContext.parentNode !== shell) shell.insertBefore(projectContext, picker);
-      if (dock.parentNode !== shell) shell.append(dock);
+      if (dock.parentNode !== shell && creationSessionRoute()?.id !== "") shell.append(dock);
     } else {
       // Native projections may update their own visibility while this entry uses the registered composer.
       for (const item of [projectContext, picker, dock]) if (item.parentNode !== slot) slot.append(item);
     }
   }
   function renderPage(conversation) {
+    const creation = creationSessionRoute();
+    if (creation) {
+      const key = creation.key;
+      queueMicrotask(() => {
+        if (creationSessionRoute()?.key === key) creationWorkspace.show();
+      });
+      return;
+    }
     if (route.page === "workspace") {
       setMessageHtml(hero, "");
       gadgetHome.show(content);
@@ -400,12 +426,6 @@ export function createWorkbench({
             route.projectId,
             route.documentId,
             new URL(location.href).searchParams.get("knowledge") || "",
-          );
-        else if (route.page === "creation")
-          creationDetail.show(
-            content,
-            route.id,
-            new URL(location.href).searchParams.get("creationScope") === "personal" ? "personal" : "application",
           );
         else if (route.page === "create") creative.show(content);
         else if (route.page === "skills")
@@ -481,11 +501,18 @@ export function createWorkbench({
     if (location.pathname + location.search + location.hash !== path)
       history[replace ? "replaceState" : "pushState"]({ pandaForce: true }, "", path);
   }
-  function navigate(path, { replace = false } = {}) {
+  function navigate(path, { replace = false, readSession = true } = {}) {
     path = { "/settings/templates": "/skills/writing", "/settings/publishing-styles": "/publish" }[path] || path;
     const url = new URL(path.startsWith("/") ? path : "/" + path, location.origin);
     if (url.origin !== location.origin) return;
     const next = parseWorkbenchRoute(url);
+    const oldCreation = creationSessionRoute(),
+      nextCreation = creationSessionRoute(url);
+    if (oldCreation?.key !== nextCreation?.key && (oldCreation || nextCreation)) {
+      creationBridge.saveDraft();
+      parkMessageComposer({ blur: true });
+      newTask({ saveCurrentDraft: false, keepRoute: true });
+    }
     routing = true;
     unavailableId = "";
     if (next.page === "workspace" && state.active) newTask();
@@ -497,9 +524,13 @@ export function createWorkbench({
     signature = "";
     closeSidebar();
     render();
+    if (oldCreation && !nextCreation) creationBridge.restoreDraft();
     if (next.page === "settings") showSettings(next.id || "general-settings");
-    if (next.page === "task") loadRouteTask();
+    if (next.page === "task" && readSession) loadRouteTask();
     routing = false;
+  }
+  function openSession(id) {
+    navigate("/task/" + encodeURIComponent(id));
   }
   function loadRouteTask() {
     if (
@@ -529,14 +560,14 @@ export function createWorkbench({
   }
   function threadOpened(id) {
     if (routing && route.page !== "task") return;
-    route = { page: "task", id, cwd: "", projectId: "", documentId: "" };
-    updateUrl("/task/" + encodeURIComponent(id));
-    render();
+    // All openers share route cleanup and draft handoff without starting a second history read.
+    navigate("/task/" + encodeURIComponent(id), { readSession: false });
   }
   function taskStarted() {
     if (routing) return;
     route = { page: "new", id: "", cwd: "", projectId: "", documentId: "" };
     updateUrl("/new" + (state.newSessionProjectId ? "?project=" + encodeURIComponent(state.newSessionProjectId) : ""));
+    closeSidebar();
     render();
   }
   function refresh() {
@@ -544,6 +575,7 @@ export function createWorkbench({
     scheduled = true;
     queueMicrotask(() => {
       scheduled = false;
+      if (creationSessionRoute()) creationWorkspace.update();
       // A slower cached/history read may recover after an earlier startup read was superseded.
       if (unavailableId === state.active?.id) {
         unavailableId = "";
@@ -592,7 +624,7 @@ export function createWorkbench({
       return;
     },
     task: async (el, what) => {
-      navigate("/task/" + encodeURIComponent(el.dataset.id));
+      openSession(el.dataset.id);
       return;
     },
     project: async (el, what) => {
@@ -730,6 +762,13 @@ export function createWorkbench({
     if (closestElement('[data-wb="retry"]', event.target)) preparation.retry();
   });
   window.addEventListener("popstate", () => {
+    const previousCreation = creationWorkspace.key,
+      nextCreation = creationSessionRoute();
+    if (previousCreation !== nextCreation?.key && (previousCreation || nextCreation)) {
+      creationBridge.saveDraft(previousCreation || state.active?.id);
+      parkMessageComposer({ blur: true });
+      newTask({ saveCurrentDraft: false, keepRoute: true });
+    }
     route = parseWorkbenchRoute();
     routing = true;
     if (route.page === "workspace" && state.active) newTask();
@@ -737,6 +776,7 @@ export function createWorkbench({
     unavailableId = "";
     signature = "";
     render();
+    if (previousCreation && !nextCreation) creationBridge.restoreDraft();
     loadRouteTask();
   });
   i18n.subscribe(() => {
@@ -772,6 +812,7 @@ export function createWorkbench({
   }
   render();
   return {
+    creationSession: () => (creationSessionRoute() ? creationWorkspace : null),
     refresh,
     navigate,
     threadOpened,

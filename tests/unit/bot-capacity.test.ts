@@ -169,3 +169,22 @@ test("high-rate key authentication throttles usage writes while revocation remai
     store.close();
   }
 });
+
+test("Bot context rotates after one hundred model executions while retaining old session protection", () => {
+  const store = new BotStore(":memory:");
+  try {
+    const bot = store.createBot("alice", { code: "bounded-context", name: "Batch reviewer" });
+    store.setSession("alice", bot.id, "first-session");
+    for (let i = 1; i <= 100; i++) {
+      const current = store.prepareSession("alice", bot.id);
+      expect(current.sessionId).toBe("first-session");
+      expect(current.sessionTasks).toBe(i);
+    }
+    const rotated = store.prepareSession("alice", bot.id);
+    expect(rotated.sessionId).toBeNull();
+    expect(rotated.sessionTasks).toBe(1);
+    expect(store.hasSession("first-session")).toBe(true);
+  } finally {
+    store.close();
+  }
+});

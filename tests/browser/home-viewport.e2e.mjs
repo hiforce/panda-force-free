@@ -59,21 +59,25 @@ try {
     await aligned();
     // Let startup sampling finish so it cannot mask a missing recovery listener.
     await page.waitForTimeout(700);
-    // A restored page can have an old CSS height without receiving another viewport resize.
+    // A dismissed keyboard can keep reporting its old height with no editor focused.
     await page.evaluate(() => {
       const v = window.__keyboardViewport;
       v._height = 340;
       v.dispatchEvent(new Event("resize"));
     });
-    await page.waitForFunction(() => document.querySelector("#app").getBoundingClientRect().height === 340);
+    await page.waitForFunction(() => document.querySelector("#app").getBoundingClientRect().height === 680);
+    assert.equal(
+      await page.evaluate(() => document.documentElement.style.getPropertyValue("--app-viewport-height")),
+      "",
+    );
     await page.evaluate(() => {
       const v = window.__keyboardViewport;
       v._height = 680;
       dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
     });
     await aligned();
-    await page.locator("#prompt").fill("保留首页草稿与光标");
-    await page.locator("#prompt").evaluate((input) => {
+    await page.locator("#gadgetDocumentPrompt").fill("保留首页草稿与光标");
+    await page.locator("#gadgetDocumentPrompt").evaluate((input) => {
       input.focus();
       input.setSelectionRange(2, 5);
     });
@@ -83,12 +87,12 @@ try {
     });
     await page.waitForFunction(
       () => {
-        const button = document.querySelector("#sendButton"),
+        const button = document.querySelector("[data-gd-start]"),
           rect = button.getBoundingClientRect();
         return (
           rect.top >= visualViewport.offsetTop &&
           rect.bottom <= visualViewport.offsetTop + visualViewport.height &&
-          document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.closest("#sendButton") ===
+          document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.closest("[data-gd-start]") ===
             button
         );
       },
@@ -97,20 +101,20 @@ try {
     );
     assert.deepEqual(
       await page
-        .locator("#prompt")
+        .locator("#gadgetDocumentPrompt")
         .evaluate((input) => [input.value, input.selectionStart, input.selectionEnd, input === document.activeElement]),
       ["保留首页草稿与光标", 2, 5, true],
     );
     if (width === 390) await page.screenshot({ path: directory + "/keyboard.png" });
     // Some keyboards finish their animation after blur, with no final resize notification.
     await page.evaluate(() => {
-      document.querySelector("#prompt").blur();
+      document.querySelector("#gadgetDocumentPrompt").blur();
       setTimeout(() => {
         window.__keyboardViewport._height = 680;
       }, 180);
     });
     await aligned();
-    assert.equal(await page.locator("#prompt").inputValue(), "保留首页草稿与光标");
+    assert.equal(await page.locator("#gadgetDocumentPrompt").inputValue(), "保留首页草稿与光标");
     await page.locator("#workbenchView").evaluate((view) => {
       view.scrollTop = 0;
     });
@@ -127,7 +131,7 @@ try {
     await page.locator('.workbench-navigation [data-route="workspace"]').tap();
     await page.waitForURL("**/workspace");
     await aligned();
-    assert.equal(await page.locator("#prompt").inputValue(), "保留首页草稿与光标");
+    assert.equal(await page.locator("#gadgetDocumentPrompt").inputValue(), "保留首页草稿与光标");
     assert.deepEqual(errors, []);
     await context.close();
   }

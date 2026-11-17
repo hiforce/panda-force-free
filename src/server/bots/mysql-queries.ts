@@ -50,7 +50,7 @@ export class MySQLBotQueries {
       const total = (states.length ? states : Object.keys(counts)).reduce((n, k) => n + (counts[k] ?? 0), 0),
         page = Math.min(query.page, Math.max(1, Math.ceil(total / query.limit)));
       const rows = await this.context.pool.unsafe(
-        `SELECT id,botId,status,title,externalTaskId,COALESCE(actionId,decision) decision,failure,createdAt,updatedAt,summary,JSON_UNQUOTE(JSON_EXTRACT(data,'$.decisionLabel')) decisionLabel,JSON_UNQUOTE(JSON_EXTRACT(data,'$.callbackStatus')) callbackStatus,NULL reason FROM panda_force_bot_tasks WHERE ${where.join(" AND ")} ORDER BY seq DESC LIMIT ? OFFSET ?`,
+        `SELECT id,botId,status,title,externalTaskId,COALESCE(actionId,decision) decision,failure,createdAt,updatedAt,summary,JSON_UNQUOTE(JSON_EXTRACT(data,'$.decisionLabel')) decisionLabel,JSON_UNQUOTE(JSON_EXTRACT(data,'$.callbackStatus')) callbackStatus,LEFT(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(data,'$.reason')),'null'),400) reason FROM panda_force_bot_tasks WHERE ${where.join(" AND ")} ORDER BY seq DESC LIMIT ? OFFSET ?`,
         [...values, query.limit, (page - 1) * query.limit],
       );
       return {

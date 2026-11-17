@@ -36,6 +36,7 @@
     "browser/conversation-loading.e2e.mjs",
     "browser/conversation-native.e2e.mjs",
     "browser/composer-skill-picker.e2e.mjs",
+    "browser/session-skills.e2e.mjs",
     "browser/creation-skill-selection.e2e.mjs",
     "browser/creation-activity.e2e.mjs",
     "browser/creation-gadget-layout.e2e.mjs",

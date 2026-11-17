@@ -2,6 +2,7 @@ import { Database } from "bun:sqlite";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DocumentError } from "./errors.js";
+import { migrateDocumentOwnership } from "./ownership/schema.js";
 
 /** One owner opens and migrates the feature database; repositories share transactions. */
 export function openDocumentDatabase(path: string): Database {
@@ -103,5 +104,11 @@ export function openDocumentDatabase(path: string): Database {
       PRIMARY KEY(placementId,version)
     );PRAGMA user_version=6;`);
     }).immediate();
-  return db;
+  try {
+    migrateDocumentOwnership(db);
+    return db;
+  } catch (error) {
+    db.close();
+    throw error;
+  }
 }

@@ -72,6 +72,7 @@ function createBotPanel(t: Translate, workspace: boolean, models?: SettingsModel
             callbackInFlight: "cli.botErrorCallbackInFlight",
             taskDeleted: "cli.botTaskDeleted",
             notFound: "cli.botNotFound",
+            bulkRetryLimit: "cli.botRetryLimit",
           } as const,
           code = error instanceof Error ? error.message : "";
         context.notice(t(messages[code as keyof typeof messages] ?? "cli.botError"));

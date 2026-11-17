@@ -43,6 +43,11 @@
   --session-content-gutter: 30px;
   --session-content-rail: min(var(--session-content-width), calc(100cqw - var(--session-content-gutter) * 2));
 }
+.creation-entry-layout .creation-entry-composer .composer-dock {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
 .session-layout.session-inspector-open:not(.side-panel-open):not(.summary-panel-open):not(.files-workspace) {
   --changes-w: var(--session-inspector-width);
 }
@@ -1082,18 +1087,6 @@
 .session-layout .conversation-scroll-bottom {
   right: max(var(--session-content-gutter), calc((100cqw - var(--session-content-width)) / 2));
 }
-.session-layout .composer {
-  border: 1px solid var(--pf-line);
-  border-radius: 16px;
-  background: var(--pf-card);
-  box-shadow: 0 4px 24px #00000004;
-}
-.session-layout .composer:focus-within {
-  border-color: color-mix(in srgb, var(--pf-accent) 50%, var(--pf-line));
-}
-.session-layout .composer-footer {
-  padding: 6px 12px 10px;
-}
 .session-layout .send-button:disabled {
   background: var(--pf-soft);
   color: var(--pf-muted);
@@ -1148,7 +1141,7 @@
     grid-column: 2;
     grid-row: 2;
   }
-  .session-layout .workbench-mobile-nav {
+  .session-layout:not(.creation-entry-layout) .workbench-mobile-nav {
     display: none;
   }
   .session-layout {
@@ -1235,7 +1228,7 @@
   .session-layout .conversation {
     padding-block: 25px 18px;
   }
-  .session-layout .workbench-mobile-nav {
+  .session-layout:not(.creation-entry-layout) .workbench-mobile-nav {
     display: none !important;
   }
   .session-layout .sidebar {
@@ -1257,18 +1250,10 @@
     padding-block: 0 max(9px, env(safe-area-inset-bottom));
     z-index: 5;
   }
-  .session-layout .composer textarea {
-    font-size: 16px;
-    min-height: 48px;
-    max-height: 145px;
-    padding: 14px 14px 4px;
-  }
   .session-layout .composer-footer {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 4px;
-    padding: 5px 9px 8px;
   }
   .session-layout .composer-left,
   .session-layout .composer-right {
@@ -1492,10 +1477,6 @@
   }
   .session-layout .app-shell {
     grid-template-rows: 52px minmax(0, 1fr);
-  }
-  .session-layout .composer textarea {
-    min-height: 38px;
-    max-height: 90px;
   }
 }
 @media (max-width: 370px) {

@@ -1,3 +1,5 @@
+import { creationFileDocuments } from "../../src/server/creation/integration/file-document-revisions.js";
+import { FileCreationMaterials } from "../../src/server/creation/integration/material-files.js";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type {
@@ -5,7 +7,11 @@ import type {
   ApplicationRunCallbacks,
   ApplicationRunScope,
 } from "../../src/shared/engine/application-tools.js";
-import type { CreationTaskView, CreationAvailability } from "../../src/shared/creation/contracts.js";
+import type {
+  CreationTaskView,
+  CreationTaskDetail,
+  CreationAvailability,
+} from "../../src/shared/creation/contracts.js";
 import type { Route } from "../../src/server/http/router.js";
 import { projectFileApiFixture } from "./project-file-api-fixture.js";
 import { createSkillFeature } from "../../src/server/skills/integration/feature.js";
@@ -20,7 +26,16 @@ export type CreationTestHandler = (
   callbacks: ApplicationRunCallbacks,
   scope: ApplicationRunScope,
 ) => Promise<void>;
-export async function creationAppFixture() {
+export async function creationAppFixture(
+  options: {
+    storage?: Parameters<typeof createCreationFeature>[0]["storage"];
+    home?: string;
+    content?(
+      files: Awaited<ReturnType<typeof projectFileApiFixture>>,
+      root: string,
+    ): Pick<Parameters<typeof createCreationFeature>[0], "documents" | "archive" | "destinations" | "directories">;
+  } = {},
+) {
   const routes: Route[] = [],
     files = await projectFileApiFixture({ extraRoutes: routes }),
     root = join(files.assetRoot, "creation-application");
@@ -52,6 +67,8 @@ export async function creationAppFixture() {
   let handler: CreationTestHandler = async (_input, callbacks, scope) => {
     await save(callbacks, scope);
   };
+  const materials = new FileCreationMaterials(join(root, "materials"));
+  const materialRoutes = materials.routes(() => actor);
   const open = () => {
     const profiles = new CreationProfiles(
       {
@@ -64,12 +81,14 @@ export async function creationAppFixture() {
       async () => "unused",
     );
     return createCreationFeature({
+      storage: options.storage,
+      materials,
       stateRoot: root,
       owner: () => actor,
       authorize: async (_owner, project) => {
         if (!files.grants.has(project)) throw new CreationError("notFound");
       },
-      documents: files.application().navigation,
+      ...(options.content?.(files, root) ?? { documents: creationFileDocuments(files.application()) }),
       skills: skills.catalog,
       profiles,
       concurrency: 1,
@@ -90,10 +109,11 @@ export async function creationAppFixture() {
     });
   };
   let feature = open();
-  routes.push(...skills.routes, ...feature.routes);
+  routes.push(...skills.routes, ...materialRoutes, ...feature.routes);
   feature.start();
   return {
     files,
+    materials,
     scopes,
     save,
     root,
@@ -108,11 +128,11 @@ export async function creationAppFixture() {
       profileModel = value;
     },
     async create(prompt: string) {
-      const options = await files.call("/api/document-creations/options"),
-        availability = options.body as CreationAvailability;
+      const available = await files.call("/api/document-creations/options"),
+        availability = available.body as CreationAvailability;
       const request = {
         id: randomUUID(),
-        projectId: "project-1",
+        projectId: options.home ?? "project-1",
         treeVersion: 0,
         parentId: null,
         locale: "en",
@@ -125,7 +145,7 @@ export async function creationAppFixture() {
     async task(id: string) {
       const response = await files.call("/api/document-creations/detail?" + new URLSearchParams({ id }));
       if (response.status !== 200) throw new Error("Task read failed: " + response.status);
-      return response.body.task as CreationTaskView;
+      return response.body.task as CreationTaskDetail;
     },
     async until(id: string, predicate: (task: CreationTaskView) => boolean) {
       const deadline = Date.now() + 30000;
@@ -140,11 +160,12 @@ export async function creationAppFixture() {
       await feature.close();
       files.reopen();
       feature = open();
-      routes.splice(0, routes.length, ...skills.routes, ...feature.routes);
+      routes.splice(0, routes.length, ...skills.routes, ...materialRoutes, ...feature.routes);
       feature.start();
     },
     async close() {
       await feature.close();
+      await materials.close();
       skills.close();
       await files.close();
     },

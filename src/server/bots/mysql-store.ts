@@ -4,6 +4,7 @@ import { MySQLBotKeys } from "./mysql-keys.js";
 import { MySQLBotQueries } from "./mysql-queries.js";
 import { MySQLBotContext } from "./mysql-context.js";
 import { SQL } from "bun";
+import { retryFailedMySQLBots } from "./mysql-recovery.js";
 import { createHash, randomUUID } from "node:crypto";
 import {
   BotError,
@@ -144,6 +145,9 @@ export class MySQLBotStore implements BotRepository {
       });
   }
   tasks = (...args: Parameters<MySQLBotQueries["tasks"]>) => this.queries.tasks(...args);
+  retryFailed(owner: string, value: unknown) {
+    return retryFailedMySQLBots(this.context, owner, value, this.maxPendingPerOwner);
+  }
   taskSummaries = (...args: Parameters<MySQLBotQueries["taskSummaries"]>) => this.queries.taskSummaries(...args);
   queue = (...args: Parameters<MySQLBotQueries["queue"]>) => this.queries.queue(...args);
 
@@ -178,8 +182,8 @@ export class MySQLBotStore implements BotRepository {
       if (Number((await sql`SELECT COUNT(*) n FROM panda_force_bot_tasks WHERE status='running'`)[0].n) >= 4)
         return null;
       const rows = await sql.unsafe(
-        `SELECT t.data FROM panda_force_bots b JOIN panda_force_bot_tasks t ON t.seq=CASE WHEN JSON_EXTRACT(b.data,'$.active')=TRUE THEN (SELECT q.seq FROM panda_force_bot_tasks q WHERE q.botId=b.id AND q.owner=b.owner AND q.status='queued' ORDER BY q.seq LIMIT 1) ELSE (SELECT q.seq FROM panda_force_bot_tasks q WHERE q.botId=b.id AND q.owner=b.owner AND q.status='queued' AND (q.actionId IS NOT NULL OR (q.decision IS NOT NULL AND q.decision!='review')) ORDER BY q.seq LIMIT 1) END WHERE NOT EXISTS(SELECT 1 FROM panda_force_bot_tasks r WHERE r.botId=b.id AND r.status='running') ${excludedBots.length ? `AND b.id NOT IN (${excludedBots.map(() => "?").join(",")})` : ""} ORDER BY t.seq LIMIT 1 FOR UPDATE`,
-        [...excludedBots],
+        `SELECT t.data FROM panda_force_bots b JOIN panda_force_bot_tasks t ON t.seq=CASE WHEN JSON_EXTRACT(b.data,'$.active')=TRUE THEN (SELECT q.seq FROM panda_force_bot_tasks q WHERE q.botId=b.id AND q.owner=b.owner AND q.status='queued' ORDER BY q.seq LIMIT 1) ELSE (SELECT q.seq FROM panda_force_bot_tasks q WHERE q.botId=b.id AND q.owner=b.owner AND q.status='queued' AND (q.actionId IS NOT NULL OR (q.decision IS NOT NULL AND q.decision!='review')) ORDER BY q.seq LIMIT 1) END WHERE NOT EXISTS(SELECT 1 FROM panda_force_bot_tasks r WHERE r.botId=b.id AND r.status='running') ${excludedBots.length ? `AND b.id NOT IN (${excludedBots.map(() => "?").join(",")})` : ""} AND (COALESCE(JSON_EXTRACT(b.data,'$.executionRetryAt'),0)<=? OR t.actionId IS NOT NULL OR (t.decision IS NOT NULL AND t.decision!='review')) ORDER BY t.seq LIMIT 1 FOR UPDATE`,
+        [...excludedBots, now],
       );
       if (!rows.length) return null;
       const task = parseTask(rows[0].data),
@@ -202,6 +206,25 @@ export class MySQLBotStore implements BotRepository {
           ).affectedRows,
         ) === 1,
     );
+  }
+  deferExecution(task: BotTask, lease: string) {
+    return this.context.transaction(async (sql) => {
+      const now = Date.now();
+      const rows =
+        await sql`SELECT id FROM panda_force_bot_tasks WHERE id=${task.id} AND owner=${task.owner} AND botId=${task.botId} AND status='running' AND lease=${lease} AND leaseUntil>=${now} FOR UPDATE`;
+      if (!rows.length) throw new BotError("leaseLost", 409);
+      const bot = await this.profiles.readBot(sql, task.owner, task.botId, true);
+      bot.executionRetryAt = now + 300000;
+      await this.profiles.put(sql, bot);
+      task.status = "queued";
+      task.decision = null;
+      task.reason = "modelRateLimited";
+      delete task.failure;
+      task.updatedAt = now;
+      task.callbackStatus = botCallbackStatus(task);
+      await this.write(sql, task, null, null);
+      await this.eventOn(sql, task.id, "execution_deferred", "modelRateLimited");
+    });
   }
   update(task: BotTask, lease: string, final = false) {
     return this.context.operation(async () => {

@@ -131,6 +131,16 @@ export class CreationTaskRepository implements CreationOutputTasks {
     return this.transaction(() => {
       const task = this.assertExecution(scope, now);
       if (task.outputDigest) return task;
+      const context = this.db
+        .query<{ id: string }, [string]>(
+          "SELECT id FROM creation_messages WHERE taskId=? ORDER BY createdAt DESC,id DESC LIMIT 1",
+        )
+        .get(scope.taskId);
+      if (context && context.id !== scope.contextVersion) throw new CreationError("conflict");
+      const goal = this.db
+        .query<{ event: string }, [string, string]>("SELECT event FROM creation_goals WHERE owner=? AND id=?")
+        .get(scope.owner, scope.taskId);
+      if (goal && JSON.parse(goal.event).at !== scope.goalVersion) throw new CreationError("conflict");
       if (this.db.query("SELECT 1 FROM creation_questions WHERE taskId=? AND state='pending'").get(scope.taskId))
         throw new CreationError("conflict");
       this.db

@@ -5,6 +5,7 @@ import { projectDocumentFile } from "../paths.js";
 import { readProjectManifest } from "../project-manifest.js";
 import type { ProjectContentView } from "../read-view.js";
 import { readSpaceMetadata } from "../space-read.js";
+import { readDocumentOwnership } from "../ownership-file.js";
 
 export async function readSavedDocument(view: ProjectContentView, projectId: string, id: string) {
   const bytes = await view.read(projectDocumentFile(id));
@@ -16,6 +17,9 @@ export async function readSavedDocument(view: ProjectContentView, projectId: str
   return detail;
 }
 export async function assertDocumentWritable(view: ProjectContentView, projectId: string, id: string) {
+  const ownership = await readDocumentOwnership(view, id);
+  if (ownership && ownership.kind !== "active") throw new ProjectContentError("notFound");
+  if (ownership && ownership.to.projectId !== projectId) throw new ProjectContentError("invalidFile");
   const bytes = await view.read("tree.json");
   if (bytes === null) return;
   const tree = decodeProjectNavigation(bytes);

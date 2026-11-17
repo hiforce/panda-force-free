@@ -7,6 +7,7 @@ import { codexIcon } from "../codex-icons.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { createLatestRequestGate, resolveComposerPlaceholder } from "../ui-core.js";
 import { parseWorkbenchRoute } from "../workbench-route.js";
+import { creationSessionRoute } from "../creation/session-route.js";
 
 // Owns workspace state and operations; peers are explicit application ports.
 /** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "$" | "escapeHtml" | "state" | "t" | "shortPath" | "titleOf", "timeline" | "models" | "composer" | "navigation" | "projects" | "goals" | "queue", "workspace">} options */
@@ -142,11 +143,31 @@ export function assembleWorkspace({
     if (workspace?.state === "ready" && state.workspaceContext?.cwd !== workspace.path) setWorkspace(workspace.path);
   }
   function refreshComposerPlaceholder() {
+    if (creationSessionRoute()) {
+      localizeAttribute(
+        $("#prompt"),
+        "placeholder",
+        creationSessionRoute()?.id ? "creation.sessionComposerHint" : "creation.startComposerHint",
+        undefined,
+        t,
+      );
+      return;
+    }
     if (!state.active && state.composerMode === "local") {
       localizeAttribute($("#prompt"), "placeholder", "workbench.describeATaskAddFilesOrStartWithAnIdea", undefined, t);
       return;
     }
     const followUpType = state.active ? (state.active.source === "cloud" ? "cloud" : "local") : undefined;
+    if (
+      followUpType === "local" &&
+      state.composerMode === "local" &&
+      !state.goalMode &&
+      !state.planMode &&
+      state.placeholderText === null
+    ) {
+      localizeAttribute($("#prompt"), "placeholder", "composer.followUpHint", undefined, t);
+      return;
+    }
     setOpaqueAttribute(
       $("#prompt"),
       "placeholder",

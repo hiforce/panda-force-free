@@ -37,7 +37,21 @@ export const statusIds = {
   callback_unknown: "cli.botCallbackUnknown",
   suspended: "cli.botStateSuspended",
   canceled: "cli.botStateCanceled",
+  execution_deferred: "cli.botExecutionDeferred",
+  execution_failed: "cli.botStateError",
 } as const;
+export function botReasonId(value: string | null | undefined): MessageId | undefined {
+  const ids = {
+    imageConfirmationUnavailable: "cli.botImageConfirmationUnavailable",
+    modelRateLimited: "cli.botModelRateLimited",
+    modelAuthenticationFailed: "cli.botModelAuthenticationFailed",
+    modelExecutionFailed: "cli.botModelExecutionFailed",
+    decisionMissing: "cli.botDecisionMissing",
+    "No validated decision was received": "cli.botDecisionMissing",
+    "null: No validated decision was received": "cli.botDecisionMissing",
+  } as const;
+  return value && Object.hasOwn(ids, value) ? ids[value as keyof typeof ids] : undefined;
+}
 export const taskStateIds = {
   created: "cli.botStateCreated",
   running: "cli.botStateRunning",
@@ -60,6 +74,10 @@ export function botDecisionLabel(decision: string | null, t: Translate): string 
 }
 export function botUi(t: Translate) {
   const h = (id: MessageId) => messageHtml(id, {}, t);
+  const reasonHtml = (value: string | null | undefined) => {
+    const id = botReasonId(value);
+    return id ? h(id) : value ? `<span data-i18n-ignore>${escapeHtml(value)}</span>` : h("cli.botUnknown");
+  };
   const attributes = (name: string, id: MessageId) => messageAttributes(name, id, {}, t);
   const option = (value: string, id: MessageId) =>
     `<option value="${escapeHtml(value)}" data-pf-message="${id}">${escapeHtml(t(id as never))}</option>`;
@@ -74,7 +92,10 @@ export function botUi(t: Translate) {
     const state = botTaskState(typeof task === "string" ? { status: task } : task);
     return `<span class="bot-status" data-status="${state}"><span aria-hidden="true"></span>${h(taskStateIds[state])}</span>`;
   };
-  const outcome = (task: Pick<BotTask, "status"> & { decision?: BotTask["decision"]; decisionLabel?: string }) => {
+  const outcome = (
+    task: Pick<BotTask, "status"> & { decision?: BotTask["decision"]; decisionLabel?: string; reason?: string | null },
+    summary = false,
+  ) => {
     const decision = botTaskDecision(task);
     const message =
       decision && Object.hasOwn(legacyDecisionIds, decision)
@@ -85,11 +106,19 @@ export function botUi(t: Translate) {
       : decision && !Object.hasOwn(legacyDecisionIds, decision)
         ? `<span data-i18n-ignore>${escapeHtml(decision)}</span>`
         : h(message);
-    return `<span class="bot-outcome" data-decision="${escapeHtml(decision || "pending")}">${label}</span>`;
+    const reason = task.reason
+      ? (botReasonId(task.reason) ? t(botReasonId(task.reason)!) : task.reason).replace(/\s+/g, " ").slice(0, 400)
+      : "";
+    const actual = summary && decision === "complete" && !task.decisionLabel && reason;
+    const content =
+      summary && reason
+        ? `${actual ? "" : `<span class="bot-outcome-label">${label}</span>`}<span class="bot-outcome-reason" data-i18n-ignore title="${escapeHtml(reason)}">${escapeHtml(reason)}</span>`
+        : label;
+    return `<span class="bot-outcome" data-decision="${escapeHtml(decision || "pending")}">${content}</span>`;
   };
   const empty = (title: MessageId, hint: MessageId, action = "") =>
     `<div class="bot-empty">${icon("bot")}<h2>${h(title)}</h2><p>${h(hint)}</p>${action}</div>`;
-  return { h, attributes, option, optional, icon, button, field, badge, outcome, empty };
+  return { h, reasonHtml, attributes, option, optional, icon, button, field, badge, outcome, empty };
 }
 export function botDate(value: number) {
   return new Intl.DateTimeFormat(document.documentElement.lang || undefined, {

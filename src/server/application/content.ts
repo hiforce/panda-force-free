@@ -1,6 +1,10 @@
+import {
+  fileCreationDocumentRevisions,
+  creationFileDocuments,
+} from "../creation/integration/file-document-revisions.js";
 import { recoverKnowledgeOutput } from "../knowledge/integration/output-recovery.js";
 import { PersonalContent } from "../creative/personal.js";
-import { projectCreationDocuments } from "../creation/integration/document-port.js";
+import { creationDocumentImages, projectCreationDocuments } from "../creation/integration/document-port.js";
 import { createNativeCreationFeature } from "../creation/integration/bootstrap.js";
 import { createNativeKnowledgeFeature } from "../knowledge/integration/bootstrap.js";
 import { FileDocumentKnowledgeContent } from "../knowledge/integration/document-content.js";
@@ -14,6 +18,10 @@ import type { ApplicationConfig, ApplicationStores, ApplicationOwnerResolver } f
 import type { ApplicationDocuments } from "./documents.js";
 import type { ApplicationProjects } from "./projects.js";
 import type { createApplicationExtensions } from "./extensions.js";
+import { FileCreationMaterials } from "../creation/integration/material-files.js";
+import { join } from "node:path";
+import { applicationCreationFileDirectories } from "./creation-file-directories.js";
+import { applicationDocumentOwnership } from "./document-ownership.js";
 /** Wire authorized content, generation and indexing ports without owning the host engine lifetime. */
 export async function createApplicationContent(
   config: ApplicationConfig,
@@ -26,6 +34,7 @@ export async function createApplicationContent(
   models: () => Promise<unknown>,
   administrator: Parameters<typeof createOptionalSearchFeature>[0]["administrator"],
   changed: (project: string, owner?: string) => void,
+  hostOwner?: () => string | null,
 ) {
   const {
     documentFeature,
@@ -37,7 +46,44 @@ export async function createApplicationContent(
   } = documents;
   const { skillFeature, portableTemplateFeature } = extensions;
   const documentStorage = projects.storage;
+  const creationMaterials = new FileCreationMaterials(join(config.stateRoot, "creation-materials"));
+  const projectDocuments = projectCreationDocuments(
+    (project) => documentStorage.files(project),
+    {
+      images: creationDocumentImages(
+        async (owner, project) => {
+          if (await documentStorage.files(project)) return scopedDocuments(owner, "contribute").assets;
+          return { content: async (_project, id) => documentFeature.assets.content(id) };
+        },
+        (owner, project) => contentAccess.require(owner, project, "contribute"),
+      ),
+      revisions: fileCreationDocumentRevisions(
+        (owner) => scopedDocuments(owner, "contribute"),
+        (project) => fileDocuments.navigation.tree(project),
+      ),
+      tree: (project) => fileDocuments.navigation.tree(project),
+      createFromSource: (owner, input, source) =>
+        scopedDocuments(owner, "contribute").navigation.createFromSource(owner, input, source),
+      appendFromSource: (owner, input, source) =>
+        scopedDocuments(owner, "contribute").navigation.appendFromSource(owner, input, source),
+    },
+    documentFeature.navigation,
+    (owner, project) => contentAccess.require(owner, project, "contribute"),
+  );
+  const archives = applicationDocumentOwnership({
+    stateRoot: config.stateRoot,
+    documents,
+    projects,
+    personal: () => personalContent,
+    projectDocuments,
+  });
+  const directories = hostOwner
+    ? applicationCreationFileDirectories(config, projects, hostOwner, (owner, project) =>
+        contentAccess.require(owner, project, "contribute"),
+      )
+    : undefined;
   const creationFeature = createNativeCreationFeature({
+    materials: creationMaterials,
     storage: runtimeStores?.creation,
     stateRoot: config.stateRoot,
     projectsRoot: config.projectWorkspaceRoot,
@@ -48,21 +94,13 @@ export async function createApplicationContent(
     owner: resolveOwner,
     requireProject: requireDocumentProject,
     authorizeProject: (owner, project) => contentAccess.require(owner, project, "contribute"),
-    documents: projectCreationDocuments(
-      (project) => documentStorage.files(project),
-      {
-        tree: (project) => fileDocuments.navigation.tree(project),
-        createFromSource: (owner, input, source) =>
-          scopedDocuments(owner, "contribute").navigation.createFromSource(owner, input, source),
-        appendFromSource: (owner, input, source) =>
-          scopedDocuments(owner, "contribute").navigation.appendFromSource(owner, input, source),
-      },
-      documentFeature.navigation,
-      (owner, project) => contentAccess.require(owner, project, "contribute"),
-    ),
+    documents: archives.wrap(projectDocuments),
+    archive: archives.archive,
+    directories,
+    destinations: archives.destinations,
     skills: skillFeature.catalog,
   });
-  const personalContent = new PersonalContent({
+  const personalContent: PersonalContent = new PersonalContent({
     authorize: (owner) => contentAccess.require(owner, "personal", "contribute"),
     contentRoot: config.documentContentRoot,
     assetRoot: config.documentAssetRoot,
@@ -73,6 +111,7 @@ export async function createApplicationContent(
       documentTemplateCreationRoutes(portableTemplateFeature.documents, documents.navigation, () => owner),
     creation: (root, owner, documents) =>
       createNativeCreationFeature({
+        materials: creationMaterials,
         storage: runtimeStores?.personalCreation(owner),
         stateRoot: root,
         profileStateRoot: config.stateRoot,
@@ -85,7 +124,10 @@ export async function createApplicationContent(
         requireProject: (id) => {
           if (id !== "personal") throw new DocumentError("notFound", 404);
         },
-        documents: documents.navigation,
+        documents: archives.wrap(creationFileDocuments(documents)),
+        archive: archives.archive,
+        directories,
+        destinations: archives.destinations,
         skills: skillFeature.catalog,
       }),
   });
@@ -207,5 +249,13 @@ export async function createApplicationContent(
     report: () => console.warn("[search] Index operation could not complete"),
   });
 
-  return { creationFeature, personalContent, readOriginalSources, knowledgeFeature, searchFeature };
+  creationFeature.routes.push(...creationMaterials.routes(resolveOwner));
+  return {
+    creationFeature,
+    personalContent,
+    readOriginalSources,
+    knowledgeFeature,
+    searchFeature,
+    closeMaterialText: () => creationMaterials.close(),
+  };
 }

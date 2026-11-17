@@ -8,9 +8,9 @@ const browser = await runtime.launchBrowser(launchOptions());
 const page = await browser.newPage({ viewport: { width: 1018, height: 980 }, colorScheme: "dark" });
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
-await page.goto(runtime.base, { waitUntil: "networkidle" });
+await page.goto(runtime.base + "/new", { waitUntil: "networkidle" });
+await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
 await page.waitForFunction(() => globalThis.__pandaForceDebug?.state?.config?.defaultCwd);
-await page.click("#newTask");
 
 await page.locator("#prompt").fill("/");
 await page.waitForSelector("#composerAutocomplete:not([hidden])");
@@ -94,7 +94,8 @@ const reset = await page.evaluate(() => ({
   chips: document.querySelectorAll("#composerContextTray .composer-context-chip").length,
 }));
 const mobile = await browser.newPage({ viewport: { width: 360, height: 780 }, colorScheme: "dark" });
-await mobile.goto(runtime.base, { waitUntil: "networkidle" });
+await mobile.goto(runtime.base + "/new", { waitUntil: "networkidle" });
+await mobile.locator("#workspacePreparation").waitFor({ state: "hidden" });
 await mobile.locator("#prompt").fill("/");
 await mobile.waitForSelector("#composerAutocomplete:not([hidden])");
 const mobileLayout = await mobile.evaluate(() => {

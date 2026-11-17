@@ -15,7 +15,7 @@ export class CreationOutputs {
     const execution = { ...scope },
       prior = await this.tasks.assertExecution(execution, this.now());
     if (!prior.outputDigest) {
-      const digest = await this.content.stage(value);
+      const digest = await this.content.stage(value, prior.spec);
       await this.tasks.admit(execution, digest, this.now());
     }
     return this.reconcile(execution.owner, execution.taskId);

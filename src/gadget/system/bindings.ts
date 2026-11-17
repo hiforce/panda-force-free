@@ -26,6 +26,7 @@ export interface ComposerCapability {
 export interface ProjectionCapability {
   ready(): boolean;
   rows(): GadgetRow[];
+  open?(id: string): boolean;
 }
 export interface CreationActivityCapability {
   identity: string;
@@ -36,6 +37,7 @@ export interface CreationActivityCapability {
 export function systemGadgetCapabilities(options: {
   identity: string;
   navigate(path: string): void;
+  openSession(id: string): void;
   creationProject(): string;
   startTask(prompt: string, project: string): void;
   taskDraft(project: string): string;
@@ -56,6 +58,11 @@ export function systemGadgetCapabilities(options: {
   };
   const sessions: ProjectionCapability = {
     ready: options.ready,
+    open(id) {
+      if (!id || id.length > 200) return false;
+      options.openSession(id);
+      return true;
+    },
     rows: () =>
       options.sessions().map((s) => ({
         id: s.id,

@@ -1,0 +1,46 @@
+{
+  "upstream": "https://github.com/unjs/unpdf",
+  "version": "2.2.1",
+  "tarball": "https://registry.npmjs.org/unpdf/-/unpdf-2.2.1.tgz",
+  "integrity": "sha512-tstQpe/fhxkDGY1ZtpejwnU14QZ9w0SYLo9lIZooB1zQ7QXVE4t+SBQUN/2a9+EBg9UrrO2bWlqdzV+UtoebHw==",
+  "build": {
+    "runtime": "Bun 1.4.2",
+    "entry": "export { getDocumentProxy } from \"unpdf\";",
+    "target": "bun",
+    "minify": true,
+    "external": [
+      "@napi-rs/canvas",
+      "pdfjs-dist"
+    ],
+    "script": "scripts/vendor-pdf-parser.mjs"
+  },
+  "sha256": "3b6893d6554bbb802cada7a45bc689d173143e948c1f512269145e245972d49a",
+  "licenses": [
+    "LICENSES/unpdf/LICENSE",
+    "LICENSES/unpdf/pdfjs/LICENSE_PDFJS_OPENJPEG",
+    "LICENSES/unpdf/pdfjs/LICENSE_JBIG2",
+    "LICENSES/unpdf/pdfjs/LICENSE_OPENJPEG",
+    "LICENSES/unpdf/pdfjs/LICENSE_PDFJS",
+    "LICENSES/unpdf/pdfjs/LICENSE_PDFJS_JBIG2"
+  ],
+  "use": "Text only inside the bounded material worker. No native rendering dependency; external fetching, system font loading and evaluation disabled.",
+  "sourceFiles": {
+    "LICENSE": "4a57080b8ecdb3a53ec678828121849ce5df877a99b1ad8d50e165d8a2aded1b",
+    "dist/index.mjs": "f8fbfc18347dbab8ecea437f7d5a8abb3966c5beddd28df6086468d30bbc963a",
+    "dist/licenses/LICENSE_JBIG2": "9e66b7f1b934a28b37f3bc4dac97915de1674271e79a0a88182a18ed9731b4d1",
+    "dist/licenses/LICENSE_OPENJPEG": "a6af136f3e15038a666b61f376612a07d9a4e48cb7c01adbf3e33b3f14ab49b6",
+    "dist/licenses/LICENSE_PDFJS": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+    "dist/licenses/LICENSE_PDFJS_JBIG2": "aad3cce09842e00e9e11ad5e8fef8cc02fbc3a3768fe2f007443b9cee37aaee5",
+    "dist/licenses/LICENSE_PDFJS_OPENJPEG": "717fc62da03292dbb4dd0c8280bd4ce7bb8550dcf31d772bc93455fb50313425",
+    "dist/pdfjs-decoders-workerd.mjs": "c646b2ff7405d32767fba4cb8723fc27ae2ae671d03cd17b2f562ba683dcc019",
+    "dist/pdfjs-decoders.mjs": "c9ee552dc11f49d901dfbbedabccd44014d2b6d92c6221d2659bc12f37e5f16a",
+    "dist/pdfjs-jbig2.mjs": "d5002bd21ea8ebe5bc138dcfafc10306b9db67ca8c80d8504fd3401341bcda16",
+    "dist/pdfjs-jbig2_nowasm_fallback.mjs": "b8a056270a0edbbb7b09a909f745162c9f813a7cec318de6c35216f61108a2aa",
+    "dist/pdfjs-loader.mjs": "a1885f9127f91080d629b3e61cea6bbec6403376848c88f3b3cad6bef9e0590c",
+    "dist/pdfjs-openjpeg.mjs": "e57c90a29a1177acf5e5f5f44b458c48327bb4f23188f63d522e24f1fcb9f171",
+    "dist/pdfjs-openjpeg_nowasm_fallback.mjs": "8e4cf37a05fbdda2e62200ea4600e1d666eeba0a31fe3192640279ad8f3ff081",
+    "dist/pdfjs-rolldown-runtime.mjs": "9e768450618389bfda5bab38511219ae708fcdd7517699b0aea8d8a24b7e1a93",
+    "dist/pdfjs.mjs": "62b18e024fdb86105102ec0b30688a18e5648f757656d358389a5025a73b2747",
+    "package.json": "1f26182f00292eef885415211f8bc30c509e2349b8bd3ac001952cc109fecc6d"
+  }
+}

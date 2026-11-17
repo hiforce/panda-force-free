@@ -376,12 +376,13 @@ try {
     if (width < 768) {
       assert.equal(layout.nav, "none");
       assert.equal(layout.permission.height, layout.send.height);
-      assert.ok(Math.abs(layout.permission.y - layout.send.y) < 1);
-      assert.ok(Math.abs(layout.model.y - layout.send.y) < 1);
+      assert.ok(Math.abs(layout.permission.y - layout.model.y) < 1);
+      if (width > 400) assert.ok(Math.abs(layout.permission.y - layout.send.y) < 1);
+      else assert.ok(layout.permission.bottom <= layout.send.y + 1);
     }
   }
   checks.push(
-    "No overflow at seven desktop/tablet/mobile/landscape sizes; one-row mobile controls and send remain visible",
+    "No overflow at seven desktop/tablet/mobile/landscape sizes; narrow toolbars wrap while model, permissions and send remain visible",
   );
 
   await page.setViewportSize({ width: 390, height: 844 });

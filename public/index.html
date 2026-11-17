@@ -330,6 +330,7 @@
     <link rel="stylesheet" href="/delivery.css" />
     <link rel="stylesheet" href="/social.css" />
     <link rel="stylesheet" href="/session-workspace.css" />
+    <link rel="stylesheet" href="/message-composer.css" />
     <link rel="stylesheet" href="/settings-workspace.css" />
     <link rel="stylesheet" href="/database.css" />
     <link rel="stylesheet" href="/workbench-chrome.css" />
@@ -776,7 +777,7 @@
           ></div>
           <div id="goalStatus" class="goal-status" role="status" aria-live="polite" hidden=""></div>
           <div id="sessionStatus" class="session-status" role="status" aria-live="polite" hidden=""></div>
-          <form class="composer" id="composer">
+          <form class="composer message-composer" id="composer">
             <div
               class="composer-autocomplete"
               id="composerAutocomplete"
@@ -800,16 +801,18 @@
               hidden=""
               data-pf-aria-label="common.attachments"
             ></div>
+            <div id="composerSkills" class="creative-selected-skills"></div>
             <input type="file" id="attachmentInput" multiple="" hidden="" />
             <textarea
               id="prompt"
+              class="message-composer-input"
               rows="1"
               placeholder="Do anything"
               aria-label="Task prompt"
               data-pf-placeholder="common.doAnything"
               data-pf-aria-label="common.taskPrompt"
             ></textarea>
-            <div class="composer-footer">
+            <div class="composer-footer message-composer-footer">
               <div class="composer-left">
                 <button
                   type="button"
@@ -822,6 +825,7 @@
                 >
                   <span class="icon-slot" data-icon="plus"></span>
                 </button>
+                <span id="composerSkillControl"></span>
                 <div class="permission-picker" id="permissionPicker" data-composer-control="approval">
                   <button
                     type="button"
@@ -1493,10 +1497,47 @@
         </label>
         <div class="goal-dialog-detail" id="goalDialogDetail"></div>
         <p id="goalDialogError" class="goal-dialog-error" role="alert" hidden=""></p>
-        <div class="goal-dialog-actions">
-          <button type="button" class="folder-confirm" id="resumeGoalDialog" data-pf-message="common.resumeGoal" hidden>
-            Resume goal
+        <div class="goal-dialog-playback" id="goalDialogPlayback" hidden>
+          <button
+            type="button"
+            class="goal-playback-button primary"
+            id="pauseGoalDialog"
+            aria-label="Pause goal"
+            title="Pause goal"
+            data-pf-aria-label="goals.pause"
+            data-pf-title="goals.pause"
+            hidden
+          >
+            <span class="icon-slot" data-icon="pause"></span
+            ><span class="sr-only" data-pf-message="goals.pause">Pause goal</span>
           </button>
+          <button
+            type="button"
+            class="goal-playback-button primary"
+            id="resumeGoalDialog"
+            aria-label="Resume goal"
+            title="Resume goal"
+            data-pf-aria-label="common.resumeGoal"
+            data-pf-title="common.resumeGoal"
+            hidden
+          >
+            <span class="icon-slot" data-icon="play"></span
+            ><span class="sr-only" data-pf-message="common.resumeGoal">Resume goal</span>
+          </button>
+          <button
+            type="button"
+            class="goal-playback-button"
+            id="clearGoalDialog"
+            aria-label="Clear goal"
+            title="Clear goal"
+            data-pf-aria-label="common.clearGoal"
+            data-pf-title="common.clearGoal"
+          >
+            <span class="icon-slot" data-icon="trash"></span
+            ><span class="sr-only" data-pf-message="common.clearGoal">Clear goal</span>
+          </button>
+        </div>
+        <div class="goal-dialog-actions goal-dialog-primary-actions">
           <button type="button" class="folder-cancel" id="cancelGoalDialog" data-pf-message="common.cancel">
             Cancel</button
           ><button type="submit" class="folder-confirm" id="saveGoalDialog" data-pf-message="common.save">Save</button>

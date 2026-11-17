@@ -4,7 +4,9 @@ import type { CreationInputs } from "./input.js";
 import type { CreationTask } from "./contracts.js";
 import type { CreationSubmissions } from "./submissions.js";
 import type { CreationQuestions } from "./questions/service.js";
+import { creationHistoryCommand } from "./history/contracts.js";
 import { CreationError } from "./contracts.js";
+import { creationGoalCommand, creationGoalView } from "./goals/contracts.js";
 import { creationId, creationUuid } from "./validation.js";
 import type { CreationProgressStore } from "./ports.js";
 import type { CreationTaskDetail } from "../../shared/creation/contracts.js";
@@ -15,12 +17,20 @@ export interface CreationManagement {
 }
 export interface CreationHistory {
   list(owner: string, projectId?: string): CreationResult<CreationTask[]>;
+  clearHistory?(
+    owner: string,
+    command: import("./history/contracts.js").CreationHistoryCommand,
+    now: number,
+  ): CreationResult<import("./history/contracts.js").CreationHistoryReceipt>;
   retry(owner: string, id: string, operationId: string, now: number): CreationResult<CreationTask>;
 }
 /** HTTP and future command adapters use the same authorized task operations; internal leases never become browser state. */
 export class CreationService {
   private closed = false;
-  private readonly summaries = new Map<string, Promise<{ prompt: string; model: string | null }>>();
+  private readonly summaries = new Map<
+    string,
+    Promise<{ prompt: string; model: string | null; effort: string | null; documentTitle?: string }>
+  >();
   private readonly pending = new Set<Promise<unknown>>();
   constructor(
     private readonly tasks: CreationManagement,
@@ -33,6 +43,20 @@ export class CreationService {
     private readonly runtime: { wake(): CreationResult<void>; interrupt(owner: string, id: string): void },
     private readonly now: () => number = Date.now,
     private readonly progress?: CreationProgressStore,
+    private readonly messages?: import("./messages/service.js").CreationMessages,
+    private readonly describeSkills?: (
+      selections: readonly import("../../shared/creation/contracts.js").CreationSkillSelection[],
+    ) => Promise<import("../../shared/session-skills.js").SessionSkillSummary[]>,
+    private readonly goals?: import("./goals/contracts.js").CreationGoalStore,
+    private readonly workspaces?: import("./workspaces.js").CreationWorkspaces,
+    private readonly documentLocation?: import("./integration/document-port.js").CreationDocumentPort["location"],
+    private readonly savedArtifact?: (
+      owner: string,
+      id: string,
+    ) => Promise<import("./contracts.js").CreationArtifact | null>,
+    private readonly fileLocation?: (
+      task: import("./contracts.js").CreationTaskSpec,
+    ) => Promise<NonNullable<import("./contracts.js").CreationArtifact["file"]> | null>,
   ) {}
   private using<T>(work: () => Promise<T>) {
     if (this.closed) return Promise.reject(new CreationError("unavailable"));
@@ -48,9 +72,12 @@ export class CreationService {
     const cacheKey = JSON.stringify([owner, task.spec.inputDigest]);
     let summary = this.summaries.get(cacheKey);
     if (!summary) {
-      summary = this.inputs
-        .read(task.spec)
-        .then((input) => ({ prompt: input.prompt, model: input.profile.model ?? null }));
+      summary = this.inputs.read(task.spec).then((input) => ({
+        prompt: input.prompt,
+        model: input.profile.model ?? null,
+        effort: input.profile.effort ?? null,
+        documentTitle: input.previous?.document.title,
+      }));
       this.summaries.set(cacheKey, summary);
       const failed = summary;
       void summary.catch(() => {
@@ -61,20 +88,63 @@ export class CreationService {
     const input = await summary,
       question = ["running", "queued"].includes(task.state) ? await this.questions.pending(owner, task.spec.id) : null;
     await this.authorize(owner, task.spec.projectId);
+    const goalEvent = (await this.goals?.read(owner, task.spec.id)) || null;
     const current = await this.tasks.get(owner, task.spec.id);
+    const primary =
+      current.artifact ??
+      (current.state === "committing" && current.outputDigest && current.failure
+        ? await this.savedArtifact?.(owner, current.spec.id)
+        : null);
+    const documentId = primary?.documentId ?? current.spec.target.document?.documentId;
+    const location =
+      documentId && this.documentLocation
+        ? await this.documentLocation(
+            owner,
+            current.spec.target.documentProjectId ?? current.spec.projectId,
+            documentId,
+          )
+        : undefined;
     return {
+      goal: creationGoalView(goalEvent, current),
       id: current.spec.id,
       projectId: current.spec.projectId,
       state: current.state,
       generation: current.generation,
       prompt: input.prompt,
       model: input.model,
+      effort: input.effort,
       artifact: current.artifact,
+      ...(documentId && this.documentLocation
+        ? { documentStatus: location ? ("available" as const) : ("unavailable" as const) }
+        : {}),
       failure: current.failure,
       cancelRequested: current.cancelRequested,
       createdAt: current.createdAt,
       updatedAt: current.updatedAt,
       ...(current.spec.previousTaskId ? { previousTaskId: current.spec.previousTaskId } : {}),
+      ...(documentId && this.documentLocation
+        ? {
+            document: {
+              documentId,
+              ...(location
+                ? {
+                    projectId: location.projectId,
+                    ...(location.projectName ? { projectName: location.projectName } : {}),
+                  }
+                : {}),
+              title: primary?.title || input.documentTitle || input.prompt.slice(0, 100),
+              revision: primary?.revision || current.spec.target.document?.version || 1,
+            },
+          }
+        : current.spec.target.document
+          ? {
+              document: {
+                documentId: current.spec.target.document.documentId,
+                title: current.artifact?.title || input.documentTitle || input.prompt.slice(0, 100),
+                revision: current.artifact?.revision || current.spec.target.document.version,
+              },
+            }
+          : {}),
       question:
         question &&
         question.generation === current.generation &&
@@ -89,6 +159,17 @@ export class CreationService {
       const task = await this.submissions.submit(owner, value);
       this.runtime.wake();
       return this.view(owner, task);
+    });
+  }
+  clearHistory(owner: string, value: unknown) {
+    return this.using(async () => {
+      const command = creationHistoryCommand(value);
+      if (!this.history.clearHistory) throw new CreationError("unavailable");
+      if (command.taskId) {
+        const task = await this.tasks.get(owner, command.taskId);
+        await this.authorize(owner, task.spec.projectId);
+      }
+      return this.history.clearHistory(owner, command, this.now());
     });
   }
   list(owner: string, projectId: string) {
@@ -120,7 +201,74 @@ export class CreationService {
           conversation ? this.questions.historyDetails(owner, id) : [],
         ]);
       await this.authorize(owner, task.projectId);
-      return { ...task, progress, clarifications };
+      const input = await this.inputs.read((await this.tasks.get(owner, id)).spec);
+      const messages = conversation ? (await this.messages?.public(owner, id)) || [] : [];
+      await this.authorize(owner, task.projectId);
+      const selections = input.skills.composition.skills
+        .filter((skill) => !(skill.packageId === "panda-force.document-creation" && skill.id === "writing"))
+        .map(({ packageId, version, digest, id, parameters }) => ({ packageId, version, digest, id, parameters }));
+      const summaries = await this.describeSkills?.(selections);
+      const goalEvent = (await this.goals?.read(owner, id)) || null;
+      const current = await this.tasks.get(owner, id);
+      const workspace = await this.workspaces?.lookup(owner, id);
+      const file =
+        task.artifact && this.fileLocation ? await this.fileLocation(current.spec).catch(() => null) : undefined;
+      const presentedMessages = await Promise.all(
+        messages.map(async (message) => ({
+          ...message,
+          skillSummaries: await this.describeSkills?.(message.selections),
+        })),
+      );
+      await this.authorize(owner, task.projectId);
+      return {
+        ...task,
+        ...(task.artifact && file !== undefined ? { artifact: { ...task.artifact, file: file ?? undefined } } : {}),
+        ...(workspace ? { workspaceDirectory: workspace.path } : {}),
+        goal: creationGoalView(goalEvent, task),
+        goalVersion: goalEvent?.at || 0,
+        progress,
+        clarifications,
+        messages: presentedMessages,
+        selections,
+        skillSummaries: summaries,
+        attachments: (input.materials || []).map((material) => ({
+          id: material.id,
+          materialId: material.id,
+          name: material.name,
+          kind: material.kind,
+          status: "ready",
+          url: "/api/creation-materials/original?id=" + material.id,
+        })),
+        usage: progress.toReversed().find((event) => event.stage === "usage")?.usage,
+      };
+    });
+  }
+  goal(owner: string, id: string, value: unknown) {
+    const command = creationGoalCommand(structuredClone(value));
+    return this.using(async () => {
+      if (!this.goals) throw new CreationError("unavailable");
+      const original = await this.tasks.get(owner, creationUuid(id));
+      await this.authorize(owner, original.spec.projectId);
+      let task = original;
+      if (["set", "create"].includes(command.action) && original.artifact && original.state === "succeeded") {
+        await this.goals.check(owner, command.id, command);
+        const last = (await this.messages?.public(owner, id))?.at(-1);
+        task = await this.submissions.followUp(owner, id, {
+          id: command.id,
+          prompt: command.objective,
+          ...(command.model === undefined ? {} : { model: command.model }),
+          ...(command.effort === undefined ? {} : { effort: command.effort }),
+          ...(last ? { selections: last.selections } : {}),
+        });
+      }
+      const event = await this.goals.command(owner, task.spec.id, command, this.now());
+      if (command.action === "pause") this.runtime.interrupt(owner, task.spec.id);
+      else this.runtime.wake();
+      await this.authorize(owner, task.spec.projectId);
+      return {
+        task: await this.view(owner, await this.tasks.get(owner, task.spec.id)),
+        goal: creationGoalView(event, await this.tasks.get(owner, task.spec.id)),
+      };
     });
   }
   followUp(owner: string, id: string, value: unknown) {
@@ -128,6 +276,22 @@ export class CreationService {
       const task = await this.submissions.followUp(owner, creationUuid(id), value);
       this.runtime.wake();
       return this.view(owner, task);
+    });
+  }
+  message(owner: string, id: string, value: unknown) {
+    const frozen = structuredClone(value);
+    return this.using(async () => {
+      const task = await this.tasks.get(owner, creationUuid(id));
+      await this.authorize(owner, task.spec.projectId);
+      if (this.messages && (await this.messages.submit(owner, id, frozen, true))) return this.view(owner, task);
+      if (task.artifact && task.state === "succeeded") {
+        const next = await this.submissions.followUp(owner, id, frozen);
+        this.runtime.wake();
+        return this.view(owner, next);
+      }
+      if (!this.messages) throw new CreationError("unavailable");
+      await this.messages.submit(owner, id, frozen);
+      return this.view(owner, await this.tasks.get(owner, id));
     });
   }
   cancel(owner: string, id: string) {
@@ -143,7 +307,28 @@ export class CreationService {
     return this.using(async () => {
       const task = await this.tasks.get(owner, creationUuid(id));
       await this.authorize(owner, task.spec.projectId);
-      const retried = await this.history.retry(owner, id, operationId, this.now());
+      if (
+        !task.artifact &&
+        task.failure === "targetChanged" &&
+        (task.spec.target.document || task.spec.previousTaskId)
+      ) {
+        const recovered = await this.submissions.recover(owner, id, operationId);
+        const goal = await this.goals?.read(owner, id);
+        if (goal?.goal)
+          await this.goals!.command(
+            owner,
+            recovered.spec.id,
+            { id: operationId, action: "set", objective: goal.goal.objective },
+            this.now(),
+          );
+        this.runtime.wake();
+        return this.view(owner, recovered);
+      }
+      const goal = await this.goals?.read(owner, id);
+      if (goal?.goal) await this.goals!.command(owner, id, { id: operationId, action: "resume" }, this.now());
+      const retried = goal?.goal
+        ? await this.tasks.get(owner, id)
+        : await this.history.retry(owner, id, operationId, this.now());
       this.runtime.wake();
       return this.view(owner, retried);
     });

@@ -1,4 +1,5 @@
 import type { CreationProgress } from "../../shared/creation/contracts.js";
+import { visibleTokenUsage } from "../../shared/engine/application-visible-events.js";
 import { isRecord } from "../../shared/records.js";
 import { CreationError, type CreationArtifact, type CreationTaskSpec } from "./contracts.js";
 
@@ -62,10 +63,11 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
       "skillCaptureId",
       "previousTaskId",
     ]),
-    target = creationRecord(v.target, ["parentId", "treeVersion", "locale"]),
+    target = creationRecord(v.target, ["parentId", "treeVersion", "locale", "document", "documentProjectId"]),
     locale = creationText(target.locale, 35);
   if (v.schema !== 1 || v.kind !== "document" || !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(locale))
     throw new CreationError("invalidInput");
+  if (target.documentProjectId !== undefined && !target.document) throw new CreationError("invalidInput");
   return {
     schema: 1,
     id: creationUuid(v.id),
@@ -77,6 +79,8 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
       parentId: target.parentId === null ? null : creationId(target.parentId),
       treeVersion: creationInteger(target.treeVersion),
       locale,
+      ...(target.document === undefined ? {} : { document: creationDocumentReference(target.document) }),
+      ...(target.documentProjectId === undefined ? {} : { documentProjectId: creationId(target.documentProjectId) }),
     },
     inputDigest: creationDigest(v.inputDigest),
     skillCaptureId: v.skillCaptureId === null ? null : creationUuid(v.skillCaptureId),
@@ -84,21 +88,77 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
   };
 }
 export function creationArtifact(value: unknown, task: CreationTaskSpec): CreationArtifact {
-  const v = creationRecord(value, ["kind", "projectId", "documentId", "operationId", "treeVersion"]);
+  const v = creationRecord(value, [
+    "kind",
+    "projectId",
+    "documentId",
+    "operationId",
+    "treeVersion",
+    "title",
+    "revisionId",
+    "revision",
+    "file",
+    "location",
+  ]);
+  const file = v.file === undefined ? null : creationRecord(v.file, ["path", "format"]);
+  const location =
+    v.location === undefined
+      ? null
+      : creationRecord(v.location, ["projectId", "operationId", "treeVersion", "revisionId", "revision"]);
+  if (location && (location.operationId !== task.operationId || Number(location.revision) !== Number(v.revision ?? 1)))
+    throw new CreationError("conflict");
+  if (
+    file &&
+    (file.format !== "markdown" ||
+      !creationText(file.path, 4096).startsWith("/") ||
+      /(?:^|\/)\.{1,2}(?:\/|$)|\\/.test(String(file.path)) ||
+      !String(file.path).endsWith(".md"))
+  )
+    throw new CreationError("invalidInput");
   if (
     v.kind !== task.kind ||
-    v.projectId !== task.projectId ||
+    v.projectId !== (task.target.documentProjectId ?? task.projectId) ||
     v.operationId !== task.operationId ||
     !Number.isSafeInteger(v.treeVersion) ||
-    Number(v.treeVersion) <= task.target.treeVersion
+    (task.target.document || (task.previousTaskId && v.revisionId)
+      ? Number(v.treeVersion) < task.target.treeVersion
+      : Number(v.treeVersion) <= task.target.treeVersion)
+  )
+    throw new CreationError("conflict");
+  if (
+    (v.revisionId === undefined) !== (v.revision === undefined) ||
+    (v.revision !== undefined && (!Number.isSafeInteger(v.revision) || Number(v.revision) < 1))
+  )
+    throw new CreationError("conflict");
+  if (
+    task.target.document &&
+    (v.documentId !== task.target.document.documentId ||
+      !v.revisionId ||
+      !Number.isSafeInteger(v.revision) ||
+      Number(v.revision) < task.target.document.version)
   )
     throw new CreationError("conflict");
   return {
     kind: "document",
-    projectId: task.projectId,
+    projectId: creationId(v.projectId),
     operationId: task.operationId,
     documentId: creationId(v.documentId),
     treeVersion: creationInteger(v.treeVersion),
+    ...(v.title === undefined ? {} : { title: creationText(v.title, 200) }),
+    ...(v.revisionId === undefined ? {} : { revisionId: creationId(v.revisionId) }),
+    ...(v.revision === undefined ? {} : { revision: creationInteger(v.revision) }),
+    ...(file ? { file: { path: String(file.path), format: "markdown" as const } } : {}),
+    ...(location
+      ? {
+          location: {
+            projectId: creationId(location.projectId),
+            operationId: creationUuid(location.operationId),
+            treeVersion: creationInteger(location.treeVersion),
+            revisionId: creationId(location.revisionId),
+            revision: creationInteger(location.revision),
+          },
+        }
+      : {}),
   };
 }
 
@@ -109,8 +169,9 @@ export function creationProgress(event: CreationProgress): CreationProgress {
     event.at < 0 ||
     !Number.isSafeInteger(event.generation) ||
     event.generation < 0 ||
-    !["started", "saving", "waiting", "answered", "message"].includes(event.stage) ||
-    (event.text !== undefined && (typeof event.text !== "string" || event.text.length > 8000))
+    !["started", "saving", "waiting", "answered", "message", "usage"].includes(event.stage) ||
+    (event.text !== undefined && (typeof event.text !== "string" || event.text.length > 65536)) ||
+    (event.streaming !== undefined && typeof event.streaming !== "boolean")
   )
     throw new Error("Invalid creation progress");
   return {
@@ -118,5 +179,45 @@ export function creationProgress(event: CreationProgress): CreationProgress {
     generation: event.generation,
     stage: event.stage,
     ...(event.text ? { text: event.text } : {}),
+    ...(event.id === undefined ? {} : { id: creationUuid(event.id) }),
+    ...(event.streaming === undefined ? {} : { streaming: event.streaming }),
+    ...(event.usage === undefined ? {} : { usage: visibleTokenUsage(event.usage) }),
+  };
+}
+
+export function creationGoal(value: unknown): import("../../shared/creation/contracts.js").CreationGoal {
+  const row = creationRecord(value, ["id", "objective", "status", "updatedAt"]);
+  if (!["active", "paused", "blocked", "completed"].includes(String(row.status)))
+    throw new CreationError("invalidInput");
+  return {
+    id: creationUuid(row.id),
+    objective: creationGoalObjective(row.objective),
+    status: row.status as import("../../shared/creation/contracts.js").CreationGoal["status"],
+    updatedAt: creationInteger(row.updatedAt),
+  };
+}
+
+export function creationGoalObjective(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    !value.trim() ||
+    value.length > 16000 ||
+    /[\p{Cc}]/u.test(value.replace(/[\r\n\t]/g, ""))
+  )
+    throw new CreationError("invalidInput");
+  return value.trim();
+}
+
+export function creationDocumentReference(
+  value: unknown,
+): import("../../shared/documents/contracts.js").DocumentRevisionReference {
+  const row = creationRecord(value, ["documentId", "revisionId", "version", "contentHash"]),
+    version = creationInteger(row.version);
+  if (version < 1) throw new CreationError("invalidInput");
+  return {
+    documentId: creationId(row.documentId),
+    revisionId: creationId(row.revisionId),
+    version,
+    contentHash: creationDigest(row.contentHash),
   };
 }

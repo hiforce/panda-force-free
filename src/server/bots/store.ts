@@ -1,6 +1,7 @@
 import { SQLiteBotProfiles } from "./sqlite-profiles.js";
 import { SQLiteBotKeys } from "./sqlite-keys.js";
 import { SQLiteBotQueries } from "./sqlite-queries.js";
+import { retryFailedSQLiteBots } from "./sqlite-recovery.js";
 
 import { changeBotTaskLifecycle } from "./task-lifecycle.js";
 import { taskStateExpression } from "./queue-query.js";
@@ -60,6 +61,7 @@ export class BotStore {
       CREATE TABLE IF NOT EXISTS bot_sessions(id TEXT PRIMARY KEY);
       CREATE TABLE IF NOT EXISTS bot_schema_meta(id TEXT PRIMARY KEY);
       CREATE TABLE IF NOT EXISTS bot_settings(owner TEXT PRIMARY KEY, retentionDays INTEGER NOT NULL CHECK(retentionDays BETWEEN 1 AND 365));
+      CREATE TABLE IF NOT EXISTS bot_recoveries(owner TEXT NOT NULL,id TEXT NOT NULL,signature TEXT NOT NULL,result TEXT NOT NULL,PRIMARY KEY(owner,id));
       CREATE INDEX IF NOT EXISTS bot_tasks_retention ON bot_tasks(json_extract(data,'$.updatedAt')) WHERE status IN ('kept','discarded','canceled','callback_failed');
       CREATE INDEX IF NOT EXISTS bot_tasks_action_retention ON bot_tasks(json_extract(data,'$.updatedAt')) WHERE status IN ('kept','discarded','completed','canceled','callback_failed');
       INSERT OR IGNORE INTO bot_sessions SELECT json_extract(data,'$.sessionId') FROM bots WHERE json_extract(data,'$.sessionId') IS NOT NULL;
@@ -145,6 +147,9 @@ export class BotStore {
       .immediate();
   }
   tasks = (...args: Parameters<SQLiteBotQueries["tasks"]>) => this.queries.tasks(...args);
+  retryFailed(owner: string, value: unknown) {
+    return retryFailedSQLiteBots(this.db, owner, value);
+  }
   taskSummaries = (...args: Parameters<SQLiteBotQueries["taskSummaries"]>) => this.queries.taskSummaries(...args);
   queue = (...args: Parameters<SQLiteBotQueries["queue"]>) => this.queries.queue(...args);
   task = (...args: Parameters<SQLiteBotQueries["task"]>) => this.queries.task(...args);
@@ -186,15 +191,16 @@ export class BotStore {
           this.event(t.id, "recovered", t.status);
         }
         const row = this.db
-          .query<Row, string[]>(
+          .query<Row, (string | number)[]>(
             `SELECT t.data FROM bots b JOIN bot_tasks t ON t.rowid=CASE WHEN json_extract(b.data,'$.active')=1 THEN
              (SELECT q.rowid FROM bot_tasks q WHERE q.status='queued' AND q.botId=b.id AND q.owner=b.owner ORDER BY q.rowid LIMIT 1)
              ELSE (SELECT q.rowid FROM bot_tasks q WHERE q.status='queued' AND q.botId=b.id AND q.owner=b.owner AND json_extract(q.data,'$.decision') IS NOT NULL AND json_extract(q.data,'$.decision')!='review' ORDER BY q.rowid LIMIT 1) END
            WHERE NOT EXISTS(SELECT 1 FROM bot_tasks r WHERE r.status='running' AND r.botId=b.id)
            ${excludedBots.length ? `AND b.id NOT IN (${excludedBots.map(() => "?").join(",")})` : ""}
+           AND (COALESCE(json_extract(b.data,'$.executionRetryAt'),0)<=? OR (json_extract(t.data,'$.decision') IS NOT NULL AND json_extract(t.data,'$.decision')!='review'))
            ORDER BY t.rowid LIMIT 1`,
           )
-          .get(...excludedBots);
+          .get(...excludedBots, now);
         if (row) {
           const task: BotTask = JSON.parse(row.data),
             bot = this.bot(task.owner, task.botId),
@@ -217,6 +223,24 @@ export class BotStore {
         .query("UPDATE bot_tasks SET leaseUntil=? WHERE id=? AND lease=? AND status='running' AND leaseUntil>=?")
         .run(Date.now() + 30000, id, lease, Date.now()).changes === 1
     );
+  }
+  deferExecution(task: BotTask, lease: string) {
+    return this.db
+      .transaction(() => {
+        if (!this.heartbeat(task.id, lease)) throw new BotError("leaseLost", 409);
+        const current = this.task(task.owner, task.id);
+        if (current.botId !== task.botId) throw new BotError("leaseLost", 409);
+        const bot = this.bot(task.owner, task.botId);
+        bot.executionRetryAt = Date.now() + 300000;
+        this.profiles.saveBot(bot);
+        task.status = "queued";
+        task.decision = null;
+        task.reason = "modelRateLimited";
+        delete task.failure;
+        this.update(task, lease, true);
+        this.event(task.id, "execution_deferred", "modelRateLimited");
+      })
+      .immediate();
   }
   update(task: BotTask, lease: string, final = false) {
     task.updatedAt = Date.now();

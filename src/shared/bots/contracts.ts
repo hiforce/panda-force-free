@@ -47,6 +47,7 @@ export interface BotConfig {
   callbackHosts: string[];
   sessionId: string | null;
   sessionTasks?: number;
+  executionRetryAt?: number;
   avatar?: BotAvatar;
   persona?: BotPersona;
   createdAt: number;
@@ -157,6 +158,17 @@ export interface BotTaskSummary {
   reason: string | null;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface BotBulkRetryRequest {
+  id: string;
+  taskIds: string[];
+}
+export interface BotBulkRetryResult {
+  id: string;
+  requested: number;
+  queued: number;
+  skipped: number;
 }
 export interface BotQueueSnapshot {
   bots: BotDirectoryEntry[];

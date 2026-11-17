@@ -8,6 +8,7 @@ import { seedBuiltinWriting, seedBuiltinPack } from "../builtin/seed.js";
 import { builtinEssentialsPack } from "../builtin/essentials.js";
 import { skillCatalogRoutes } from "./routes.js";
 import { skillManagementRoutes } from "./management-routes.js";
+import { conversationSkillRoutes } from "./conversation-routes.js";
 import { RasterCoverRenderer } from "../../media/raster-cover.js";
 import { skillArtwork, skillArtworkRoutes } from "./artwork.js";
 import type { SkillRegistryStore } from "../ports.js";
@@ -33,6 +34,7 @@ export async function createSkillFeature(options: {
       routes: [
         ...skillCatalogRoutes(catalog, options.owner),
         ...skillManagementRoutes(catalog, options.owner),
+        ...conversationSkillRoutes(catalog, options.owner),
         ...skillArtworkRoutes(catalog, renderer, options.owner),
       ],
       close: () => db?.close(),

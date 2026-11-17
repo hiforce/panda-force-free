@@ -105,3 +105,7 @@ and in the installed packages. Language recipe packages do not execute plugin co
 ## CSS syntax for authored web previews
 
 Packaged web previews use `@csstools/css-tokenizer` 3.0.4 (MIT) to decode CSS URL tokens. Its complete upstream notice is retained in [LICENSES/css-tokenizer-MIT.txt](./LICENSES/css-tokenizer-MIT.txt) and the checksum-verified vendored module in `src/server/creative/assets/vendor/`. CSS, image and font bytes are resolved only from the saved bundle.
+
+## PDF text extraction
+
+The generated text parser in `src/server/materials/vendor/pdf-parser.mjs` redistributes [unpdf 2.2.1](https://github.com/unjs/unpdf) and its serverless Mozilla PDF.js build. unpdf uses the MIT License; PDF.js uses the Apache License 2.0. Included PDFium JBIG2, Mozilla decoder and OpenJPEG portions retain their Apache/BSD notices. The complete upstream notices are kept under [LICENSES/unpdf](./LICENSES/unpdf), and the pinned package integrity, build recipe and generated-source hash are recorded in `src/server/materials/vendor/provenance.json`. This application uses text extraction; optional native rendering packages are not required.

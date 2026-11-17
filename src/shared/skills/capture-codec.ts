@@ -63,7 +63,7 @@ function selection(value: unknown): FrozenSkillSelection {
   };
 }
 /** Validate the immutable execution snapshot without reopening mutable packages or reinterpreting their definitions. */
-export function decodeSkillComposition(value: unknown): SkillComposition {
+export function decodeSkillComposition(value: unknown, options: { workflowRequired?: boolean } = {}): SkillComposition {
   const row = record(value, ["schema", "outputType", "skills", "capabilities", "constraints"]);
   skillAssert(row.schema === 1, "invalidManifest", "schema");
   const skills = list(row.skills, selection, 1, SKILL_LIMITS.selections, "skills"),
@@ -76,7 +76,8 @@ export function decodeSkillComposition(value: unknown): SkillComposition {
     );
   unique(skills, (skill) => skill.qualifiedId, "skills");
   unique(capabilities, (capability) => capability, "capabilities");
-  skillAssert(skills.filter((skill) => skill.role === "workflow").length === 1, "workflowRequired");
+  const workflows = skills.filter((skill) => skill.role === "workflow").length;
+  skillAssert(options.workflowRequired === false ? workflows <= 1 : workflows === 1, "workflowRequired");
   skillAssert(
     skills.reduce(
       (size, skill) =>
@@ -96,7 +97,7 @@ export function decodeSkillComposition(value: unknown): SkillComposition {
     constraints: constraints(row.constraints),
   };
 }
-export function decodeSkillCapture(value: unknown): SkillCapture {
+export function decodeSkillCapture(value: unknown, options: { workflowRequired?: boolean } = {}): SkillCapture {
   const row = record(value, [
       "id",
       "owner",
@@ -106,7 +107,7 @@ export function decodeSkillCapture(value: unknown): SkillCapture {
       "composition",
       "origins",
     ]),
-    composition = decodeSkillComposition(row.composition),
+    composition = decodeSkillComposition(row.composition, options),
     origins = list(
       row.origins,
       (value) => {

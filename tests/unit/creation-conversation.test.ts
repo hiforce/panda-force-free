@@ -1,10 +1,6 @@
 import { test, expect } from "bun:test";
-import { JSDOM } from "jsdom";
-import type { Translate } from "../../src/shared/i18n/messages.js";
 import type { CreationTaskDetail } from "../../src/shared/creation/contracts.js";
-import { creationConversation, previousCreationRounds } from "../../src/client/creation/activity-conversation.js";
-globalThis.window = new JSDOM().window as unknown as Window & typeof globalThis;
-const t = ((id: string) => id) as Translate;
+import { previousCreationRounds } from "../../src/client/creation/activity-conversation.js";
 const round = (id: string, previousTaskId?: string): CreationTaskDetail => ({
   id,
   projectId: "personal",
@@ -21,34 +17,6 @@ const round = (id: string, previousTaskId?: string): CreationTaskDetail => ({
   progress: [],
   clarifications: [],
   ...(previousTaskId ? { previousTaskId } : {}),
-});
-test("the conversation shows real questions, answers and visible replies in time order without executing user markup", () => {
-  const task = round("first");
-  task.prompt = '<script>alert("input")</script>';
-  task.progress = [
-    { at: 2, generation: 1, stage: "message", text: "Preparing the outline" },
-    { at: 8, generation: 1, stage: "message", text: "The editable result is saved" },
-    { at: 4, generation: 1, stage: "saving" },
-  ];
-  task.clarifications = [
-    {
-      askedAt: 3,
-      answeredAt: 5,
-      questions: [{ id: "audience", question: "Who is this for?" }],
-      answers: { audience: { answers: ["Operations"] } },
-    },
-  ];
-  const view = new JSDOM(creationConversation([task], t)).window.document;
-  expect(view.querySelector("script")).toBeNull();
-  expect([...view.querySelectorAll(".creation-message > div")].map((node) => node.textContent?.trim())).toEqual([
-    task.prompt,
-    "Preparing the outline",
-    "Who is this for?",
-    "Operations",
-    "The editable result is saved",
-  ]);
-  task.clarifications[0]!.questions[0]!.isSecret = true;
-  expect(creationConversation([task], t)).not.toContain("Operations");
 });
 test("linked output rounds are read oldest first and the bounded cache does not grow with repeated navigation", async () => {
   const tasks = new Map([

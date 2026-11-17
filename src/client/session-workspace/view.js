@@ -33,6 +33,10 @@ export function createSessionWorkspaceView(t) {
   `,
   );
   requireElement("#app").append(inspector);
+  const extension = document.createElement("div");
+  extension.id = "sessionDomainSections";
+  extension.hidden = true;
+  requireElement("#sessionUsageSection", inspector).after(extension);
   const info = document.createElement("button");
   info.id = "sessionInfoButton";
   info.type = "button";

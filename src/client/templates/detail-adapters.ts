@@ -17,6 +17,7 @@ export function templateDetailAdapters(
   commands: () => Promise<TemplateCommands | null>,
   authoring: () => Promise<WritingSkillAuthoring | null>,
   previews: () => Promise<TemplateDetailPreviewRuntime>,
+  applySkill?: (selection: import("../../shared/creation/contracts.js").CreationSkillSelection) => void,
 ) {
   return [
     ...presentationManagerAdapters(t, async (draft) => {
@@ -26,6 +27,10 @@ export function templateDetailAdapters(
     skillManagerAdapter(
       t,
       async (selection) => {
+        if (applySkill) {
+          applySkill(selection);
+          return;
+        }
         const drafts = new CreationDrafts(identity || "local", "personal"),
           saved = drafts.load();
         if (saved?.pending) throw new PluginApiError(409, { messageId: "creative.pendingCreation" });

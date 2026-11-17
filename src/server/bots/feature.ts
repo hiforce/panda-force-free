@@ -154,6 +154,12 @@ export function createBotFeature(options: {
           return;
         }
         const task = /^\/api\/bots\/tasks\/([^/]+)(?:\/(review|retry|cancel|suspend|resume))?$/.exec(pathname);
+        if (pathname === "/api/bots/tasks/retry-failed" && method === "POST") {
+          const result = await store.retryFailed(owner, await json(context));
+          worker.tick();
+          respondJson(context.res, 200, result);
+          return;
+        }
         if (task && !task[2] && method === "DELETE") {
           await store.deleteTask(owner, task[1]!);
           respondJson(context.res, 200, { ok: true });

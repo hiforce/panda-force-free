@@ -5,6 +5,7 @@ import type {
   ApplicationToolDefinition,
 } from "../../../shared/engine/application-tools.js";
 import type { EngineEnvelope } from "../../../shared/engine/contracts.js";
+import { reportDiagnostic } from "../../../shared/diagnostics.js";
 
 /** Native request IDs never leave this adapter or enter the browser's conversation approval map. */
 export function codexApplicationCalls(options: {
@@ -79,7 +80,8 @@ export function codexApplicationCalls(options: {
         validateQuestionAnswers(questions, { answers });
         options.respond({ id: message.id, result: { answers } });
       } else reject();
-    } catch {
+    } catch (error) {
+      reportDiagnostic("application-tool-call", error);
       // Paths, task records, prompts and credentials must not escape through model-visible exception text.
       if (message.method === "item/tool/call")
         options.respond({

@@ -68,12 +68,11 @@ for (const [engine, width, locale] of [
     } else assert(before.y >= input.y + input.height);
     await page.screenshot({ path: `${out}/default-${width}.png`, fullPage: true });
     await creation.locator(`[data-activity-task="${request.id}"]`).click();
-    await page.locator('.creation-detail-page [data-detail-tab="conversation"]').waitFor();
+    await page.locator("#conversation .user-message").first().waitFor();
     await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
-    await page.locator('[data-detail-tab="conversation"]').click();
-    await page.locator('[data-conversation-role="user"]').waitFor();
-    assert.match(await page.locator("[data-detail-conversation]").innerText(), /商品资料协作平台/);
-    await page.locator("[data-detail-back]").click();
+    await page.locator("#conversation .user-message").first().waitFor();
+    assert.match(await page.locator("#conversation").innerText(), /商品资料协作平台/);
+    await page.goBack();
     await page.locator("#gadgetDocumentPrompt").fill("保留当前输入，调整创作记录组件的位置。");
     await page.locator("[data-gw=customize]").click();
     if (width >= 1050) {
@@ -98,7 +97,7 @@ for (const [engine, width, locale] of [
     assert.equal(await page.locator("#gadgetDocumentPrompt").inputValue(), "保留当前输入，调整创作记录组件的位置。");
     const restored = await (await context.request.get(app.base + "/api/gadgets/layout")).json();
     assert.deepEqual(restored, saved);
-    assert.equal(await page.locator(".creation-detail-page").count(), 0);
+    assert.equal(await page.locator(".creation-session-status").count(), 0);
     if (width >= 1050) {
       await page.locator("[data-gw=customize]").click();
       await creation.locator('[data-gw="remove"]').click();
@@ -108,17 +107,15 @@ for (const [engine, width, locale] of [
       await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
       await page.locator("[data-gw=customize]:enabled").waitFor();
       assert.equal(await page.locator('[data-gadget-type-id="system.creations"]').count(), 0);
-      assert.equal(await page.locator(".creation-detail-page").count(), 0);
+      assert.equal(await page.locator(".creation-session-status").count(), 0);
     }
     await page.goto(app.base + "/create?" + new URLSearchParams({ creation: request.id, creationScope: "personal" }));
-    await page.locator('.creation-detail-page [data-detail-tab="conversation"]').waitFor();
+    await page.locator("#conversation .user-message").first().waitFor();
     await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
-    await page.locator("[data-detail-back]").click();
-    const pair = page.locator(".creation-entry"),
-      left = await pair.locator("[data-creation-entry-composer]").boundingBox(),
-      right = await pair.locator("[data-creation-entry-activity]").boundingBox();
-    if (width >= 1050) assert(right.x >= left.x + left.width);
-    else assert(right.y >= left.y + left.height);
+    await page.locator("[data-creation-new]").click();
+    await page.locator(".creation-entry-composer #composer").waitFor();
+    assert.equal(await page.locator("#sessionInspector").isVisible(), false);
+    assert(await page.locator(".creation-skill-discovery").isVisible());
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: `${out}/create-${width}.png`, fullPage: true });
     assert.deepEqual(errors, []);

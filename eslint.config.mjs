@@ -11,6 +11,7 @@ export default [
       "public/**",
       "panda-docs/**",
       "src/server/creative/assets/vendor/css-tokenizer.js",
+      "src/server/materials/vendor/pdf-parser.mjs",
       "src/shared/i18n/messages.d.ts",
       "src/shared/i18n/catalogs.js",
       "src/shared/i18n/server-catalogs.js",

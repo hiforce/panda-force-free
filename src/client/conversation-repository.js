@@ -2,7 +2,7 @@ import { isConversationCacheExpired } from "./conversation-policy.js";
 
 // Memory, persistence revisions and invalidation share one lifecycle. An async
 // cache read must never resurrect a deleted conversation or survive logout.
-export function createConversationRepository({ persistent, maxThreads = 8 }) {
+export function createConversationRepository({ persistent, maxThreads = 8, cacheReadTimeoutMs = 150 }) {
   const memory = new Map(),
     versions = new Map(),
     pendingWrites = new Map(),
@@ -50,8 +50,18 @@ export function createConversationRepository({ persistent, maxThreads = 8 }) {
       if (!isConversationCacheExpired(thread)) return thread;
       forget(id);
     }
-    const generation = epoch,
-      thread = await persistent.get(id);
+    const generation = epoch;
+    let timer;
+    // Persistence is optional: a blocked IndexedDB transaction must not hold
+    // session navigation ahead of the authoritative server history request.
+    const thread = await Promise.race([
+      Promise.resolve()
+        .then(() => persistent.get(id))
+        .catch(() => null),
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve(null), cacheReadTimeoutMs);
+      }),
+    ]).finally(() => clearTimeout(timer));
     if (generation !== epoch || removed.has(id)) return null;
     // Prefer live data written while the persistent read was in flight.
     if (memory.has(id)) return memory.get(id);

@@ -1,11 +1,17 @@
 import { isRecord } from "../../../shared/records.js";
-import type { ApplicationRunScope, ApplicationToolEngine } from "../../../shared/engine/application-tools.js";
+import type {
+  ApplicationRunScope,
+  ApplicationToolEngine,
+  ApplicationRunFailure,
+} from "../../../shared/engine/application-tools.js";
+import { applicationRunFailure } from "../../../shared/engine/application-failure.js";
 import type { CodexConnection, CodexTransport, CodexTransportFactory } from "../codex-transport.js";
 import { createCodexBridge } from "../../bridge/codex-process.js";
 import { codexApplicationThread } from "./codex-policy.js";
 import { codexApplicationCalls } from "./codex-calls.js";
 import { ActiveRunBudget } from "../active-budget.js";
 import { rememberApplicationSession } from "./sessions.js";
+import { applicationVisibleEvents } from "../../../shared/engine/application-visible-events.js";
 
 function identity(value: unknown): string {
   if (typeof value !== "string" || !value || value.length > 128) throw new Error("Invalid application engine identity");
@@ -18,6 +24,7 @@ export function createCodexApplicationEngine(
     scratchDirectory: string;
     version: string;
     model?: string;
+    effort?: string;
     timeoutMs?: number;
     purpose?: "creation" | "knowledge" | "bots";
   },
@@ -48,19 +55,22 @@ export function createCodexApplicationEngine(
         budget!: ActiveRunBudget,
         terminalObserved = false,
         bound = false;
-      const earlyCompletions = new Map<string, "completed" | "failed" | "interrupted">();
+      type Terminal = { status: "completed" | "failed" | "interrupted"; failure?: ApplicationRunFailure };
+      const earlyCompletions = new Map<string, Terminal>();
+      const earlyVisible: Array<{ method: string; params: Record<string, unknown> }> = [];
+      const visible = applicationVisibleEvents((event) => {
+        void Promise.resolve(callbacks.event?.(event)).catch(() => {});
+      });
       let markReady!: () => void,
-        finish!: (result: ApplicationRunScope & { status: "completed" | "failed" | "interrupted" }) => void,
+        finish!: (result: ApplicationRunScope & Terminal) => void,
         fail!: (error: Error) => void;
       const ready = new Promise<void>((resolve) => {
           markReady = resolve;
         }),
-        completion = new Promise<ApplicationRunScope & { status: "completed" | "failed" | "interrupted" }>(
-          (resolve, reject) => {
-            finish = resolve;
-            fail = reject;
-          },
-        );
+        completion = new Promise<ApplicationRunScope & Terminal>((resolve, reject) => {
+          finish = resolve;
+          fail = reject;
+        });
       // A start failure can settle before the main flow awaits completion.
       void completion.catch(() => {});
       const abort = () => {
@@ -123,6 +133,17 @@ export function createCodexApplicationEngine(
             return;
           }
           if (
+            !stopping &&
+            scope &&
+            message.params?.threadId === scope.sessionId &&
+            ["item/agentMessage/delta", "item/completed", "thread/tokenUsage/updated"].includes(message.method || "")
+          ) {
+            if (bound && (message.method === "thread/tokenUsage/updated" || message.params.turnId === scope.runId))
+              visible(message.method!, message.params);
+            else if (!bound && earlyVisible.length < 128 && JSON.stringify(message.params).length <= 65536)
+              earlyVisible.push({ method: message.method!, params: message.params });
+          }
+          if (
             scope &&
             bound &&
             !stopping &&
@@ -141,9 +162,13 @@ export function createCodexApplicationEngine(
               typeof turn.id === "string" &&
               ["completed", "failed", "interrupted"].includes(String(turn.status))
             ) {
-              const status = turn.status as "completed" | "failed" | "interrupted";
-              if (turn.id === scope.runId && bound) finish({ ...scope, status });
-              else if (!bound && earlyCompletions.size < 8) earlyCompletions.set(turn.id, status);
+              const status = turn.status as Terminal["status"];
+              const terminal: Terminal = {
+                status,
+                ...(status === "failed" ? { failure: applicationRunFailure(turn.error) } : {}),
+              };
+              if (turn.id === scope.runId && bound) finish({ ...scope, ...terminal });
+              else if (!bound && earlyCompletions.size < 8) earlyCompletions.set(turn.id, terminal);
             }
           }
         },
@@ -180,6 +205,7 @@ export function createCodexApplicationEngine(
         const running = await transport.request("turn/start", {
           threadId: scope.sessionId,
           input: [{ type: "text", text: input.prompt }],
+          ...(options.effort ? { effort: options.effort } : {}),
         });
         if (!isRecord(running) || !isRecord(running.turn)) throw new Error("Invalid application engine run");
         scope = { ...scope, runId: identity(running.turn.id) };
@@ -192,8 +218,24 @@ export function createCodexApplicationEngine(
         ]);
         bound = true;
         markReady();
+        for (const event of earlyVisible)
+          if (event.method === "thread/tokenUsage/updated" || event.params.turnId === scope.runId)
+            visible(event.method, event.params);
+        earlyVisible.length = 0;
+        await callbacks.control?.({
+          steer: async (prompt) => {
+            if (stopping || !bound || terminalObserved || !scope?.runId || callbacks.signal.aborted)
+              throw new Error("Application execution closed");
+            if (!prompt.trim() || Buffer.byteLength(prompt) > 262144) throw new Error("Invalid application input");
+            await transport.request("turn/steer", {
+              threadId: scope.sessionId,
+              expectedTurnId: scope.runId,
+              input: [{ type: "text", text: prompt }],
+            });
+          },
+        });
         const early = earlyCompletions.get(scope.runId);
-        if (early) finish({ ...scope, status: early });
+        if (early) finish({ ...scope, ...early });
         const result = await completion;
         terminalObserved = true;
         return result;

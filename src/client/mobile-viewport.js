@@ -4,11 +4,24 @@ export function trackMobileViewport() {
   let frame = 0;
   /** @type {number[]} */
   let settling = [];
+  function editing() {
+    const input = document.activeElement;
+    if (input instanceof HTMLTextAreaElement) return !input.readOnly;
+    if (input instanceof HTMLInputElement)
+      return (
+        !input.readOnly &&
+        !["button", "checkbox", "radio", "submit", "reset", "file", "hidden", "color", "range"].includes(input.type)
+      );
+    return (
+      input instanceof HTMLElement &&
+      (input.isContentEditable || input instanceof HTMLIFrameElement || input instanceof HTMLSelectElement)
+    );
+  }
   function revealHomeComposer() {
     const input = document.activeElement;
     if (!(input instanceof HTMLTextAreaElement)) return;
-    const composer = input.closest(".composer"),
-      scroller = input.closest(".workbench-view");
+    const composer = input.closest(".composer, .message-composer"),
+      scroller = input.closest(".workbench-view, .creation-entry-layout .conversation");
     if (!composer || !scroller) return;
     const bounds = composer.getBoundingClientRect(),
       visible = scroller.getBoundingClientRect();
@@ -22,9 +35,17 @@ export function trackMobileViewport() {
     const mobile = root.classList.contains("mobile-device") || matchMedia("(max-width:767px)").matches;
     // Keep native pinch zoom: only adapt the keyboard/browser-chrome viewport at normal scale.
     const active = mobile && viewport && Math.abs(viewport.scale - 1) < 0.02 && viewport.height > 0;
-    root.classList.toggle("soft-keyboard-open", Boolean(active && innerHeight - viewport.height > 110));
+    const conversation =
+        ["new", "task", "creation"].includes(document.body.dataset.workbenchPage || "") ||
+        (document.body.classList.contains("session-layout") &&
+          !document.body.classList.contains("creation-entry-layout")),
+      pinned = active && (editing() || conversation);
+    root.classList.toggle("soft-keyboard-open", Boolean(pinned && innerHeight - viewport.height > 110));
     root.classList.toggle("visual-viewport-active", Boolean(active));
-    if (active) {
+    // A dismissed WebKit keyboard can leave stale visual metrics during SPA navigation.
+    // Entry/list pages use native dynamic viewport units when unfocused. Conversations
+    // retain their keyboard-sized dock while focus moves into its menus and dialogs.
+    if (pinned) {
       root.style.setProperty("--app-viewport-height", `${viewport.height}px`);
       root.style.setProperty("--app-viewport-top", `${viewport.offsetTop}px`);
       revealHomeComposer();
@@ -65,5 +86,8 @@ export function trackMobileViewport() {
   });
   viewport?.addEventListener("resize", schedule);
   viewport?.addEventListener("scroll", schedule);
+  new MutationObserver((changes) => {
+    if (changes.some((change) => change.oldValue !== document.body.dataset.workbenchPage)) settle();
+  }).observe(document.body, { attributes: true, attributeFilter: ["data-workbench-page"], attributeOldValue: true });
   settle();
 }

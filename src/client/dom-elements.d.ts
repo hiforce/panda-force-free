@@ -49,6 +49,7 @@ export interface InterfaceElements {
   "#changeList": HTMLElementTagNameMap["div"];
   "#changesPanel": HTMLElementTagNameMap["div"];
   "#changeSummary": HTMLElementTagNameMap["span"];
+  "#clearGoalDialog": HTMLElementTagNameMap["button"];
   "#clearSettingsSearch": HTMLElementTagNameMap["button"];
   "#closeAllFileTabs": HTMLElementTagNameMap["button"];
   "#closeFilePreview": HTMLElementTagNameMap["button"];
@@ -64,6 +65,8 @@ export interface InterfaceElements {
   "#composerContextTray": HTMLElementTagNameMap["div"];
   "#composerProjectButton": HTMLElementTagNameMap["button"];
   "#composerProjectLabel": HTMLElementTagNameMap["span"];
+  "#composerSkillControl": HTMLElementTagNameMap["span"];
+  "#composerSkills": HTMLElementTagNameMap["div"];
   "#confirmFullAccess": HTMLElementTagNameMap["button"];
   "#contextUsage": HTMLElementTagNameMap["span"];
   "#conversation": HTMLElementTagNameMap["section"];
@@ -103,6 +106,7 @@ export interface InterfaceElements {
   "#goalDialogDetail": HTMLElementTagNameMap["div"];
   "#goalDialogError": HTMLElementTagNameMap["p"];
   "#goalDialogObjective": HTMLElementTagNameMap["textarea"];
+  "#goalDialogPlayback": HTMLElementTagNameMap["div"];
   "#goalDialogStatus": HTMLElementTagNameMap["span"];
   "#goalDialogTitle": HTMLElementTagNameMap["strong"];
   "#goalStatus": HTMLElementTagNameMap["div"];
@@ -142,6 +146,7 @@ export interface InterfaceElements {
   "#passwordStep": HTMLElementTagNameMap["p"];
   "#passwordTitle": HTMLElementTagNameMap["h1"];
   "#passwordVisibility": HTMLElementTagNameMap["button"];
+  "#pauseGoalDialog": HTMLElementTagNameMap["button"];
   "#pendingApprovalNotice": HTMLElementTagNameMap["button"];
   "#permissionMenu": HTMLElementTagNameMap["div"];
   "#permissionOptions": HTMLElementTagNameMap["div"];
@@ -187,6 +192,7 @@ export interface InterfaceElements {
   "#sessionChecklistInput": HTMLElementTagNameMap["input"];
   "#sessionChecklistItems": HTMLElementTagNameMap["div"];
   "#sessionConfiguration": HTMLElementTagNameMap["div"];
+  "#sessionDomainSections": HTMLElementTagNameMap["div"];
   "#sessionElapsed": HTMLElementTagNameMap["span"];
   "#sessionExecutionHint": HTMLElementTagNameMap["p"];
   "#sessionExecutionSection": HTMLElementTagNameMap["section"];
@@ -216,8 +222,6 @@ export interface InterfaceElements {
   "#sessionProjectName": HTMLElementTagNameMap["strong"];
   "#sessionProjectSelect": HTMLElementTagNameMap["select"];
   "#sessionReloadModels": HTMLElementTagNameMap["button"];
-  "#sessionSettingEfforts": HTMLElementTagNameMap["div"];
-  "#sessionSettingModel": HTMLElementTagNameMap["select"];
   "#sessionSettingsDialog": HTMLElementTagNameMap["dialog"];
   "#sessionSettingsDialogTitle": HTMLElementTagNameMap["h2"];
   "#sessionSettingsForm": HTMLElementTagNameMap["form"];

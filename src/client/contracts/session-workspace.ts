@@ -1,6 +1,8 @@
 import type { MessageId } from "../../shared/i18n/messages.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import type { I18nRuntime } from "./platform.js";
+import type { CreationSkillSelection } from "../../shared/creation/contracts.js";
+import type { ComposerAttachment } from "../../shared/data-contracts.js";
 
 export interface SessionUsageView {
   total: number | null;
@@ -25,6 +27,28 @@ export interface SessionWorkspaceView {
   modelLabel: string;
   effortLabel: string;
   permissionLabel: string;
+  contextKind?: "creation";
+  inspectorAvailable?: boolean;
+}
+
+/** Domain commands use public identities; the shared UI never forwards private engine RPCs. */
+export interface CreationSessionDomain {
+  readonly key: string;
+  readonly running: boolean;
+  read(): SessionWorkspaceView;
+  controls(): SessionControlView;
+  applyModel(model: string, effort: string): void;
+  goal(): import("../../shared/engine/types.js").Goal | null;
+  goalCommand(
+    command: Pick<import("../../shared/creation/contracts.js").CreationGoalCommand, "action" | "objective">,
+  ): Promise<import("../../shared/engine/types.js").Goal | null>;
+  renderSections(host: HTMLElement): void;
+  submit(input: {
+    text: string;
+    attachments: readonly ComposerAttachment[];
+    selections: readonly CreationSkillSelection[];
+  }): Promise<void>;
+  stop(): Promise<void>;
 }
 
 export interface SessionTool {
@@ -75,9 +99,11 @@ export interface SessionWorkspaceOptions {
   pendingAction: () => void;
   search: () => void;
   layoutChanged: () => void;
+  renderSections?: (host: HTMLElement) => void;
 }
 
 export interface SessionControlView {
+  settingsHint?: MessageId;
   sessionId: string;
   model: string;
   effort: string;

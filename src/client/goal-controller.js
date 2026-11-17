@@ -16,6 +16,9 @@ export function createGoalController({
   toast,
   mutations,
   onChange,
+  activeId = () => state.active?.id,
+  readGoal = (id) => state.goals.get(id),
+  isManaged = (_id) => false,
 }) {
   const loader = createGoalLoader({ rpc, apply: applyGoalStatusEvent, clear: clearGoal });
   const pendingActions = new Set();
@@ -47,23 +50,42 @@ export function createGoalController({
   }
   let goalDialogThreadId = "",
     goalDialogGoalId = "",
-    goalDialogReturnFocus = null;
+    goalDialogReturnFocus = null,
+    goalDialogDraft = null;
   function closeGoalDialog() {
     const dialog = $("#goalDialog");
     if (dialog?.open) dialog.close();
   }
+  const dialogGoal = (id) => readGoal(id) || (goalDialogThreadId === id ? goalDialogDraft : null);
   function syncGoalActions() {
     const threadId = goalDialogThreadId,
-      goal = threadId && state.goals.get(threadId),
+      goal = threadId && dialogGoal(threadId),
       button = $("#resumeGoalDialog");
     button.hidden = !resumable(goal);
     button.disabled = pendingActions.has(threadId);
     button.setAttribute("aria-busy", String(pendingActions.has(threadId)));
+    $("#goalDialogPlayback").hidden = !readGoal(threadId);
+    $("#pauseGoalDialog").hidden = !goal || goal.status !== "active";
+    $("#pauseGoalDialog").disabled = pendingActions.has(threadId);
+    $("#clearGoalDialog").disabled = pendingActions.has(threadId);
+    if (isManaged(threadId) && goal)
+      localizeText(
+        $("#goalDialogStatus"),
+        {
+          draft: "creation.createGoal",
+          active: "common.goalInProgress",
+          paused: "common.goalPaused",
+          blocked: "common.goalBlocked",
+          completed: "common.goalCompleted",
+        }[goal.status] || "common.goalInProgress",
+        undefined,
+        t,
+      );
   }
   async function resumeGoal(threadId) {
     const thread = state.active,
-      goal = state.goals.get(threadId);
-    if (thread?.id !== threadId || !resumable(goal) || pendingActions.has(threadId)) return;
+      goal = readGoal(threadId);
+    if (activeId() !== threadId || !resumable(goal) || pendingActions.has(threadId)) return;
     pendingActions.add(threadId);
     if (goalDialogThreadId === threadId) $("#goalDialogError").hidden = true;
     syncGoalActions();
@@ -88,16 +110,21 @@ export function createGoalController({
       }
     }
   }
-  function openGoalDialog(threadId = state.active?.id) {
-    const goal = threadId && state.goals.get(threadId),
+  function openGoalDialog(
+    threadId = activeId(),
+    draft = /** @type {import("../shared/engine/types.js").Goal | null} */ (null),
+  ) {
+    const goal = threadId && (readGoal(threadId) || (isManaged(threadId) ? draft : null)),
       dialog = $("#goalDialog");
     if (!goal || !dialog) return;
     goalDialogThreadId = threadId;
     goalDialogGoalId = goal.goalId;
+    goalDialogDraft = draft;
     goalDialogReturnFocus = document.activeElement;
     localizeText(
       $("#goalDialogStatus"),
       {
+        draft: "creation.createGoal",
         active: "common.goalInProgress",
         paused: "common.goalPaused",
         blocked: "common.goalBlocked",
@@ -110,6 +137,7 @@ export function createGoalController({
       t,
     );
     $("#goalDialogObjective").value = goal.objective || "";
+    $("#goalDialogObjective").maxLength = isManaged(threadId) ? 16000 : 4000;
     $("#goalDialogObjective").setCustomValidity("");
     setOpaqueText(
       $("#goalDialogDetail"),
@@ -124,11 +152,11 @@ export function createGoalController({
   async function saveGoalDialog() {
     const threadId = goalDialogThreadId,
       goalId = goalDialogGoalId,
-      goal = state.goals.get(threadId),
+      goal = dialogGoal(threadId),
       input = $("#goalDialogObjective"),
       objective = input.value.trim(),
       button = $("#saveGoalDialog");
-    if (button.disabled || !goal || goal.goalId !== goalId) return;
+    if (button.disabled || pendingActions.has(threadId) || !goal || goal.goalId !== goalId) return;
     if (!objective) {
       input.setCustomValidity(t("goals.goalObjectiveCannotBeEmpty"));
       input.reportValidity();
@@ -137,6 +165,8 @@ export function createGoalController({
     input.setCustomValidity("");
     $("#goalDialogError").hidden = true;
     button.disabled = true;
+    pendingActions.add(threadId);
+    syncGoalActions();
     localizeText(button, "goals.saving", undefined, t);
     try {
       const result = await rpc("thread/goal/set", {
@@ -157,14 +187,17 @@ export function createGoalController({
         $("#goalDialogError").hidden = false;
       }
     } finally {
+      pendingActions.delete(threadId);
+      syncGoalActions();
       button.disabled = false;
       localizeText(button, "common.save", undefined, t);
     }
   }
-  function syncGoalStatusSurface(threadId = state.active?.id) {
+  function syncGoalStatusSurface(threadId = activeId()) {
+    if (isManaged(activeId())) threadId = activeId();
     const root = $("#goalStatus");
     if (!root) return;
-    const goal = threadId && state.goals.get(threadId);
+    const goal = threadId && readGoal(threadId);
     if (!goal) {
       root.hidden = true;
       root.replaceChildren();
@@ -173,6 +206,7 @@ export function createGoalController({
       return;
     }
     const labels = {
+        draft: "creation.createGoal",
         active: "common.goalInProgress",
         paused: "common.goalPaused",
         blocked: "common.goalBlocked",
@@ -199,7 +233,7 @@ export function createGoalController({
     setOpaqueAttribute(root, "title", `${label}${progress ? ` · ${progress}` : ""}`);
     setMessageHtml(
       root,
-      `<span class="goal-status-icon" aria-hidden="true">${codexIcon(icons[goal.status] || icons.active)}</span><span class="goal-status-copy">${escapeHtml(label)}</span>${progress ? `<span class="goal-status-progress">${escapeHtml(progress)}</span>` : ""}${resumable(goal) ? `<button type="button" class="goal-status-resume" ${pendingActions.has(threadId) ? 'disabled aria-busy="true"' : ""}>${escapeHtml(t("common.resumeGoal"))}</button>` : ""}<button type="button" class="goal-status-toggle" aria-haspopup="dialog" aria-controls="goalDialog">${t("goals.showGoalDetails")}</button>`,
+      `<span class="goal-status-icon" aria-hidden="true">${codexIcon(icons[goal.status] || icons.active)}</span><span class="goal-status-copy">${escapeHtml(label)}</span>${progress ? `<span class="goal-status-progress">${escapeHtml(progress)}</span>` : ""}${resumable(goal) ? `<button type="button" class="goal-status-resume" aria-label="${escapeHtml(t("common.resumeGoal"))}" title="${escapeHtml(t("common.resumeGoal"))}" ${pendingActions.has(threadId) ? 'disabled aria-busy="true"' : ""}>${codexIcon("play")}</button>` : ""}<button type="button" class="goal-status-toggle" aria-haspopup="dialog" aria-controls="goalDialog">${t("goals.showGoalDetails")}</button>`,
     );
     const resume = findElement(".goal-status-resume", root);
     if (resume)
@@ -250,7 +284,11 @@ export function createGoalController({
   function applyGoalStatusEvent(method, payload = {}) {
     const threadId = typeof payload.threadId === "string" && payload.threadId ? payload.threadId : state.active?.id;
     if (!threadId) return;
-    const existing = state.goals.get(threadId),
+    if (isManaged(threadId)) {
+      if (threadId === activeId()) onChange(threadId);
+      return;
+    }
+    const existing = readGoal(threadId),
       source = goalPayload(payload),
       goalId = String(source.goalId || source.id || existing?.goalId || "default"),
       updatedAt = (timestampSeconds(source.updatedAt ?? source.timestamp) || 0) * 1000;
@@ -276,6 +314,7 @@ export function createGoalController({
       localizeText(
         $("#goalDialogStatus"),
         {
+          draft: "creation.createGoal",
           active: "common.goalInProgress",
           paused: "common.goalPaused",
           blocked: "common.goalBlocked",
@@ -292,12 +331,37 @@ export function createGoalController({
     if (threadId === state.active?.id) onChange(threadId);
   }
   $("#resumeGoalDialog").onclick = () => void resumeGoal(goalDialogThreadId);
+  async function changeGoal(command) {
+    const threadId = goalDialogThreadId;
+    if (!threadId || activeId() !== threadId || pendingActions.has(threadId)) return;
+    pendingActions.add(threadId);
+    syncGoalActions();
+    $("#goalDialogError").hidden = true;
+    try {
+      await submitGoalCommand(state.active, { command }, { preserveDraft: true });
+      if (command === "clear" && goalDialogThreadId === threadId) closeGoalDialog();
+      else if (goalDialogThreadId === threadId) {
+        localizeText($("#goalDialogStatus"), "common.goalPaused", undefined, t);
+      }
+    } catch (error) {
+      if (goalDialogThreadId === threadId) {
+        setOpaqueText($("#goalDialogError"), errorMessage(error));
+        $("#goalDialogError").hidden = false;
+      }
+    } finally {
+      pendingActions.delete(threadId);
+      syncGoalActions();
+    }
+  }
+  $("#pauseGoalDialog").onclick = () => void changeGoal("pause");
+  $("#clearGoalDialog").onclick = () => void changeGoal("clear");
   $("#closeGoalDialog").onclick = closeGoalDialog;
   $("#cancelGoalDialog").onclick = closeGoalDialog;
   $("#goalDialogObjective").oninput = () => $("#goalDialogObjective").setCustomValidity("");
   $("#goalDialog").addEventListener("close", () => {
     goalDialogThreadId = "";
     goalDialogGoalId = "";
+    goalDialogDraft = null;
     if (goalDialogReturnFocus?.isConnected) goalDialogReturnFocus.focus();
     goalDialogReturnFocus = null;
   });
@@ -314,12 +378,12 @@ export function createGoalController({
   };
   function clearGoal(threadId) {
     loader.changed(threadId);
-    mutations.collection("goals").delete(threadId);
+    if (!isManaged(threadId)) mutations.collection("goals").delete(threadId);
     if (threadId === goalDialogThreadId) closeGoalDialog();
-    onChange(state.active?.id);
+    onChange(activeId());
   }
   function syncGoalDialogSession() {
-    if ($("#goalDialog").open && goalDialogThreadId !== state.active?.id) closeGoalDialog();
+    if ($("#goalDialog").open && goalDialogThreadId !== activeId()) closeGoalDialog();
   }
   return {
     closeGoalDialog,

@@ -41,7 +41,9 @@ export class CreationSkillCategories {
     private readonly host: HTMLElement,
     private readonly t: Translate,
     private readonly changed: (reset: boolean) => void,
+    initial = "",
   ) {
+    this.selected = initial;
     this.unsubscribe = this.client.subscribe(() => {
       const previous = this.selected;
       this.render();

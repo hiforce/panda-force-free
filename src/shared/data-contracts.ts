@@ -11,6 +11,7 @@ export interface ComposerAttachment {
   url?: string;
   path?: string;
   error?: string;
+  materialId?: string;
 }
 
 export interface HistoryQuery {

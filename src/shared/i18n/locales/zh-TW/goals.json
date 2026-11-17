@@ -6,5 +6,6 @@
   "goalObjective": "Goal 目標",
   "goalObjectiveCannotBeEmpty": "Goal 目標不能為空",
   "goalUpdated": "Goal 已更新",
-  "goalCleared": "已清除目標"
+  "goalCleared": "已清除目標",
+  "pause": "暫停目標"
 }

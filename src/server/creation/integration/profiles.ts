@@ -4,6 +4,7 @@ import type { CreationEngineProfile } from "../../../shared/creation/contracts.j
 import { creationEngineProfile } from "./input-codec.js";
 import { CreationError } from "../contracts.js";
 import { creationId, creationRecord, creationText } from "../validation.js";
+import { isRecord } from "../../../shared/records.js";
 
 export interface CreationProfileSettings {
   profiles: readonly CreationEngineProfile[];
@@ -55,15 +56,31 @@ export class CreationProfiles {
     readonly settings: CreationProfileSettings,
     private readonly engines: ReadonlySet<string>,
     private readonly defaultModel: (engineId: string) => Promise<string>,
+    private readonly models?: () => Promise<unknown>,
   ) {}
-  async resolve(id: string) {
+  async resolve(id: string, selection?: { model?: string; effort?: string }) {
     const configured = this.settings.profiles.find((profile) => profile.id === id);
     if (!this.settings.enabled || !configured || !this.engines.has(configured.engineId))
       throw new CreationError("unavailable");
-    return {
+    const result = {
       ...configured,
       model: configured.model ?? creationText(await this.defaultModel(configured.engineId), 128),
     };
+    if (selection?.model || selection?.effort) {
+      const catalog = await this.models?.();
+      if (!isRecord(catalog) || !Array.isArray(catalog.data)) throw new CreationError("unavailable");
+      const model = catalog.data.find(
+        (entry) => isRecord(entry) && (entry.model ?? entry.id) === (selection.model || result.model),
+      );
+      if (!isRecord(model) || model.hidden === true) throw new CreationError("invalidInput");
+      const efforts = Array.isArray(model.supportedReasoningEfforts) ? model.supportedReasoningEfforts : [];
+      const effort = selection.effort ?? model.defaultReasoningEffort;
+      if (effort && !efforts.some((item) => isRecord(item) && item.reasoningEffort === effort))
+        throw new CreationError("invalidInput");
+      result.model = creationText(model.model ?? model.id, 128);
+      if (effort) result.effort = creationId(effort);
+    }
+    return result;
   }
   async list() {
     if (!this.settings.enabled)

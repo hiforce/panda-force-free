@@ -1,4 +1,8 @@
 import type { EngineQuestion } from "./questions.js";
+import type { TokenUsage } from "./types.js";
+
+export type ApplicationVisibleEvent =
+  { kind: "message"; id: string; text: string; complete: boolean } | { kind: "usage"; usage: TokenUsage };
 
 export interface ApplicationToolDefinition {
   name: string;
@@ -22,11 +26,14 @@ export interface ApplicationToolResult {
 export type ApplicationQuestionAnswers = Record<string, { answers: string[] }>;
 export interface ApplicationRunCallbacks {
   signal: AbortSignal;
+  directory?: { readonly path: string; verify(): Promise<void> };
   session?(sessionId: string): void | Promise<void>;
   started(scope: ApplicationRunScope): void | Promise<void>;
   call(value: ApplicationToolCall): Promise<ApplicationToolResult>;
   question?(scope: ApplicationRunScope, questions: readonly EngineQuestion[]): Promise<ApplicationQuestionAnswers>;
   message?(text: string): void | Promise<void>;
+  event?(event: ApplicationVisibleEvent): void | Promise<void>;
+  control?(control: { steer(prompt: string): Promise<void> }): void | Promise<void>;
 }
 export interface ApplicationToolEngine {
   readonly id: string;
@@ -39,5 +46,7 @@ export interface ApplicationToolEngine {
       tools: readonly ApplicationToolDefinition[];
     },
     callbacks: ApplicationRunCallbacks,
-  ): Promise<ApplicationRunScope & { status: "completed" | "failed" | "interrupted" }>;
+  ): Promise<ApplicationRunScope & { status: "completed" | "failed" | "interrupted"; failure?: ApplicationRunFailure }>;
 }
+
+export type ApplicationRunFailure = "rateLimited" | "authentication" | "unavailable" | "failed";

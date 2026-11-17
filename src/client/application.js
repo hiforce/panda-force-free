@@ -195,6 +195,7 @@ export function startApplication() {
   install(
     localization,
     assembleLocalization({
+      composerPort: composer,
       viewUpdates: environment.viewUpdates,
       $: environment.$,
       i18n: environment.i18n,
@@ -259,6 +260,7 @@ export function startApplication() {
   install(
     goals,
     assembleGoals({
+      workbenchPort: workbench,
       viewUpdates: environment.viewUpdates,
       transportPort: transport,
       $: environment.$,
@@ -307,6 +309,8 @@ export function startApplication() {
   install(
     composer,
     assembleComposer({
+      workbenchPort: workbench,
+      identity: environment.identityKey,
       drafts: environment.drafts,
       mutations: environment.stateFor("composer").mutations,
       state: environment.stateFor("composer").state,
@@ -684,6 +688,7 @@ export function startApplication() {
   install(
     submission,
     assembleSubmission({
+      workbenchPort: workbench,
       transportPort: transport,
       selection: environment.selection,
       viewUpdates: environment.viewUpdates,
@@ -864,6 +869,12 @@ export function startApplication() {
   install(
     workbench,
     assembleWorkbench({
+      goalsPort: goals,
+      composerPort: composer,
+      timelinePort: timeline,
+      viewportPort: viewport,
+      messagesPort: messages,
+      modelsPort: models,
       identity: environment.identityKey,
       viewUpdates: environment.viewUpdates,
       t: environment.t,

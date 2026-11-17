@@ -58,6 +58,12 @@ export interface DocumentDetail {
   document: DocumentRecord;
   revision: DocumentRevision;
 }
+export interface DocumentRevisionReference {
+  documentId: string;
+  revisionId: string;
+  version: number;
+  contentHash: string;
+}
 export interface DocumentPage {
   documents: DocumentRecord[];
   total: number;

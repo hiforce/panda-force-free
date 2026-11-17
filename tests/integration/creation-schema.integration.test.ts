@@ -29,7 +29,7 @@ test("existing creation metadata migrates without losing task identity or resett
     );
     db.query("UPDATE creation_tasks SET attempts=4,generation=4 WHERE id=?").run(task.spec.id);
     db.exec(
-      "DROP TABLE creation_progress; DROP TABLE creation_actions; DROP TABLE creation_questions; ALTER TABLE creation_tasks DROP COLUMN budget; PRAGMA user_version=1;",
+      "DROP TABLE creation_goals; DROP TABLE creation_messages; DROP TABLE creation_progress; DROP TABLE creation_actions; DROP TABLE creation_questions; ALTER TABLE creation_tasks DROP COLUMN budget; PRAGMA user_version=1;",
     );
     db.close();
     db = undefined;
@@ -54,13 +54,13 @@ test("a newer creation schema is rejected without downgrading its database", asy
   try {
     const newer = new Database(path);
     newer.exec(
-      "PRAGMA user_version=4; CREATE TABLE future_data(value TEXT); INSERT INTO future_data VALUES('retained');",
+      "PRAGMA user_version=6; CREATE TABLE future_data(value TEXT); INSERT INTO future_data VALUES('retained');",
     );
     newer.close();
     expect(() => openCreationDatabase(path)).toThrow("unavailable");
     const retained = new Database(path, { readonly: true });
     try {
-      expect(retained.query("PRAGMA user_version").get()).toEqual({ user_version: 4 });
+      expect(retained.query("PRAGMA user_version").get()).toEqual({ user_version: 6 });
       expect(retained.query("SELECT value FROM future_data").get()).toEqual({ value: "retained" });
     } finally {
       retained.close();

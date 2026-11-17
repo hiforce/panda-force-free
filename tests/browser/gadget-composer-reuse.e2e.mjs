@@ -55,7 +55,21 @@ try {
         if (request.url().includes("/document-creations/options")) optionsReads++;
         if (request.method() === "POST" && /\/document-creations$/.test(new URL(request.url()).pathname)) submissions++;
       });
-      const navigate = (route) => page.locator(`[data-wb=route][data-route="${route}"]:visible`).first().click();
+      const navigate = async (route) => {
+        const bottom = page.locator(`.workbench-mobile-nav [data-route="${route}"]`);
+        if (await bottom.isVisible()) {
+          await bottom.click();
+          return;
+        }
+        const navigation = page.locator(`.workbench-navigation [data-route="${route}"]`);
+        if (!(await navigation.isVisible())) {
+          await page.locator("#workspaceNavigationToggle").click();
+          await page.waitForFunction(
+            () => document.querySelector("#workspaceNavigationToggle")?.getAttribute("aria-expanded") === "true",
+          );
+        }
+        await navigation.click();
+      };
       const root = page.locator('[data-gadget-type-id="system.composer"]');
       const prompt = page.locator("#gadgetDocumentPrompt");
       const chooseSkill = async () => {
@@ -88,6 +102,14 @@ try {
       assert.equal(new URL(page.url()).pathname, "/workspace", "Confirming an IME candidate must not send a task");
       assert.equal(submissions, 0);
       await chooseSkill();
+      const fold = root.locator(".message-composer-disclosure");
+      await fold.click();
+      assert.equal(await fold.getAttribute("aria-expanded"), "false");
+      assert((await root.locator("form").boundingBox()).height <= 54);
+      assert.equal(await prompt.inputValue(), "Shared personal brief");
+      await fold.click();
+      assert.equal(await fold.getAttribute("aria-expanded"), "true");
+      assert.equal(await root.locator("[data-selected-skill=software-prd]").count(), 1);
       await page.screenshot({ path: `${out}/workbench-${locale}-${width}.png` });
       assert.equal(await page.locator("#conversationProjectPicker").isVisible(), false);
       assert.equal(await page.locator("#businessProjectContext").isVisible(), false);
@@ -95,25 +117,26 @@ try {
       const sharedShape = await shape();
       await navigate("create");
       await page.waitForURL("**/create");
-      await page.locator("[data-selected-skill=software-prd] .template-cover").waitFor();
+      const native = page.locator("#composer");
+      await native.locator("[data-selected-skill=software-prd] .template-cover").waitFor();
       assert.equal(await page.locator("#conversationProjectPicker").isVisible(), false);
-      assert.equal(await root.count(), 1);
       assert.equal(await page.locator(".creative-composer,#creativePrompt").count(), 0);
-      assert.equal(await prompt.inputValue(), "Shared personal brief");
+      assert.equal(await native.locator("#prompt").inputValue(), "Shared personal brief");
+      assert.equal(await page.locator("#sessionInspector").isVisible(), false);
       const nextLocale = locale === "en" ? "zh-TW" : "en";
       await page.evaluate((value) => window.__pandaForceI18n.setPreference(value), nextLocale);
       await page.waitForFunction((value) => document.documentElement.lang === value, nextLocale);
-      await page
-        .locator(`[data-gd-start][aria-label="${nextLocale === "en" ? "Send message" : "傳送訊息"}"]`)
-        .waitFor();
+      await native.locator(`#sendButton[aria-label="${nextLocale === "en" ? "Send message" : "傳送訊息"}"]`).waitFor();
       assert.match(
-        await page.locator('[data-selected-skill="software-prd"] strong').innerText(),
+        await native.locator('[data-selected-skill="software-prd"] strong').innerText(),
         nextLocale === "en" ? /Software PRD/ : /軟體需求/,
       );
       await page.evaluate((value) => window.__pandaForceI18n.setPreference(value), locale);
       await page.waitForFunction((value) => document.documentElement.lang === value, locale);
-      assert.deepEqual(await shape(), sharedShape);
       await page.screenshot({ path: `${out}/personal-${locale}-${width}.png` });
+      await navigate("workspace");
+      await prompt.waitFor();
+      assert.equal(await prompt.inputValue(), "Shared personal brief");
       await page.locator("[data-gd-project]").click();
       await page.locator(`[data-gd-destination="${project.id}"]`).click();
       await prompt.fill("Shared project brief");
@@ -161,8 +184,8 @@ try {
         assert(!calls.some((call) => call.method === "turn/start" && call.params?.threadId === "old-alpha"));
       }
       await navigate("create");
-      await prompt.waitFor();
-      assert.equal(await prompt.inputValue(), "Shared personal brief");
+      await page.locator("#prompt").waitFor();
+      assert.equal(await page.locator("#prompt").inputValue(), "Shared personal brief");
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.deepEqual(errors, []);
       records.push({

@@ -57,7 +57,7 @@ export class SQLiteBotQueries {
       json_extract(data,'$.title') title,json_extract(data,'$.externalTaskId') externalTaskId,json_extract(data,'$.decision') decision,json_extract(data,'$.decisionLabel') decisionLabel,
       json_extract(data,'$.failure') failure,json_extract(data,'$.callbackStatus') callbackStatus,
       json_extract(data,'$.createdAt') createdAt,json_extract(data,'$.updatedAt') updatedAt,
-      json_extract(data,'$.input.input.text') summary,NULL reason
+      json_extract(data,'$.input.input.text') summary,substr(json_extract(data,'$.reason'),1,400) reason
       FROM bot_tasks WHERE ${conditions.join(" AND ")} ORDER BY rowid DESC LIMIT ? OFFSET ?`,
       )
       .all(...values, query.limit, (page - 1) * query.limit)

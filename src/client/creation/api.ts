@@ -30,15 +30,25 @@ async function json<T>(path: string, body?: unknown): Promise<T> {
 export function creationApiFor(project = "") {
   const prefix = (project === "personal" ? "/api/personal" : "/api") + "/document-creations";
   return {
+    clearHistory: (command: { id: string; taskId?: string; before?: number }) =>
+      json<{ id: string; hidden: number }>(prefix + "/history/clear", command),
     options: () => json<CreationAvailability>(prefix + "/options"),
-    list: (project: string) => json<{ tasks: CreationTaskView[] }>(prefix + "?" + new URLSearchParams({ project })),
+    list: (project: string) =>
+      json<{ tasks: CreationTaskView[]; before: number }>(prefix + "?" + new URLSearchParams({ project })),
     detail: (id: string) => json<{ task: CreationTaskDetail }>(prefix + "/detail?" + new URLSearchParams({ id })),
     progress: (id: string) =>
       json<{ task: CreationTaskDetail }>(prefix + "/detail?" + new URLSearchParams({ id, view: "progress" })),
     followUp: (taskId: string, id: string, prompt: string) =>
       json<{ task: CreationTaskView }>(prefix + "/follow-up", { taskId, id, prompt }),
+    message: (taskId: string, body: Record<string, unknown>) =>
+      json<{ task: CreationTaskView }>(prefix + "/message", { taskId, ...body }),
     submit: (body: CreationRequest) => json<{ task: CreationTaskView }>(prefix, body),
     cancel: (id: string) => json<{ task: CreationTaskView }>(prefix + "/cancel", { id }),
+    goal: (taskId: string, command: import("../../shared/creation/contracts.js").CreationGoalCommand) =>
+      json<{ task: CreationTaskView; goal: import("../../shared/creation/contracts.js").CreationGoal | null }>(
+        prefix + "/goal",
+        { taskId, ...command },
+      ),
     retry: (id: string, operationId: string) =>
       json<{ task: CreationTaskView }>(prefix + "/retry", { id, operationId }),
     answer: (id: string, answers: unknown) => json<{ task: CreationTaskView }>(prefix + "/answer", { id, answers }),

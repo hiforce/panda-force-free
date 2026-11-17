@@ -15,6 +15,7 @@ export interface CreationScheduling {
   nextOutput(now: number): CreationResult<CreationTask | null>;
 }
 export interface CreationRunTasks extends CreationExecutionTasks {
+  assertExecution(scope: import("../contracts.js").CreationExecution, now: number): CreationResult<CreationTask>;
   heartbeat(lease: CreationLease, now: number, leaseMs: number): CreationResult<void>;
 }
 export interface CreationEngines {

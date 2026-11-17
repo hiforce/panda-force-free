@@ -37,6 +37,7 @@ interface BackgroundShutdown {
   slides: Closes;
   sources: Closes;
   closeCreativeText(): unknown;
+  closeMaterialText(): unknown;
 }
 interface StorageShutdown {
   drainCatalog(): Promise<void>;
@@ -75,8 +76,10 @@ export async function drainApplicationBackground(ports: BackgroundShutdown) {
     ports.search.close(),
     ports.closeCreativeText(),
     ports.knowledge.close(),
-    ports.creation.close(),
-    ports.personal.close(),
+    (async () => {
+      await Promise.all([ports.creation.close(), ports.personal.close()]);
+      await ports.closeMaterialText();
+    })(),
     ports.publication.stop(),
     ports.editorial.stop(),
     (async () => {

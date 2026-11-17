@@ -2,9 +2,19 @@ import { localizeAttribute, setMessageHtml } from "../i18n.js";
 
 import { codexIcon } from "../codex-icons.js";
 import { attachmentsFromInput, composerTextFromInput } from "../composer-attachments.js";
+import { CreationSkills } from "../creation/skills.js";
+import { composerSkillButton } from "../composer-skill-button.js";
+import { DOCUMENT_CREATION_CAPABILITIES } from "../../shared/creation/contracts.js";
+import { sessionSkillsFromInput } from "../../shared/session-skills.js";
+import { canonicalData } from "../../shared/read-model.js";
+import { createComposerDisclosure } from "../message-composer-disclosure.js";
+import { parseWorkbenchRoute } from "../workbench-route.js";
+import { creationSessionRoute } from "../creation/session-route.js";
+import { selectCreationSkill } from "../creation/drafts.js";
+import { creationDraftAfterAcknowledgement } from "../creation/submitted-draft.js";
 
 // Owns drafts, IME input and submit-control projections; native delivery is delegated.
-/** @param {import("./ports.js").FeatureOptions<"drafts" | "mutations" | "state" | "$" | "t" | "viewUpdates", "uploads" | "status" | "delivery" | "models", "composer">} options */
+/** @param {import("./ports.js").FeatureOptions<"drafts" | "mutations" | "state" | "$" | "t" | "viewUpdates" | "identity", "uploads" | "status" | "delivery" | "models" | "workbench", "composer">} options */
 export function assembleComposer({
   drafts,
   mutations,
@@ -16,6 +26,8 @@ export function assembleComposer({
   deliveryPort,
   viewUpdates,
   modelsPort,
+  identity,
+  workbenchPort,
 }) {
   const {
     composerHistory,
@@ -25,10 +37,73 @@ export function assembleComposer({
     getComposerDraft,
     setComposerDraft,
   } = drafts;
-  function saveComposerDraft() {
+  const initialRoute = parseWorkbenchRoute();
+  const disclosure = createComposerDisclosure(
+    $("#composer"),
+    t,
+    identity,
+    creationSessionRoute()?.key ||
+      state.active?.id ||
+      (initialRoute.page === "task" ? initialRoute.id : "new:" + (state.newSessionProjectId || "personal")),
+  );
+  $("#composer").addEventListener("composer:visibility-changed", () => resizePrompt());
+  let skills = /** @type {CreationSkills | null} */ (null);
+  const skillControl = $("#composerSkillControl");
+  setMessageHtml(skillControl, composerSkillButton(t, "data-session-skills"));
+  skillControl.onclick = () => {
+    if (!skills) {
+      skills = new CreationSkills(
+        $("#composerSkills"),
+        t,
+        state.composerSkills,
+        DOCUMENT_CREATION_CAPABILITIES,
+        () => {
+          mutations.set("composerSkills", skills?.read() || []);
+          persistComposerDraft();
+          viewUpdates.request("workbench");
+        },
+        () => {
+          // Picker load failures are displayed by the existing retryable browser.
+        },
+        "composer",
+      );
+    }
+    skills.browse(/** @type {HTMLElement} */ (skillControl.firstElementChild));
+  };
+  function renderComposerSkills() {
+    if (!skills && state.composerSkills.length) {
+      skills = new CreationSkills(
+        $("#composerSkills"),
+        t,
+        state.composerSkills,
+        DOCUMENT_CREATION_CAPABILITIES,
+        () => {
+          mutations.set("composerSkills", skills?.read() || []);
+          persistComposerDraft();
+          viewUpdates.request("workbench");
+        },
+        () => {},
+        "composer",
+      );
+    } else skills?.setSelected(state.composerSkills);
+  }
+  /** @param {string} [scope] */
+  function saveComposerDraft(scope) {
+    if (scope) {
+      setComposerDraft(scope, {
+        text: $("#prompt").value,
+        mentions: canonicalData(state.composerMentions),
+        attachments: canonicalData(state.composerAttachments),
+        skills: canonicalData(state.composerSkills),
+      });
+      return;
+    }
     persistComposerDraft();
   }
   function restoreComposerDraft() {
+    disclosure.setScope(
+      creationSessionRoute()?.key || state.active?.id || "new:" + (state.newSessionProjectId || "personal"),
+    );
     composerHistory.setReplay(
       (state.active?.turns || []).flatMap((turn) =>
         (turn.items || [])
@@ -43,12 +118,22 @@ export function assembleComposer({
     $("#prompt").value = draft?.text || "";
     mutations.set("composerMentions", draft?.mentions || []);
     mutations.set("composerAttachments", [...(draft?.attachments || [])]);
+    const previousInput = (state.active?.turns || [])
+      .flatMap((turn) => turn.items || [])
+      .filter((item) => item.type === "userMessage")
+      .at(-1)?.content;
+    mutations.set("composerSkills", [
+      ...(draft?.skills ?? sessionSkillsFromInput(previousInput).map((skill) => skill.selection)),
+    ]);
+    renderComposerSkills();
     uploadsPort.renderComposerAttachments();
     resizePrompt();
   }
   let promptComposing = false;
 
   function activeTurnId() {
+    const creation = creationSessionRoute() ? workbenchPort.workbench?.creationSession() : null;
+    if (creation) return creation.running ? creation.key : "";
     return statusPort.sessionRuntime.activeTurnId(state.active);
   }
   function syncQueueButton() {
@@ -61,6 +146,7 @@ export function assembleComposer({
         deliveryPort.isSending(deliveryPort.pendingMessageOwner());
   }
   function syncComposerSubmitState() {
+    disclosure.refresh();
     syncQueueButton();
     const button = $("#sendButton");
     if (!button) return;
@@ -103,7 +189,8 @@ export function assembleComposer({
   function resizePrompt() {
     const e = $("#prompt");
     e.style.height = "auto";
-    e.style.height = Math.min(190, e.scrollHeight) + "px";
+    // The shared stylesheet bounds input growth against the viewport.
+    e.style.height = e.scrollHeight + "px";
     syncComposerSubmitState();
   }
   function setComposing(value) {
@@ -115,7 +202,42 @@ export function assembleComposer({
     viewUpdates.request("composerPlaceholder");
     modelsPort.syncPermissionControl();
   }
+  /** @param {string} threadId @param {readonly import('../../shared/creation/contracts.js').CreationSkillSelection[]} submittedSkills */
+  function clearDraft(threadId, submittedSkills = []) {
+    if (state.active?.id === threadId && ($("#prompt").value || state.composerAttachments.length)) {
+      persistComposerDraft();
+      return;
+    }
+    const selected = state.active?.id === threadId ? state.composerSkills : submittedSkills;
+    clearComposerDraft(threadId);
+    // Empty selections are an explicit override of skills on older messages.
+    setComposerDraft(threadId, { text: "", mentions: [], attachments: [], skills: [...selected] });
+  }
   return {
+    acceptCreationSubmission(scope, nextScope, prompt, materialIds) {
+      const current = creationSessionRoute()?.key === scope;
+      if (current) persistComposerDraft();
+      const draft = getComposerDraft(scope);
+      if (!draft) return;
+      const next = creationDraftAfterAcknowledgement(draft, prompt, materialIds);
+      const existing = nextScope === scope ? null : getComposerDraft(nextScope);
+      const occupied = Boolean(existing?.text || existing?.attachments.length);
+      setComposerDraft(
+        scope,
+        nextScope === scope || occupied ? next : { text: "", mentions: [], attachments: [], skills: next.skills },
+      );
+      if (nextScope !== scope && !occupied)
+        setComposerDraft(nextScope, { ...next, skills: existing?.skills ?? next.skills });
+      if (current) restoreComposerDraft();
+    },
+    selectComposerSkill(selection) {
+      mutations.set("composerSkills", selectCreationSkill(canonicalData(state.composerSkills), selection));
+      renderComposerSkills();
+      persistComposerDraft();
+      resizePrompt();
+    },
+    readComposerSkills: () => canonicalData(state.composerSkills),
+    renderComposerSkills,
     setPlanMode,
     setComposing,
     syncQueueButton,
@@ -134,6 +256,6 @@ export function assembleComposer({
     setComposerDraft,
     loadComposerHistory,
     setActiveTurnId,
-    clearComposerDraft,
+    clearComposerDraft: clearDraft,
   };
 }

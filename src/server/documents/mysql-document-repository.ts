@@ -16,6 +16,8 @@ import { contentHash } from "./content-hash.js";
 import type { RichDocumentBody } from "../../shared/documents/rich-body.js";
 import { richBodyImageIds } from "../../shared/documents/rich-body.js";
 import { stableJson } from "../../shared/stable-json.js";
+import { documentHistoryPage, documentHistoryCursor, type DocumentHistorySummary } from "./history-page.js";
+import { MySQLDocumentOwnershipRepository } from "./ownership/mysql-repository.js";
 type DraftInput = {
   title: string;
   locale: string;
@@ -67,6 +69,8 @@ export class MySQLDocumentRepository {
     });
   }
   async isTrashed(id: string) {
+    const ownership = await new MySQLDocumentOwnershipRepository(this.db).forDocument(id);
+    if (ownership && ownership.kind !== "active") return true;
     return !!(await this.db.one("SELECT 1 FROM panda_force_document_trash WHERE documentId=?", [id]));
   }
   async revisions(id: string): Promise<Omit<DocumentRevision, "content">[]> {
@@ -88,6 +92,18 @@ export class MySQLDocumentRepository {
         ...(await this.richBody(revision.id)),
         resources: await mysqlRevisionResources(this.db, revision.id),
       };
+    });
+  }
+  /** A frozen exclusive version boundary lets transfers read every revision while later saves continue. */
+  async historyPage(id: string, beforeVersion: number, limit = 100) {
+    documentHistoryPage(beforeVersion, limit);
+    return this.db.snapshot(async () => {
+      if (beforeVersion > (await this.record(id)).revision + 1) throw new DocumentError("conflict", 409);
+      const revisions = await this.db.all<DocumentHistorySummary>(
+        "SELECT id,documentId,number,title,locale,contentHash,createdAt FROM panda_force_document_revisions WHERE documentId=? AND number<? ORDER BY number DESC LIMIT ?",
+        [id, beforeVersion, limit],
+      );
+      return { revisions, nextBeforeVersion: documentHistoryCursor(revisions, limit) };
     });
   }
   private async richBody(revisionId: string): Promise<{

@@ -1,3 +1,9 @@
+import {
+  sourceRevisionInput,
+  documentRevisionReference,
+  assertSourceRevision,
+  sourceRevisionReceipt,
+} from "./revision-source.js";
 import { randomUUID } from "node:crypto";
 import { emptyRichBody } from "../../../shared/documents/rich-body.js";
 import {
@@ -84,6 +90,62 @@ export class ProjectDocumentNavigation {
     authorize?: () => void | Promise<void>,
   ) {
     return this.sourceDocument(owner, value, source, true, authorize);
+  }
+  async currentFromSource(projectId: string, documentId: string) {
+    const tree = await this.tree(projectId);
+    if (!tree.nodes.some((node) => node.documentId === documentId)) throw new DocumentError("notFound", 404);
+    return await this.documents.detail(documentId);
+  }
+  async reviseFromSource(
+    owner: string,
+    value: unknown,
+    source: DocumentCreationSource,
+    authorize?: () => void | Promise<void>,
+  ) {
+    const input = sourceRevisionInput(value, source.identity),
+      actor = text(owner, 200);
+    await authorize?.();
+    const prior = this.repository.transaction(() => {
+      const space = this.library.get(input.projectId);
+      if (!space) return null;
+      const previous = this.repository.receipt(space.id, actor, input.id, input.request);
+      return previous ? { tree: this.tree(input.projectId), operation: sourceRevisionReceipt(previous) } : null;
+    });
+    if (prior) return prior;
+    const seed = await source.prepare();
+    if (seed.images.length) throw new DocumentError("invalidImage");
+    await authorize?.();
+    return this.repository.transaction(() => {
+      const space = this.library.get(input.projectId);
+      if (!space) throw new DocumentError("notFound", 404);
+      const previous = this.repository.receipt(space.id, actor, input.id, input.request);
+      if (previous) return { tree: this.tree(input.projectId), operation: sourceRevisionReceipt(previous) };
+      const tree = this.tree(input.projectId),
+        current = this.documents.detail(input.base.documentId);
+      if (
+        current.document.spaceId !== space.id ||
+        !tree.nodes.some((node) => node.documentId === input.base.documentId)
+      )
+        throw new DocumentError("notFound", 404);
+      assertSourceRevision(current, input.base);
+      const saved = this.documents.saveDocument(input.base.documentId, {
+        revision: input.base.version,
+        title: current.revision.title,
+        locale: current.revision.locale,
+        body: seed.body,
+      });
+      this.repository.bump(space.id, tree.version);
+      const operation = {
+        id: input.id,
+        documentId: input.base.documentId,
+        affectedDocumentIds: [input.base.documentId],
+        treeVersion: tree.version + 1,
+        restoredToRoot: false,
+        sourceRevision: documentRevisionReference(saved),
+      };
+      this.repository.recordOperation(space.id, actor, input.id, input.request, input.base.documentId, operation);
+      return { tree: this.tree(input.projectId), operation };
+    });
   }
   private async sourceDocument(
     owner: string,

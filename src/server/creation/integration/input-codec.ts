@@ -9,11 +9,12 @@ import { creationRunInput } from "../run-input.js";
 import { richDocumentInput } from "../../documents/rich-codec.js";
 
 export function creationEngineProfile(value: unknown): CreationEngineProfile {
-  const row = creationRecord(value, ["id", "engineId", "model"]);
+  const row = creationRecord(value, ["id", "engineId", "model", "effort"]);
   return {
     id: creationId(row.id),
     engineId: creationId(row.engineId),
     ...(row.model === undefined ? {} : { model: creationText(row.model, 128) }),
+    ...(row.effort === undefined ? {} : { effort: creationId(row.effort) }),
   };
 }
 export function creationPrompt(value: unknown): string {
@@ -32,6 +33,8 @@ function snapshot(value: unknown): CreationInputSnapshot {
       "profile",
       "skills",
       "previous",
+      "materials",
+      "recoveryFrom",
     ]),
     skills = decodeSkillCapture(row.skills),
     taskId = creationUuid(row.taskId),
@@ -55,8 +58,27 @@ function snapshot(value: unknown): CreationInputSnapshot {
     prompt: creationPrompt(row.prompt),
     profile: creationEngineProfile(row.profile),
     skills,
+    ...(row.materials === undefined ? {} : { materials: decodeCreationMaterials(row.materials) }),
     ...(row.previous === undefined ? {} : { previous: previousInput(row.previous) }),
+    ...(row.recoveryFrom === undefined ? {} : { recoveryFrom: recoveryInput(row.recoveryFrom) }),
   };
+}
+function recoveryInput(value: unknown) {
+  const row = creationRecord(value, ["taskId", "inputDigest"]);
+  return { taskId: creationUuid(row.taskId), inputDigest: creationDigest(row.inputDigest) };
+}
+export function decodeCreationMaterials(value: unknown) {
+  if (!Array.isArray(value) || value.length > 10) throw new CreationError("invalidInput");
+  return value.map((entry): import("../../../shared/creation/contracts.js").CreationMaterial => {
+    const material = creationRecord(entry, ["id", "name", "kind", "digest"]);
+    if (material.kind !== "file" && material.kind !== "image") throw new CreationError("invalidInput");
+    return {
+      id: creationUuid(material.id),
+      name: creationText(material.name, 240),
+      kind: material.kind,
+      digest: creationDigest(material.digest),
+    };
+  });
 }
 function previousInput(value: unknown): NonNullable<CreationInputSnapshot["previous"]> {
   const row = creationRecord(value, ["prompt", "document"]),
@@ -68,7 +90,7 @@ function previousInput(value: unknown): NonNullable<CreationInputSnapshot["previ
       body: richDocumentInput(document.body).body,
     },
   };
-  if (Buffer.byteLength(stableJson(result)) > 196608) throw new CreationError("invalidInput");
+  if (Buffer.byteLength(stableJson(result)) > 4 * 1024 * 1024) throw new CreationError("invalidInput");
   return result;
 }
 const digest = (value: CreationInputSnapshot) => createHash("sha256").update(stableJson(value)).digest("hex");
@@ -77,7 +99,7 @@ export class FileCreationInputs implements CreationInputs {
   private readonly files: FilePackageContent<CreationInputSnapshot>;
   constructor(root: string) {
     this.files = new FilePackageContent(root, {
-      maxBytes: 2 * 1024 * 1024,
+      maxBytes: 6 * 1024 * 1024,
       encode: async (value) => Buffer.from(stableJson(snapshot(value))),
       decode: async (bytes) => snapshot(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes))),
       digest,

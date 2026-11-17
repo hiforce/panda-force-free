@@ -32,16 +32,33 @@ export function createNativeCreationFeature(
     requireProject(projectId: string): unknown;
     authorizeProject?(owner: string, projectId: string): void | Promise<void>;
     documents: CreationDocumentPort;
+    archive?: import("./document-archive.js").CreationDocumentArchive;
+    destinations?: import("../document-destinations.js").CreationDocumentDestinations;
+    directories?: import("../file-directories.js").CreationFileDirectories;
     skills: SkillCatalog;
+    materials?: import("../materials.js").CreationMaterialPort;
     storage?: Parameters<typeof createCreationFeature>[0]["storage"];
   },
   env: NodeJS.ProcessEnv = process.env,
 ) {
   const settings = creationProfileSettings(options.profileStateRoot ?? options.stateRoot, env);
+  const scratchRoot = resolve(
+      env.PANDA_FORCE_CREATION_SCRATCH_DIR ||
+        (options.connection.mode === "shared"
+          ? join(options.projectsRoot, ".panda-force-creation")
+          : join(options.stateRoot, "creation", "scratch")),
+    ),
+    workspaceRoot = resolve(
+      env.PANDA_FORCE_CREATION_WORKSPACE_DIR ||
+        (options.connection.mode === "shared"
+          ? join(options.projectsRoot, ".panda-force-creation", "workspaces")
+          : join(options.stateRoot, "creation", "workspaces")),
+    );
   if (settings.invalid) reportDiagnostic("creation-configuration", new CreationError("invalidInput"));
   try {
     return createCreationFeature({
       ...options,
+      workspaceRoot,
       authorize: async (owner, projectId) => {
         try {
           await options.requireProject(projectId);
@@ -50,17 +67,16 @@ export function createNativeCreationFeature(
           throw new CreationError("notFound");
         }
       },
-      profiles: new CreationProfiles(settings, new Set(options.engineId === "codex" ? ["codex"] : []), async () =>
-        creationDefaultModel(await options.models()),
+      profiles: new CreationProfiles(
+        settings,
+        new Set(options.engineId === "codex" ? ["codex"] : []),
+        async () => creationDefaultModel(await options.models()),
+        options.models,
       ),
       engines: creationEngines({
         ...options,
-        scratchRoot: resolve(
-          env.PANDA_FORCE_CREATION_SCRATCH_DIR ||
-            (options.connection.mode === "shared"
-              ? join(options.projectsRoot, ".panda-force-creation")
-              : join(options.stateRoot, "creation", "scratch")),
-        ),
+        scratchRoot,
+        workspaceRoot,
       }),
     });
   } catch (error) {

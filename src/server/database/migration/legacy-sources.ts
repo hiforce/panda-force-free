@@ -43,6 +43,10 @@ import { migrateContentAccessSnapshot } from "../../content-access/storage/migra
 import { openDocumentDatabase } from "../../documents/database.js";
 import { migrateDocumentNavigation } from "../../documents/navigation/schema.js";
 import { documentSQLiteMappings, importDocumentsSQLite } from "../../documents/mysql-import.js";
+import {
+  documentOwnershipSQLiteMappings,
+  importDocumentOwnershipSQLite,
+} from "../../documents/ownership/mysql-migration.js";
 import { migrateEditorial } from "../../editorial/schema.js";
 import { editorialSQLiteMappings, importEditorialSQLite } from "../../editorial/mysql-import.js";
 import { openCreationDatabase } from "../../creation/storage/database.js";
@@ -309,7 +313,16 @@ export async function createLegacySQLiteMigrationSources(options: LegacySQLiteMi
     models(contentAccessMySQLModels),
     migrateContentAccessSnapshot,
   );
-  addUnit("documents", "documents", documents.id, targets(documentSQLiteMappings), importDocumentsSQLite);
+  addUnit("documents", "documents", documents.id, targets(documentSQLiteMappings), (options) =>
+    importDocumentsSQLite({ ...options, ownershipWillFollow: true }),
+  );
+  addUnit(
+    "document-ownership",
+    "documents",
+    documents.id,
+    targets(documentOwnershipSQLiteMappings),
+    importDocumentOwnershipSQLite,
+  );
   addUnit("editorial", "editorial", documents.id, targets(editorialSQLiteMappings), importEditorialSQLite);
   addUnit("skills", "skills", "skills", models(skillMySQLModels), migrateSkillsSnapshot);
   addUnit(

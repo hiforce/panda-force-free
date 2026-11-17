@@ -1,7 +1,10 @@
+import { mysqlOwnershipVisible } from "./ownership/sql-policy.js";
 import { documentKeyHash } from "./mysql-session.js";
 import type { MySQLDocumentSession } from "./mysql-session.js";
 import { randomUUID } from "node:crypto";
 import type { DocumentFolder, DocumentRecord } from "../../shared/documents/contracts.js";
+import { MySQLDocumentOwnershipRepository } from "./ownership/mysql-repository.js";
+import { assertOwnershipVisible } from "./ownership/record.js";
 import { DocumentError } from "./errors.js";
 const beneath = (path: string, root: string) => path === root || path.startsWith(root + "/");
 /** Folder mutations change logical locations only. The source filesystem and revision bodies are untouched. */
@@ -135,6 +138,7 @@ export class MySQLDocumentFolderRepository {
   }
   async restore(document: DocumentRecord) {
     return await this.db.transaction(async () => {
+      assertOwnershipVisible(await new MySQLDocumentOwnershipRepository(this.db).get(document.spaceId, document.id));
       await this.db.run("DELETE FROM panda_force_document_trash WHERE documentId=?", [document.id]);
       const parent = document.path.split("/").slice(0, -1).join("/");
       if (parent) await this.create(document.spaceId, parent);
@@ -142,7 +146,7 @@ export class MySQLDocumentFolderRepository {
   }
   async trashList(spaceId: string): Promise<DocumentRecord[]> {
     return await this.db.all<DocumentRecord>(
-      "SELECT d.* FROM panda_force_documents d JOIN panda_force_document_trash t ON t.documentId=d.id WHERE d.spaceId=? ORDER BY t.deletedAt DESC LIMIT 200",
+      `SELECT d.* FROM panda_force_documents d JOIN panda_force_document_trash t ON t.documentId=d.id WHERE d.spaceId=? AND ${mysqlOwnershipVisible("d")} ORDER BY t.deletedAt DESC LIMIT 200`,
       [spaceId],
     );
   }
@@ -153,7 +157,10 @@ export class MySQLDocumentFolderRepository {
       if (!root) throw new DocumentError("notFound", 404);
       if (root.version !== expected) throw new DocumentError("conflict", 409);
       const documents = (
-        await this.db.all<DocumentRecord>("SELECT * FROM panda_force_documents WHERE spaceId=?", [spaceId])
+        await this.db.all<DocumentRecord>(
+          `SELECT * FROM panda_force_documents WHERE spaceId=? AND ${mysqlOwnershipVisible("panda_force_documents")} `,
+          [spaceId],
+        )
       ).filter((document) => document.path.startsWith(path + "/"));
       for (const document of documents) await this.trash(document.id, document.revision);
       for (const folder of folders.filter((folder) => beneath(folder.path, path)))

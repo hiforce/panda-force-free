@@ -16,6 +16,7 @@ import { createAnchoredMenu } from "../../../client/anchored-menu.js";
 import { escapeHtml as e } from "../../../shared/html.js";
 import { codexIcon } from "../../../client/codex-icons.js";
 import { gt } from "../../../client/gadget/messages.js";
+import { createComposerDisclosure } from "../../../client/message-composer-disclosure.js";
 /** One input dispatches plain tasks to the native transaction and selected skills to the document adapter. */
 export function createDocumentComposer(root: HTMLElement, initial: GadgetContext) {
   let context = initial,
@@ -26,6 +27,7 @@ export function createDocumentComposer(root: HTMLElement, initial: GadgetContext
     epoch = 0,
     busy = false,
     treeVersion = 0;
+  let disclosure: ReturnType<typeof createComposerDisclosure> | null = null;
   const request = new AbortController(),
     destinationMenu = createAnchoredMenu();
   let failure: unknown = null;
@@ -150,11 +152,18 @@ export function createDocumentComposer(root: HTMLElement, initial: GadgetContext
     destinationMenu.toggle(trigger, menu);
   }
   function render() {
+    disclosure?.dispose();
     destinationMenu.close();
     skills?.close();
     skills = null;
     const saved = draft();
     setMessageHtml(root, composerFrame(context, saved.prompt));
+    disclosure = createComposerDisclosure(
+      root.querySelector<HTMLFormElement>("form")!,
+      context.t,
+      context.capability<ComposerCapability>("panda.composer").identity,
+      "entry:" + scope,
+    );
     destinationList = root.querySelector<HTMLElement>("[data-gd-project-menu]")!;
     const textarea = root.querySelector<HTMLTextAreaElement>("textarea")!;
     textarea.oninput = () => {
@@ -293,6 +302,7 @@ export function createDocumentComposer(root: HTMLElement, initial: GadgetContext
     update(next: GadgetContext) {
       const changed = context.locale !== next.locale;
       context = next;
+      disclosure?.refresh();
       const prompt = root.querySelector<HTMLTextAreaElement>("textarea")!;
       prompt.placeholder = gt(context.t, "briefPlaceholder");
       prompt.setAttribute("aria-label", context.t("creation.prompt"));
@@ -335,6 +345,7 @@ export function createDocumentComposer(root: HTMLElement, initial: GadgetContext
       chooseSkills().setSelected(next.selections);
     },
     dispose() {
+      disclosure?.dispose();
       live = false;
       epoch++;
       request.abort();

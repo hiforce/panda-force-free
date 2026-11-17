@@ -16,6 +16,8 @@ import { contentHash } from "./content-hash.js";
 import type { RichDocumentBody } from "../../shared/documents/rich-body.js";
 import { richBodyImageIds } from "../../shared/documents/rich-body.js";
 import { stableJson } from "../../shared/stable-json.js";
+import { documentHistoryPage, documentHistoryCursor, type DocumentHistorySummary } from "./history-page.js";
+import { DocumentOwnershipRepository } from "./ownership/repository.js";
 type DraftInput = { title: string; locale: string; content: string; body?: RichDocumentBody };
 /** SQLite owns immutable revisions. External source files are never rewritten here. */
 export class DocumentRepository {
@@ -51,6 +53,8 @@ export class DocumentRepository {
     return { documents, total, nextOffset: offset + documents.length < total ? offset + documents.length : null };
   }
   isTrashed(id: string) {
+    const ownership = new DocumentOwnershipRepository(this.db).forDocument(id);
+    if (ownership && ownership.kind !== "active") return true;
     return !!this.db.query("SELECT 1 FROM document_trash WHERE documentId=?").get(id);
   }
   revisions(id: string): Omit<DocumentRevision, "content">[] {
@@ -67,6 +71,21 @@ export class DocumentRepository {
       .get(documentId, revisionId);
     if (!revision) throw new DocumentError("notFound", 404);
     return { ...revision, ...this.richBody(revision.id), resources: revisionResources(this.db, revision.id) };
+  }
+  /** A frozen exclusive version boundary lets transfers read every revision while later saves continue. */
+  historyPage(id: string, beforeVersion: number, limit = 100) {
+    documentHistoryPage(beforeVersion, limit);
+    return this.db
+      .transaction(() => {
+        if (beforeVersion > this.record(id).revision + 1) throw new DocumentError("conflict", 409);
+        const revisions = this.db
+          .query<DocumentHistorySummary, [string, number, number]>(
+            "SELECT id,documentId,number,title,locale,contentHash,createdAt FROM document_revisions WHERE documentId=? AND number<? ORDER BY number DESC LIMIT ?",
+          )
+          .all(id, beforeVersion, limit);
+        return { revisions, nextBeforeVersion: documentHistoryCursor(revisions, limit) };
+      })
+      .deferred();
   }
   private richBody(revisionId: string): { body?: RichDocumentBody } {
     const row = this.db

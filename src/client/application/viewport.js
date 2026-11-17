@@ -5,6 +5,7 @@ import { captureConversationAnchor, conversationAnchorTop } from "../conversatio
 // Owns follow intent, user gestures and scroll writes independently of rendering.
 /** @param {import("./ports.js").FeatureOptions<"$", never, "viewport">} options */
 export function assembleViewport({ $ }) {
+  let mode = "conversation";
   let following = true,
     frame = 0,
     forced = false,
@@ -38,7 +39,7 @@ export function assembleViewport({ $ }) {
   function syncConversationScrollSurface() {
     const button = $("#conversationScrollBottom");
     if (!button) return;
-    button.hidden = nearBottom();
+    button.hidden = mode === "discovery" || nearBottom();
     button.setAttribute("aria-hidden", String(button.hidden));
   }
   function observeScroll() {
@@ -61,6 +62,10 @@ export function assembleViewport({ $ }) {
   }
   function applyPosition(rendered = false) {
     const root = $("#conversation");
+    if (mode === "discovery") {
+      syncConversationScrollSurface();
+      return;
+    }
     if (!root.clientHeight) return;
     if (!rendered) observeScroll();
     // Never fight touch momentum with a scheduled write, including zero-distance
@@ -143,6 +148,14 @@ export function assembleViewport({ $ }) {
     };
   }
   return {
+    /** @param {"conversation" | "discovery"} value */
+    setConversationMode(value) {
+      if (mode === value) return;
+      mode = value;
+      resetAutoScroll();
+      if (mode === "discovery") $("#conversation").scrollTop = 0;
+      syncConversationScrollSurface();
+    },
     bind,
     scrollBottom,
     resetAutoScroll,

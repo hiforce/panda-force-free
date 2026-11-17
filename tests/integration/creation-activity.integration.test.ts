@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { creationAppFixture } from "../support/creation-app.js";
 
-test("owner-wide creation history retains process and follow-up output across restart without changing the original", async () => {
+test("owner-wide creation history retains process and same-document revisions across restart", async () => {
   const f = await creationAppFixture();
   try {
     f.onRun(async (input, callbacks, scope) => {
@@ -42,13 +42,13 @@ test("owner-wide creation history retains process and follow-up output across re
       (await f.files.call("/api/document-creations/follow-up", "POST", { ...request, prompt: "Different request" }))
         .status,
     ).toBe(409);
-    expect(revised.artifact!.documentId).not.toBe(completed.artifact!.documentId);
+    expect(revised.artifact!.documentId).toBe(completed.artifact!.documentId);
     expect(f.scopes.at(-1)!.input.prompt).toContain("Original result");
     expect(f.scopes.at(-1)!.input.prompt).toContain(request.prompt);
     expect((await f.files.call("/api/document-creations/detail?id=" + revised.id)).body.task.previousTaskId).toBe(
       completed.id,
     );
-    expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(2);
+    expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(1);
     f.actor("operator:another");
     expect((await f.files.call("/api/document-creations?project=*")).body.tasks).toEqual([]);
     expect(

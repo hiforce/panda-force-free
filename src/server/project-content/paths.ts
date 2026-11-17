@@ -34,7 +34,7 @@ export function projectFilePath(value: string): string {
     return value;
   }
   const match =
-    /^(documents|spaces|placements|asset-records|navigation-operations|knowledge|creations)\/([^/]+)\.panda\.json$/.exec(
+    /^(documents|spaces|placements|asset-records|navigation-operations|knowledge|creations|document-ownership)\/([^/]+)\.panda\.json$/.exec(
       value,
     );
   if (!match) throw new ProjectContentError("invalidFile");

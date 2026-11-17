@@ -176,7 +176,7 @@ try {
       results.push({ device, width, keyboardHeight, inputFont: before.fonts[0].size, modelFits: true, sendFits: true });
     } else {
       assert.equal(before.active, false);
-      assert.equal(before.fonts[0].size, 15);
+      assert.equal(before.fonts[0].size, 16);
     }
     assert.deepEqual(errors, []);
     await context.close();

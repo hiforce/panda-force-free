@@ -8,6 +8,8 @@ import {
   composerTextFromInput,
 } from "../composer-attachments.js";
 import { deliveryIsUncertain } from "./input-errors.js";
+import { prepareSessionSkillInput } from "../session-skills-api.js";
+import { creationSessionRoute } from "../creation/session-route.js";
 
 // Owns queued input, reconciliation versions, cancellation and uncertain acknowledgements.
 /** @param {import("./ports.js").FeatureOptions<"selection" | "viewUpdates" | "mutations" | "$" | "t" | "state", "transport" | "delivery" | "notices" | "uploads" | "composer" | "models" | "suggestions" | "inputSessions", "queue">} options */
@@ -174,9 +176,14 @@ export function assembleQueue({
     refreshMessageQueue(message.owner);
   }
   async function queuePrompt() {
+    if (creationSessionRoute()) {
+      $("#composer").requestSubmit();
+      return;
+    }
     const input = $("#prompt"),
       text = input.value.trim(),
       attachments = [...state.composerAttachments],
+      skillSelections = composerPort.readComposerSkills(),
       content = buildComposerInput(text, attachments),
       owner = deliveryPort.pendingMessageOwner();
     if (
@@ -223,6 +230,8 @@ export function assembleQueue({
     suggestionsPort.renderContextTray();
     viewUpdates.request("composerLayout");
     try {
+      const preparedContent = await prepareSessionSkillInput(content, skillSelections, owner, t);
+      message.content = preparedContent;
       thread = await inputSessionsPort.prepareInputSession({
         thread,
         cwd,
@@ -241,7 +250,7 @@ export function assembleQueue({
       const result = await transportPort.rpc("thread/queue/add", {
         threadId: thread.id,
         clientUserMessageId: clientId,
-        input: content,
+        input: preparedContent,
       });
       if (queuedMessages.has(clientId)) {
         message.queueId = result.queuedSubmission.id;
@@ -274,7 +283,7 @@ export function assembleQueue({
         !composerPort.getComposerDraft(thread.id)?.text &&
         !composerPort.getComposerDraft(thread.id)?.attachments?.length
       ) {
-        composerPort.setComposerDraft(thread.id, { text, mentions, attachments });
+        composerPort.setComposerDraft(thread.id, { text, mentions, attachments, skills: skillSelections });
         if (state.active?.id === thread.id && !input.value && !state.composerAttachments.length) {
           composerPort.restoreComposerDraft();
           suggestionsPort.renderContextTray();

@@ -1,0 +1,21 @@
+/** Fixed product artwork; publisher-owned covers retain precedence. */
+export const BUILTIN_SKILL_COVERS: Readonly<Record<string, string>> = {
+  "software-prd": "/assets/skill-cover-software-prd-v1.webp",
+  "research-digest": "/assets/skill-cover-research-digest-v1.webp",
+  "executive-deck": "/assets/skill-cover-executive-deck-v1.webp",
+  "science-illustration": "/assets/skill-cover-science-illustration-v1.webp",
+  "short-film-storyboard": "/assets/skill-cover-short-film-storyboard-v1.webp",
+  "landing-page-brief": "/assets/skill-cover-landing-page-brief-v1.webp",
+  "technical-proposal": "/assets/skill-cover-technical-proposal-v1.webp",
+  "api-contract": "/assets/skill-cover-api-contract-v1.webp",
+  "meeting-notes": "/assets/skill-cover-meeting-notes-v1.webp",
+  "decision-brief": "/assets/skill-cover-decision-brief-v1.webp",
+  "release-notes": "/assets/skill-cover-release-notes-v1.webp",
+  "longform-editor": "/assets/skill-cover-longform-editor-v1.webp",
+  "concept-explainer": "/assets/skill-cover-concept-explainer-v1.webp",
+  "evidence-comparison": "/assets/skill-cover-evidence-comparison-v1.webp",
+  "lesson-deck": "/assets/skill-cover-lesson-deck-v1.webp",
+  "infographic-brief": "/assets/skill-cover-infographic-brief-v1.webp",
+  "information-architecture": "/assets/skill-cover-information-architecture-v1.webp",
+  "product-demo-script": "/assets/skill-cover-product-demo-script-v1.webp",
+};

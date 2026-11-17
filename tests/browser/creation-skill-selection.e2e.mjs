@@ -106,11 +106,12 @@ for (const [engine, width, locale, theme] of [
       if (denySkills) return route.fulfill({ status: 503, json: { messageId: "plugins.packageUnavailable" } });
       await route.continue();
     });
-    await page.locator("#gadgetDocumentPrompt").fill("A brief with optional skills.");
+    await page.locator("#prompt").fill("A brief with optional skills.");
     await page.goto(app.base + "/documents?project=personal");
     await page.locator('.documents-heading [data-authoring-action="new-ai"]').click();
     const dialog = page.locator(".creation-dialog[open]");
     await dialog.locator("[data-creation-submit]:enabled").waitFor();
+    await dialog.locator('[name="prompt"]').fill("A brief with optional skills.");
     assert.equal(await dialog.locator(".creation-skill").count(), 0);
     assert.match(
       await dialog.locator(".creation-skill-empty").innerText(),
@@ -250,7 +251,7 @@ for (const [engine, width, locale, theme] of [
     );
     assert.equal(await prd.locator("small").innerText(), "v1.0.0");
     assert.equal(await prd.locator("p").count(), 0);
-    const art = await prd.locator(".skill-artwork").innerHTML();
+    const art = await prd.locator(".template-cover-image").getAttribute("src");
     await prd.locator('[data-skill-action="details"]').click();
     const detail = page.locator(".creation-skill-detail[open]");
     await detail.waitFor();
@@ -260,14 +261,14 @@ for (const [engine, width, locale, theme] of [
     );
     assert.equal(await dialog.locator(".creation-skill").count(), 0);
     assert.equal(await dialog.locator('[name="prompt"]').inputValue(), "A brief with optional skills.");
-    assert.equal(await detail.locator(".skill-artwork").innerHTML(), art);
+    assert.equal(await detail.locator(".template-cover-image").getAttribute("src"), art);
     await page.screenshot({ path: `${out}/details-${width}.png` });
     await page.keyboard.press("Escape");
     await detail.waitFor({ state: "detached" });
     assert.equal(await picker.locator("[data-skill-search]").inputValue(), "PRD");
     assert.equal(await page.evaluate(() => document.activeElement?.dataset.skillAction), "details");
     await prd.locator('[data-skill-action="add"]').click();
-    assert.equal(await dialog.locator(".creation-skill-thumbnail .skill-artwork").innerHTML(), art);
+    assert.equal(await dialog.locator(".creation-skill-thumbnail .template-cover-image").getAttribute("src"), art);
     assert.equal(await prd.locator('[data-skill-action="add"]').getAttribute("aria-pressed"), "true");
     await picker.locator("[data-skill-browser-close]").last().click();
     await page.screenshot({ path: `${out}/prd-selected-${width}.png` });

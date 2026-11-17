@@ -45,6 +45,9 @@ export function creationRequest(value: unknown): CreationRequest {
       "profileId",
       "selections",
       "previousTaskId",
+      "model",
+      "effort",
+      "attachments",
     ]),
     locale = creationText(row.locale, 35),
     prompt = row.prompt;
@@ -66,6 +69,9 @@ export function creationRequest(value: unknown): CreationRequest {
     locale,
     prompt,
     profileId: creationId(row.profileId),
+    ...(row.model === undefined ? {} : { model: creationText(row.model, 128) }),
+    ...(row.effort === undefined ? {} : { effort: creationId(row.effort) }),
+    ...(row.attachments === undefined ? {} : { attachments: creationAttachments(row.attachments) }),
     ...(row.previousTaskId === undefined ? {} : { previousTaskId: creationUuid(row.previousTaskId) }),
     selections: row.selections.map((value) => {
       const skill = creationRecord(value, ["packageId", "version", "digest", "id", "parameters"]);
@@ -78,6 +84,12 @@ export function creationRequest(value: unknown): CreationRequest {
       };
     }),
   };
+}
+export function creationAttachments(value: unknown) {
+  if (!Array.isArray(value) || value.length > 10) throw new CreationError("invalidInput");
+  const refs = value.map((entry) => ({ materialId: creationUuid(creationRecord(entry, ["materialId"]).materialId) }));
+  if (new Set(refs.map((ref) => ref.materialId)).size !== refs.length) throw new CreationError("invalidInput");
+  return refs;
 }
 /** A task slot is stable across concurrent submissions, independent of model-chosen call IDs. */
 export function creationOperation(owner: string, id: string): string {

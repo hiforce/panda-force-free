@@ -1,7 +1,7 @@
 // Generated from reviewed state ownership metadata. Do not edit by hand.
 import type { ApplicationState } from "./state.js";
 
-export type OwnedStateField = "account" | "active" | "activeReview" | "activities" | "activityItems" | "backgroundAgentsVisible" | "changes" | "cloudStartingState" | "composerAttachments" | "composerMentions" | "composerMode" | "config" | "connected" | "dividers" | "events" | "goalMode" | "goals" | "items" | "modelLoadStatus" | "models" | "newSessionProjectId" | "pending" | "permissionMode" | "permissionProfiles" | "permissionVisibility" | "persistentErrors" | "placeholderText" | "planMode" | "projectless" | "requestCards" | "rpcId" | "selectedModel" | "sessionSettings" | "sideTasks" | "threads" | "tokenUsage" | "transport" | "turnDiffs" | "turnTimings" | "turnWindow" | "turns" | "workspaceContext" | "ws" | "wsFallbackTimer";
+export type OwnedStateField = "account" | "active" | "activeReview" | "activities" | "activityItems" | "backgroundAgentsVisible" | "changes" | "cloudStartingState" | "composerAttachments" | "composerMentions" | "composerMode" | "composerSkills" | "config" | "connected" | "dividers" | "events" | "goalMode" | "goals" | "items" | "modelLoadStatus" | "models" | "newSessionProjectId" | "pending" | "permissionMode" | "permissionProfiles" | "permissionVisibility" | "persistentErrors" | "placeholderText" | "planMode" | "projectless" | "requestCards" | "rpcId" | "selectedModel" | "sessionSettings" | "sideTasks" | "threads" | "tokenUsage" | "transport" | "turnDiffs" | "turnTimings" | "turnWindow" | "turns" | "workspaceContext" | "ws" | "wsFallbackTimer";
 export interface StateGrants {
   account: { read: "account"; write: "account" };
   activity: { read: "active" | "activities" | "activityItems"; write: "activities" | "activityItems" };
@@ -10,7 +10,7 @@ export interface StateGrants {
   bindings: { read: "modelLoadStatus"; write: never };
   clipboard: { read: never; write: never };
   commands: { read: "active" | "planMode"; write: never };
-  composer: { read: "active" | "composerAttachments" | "composerMentions" | "config" | "newSessionProjectId" | "planMode" | "projectless" | "workspaceContext"; write: "composerAttachments" | "composerMentions" | "planMode" };
+  composer: { read: "active" | "composerAttachments" | "composerMentions" | "config" | "newSessionProjectId" | "planMode" | "projectless" | "workspaceContext" | "composerSkills"; write: "composerAttachments" | "composerMentions" | "planMode" | "composerSkills" };
   composerInteractions: { read: "active" | "composerAttachments" | "composerMentions" | "config" | "newSessionProjectId" | "projectless" | "workspaceContext"; write: "composerAttachments" | "composerMentions" };
   connection: { read: "connected" | "pending"; write: "connected" | "pending" };
   delivery: { read: "active" | "items"; write: "items" };

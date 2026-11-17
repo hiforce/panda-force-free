@@ -1,10 +1,19 @@
 import type { EngineQuestion } from "../engine/questions.js";
 import type { SkillCapability } from "../skills/contracts.js";
+import type { ComposerAttachment } from "../data-contracts.js";
+import type { TokenUsage } from "../engine/types.js";
 
 export interface CreationEngineProfile {
   id: string;
   engineId: string;
   model?: string;
+  effort?: string;
+}
+export interface CreationMaterial {
+  id: string;
+  name: string;
+  kind: "image" | "file";
+  digest: string;
 }
 export interface CreationSkillSelection {
   packageId: string;
@@ -12,6 +21,10 @@ export interface CreationSkillSelection {
   digest: string;
   id: string;
   parameters: Readonly<Record<string, string | number | boolean>>;
+}
+export interface CreationSkillSummary {
+  selection: CreationSkillSelection;
+  name: Readonly<Record<string, string>>;
 }
 export interface CreationRequest {
   id: string;
@@ -23,6 +36,9 @@ export interface CreationRequest {
   profileId: string;
   selections: readonly CreationSkillSelection[];
   previousTaskId?: string;
+  model?: string;
+  effort?: string;
+  attachments?: readonly { materialId: string }[];
 }
 export const DOCUMENT_CREATION_CAPABILITIES = ["project.documents.create"] as const;
 export interface CreationAvailability {
@@ -33,12 +49,29 @@ export interface CreationAvailability {
   capabilities: readonly SkillCapability[];
 }
 export type CreationTaskState = "queued" | "running" | "committing" | "succeeded" | "failed" | "cancelled";
-export type CreationFailure = "interrupted" | "timedOut" | "invalidOutput" | "targetChanged" | "writeUnavailable";
+export type CreationFailure =
+  "interrupted" | "timedOut" | "invalidOutput" | "targetChanged" | "fileChanged" | "writeUnavailable";
+export interface CreationGoal {
+  id: string;
+  objective: string;
+  status: "active" | "paused" | "blocked" | "completed";
+  updatedAt: number;
+}
+export interface CreationGoalCommand {
+  id: string;
+  action: "set" | "create" | "pause" | "resume" | "clear";
+  objective?: string;
+  model?: string;
+  effort?: string;
+}
 export interface CreationProgress {
   at: number;
   generation: number;
-  stage: "started" | "saving" | "waiting" | "answered" | "message";
+  stage: "started" | "saving" | "waiting" | "answered" | "message" | "usage";
   text?: string;
+  id?: string;
+  streaming?: boolean;
+  usage?: TokenUsage;
 }
 export interface CreationArtifact {
   kind: "document";
@@ -46,6 +79,11 @@ export interface CreationArtifact {
   documentId: string;
   operationId: string;
   treeVersion: number;
+  title?: string;
+  revisionId?: string;
+  revision?: number;
+  file?: { path: string; format: "markdown" };
+  location?: { projectId: string; operationId: string; treeVersion: number; revisionId: string; revision: number };
 }
 /** Browser state contains no execution lease, engine request IDs, source digests or selected skill instructions. */
 export interface CreationTaskView {
@@ -54,7 +92,9 @@ export interface CreationTaskView {
   state: CreationTaskState;
   generation: number;
   prompt: string;
+  goal?: CreationGoal | null;
   model: string | null;
+  effort?: string | null;
   cancelRequested: boolean;
   artifact: CreationArtifact | null;
   failure: CreationFailure | null;
@@ -62,8 +102,26 @@ export interface CreationTaskView {
   createdAt: number;
   updatedAt: number;
   previousTaskId?: string;
+  document?: { documentId: string; title: string; revision: number; projectId?: string; projectName?: string };
+  documentStatus?: "available" | "unavailable";
 }
 export interface CreationTaskDetail extends CreationTaskView {
+  workspaceDirectory?: string;
+  goalVersion?: number;
+  messages?: {
+    id: string;
+    text: string;
+    state: "received" | "dispatching" | "delivered" | "uncertain";
+    createdAt: number;
+    updatedAt: number;
+    selections: CreationSkillSelection[];
+    skillSummaries?: CreationSkillSummary[];
+    attachments: ComposerAttachment[];
+  }[];
+  selections?: CreationSkillSelection[];
+  skillSummaries?: CreationSkillSummary[];
+  attachments?: ComposerAttachment[];
+  usage?: TokenUsage;
   progress: CreationProgress[];
   clarifications: {
     questions: EngineQuestion[];

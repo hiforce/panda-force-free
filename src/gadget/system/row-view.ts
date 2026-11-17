@@ -83,6 +83,8 @@ export function rowGadget(options: {
           void update(context).catch(() => {});
         } else if (target.dataset.id) {
           const id = target.dataset.id;
+          // Trusted session projections use the application's normal opener without a navigation-only server action.
+          if (options.projection && context.capability<ProjectionCapability>(options.projection).open?.(id)) return;
           void (async () => {
             if (options.skills) {
               const rows = (await context.data("summary")) as Array<GadgetRow & { template?: ManagedTemplate }>;

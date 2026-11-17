@@ -7,7 +7,11 @@ import { creationRecord, creationText } from "../validation.js";
 import { creationProtection } from "./protect.js";
 
 export function creationRoutes(
-  service: Pick<CreationService, "options" | "list" | "detail" | "submit" | "cancel" | "retry" | "answer" | "followUp">,
+  service: Pick<
+    CreationService,
+    "options" | "list" | "detail" | "submit" | "cancel" | "retry" | "answer" | "followUp"
+  > &
+    Partial<Pick<CreationService, "message" | "goal" | "clearHistory">>,
   owner: (context: RouteContext) => string,
 ): Route[] {
   const protect = creationProtection(owner),
@@ -17,6 +21,49 @@ export function creationRoutes(
       return creationText(url.searchParams.get(key));
     };
   return [
+    {
+      path: "/api/document-creations/history/clear",
+      method: "POST",
+      handler: protect(async ({ req, url, res }, actor) => {
+        if (url.search || !service.clearHistory) throw new CreationError("unavailable");
+        respondJson(res, 200, await service.clearHistory(actor, await readJsonBody(req, 4096)));
+      }),
+    },
+    {
+      path: "/api/document-creations/goal",
+      method: "POST",
+      handler: protect(async ({ req, url, res }, actor) => {
+        if (url.search || !service.goal) throw new CreationError("unavailable");
+        const value = creationRecord(await readJsonBody(req, 96 * 1024), [
+          "taskId",
+          "id",
+          "action",
+          "objective",
+          "model",
+          "effort",
+        ]);
+        const { taskId, ...command } = value;
+        respondJson(res, 200, await service.goal(actor, creationText(taskId), command));
+      }),
+    },
+    {
+      path: "/api/document-creations/message",
+      method: "POST",
+      handler: protect(async ({ req, url, res }, actor) => {
+        if (url.search || !service.message) throw new CreationError("unavailable");
+        const value = creationRecord(await readJsonBody(req, 128 * 1024), [
+          "taskId",
+          "id",
+          "prompt",
+          "selections",
+          "attachments",
+          "model",
+          "effort",
+        ]);
+        const { taskId, ...input } = value;
+        respondJson(res, 202, { task: await service.message(actor, creationText(taskId), input) });
+      }),
+    },
     {
       path: "/api/document-creations/options",
       method: "GET",
@@ -29,8 +76,10 @@ export function creationRoutes(
       path: "/api/document-creations",
       method: ["GET", "POST"],
       handler: protect(async ({ req, url, res }, actor) => {
-        if (req.method === "GET")
-          return respondJson(res, 200, { tasks: await service.list(actor, query(url, "project")) });
+        if (req.method === "GET") {
+          const tasks = await service.list(actor, query(url, "project"));
+          return respondJson(res, 200, { tasks, before: Date.now() + 1 });
+        }
         if (url.search) throw new CreationError("invalidInput");
         respondJson(res, 202, { task: await service.submit(actor, await readJsonBody(req, 2 * 1024 * 1024)) });
       }),

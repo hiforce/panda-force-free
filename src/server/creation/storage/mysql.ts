@@ -1,4 +1,12 @@
+import {
+  creationHistoryCommand,
+  historyDocument,
+  historyReceipt,
+  historySignature,
+  type CreationHistoryCommand,
+} from "../history/contracts.js";
 import type { SQL } from "bun";
+import type { CreationMessageStore, CreationMessageRecord } from "../messages/contracts.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { stableJson } from "../../../shared/stable-json.js";
@@ -27,6 +35,14 @@ import { creationSignature, creationTask, type CreationTaskRow } from "./records
 import type { CreationProgress } from "../../../shared/creation/contracts.js";
 import { creationProgress } from "../validation.js";
 
+import type { CreationGoalStore, CreationGoalEvent } from "../goals/contracts.js";
+import {
+  creationGoalCommand,
+  goalActionSignature,
+  creationGoalEvent,
+  creationGoalResumeId,
+} from "../goals/contracts.js";
+
 export function creationLedgerNamespace(value: string) {
   if (typeof value !== "string" || !value || value.length > 256 || value.includes("\0"))
     throw new CreationError("invalidInput");
@@ -41,6 +57,7 @@ const integers = [
   "createdAt",
   "updatedAt",
   "answeredAt",
+  "dispatchGeneration",
 ];
 function numbers<T>(row: T): T {
   const result = { ...row };
@@ -87,17 +104,98 @@ export class MySQLCreationLedger {
   async get(owner: string, id: string) {
     return creationTask(await this.row(owner, id));
   }
+  readonly goals: CreationGoalStore = {
+    check: async (owner, taskId, input) => {
+      const command = creationGoalCommand(input),
+        rows = await this
+          .sql`SELECT owner,request FROM panda_force_creation_actions WHERE namespace=${this.namespace} AND id=${command.id}`;
+      if (!rows.length) return false;
+      if (rows[0].owner !== owner) throw new CreationError("notFound");
+      if (rows[0].request !== goalActionSignature(taskId, command)) throw new CreationError("conflict");
+      return true;
+    },
+    read: async (owner, taskId) => {
+      await this.row(owner, taskId);
+      const rows = await this
+        .sql`SELECT event FROM panda_force_creation_goals WHERE namespace=${this.namespace} AND owner=${owner} AND id=${taskId}`;
+      if (!rows.length) return null;
+      return creationGoalEvent(JSON.parse(String(rows[0].event)));
+    },
+    command: async (owner, taskId, input, now, execution) => {
+      const command = creationGoalCommand(input),
+        request = goalActionSignature(taskId, command);
+      creationInteger(now);
+      return this.transaction(async () => {
+        if (execution) {
+          if (execution.owner !== owner || execution.taskId !== taskId) throw new CreationError("leaseLost");
+          await this.assertExecution(execution, now);
+        }
+        let task = await this.get(owner, taskId);
+        const actions = await this
+            .sql`SELECT owner,request FROM panda_force_creation_actions WHERE namespace=${this.namespace} AND id=${command.id}`,
+          prior = await this.goals.read(owner, taskId);
+        if (actions.length) {
+          if (actions[0].owner !== owner) throw new CreationError("notFound");
+          if (actions[0].request !== request || !prior) throw new CreationError("conflict");
+          return prior;
+        }
+        if (command.action === "create" && prior?.goal) throw new CreationError("conflict");
+        if (command.action !== "set" && command.action !== "create" && command.action !== "clear" && !prior?.goal)
+          throw new CreationError("conflict");
+        if (["set", "create"].includes(command.action) && task.outputDigest && task.spec.id !== command.id)
+          throw new CreationError("conflict");
+        if (command.action === "pause") {
+          if (task.outputDigest || !["queued", "running", "failed", "cancelled"].includes(task.state))
+            throw new CreationError("conflict");
+          task = await this.cancel(owner, taskId, now);
+        } else if (command.action === "resume") {
+          if (task.artifact) throw new CreationError("conflict");
+          if (["failed", "cancelled"].includes(task.state) || (task.state === "committing" && task.failure))
+            task = await this.retry(owner, taskId, creationGoalResumeId(command.id), now);
+        }
+        const at = Math.max(now, (prior?.at || 0) + 1),
+          goal =
+            command.action === "clear"
+              ? null
+              : {
+                  id: prior?.goal?.id || command.id,
+                  objective: ["set", "create"].includes(command.action) ? command.objective! : prior!.goal!.objective,
+                  status: (command.action === "pause" ||
+                  (["set", "create"].includes(command.action) &&
+                    (prior?.goal?.status === "paused" || task.state === "cancelled"))
+                    ? "paused"
+                    : "active") as "active" | "paused",
+                  updatedAt: at,
+                };
+        const event: CreationGoalEvent = { at, goal };
+        await this
+          .sql`INSERT INTO panda_force_creation_goals(namespace,id,owner,event) VALUES(${this.namespace},${taskId},${owner},${JSON.stringify(event)}) ON DUPLICATE KEY UPDATE event=VALUES(event)`;
+        await this
+          .sql`INSERT INTO panda_force_creation_actions(namespace,id,owner,taskId,request,createdAt) VALUES(${this.namespace},${command.id},${owner},${taskId},${request},${now})`;
+        return event;
+      });
+    },
+  };
   readonly progress = {
     record: async (lease: CreationLease, value: CreationProgress) => {
       const event = creationProgress(value);
       await this.transaction(async () => {
         const task = await this.row(lease.owner, lease.taskId);
         if (task.generation !== lease.generation || event.generation !== lease.generation) return;
+        if (event.id) {
+          const current = await this
+            .sql`SELECT id FROM panda_force_creation_progress WHERE namespace=${this.namespace} AND id=${event.id} AND taskId=${lease.taskId} AND generation=${lease.generation}`;
+          if (current.length) {
+            await this
+              .sql`UPDATE panda_force_creation_progress SET event=${JSON.stringify(event)} WHERE namespace=${this.namespace} AND id=${event.id}`;
+            return;
+          }
+        }
         const [count] = await this
           .sql`SELECT COUNT(*) n FROM panda_force_creation_progress WHERE namespace=${this.namespace} AND taskId=${lease.taskId} AND generation=${lease.generation}`;
         if (mysqlInteger(count.n) >= 64) return;
         await this
-          .sql`INSERT INTO panda_force_creation_progress(namespace,id,taskId,generation,createdAt,ordinal,event) VALUES(${this.namespace},${randomUUID()},${lease.taskId},${lease.generation},${event.at},${mysqlInteger(count.n)},${JSON.stringify(event)})`;
+          .sql`INSERT INTO panda_force_creation_progress(namespace,id,taskId,generation,createdAt,ordinal,event) VALUES(${this.namespace},${event.id || randomUUID()},${lease.taskId},${lease.generation},${event.at},${mysqlInteger(count.n)},${JSON.stringify(event)})`;
       });
     },
     list: async (owner: string, id: string, conversation = true): Promise<CreationProgress[]> => {
@@ -106,6 +204,85 @@ export class MySQLCreationLedger {
         .sql`SELECT event FROM (SELECT event,generation,ordinal FROM panda_force_creation_progress WHERE namespace=${this.namespace} AND taskId=${id} AND (${conversation ? 1 : 0}=1 OR JSON_UNQUOTE(JSON_EXTRACT(event,'$.stage'))<>'message') ORDER BY generation DESC,ordinal DESC LIMIT 192) recent ORDER BY generation,ordinal`;
       return rows.map((row: { event: unknown }) => creationProgress(JSON.parse(String(row.event))));
     },
+  };
+  private async messageRow(owner: string, id: string): Promise<CreationMessageRecord | null> {
+    const rows = await this
+      .sql`SELECT * FROM panda_force_creation_messages WHERE namespace=${this.namespace} AND id=${creationUuid(id)}`;
+    if (!rows.length) return null;
+    if (rows[0].owner !== owner) throw new CreationError("notFound");
+    return numbers(rows[0] as CreationMessageRecord);
+  }
+  readonly messages: CreationMessageStore = {
+    find: (owner, id) => this.messageRow(owner, id),
+    accept: (value) =>
+      this.transaction(async () => {
+        const prior = await this.messageRow(value.owner, value.id);
+        if (prior) {
+          if (prior.requestDigest !== value.requestDigest || prior.taskId !== value.taskId)
+            throw new CreationError("conflict");
+          return prior;
+        }
+        const task = await this.row(value.owner, value.taskId);
+        if (
+          !["queued", "running"].includes(task.state) ||
+          task.cancelRequested ||
+          task.outputDigest ||
+          task.generation !== value.generation
+        )
+          throw new CreationError("conflict");
+        const [count] = await this
+          .sql`SELECT COUNT(*) n FROM panda_force_creation_messages WHERE namespace=${this.namespace} AND taskId=${value.taskId}`;
+        if (mysqlInteger(count.n) >= 32) throw new CreationError("unavailable");
+        const [previous] = await this
+          .sql`SELECT MAX(createdAt) at FROM panda_force_creation_messages WHERE namespace=${this.namespace} AND taskId=${value.taskId}`;
+        const acceptedAt = Math.max(
+          value.createdAt,
+          previous.at === null ? value.createdAt : mysqlInteger(previous.at) + 1,
+        );
+        await this
+          .sql`INSERT INTO panda_force_creation_messages(namespace,id,owner,taskId,generation,requestDigest,payloadDigest,state,dispatchGeneration,createdAt,updatedAt) VALUES(${this.namespace},${value.id},${value.owner},${value.taskId},${value.generation},${value.requestDigest},${value.payloadDigest},'received',NULL,${acceptedAt},${Math.max(acceptedAt, value.updatedAt)})`;
+        return (await this.messageRow(value.owner, value.id))!;
+      }),
+    list: async (owner, taskId) => {
+      await this.row(owner, taskId);
+      return (
+        await this
+          .sql`SELECT * FROM panda_force_creation_messages WHERE namespace=${this.namespace} AND taskId=${taskId} ORDER BY createdAt,id`
+      ).map((row: CreationMessageRecord) => numbers(row));
+    },
+    claim: (lease, now) =>
+      this.transaction(async () => {
+        let task;
+        try {
+          task = await this.active(lease, now);
+        } catch (error) {
+          if (error instanceof CreationError && error.code === "leaseLost") return null;
+          throw error;
+        }
+        if (task.state !== "running") return null;
+        await this
+          .sql`UPDATE panda_force_creation_messages SET state='uncertain',updatedAt=${now} WHERE namespace=${this.namespace} AND taskId=${lease.taskId} AND state='dispatching' AND dispatchGeneration<>${lease.generation}`;
+        const [row] = await this
+          .sql`SELECT * FROM panda_force_creation_messages WHERE namespace=${this.namespace} AND taskId=${lease.taskId} AND state='received' ORDER BY createdAt,id LIMIT 1`;
+        if (!row) return null;
+        await this
+          .sql`UPDATE panda_force_creation_messages SET state='dispatching',dispatchGeneration=${lease.generation},updatedAt=${now} WHERE namespace=${this.namespace} AND id=${row.id}`;
+        return this.messageRow(lease.owner, row.id);
+      }),
+    settle: (lease, id, state, now) =>
+      this.transaction(async () => {
+        const task = await this.row(lease.owner, lease.taskId);
+        if (task.generation !== lease.generation) return;
+        await this
+          .sql`UPDATE panda_force_creation_messages SET state=${state},updatedAt=${now} WHERE namespace=${this.namespace} AND id=${id} AND owner=${lease.owner} AND taskId=${lease.taskId} AND dispatchGeneration=${lease.generation} AND state='dispatching'`;
+      }),
+    seen: (lease, ids, now) =>
+      this.transaction(async () => {
+        await this.active(lease, now);
+        for (const id of ids)
+          await this
+            .sql`UPDATE panda_force_creation_messages SET state='delivered',dispatchGeneration=${lease.generation},updatedAt=${now} WHERE namespace=${this.namespace} AND id=${id} AND owner=${lease.owner} AND taskId=${lease.taskId} AND state<>'delivered'`;
+      }),
   };
   async find(owner: string, id: string) {
     const rows = await this
@@ -213,6 +390,11 @@ export class MySQLCreationLedger {
     return this.transaction(async () => {
       const task = await this.assertExecution(scope, now);
       if (task.outputDigest) return task;
+      const [context] = await this
+        .sql`SELECT id FROM panda_force_creation_messages WHERE namespace=${this.namespace} AND taskId=${scope.taskId} ORDER BY createdAt DESC,id DESC LIMIT 1`;
+      if (context && context.id !== scope.contextVersion) throw new CreationError("conflict");
+      const goal = await this.goals.read(scope.owner, scope.taskId);
+      if (goal && goal.at !== scope.goalVersion) throw new CreationError("conflict");
       if (await this.hasPending(scope.taskId)) throw new CreationError("conflict");
       await this
         .sql`UPDATE panda_force_creation_tasks SET state='committing',outputDigest=${digest},updatedAt=${now} WHERE namespace=${this.namespace} AND id=${scope.taskId}`;
@@ -337,14 +519,61 @@ export class MySQLCreationLedger {
       return this.get(owner, id);
     });
   }
+  async clearHistory(owner: string, command: CreationHistoryCommand, now: number) {
+    command = creationHistoryCommand(command);
+    owner = creationText(owner, 200);
+    creationInteger(now);
+    const signature = historySignature(command);
+    return this.transaction(async () => {
+      const prior = await this
+        .sql`SELECT owner,request,result FROM panda_force_creation_history_actions WHERE namespace=${this.namespace} AND id=${command.id}`;
+      if (prior.length) {
+        if (prior[0].owner !== owner) throw new CreationError("notFound");
+        if (prior[0].request !== signature) throw new CreationError("conflict");
+        return historyReceipt(prior[0].result, command.id);
+      }
+      const task = command.taskId ? await this.get(owner, command.taskId) : null,
+        document = task ? historyDocument(task) : null;
+      const changed = await this.sql.unsafe(
+        `INSERT IGNORE INTO panda_force_creation_history_hidden(namespace,id,owner) SELECT namespace,id,owner FROM panda_force_creation_tasks WHERE namespace=? AND owner=?` +
+          (task
+            ? ` AND projectId=? AND ` +
+              (document
+                ? `(JSON_UNQUOTE(JSON_EXTRACT(spec,'$.target.document.documentId'))=? OR JSON_UNQUOTE(JSON_EXTRACT(artifact,'$.documentId'))=?)`
+                : `id=?`)
+            : "") +
+          (command.before === undefined ? "" : " AND createdAt<?"),
+        [
+          ...(task
+            ? document
+              ? [this.namespace, owner, task.spec.projectId, document, document]
+              : [this.namespace, owner, task.spec.projectId, task.spec.id]
+            : [this.namespace, owner]),
+          ...(command.before === undefined ? [] : [command.before]),
+        ],
+      );
+      const hidden = mysqlInteger(changed.affectedRows);
+      const result = { id: command.id, hidden };
+      await this
+        .sql`INSERT INTO panda_force_creation_history_actions(namespace,id,owner,request,result,createdAt) VALUES(${this.namespace},${command.id},${owner},${signature},${stableJson(result)},${now})`;
+      return result;
+    });
+  }
   async list(owner: string, projectId?: string): Promise<CreationTask[]> {
     if (projectId !== undefined) creationId(projectId);
-    const rows =
-      projectId === undefined
-        ? await this
-            .sql`SELECT * FROM panda_force_creation_tasks WHERE namespace=${this.namespace} AND owner=${owner} ORDER BY CASE WHEN state IN ('queued','running','committing') THEN 0 ELSE 1 END,createdAt DESC,id DESC LIMIT 50`
-        : await this
-            .sql`SELECT * FROM panda_force_creation_tasks WHERE namespace=${this.namespace} AND owner=${owner} AND projectId=${projectId} ORDER BY createdAt DESC,id DESC LIMIT 20`;
+    const rows = await this.sql.unsafe(
+      `SELECT * FROM (
+      SELECT t.*,ROW_NUMBER() OVER(PARTITION BY projectId,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(spec,'$.target.document.documentId')),JSON_UNQUOTE(JSON_EXTRACT(artifact,'$.documentId')),id) ORDER BY createdAt DESC,id DESC) AS historyRank
+      FROM panda_force_creation_tasks t WHERE namespace=? AND owner=? AND NOT EXISTS(SELECT 1 FROM panda_force_creation_history_hidden h WHERE h.namespace=t.namespace AND h.id=t.id AND h.owner=t.owner)` +
+        (projectId === undefined ? "" : " AND projectId=?") +
+        `) ranked WHERE historyRank=1 ORDER BY ` +
+        (projectId === undefined
+          ? `CASE WHEN state IN ('queued','running','committing') AND failure IS NULL THEN 0 ELSE 1 END,`
+          : "") +
+        `createdAt DESC,id DESC LIMIT ` +
+        (projectId === undefined ? "50" : "20"),
+      projectId === undefined ? [this.namespace, owner] : [this.namespace, owner, projectId],
+    );
     return rows.map((r: any) => creationTask(numbers(r as CreationTaskRow)));
   }
   async nextOutput(now: number) {
@@ -442,6 +671,7 @@ export class MySQLCreationLedger {
       fail: this.fail.bind(this),
       nextOutput: this.nextOutput.bind(this),
       retry: this.retry.bind(this),
+      clearHistory: this.clearHistory.bind(this),
       list: this.list.bind(this),
     };
   }
@@ -464,5 +694,12 @@ export function personalCreationLedgerNamespace(owner: string): string {
 }
 export function createMySQLCreationStorage(sql: SQL, namespace: string) {
   const tasks = new MySQLCreationLedger(sql, namespace);
-  return { tasks, queue: tasks.scheduling, questions: tasks.questions, progress: tasks.progress };
+  return {
+    tasks,
+    queue: tasks.scheduling,
+    questions: tasks.questions,
+    progress: tasks.progress,
+    messages: tasks.messages,
+    goals: tasks.goals,
+  };
 }

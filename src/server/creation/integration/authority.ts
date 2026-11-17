@@ -11,15 +11,17 @@ const capabilities = DOCUMENT_CREATION_CAPABILITIES;
 /** Declared capabilities match the actual tool set. Revision-oriented and paid skills keep their own unavailable states. */
 export function creationAuthority(options: {
   authorize(owner: string, projectId: string): Promise<void>;
-  documents: Pick<FileDocumentNavigation, "tree">;
+  documents: Pick<FileDocumentNavigation, "tree"> & { revisions?: import("../ports.js").CreationDocumentRevisions };
   profiles: CreationProfiles;
   skills: SkillCatalog;
 }) {
   const allowed = new Set<SkillCapability>(capabilities);
   const authority: CreationSubmissionAuthority = {
     authorize: options.authorize,
+    revision: options.documents.revisions?.read,
     async target(owner, input) {
       await options.authorize(owner, input.projectId);
+      if (input.previousTaskId) return;
       const tree = await options.documents.tree(input.projectId);
       if (
         tree.version < input.treeVersion ||
@@ -27,7 +29,7 @@ export function creationAuthority(options: {
       )
         throw new CreationError("conflict");
     },
-    profile: (id) => options.profiles.resolve(id),
+    profile: (id, selection) => options.profiles.resolve(id, selection),
     capture: async (owner, input, requestDigest) =>
       options.skills.capture(
         {

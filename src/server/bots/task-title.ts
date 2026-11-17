@@ -19,6 +19,7 @@ export function taskSummary(task: BotTaskSummary): BotTaskSummary {
   const { title, ...record } = task;
   return {
     ...record,
+    reason: typeof task.reason === "string" ? task.reason.replace(/\s+/g, " ").trim().slice(0, 400) : null,
     ...(title ? { title } : {}),
     summary: summary.replace(/\s+/g, " ").slice(0, 240),
     state: botTaskState(task),

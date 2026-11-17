@@ -1,10 +1,11 @@
+import { stripSessionSkillPreview } from "../../shared/session-skills.js";
 import type { StateScope } from "../contracts/ownership.js";
 import type { SessionRepository } from "../contracts/repositories.js";
 import { latestTokenUsage, tokenUsage } from "../../shared/engine/usage.js";
 import { stripAttachmentWorkspacePreview } from "../../shared/attachment-workspace.js";
 function visibleSummary<T extends { preview?: string }>(thread: T): T {
   if (typeof thread.preview !== "string") return thread;
-  const preview = stripAttachmentWorkspacePreview(thread.preview);
+  const preview = stripSessionSkillPreview(stripAttachmentWorkspacePreview(thread.preview));
   return preview === thread.preview ? thread : { ...thread, preview };
 }
 // Session collections and the current selection share one explicit write boundary.

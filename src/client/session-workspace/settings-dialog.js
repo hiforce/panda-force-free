@@ -2,6 +2,7 @@ import { escapeHtml } from "../../shared/html.js";
 import { codexIcon } from "../codex-icons.js";
 import { closestElement, requireElement } from "../dom.js";
 import { messageHtml, setMessageHtml } from "../i18n.js";
+import { sessionEffortOptions, sessionModelFields } from "./model-fields.js";
 
 /** An edit buffer lives only for the open dialog; Cancel never writes engine settings. */
 /** @param {import('../contracts/session-workspace.js').SessionSettingsDialogOptions} options */
@@ -24,15 +25,7 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
     const choices = selected?.efforts || [];
     if (!choices.some((item) => item.id === effort)) effort = selected?.defaultEffort || choices[0]?.id || "";
     if (!choices.some((item) => item.id === effort)) effort = choices[0]?.id || "";
-    setMessageHtml(
-      requireElement("#sessionSettingEfforts"),
-      choices
-        .map(
-          (item) =>
-            `<label><input type="radio" name="session-effort" value="${escapeHtml(item.id)}" ${item.id === effort ? "checked" : ""}/><span>${escapeHtml(item.label)}</span></label>`,
-        )
-        .join(""),
-    );
+    setMessageHtml(requireElement("#sessionSettingEfforts"), sessionEffortOptions(choices, effort));
   }
   function render() {
     const snapshot = read();
@@ -47,15 +40,9 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
         : snapshot.permissions.some((item) => item.id === permission && item.allowed);
     const fields =
       kind === "model"
-        ? `<label class="session-form-label" for="sessionSettingModel">${label("common.model")}</label>
-          <select class="session-field" id="sessionSettingModel" ${snapshot.models.length ? "" : "disabled"}>
-            ${snapshot.models.map((item) => `<option value="${escapeHtml(item.id)}" ${item.id === model ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
-          </select>
+        ? `${sessionModelFields(snapshot.models, { model, effort }, t)}
           ${snapshot.models.length ? "" : `<button type="button" class="session-button" id="sessionReloadModels">${label("sessions.retryLoadingModels")}</button>`}
-          <fieldset class="session-effort-fieldset">
-            <legend>${label("common.reasoningEffort")}</legend>
-            <div class="session-effort-segments" id="sessionSettingEfforts"></div>
-          </fieldset>`
+          `
         : `<fieldset class="session-permission-fieldset">
             <legend class="sr-only">${label("common.permissions")}</legend>
             ${snapshot.permissions.map((item) => `<label class="session-permission-choice ${item.allowed ? "" : "unavailable"}"><input type="radio" name="session-permission" value="${escapeHtml(item.id)}" ${item.id === permission ? "checked" : ""} ${item.allowed ? "" : "disabled"} /><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.description)}</small></span></label>`).join("")}
@@ -67,7 +54,7 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
         <button type="button" class="icon-button" data-settings-dismiss aria-label="${escapeHtml(t("common.close"))}">${codexIcon("x")}</button>
       </header>
       <form id="sessionSettingsForm" class="session-dialog-form">
-        <div class="session-dialog-body"><p class="session-caption">${label("sessionview.nextInstruction")}</p>${fields}</div>
+        <div class="session-dialog-body"><p class="session-caption">${label(snapshot.settingsHint || "sessionview.nextInstruction")}</p>${fields}</div>
         <footer class="session-dialog-actions">
           <button type="button" class="session-button" data-settings-dismiss>${label("common.cancel")}</button>
           <button type="submit" class="session-button primary" ${canSave ? "" : "disabled"}>${label("sessionview.saveSettings")}</button>

@@ -1,3 +1,4 @@
+import { stripSessionSkillContext } from "../../shared/session-skills.js";
 import { open } from "node:fs/promises";
 import { join } from "node:path";
 import { errorCode } from "./../../shared/errors.js";
@@ -38,7 +39,7 @@ export async function readComposerHistory(codexHome, options = {}) {
         if (!decisions.has(id)) decisions.set(id, await includeSession(id));
         if (!decisions.get(id)) continue;
       }
-      const text = stripAttachmentWorkspaceContext(entry.text);
+      const text = stripSessionSkillContext(stripAttachmentWorkspaceContext(entry.text));
       if (text) entries.push({ text });
     }
     return entries.slice(-limit);

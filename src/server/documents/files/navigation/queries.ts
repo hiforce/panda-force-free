@@ -5,6 +5,7 @@ import { DocumentError } from "../../errors.js";
 import { editorInput } from "../commands.js";
 import { documentIdentity, type DocumentFileProjects } from "../projects.js";
 import { readFileNavigation, readFileTree } from "./read.js";
+import { readDocumentOwnership } from "../../../project-content/ownership-file.js";
 
 function cursorInput(value: string, projectId: string) {
   try {
@@ -68,7 +69,14 @@ export class FileTreeQueries {
         if (after && after.commit !== view.commit) throw new DocumentError("navigationConflict", 409);
         const { space, state } = await readFileNavigation(view, projectId),
           { roots, counts } = trashGroups(state?.trash ?? []),
-          selected = roots
+          visible: ProjectNavigationTrash[] = [];
+        for (const row of roots) {
+          const ownership = await readDocumentOwnership(view, row.documentId);
+          if (ownership && ownership.kind !== "active") continue;
+          if (ownership && ownership.to.projectId !== projectId) throw new DocumentError("conflict", 409);
+          visible.push(row);
+        }
+        const selected = visible
             .filter(
               (row) =>
                 !after ||

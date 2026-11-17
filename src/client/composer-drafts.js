@@ -46,7 +46,8 @@ export function createComposerDrafts({
   function persistComposerDraft() {
     const key = composerDraftKey(),
       draft = getDraftSnapshot();
-    if (!draft.text.trim() && !draft.mentions.length && !draft.attachments.length) composerDrafts.delete(key);
+    if (!draft.text.trim() && !draft.mentions.length && !draft.attachments.length && !draft.skills)
+      composerDrafts.delete(key);
     else composerDrafts.set(key, draft);
     persistComposerDrafts();
   }

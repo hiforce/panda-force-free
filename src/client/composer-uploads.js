@@ -1,3 +1,4 @@
+import { errorText } from "./i18n.js";
 import { errorMessage } from "./../shared/errors.js";
 import { request as fetch } from "./http-client.js";
 import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "./i18n.js";
@@ -5,6 +6,7 @@ import { attachmentDisplayUrl } from "../shared/attachment-urls.js";
 import { codexIcon } from "./codex-icons.js";
 import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MAX_COUNT, filesFromClipboard } from "./composer-attachments.js";
 import { localImageUrl } from "./rendering.js";
+import { creationSessionRoute } from "./creation/session-route.js";
 // Clipboard, drop and file-picker input share one upload and rendering path.
 // Upload identity belongs to its original draft, even if navigation happens first.
 export function createComposerUploads({
@@ -90,6 +92,7 @@ export function createComposerUploads({
     onChange();
   }
   async function uploadComposerFiles(files) {
+    const creation = Boolean(creationSessionRoute());
     // Capture the destination before an upload can outlive navigation to another draft.
     /** @type {Record<string, string>} */
     const destination = state.active?.cwd
@@ -121,14 +124,15 @@ export function createComposerUploads({
       // Stable attachment identity updates its saved draft without changing another task.
       void (async () => {
         try {
-          const query = new URLSearchParams({ name: file.name, ...destination });
-          const response = await fetch(`/api/attachments?${query}`, {
+          const query = new URLSearchParams({ name: file.name, ...(creation ? {} : destination) });
+          const response = await fetch(`${creation ? "/api/creation-materials" : "/api/attachments"}?${query}`, {
             method: "POST",
             headers: { "content-type": "application/octet-stream" },
             body: file,
           });
           const result = await response.json();
-          if (!response.ok) throw new Error(result.error || "Upload failed");
+          if (!response.ok)
+            throw new Error(creation ? errorText(result, t, "creation.unavailable") : result.error || "Upload failed");
           completeAttachment(attachment.id, result.attachment);
         } catch (error) {
           completeAttachment(attachment.id, { status: "failed", error: errorMessage(error) });

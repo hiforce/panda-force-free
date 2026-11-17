@@ -1,3 +1,4 @@
+import { sqliteOwnershipVisible } from "../ownership/sql-policy.js";
 import type { Database } from "bun:sqlite";
 import type { DocumentRecord } from "../../../shared/documents/contracts.js";
 import type {
@@ -7,6 +8,8 @@ import type {
 } from "../../../shared/documents/navigation.js";
 import { validateDocumentTree } from "../../../shared/documents/navigation.js";
 import { DocumentError } from "../errors.js";
+import { DocumentOwnershipRepository } from "../ownership/repository.js";
+import { assertOwnershipVisible } from "../ownership/record.js";
 import { migrateDocumentNavigation } from "./schema.js";
 
 export interface DocumentTreeRow extends DocumentTreePlacement {
@@ -200,7 +203,10 @@ export class DocumentNavigationRepository {
   }
   revive(ids: string[]) {
     const remove = this.db.query("DELETE FROM document_trash WHERE documentId=?");
-    for (const id of ids) remove.run(id);
+    for (const id of ids) {
+      assertOwnershipVisible(new DocumentOwnershipRepository(this.db).forDocument(id));
+      remove.run(id);
+    }
     this.forgetTombstones(ids);
   }
   trashList(spaceId: string): DocumentTreeTrashItem[] {
@@ -212,7 +218,7 @@ export class DocumentNavigationRepository {
         DocumentRecord & { deletedAt: number; operationId: string | null },
         [string, number | null, number | null, number | null, string]
       >(
-        `SELECT d.*,x.deletedAt,t.operationId FROM documents d JOIN document_trash x ON x.documentId=d.id LEFT JOIN document_tree_trash t ON t.documentId=d.id WHERE d.spaceId=? AND (t.documentId IS NULL OR NOT EXISTS(SELECT 1 FROM document_tree_trash p JOIN document_trash z ON z.documentId=p.documentId WHERE p.documentId=t.parentId AND p.operationId=t.operationId AND p.spaceId=t.spaceId)) AND (? IS NULL OR x.deletedAt<? OR (x.deletedAt=? AND d.id>?)) ORDER BY x.deletedAt DESC,d.id LIMIT 201`,
+        `SELECT d.*,x.deletedAt,t.operationId FROM documents d JOIN document_trash x ON x.documentId=d.id LEFT JOIN document_tree_trash t ON t.documentId=d.id WHERE d.spaceId=? AND ${sqliteOwnershipVisible("d")} AND (t.documentId IS NULL OR NOT EXISTS(SELECT 1 FROM document_tree_trash p JOIN document_trash z ON z.documentId=p.documentId WHERE p.documentId=t.parentId AND p.operationId=t.operationId AND p.spaceId=t.spaceId)) AND (? IS NULL OR x.deletedAt<? OR (x.deletedAt=? AND d.id>?)) ORDER BY x.deletedAt DESC,d.id LIMIT 201`,
       )
       .all(
         spaceId,

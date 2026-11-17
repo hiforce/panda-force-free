@@ -1,3 +1,4 @@
+import { parkMessageComposer } from "../message-composer-placement.js";
 import { localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
 import { errorMessage, errorStatus } from "./../../shared/errors.js";
 
@@ -45,6 +46,7 @@ export function assembleNavigation({
       : state.newSessionProjectId || null;
   }
   function startNewTask({ saveCurrentDraft = true, projectId = defaultNewSessionProject(), keepRoute = false } = {}) {
+    parkMessageComposer();
     if (saveCurrentDraft) composerPort.saveComposerDraft();
     mutations.set("newSessionProjectId", projectId);
     goalsPort.closeGoalDialog();
@@ -74,9 +76,10 @@ export function assembleNavigation({
     viewUpdates.request("sidebar");
     viewUpdates.request("goals");
     viewUpdates.request("status");
-    $("#prompt").focus();
+    if (!keepRoute) $("#prompt").focus();
   }
   function showOpenedConversation(thread, fromCache = false) {
+    parkMessageComposer();
     viewportPort.resetAutoScroll();
     viewportPort.syncConversationScrollSurface();
     synchronizationPort.resetActiveThreadSync();

@@ -38,7 +38,7 @@ try {
         const r =
           data === undefined
             ? await context.request.get(app.base + path)
-            : await context.request.post(app.base + path, { data });
+            : await context.request.post(app.base + path, { data, headers: { Origin: app.base } });
         assert.ok(r.ok(), await r.text());
         return r.json();
       };
@@ -62,7 +62,7 @@ try {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, name);
         await page.screenshot({ path: `${out}/${name}-${width}.png` });
       };
-      await page.goto(app.base + "/create");
+      await page.goto(app.base + "/create?view=works");
       await ready();
       const title = "Release plan " + width + " <V2>";
       const importFile = async (name, buffer, newTitle) => {
@@ -130,7 +130,7 @@ try {
       assert.equal(await dialog.frameLocator("[data-asset-frame]").locator("h1").innerText(), "Release plan " + width);
       await dialog.locator("[data-doc-close]").click();
       await snap("project");
-      await page.goto(app.base + "/create");
+      await page.goto(app.base + "/create?view=works");
       await ready();
       const deck = officeFixture({ slides: 2 }).bytes(),
         slides = await importFile("architecture.pptx", Buffer.from(deck), "Architecture " + width);

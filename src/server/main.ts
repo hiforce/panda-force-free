@@ -225,7 +225,7 @@ const {
   recovery: autoContinueRecovery,
   recoverQueue: recoverMessageQueue,
 } = installedEngine;
-const { creationFeature, personalContent, readOriginalSources, knowledgeFeature, searchFeature } =
+const { creationFeature, personalContent, readOriginalSources, knowledgeFeature, searchFeature, closeMaterialText } =
   await createApplicationContent(
     config,
     runtimeStores,
@@ -239,6 +239,7 @@ const { creationFeature, personalContent, readOriginalSources, knowledgeFeature,
       sharedWorkspaceAllowed(context.req) &&
       (!!authState.administrator || allowlist.includes(publicationOwner(authState, context))),
     (project, owner) => searchChanged(project, owner),
+    () => (authState.administrator ? publicationOwner(authState, {}) : null),
   );
 const authorizeCliProject = async (owner: string, project: string) => {
   if (owner !== publicationOwner(authState, {})) throw new DocumentError("notFound", 404);
@@ -556,7 +557,7 @@ const dispatchApiRoute = createRouter([
       if (await documentStorage.files(project)) await contentAccess.require(owner, project, action);
       else await contentAccess.requireLegacy(owner, project, action);
     },
-    legacyRoutes: documentFeature.routes,
+    legacyRoutes: documents.authorizedLegacyRoutes,
     usesFiles: (id) => documentStorage.files(id),
     requireProject: requireDocumentProject,
   }),
@@ -682,6 +683,7 @@ const server = createServer(
         "/delivery.css",
         "/social.css",
         "/session-workspace.css",
+        "/message-composer.css",
         "/settings-workspace.css",
         "/workbench-chrome.css",
         "/workbench-layout.css",
@@ -836,6 +838,7 @@ function shutdown() {
     bots: botFeature,
     search: searchFeature,
     closeCreativeText,
+    closeMaterialText,
     knowledge: knowledgeFeature,
     creation: creationFeature,
     personal: personalContent,

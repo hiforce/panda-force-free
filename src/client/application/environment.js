@@ -13,6 +13,7 @@ import { createRenderBatch } from "./render-batch.js";
 import { createSessionState } from "./session-state.js";
 import { createInitialState } from "./initial-state.js";
 import { createStateDomains } from "./state-domains.js";
+import { creationSessionRoute } from "../creation/session-route.js";
 // Creates domain stores, scoped capabilities, localization and initial shell assets.
 export function assembleEnvironment() {
   const $ = requireElement;
@@ -44,7 +45,7 @@ export function assembleEnvironment() {
   });
   const composerState = stateDomains.scope("composer").state;
   const drafts = createComposerDrafts({
-    getActiveThreadId: () => composerState.active?.id,
+    getActiveThreadId: () => creationSessionRoute()?.key || composerState.active?.id,
     getNewDraftKey: () =>
       "__new__:project:" +
       (composerState.newSessionProjectId || "unassigned") +
@@ -53,17 +54,18 @@ export function assembleEnvironment() {
         ? "projectless"
         : composerState.workspaceContext?.cwd || composerState.config.defaultCwd || "default"),
     getLegacyNewDraftKey: () =>
-      composerState.newSessionProjectId
+      creationSessionRoute() || composerState.newSessionProjectId
         ? null
         : "__new__:" +
           (composerState.projectless
             ? "projectless"
             : composerState.workspaceContext?.cwd || composerState.config.defaultCwd || "default"),
-    migrateLegacyGlobalDraft: () => !composerState.newSessionProjectId,
+    migrateLegacyGlobalDraft: () => !creationSessionRoute() && !composerState.newSessionProjectId,
     getDraftSnapshot: () => ({
       text: $("#prompt").value,
       mentions: [...composerState.composerMentions],
       attachments: [...composerState.composerAttachments],
+      skills: [...composerState.composerSkills],
     }),
   });
   // Seed the static shell before route rendering replaces its empty-state DOM.

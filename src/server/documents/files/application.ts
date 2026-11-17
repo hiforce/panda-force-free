@@ -21,6 +21,10 @@ import { FileDocumentSnapshots } from "./snapshots.js";
 import { FileDocumentChanges } from "./source-edits.js";
 import { FileDocumentSourceProfiles } from "./spaces/profiles.js";
 import { FileDocumentSpaces } from "./spaces/service.js";
+import { FileDocumentOwnershipSource } from "../ownership/file-source.js";
+import { FileDocumentOwnershipRemoval } from "../ownership/file-source-removal.js";
+import { FileDocumentOwnershipTarget } from "../ownership/file-target.js";
+import { fileOwnershipLocation } from "../ownership/location.js";
 
 /** Activation belongs to the application cutover, after all publishing consumers use the same file-backed source. */
 export function createFileDocumentApplication(options: {
@@ -50,6 +54,12 @@ export function createFileDocumentApplication(options: {
     profiles = new FileDocumentSourceProfiles(projects, sourceReader),
     spaces = new FileDocumentSpaces(projects, sourceReader, options.themes ?? builtinSiteThemes);
   return {
+    transfers: {
+      location: (project: string, documentId: string) => fileOwnershipLocation(projects, project, documentId),
+      source: new FileDocumentOwnershipSource(projects, options.assetRoot),
+      removal: new FileDocumentOwnershipRemoval(projects),
+      target: new FileDocumentOwnershipTarget(projects, options.assetRoot),
+    },
     projectContent: projects,
     queries,
     originals: new FileOriginalQueries(projects, options.assetRoot),

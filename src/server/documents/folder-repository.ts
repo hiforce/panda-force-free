@@ -1,6 +1,9 @@
+import { sqliteOwnershipVisible } from "./ownership/sql-policy.js";
 import { randomUUID } from "node:crypto";
 import type { Database } from "bun:sqlite";
 import type { DocumentFolder, DocumentRecord } from "../../shared/documents/contracts.js";
+import { DocumentOwnershipRepository } from "./ownership/repository.js";
+import { assertOwnershipVisible } from "./ownership/record.js";
 import { DocumentError } from "./errors.js";
 
 const beneath = (path: string, root: string) => path === root || path.startsWith(root + "/");
@@ -126,6 +129,7 @@ export class DocumentFolderRepository {
   restore(document: DocumentRecord) {
     return this.db
       .transaction(() => {
+        assertOwnershipVisible(new DocumentOwnershipRepository(this.db).get(document.spaceId, document.id));
         this.db.query("DELETE FROM document_trash WHERE documentId=?").run(document.id);
         const parent = document.path.split("/").slice(0, -1).join("/");
         if (parent) this.create(document.spaceId, parent);
@@ -135,7 +139,7 @@ export class DocumentFolderRepository {
   trashList(spaceId: string): DocumentRecord[] {
     return this.db
       .query<DocumentRecord, [string]>(
-        "SELECT d.* FROM documents d JOIN document_trash t ON t.documentId=d.id WHERE d.spaceId=? ORDER BY t.deletedAt DESC LIMIT 200",
+        `SELECT d.* FROM documents d JOIN document_trash t ON t.documentId=d.id WHERE d.spaceId=? AND ${sqliteOwnershipVisible("d")} ORDER BY t.deletedAt DESC LIMIT 200`,
       )
       .all(spaceId);
   }
@@ -147,7 +151,9 @@ export class DocumentFolderRepository {
         if (!root) throw new DocumentError("notFound", 404);
         if (root.version !== expected) throw new DocumentError("conflict", 409);
         const documents = this.db
-          .query<DocumentRecord, [string]>("SELECT * FROM documents WHERE spaceId=?")
+          .query<DocumentRecord, [string]>(
+            `SELECT * FROM documents WHERE spaceId=? AND ${sqliteOwnershipVisible("documents")} `,
+          )
           .all(spaceId)
           .filter((document) => document.path.startsWith(path + "/"));
         for (const document of documents) this.trash(document.id, document.revision);

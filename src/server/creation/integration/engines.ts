@@ -4,11 +4,12 @@ import type { CreationEngines } from "../runtime/contracts.js";
 import { CreationError } from "../contracts.js";
 import { isolatedApplicationEngines } from "../../engines/application-tools/factory.js";
 
-/** Each run gets an empty directory visible to its native engine. Model text never selects a workspace or process. */
+/** The application selects scratch or a verified conversation directory; model text never selects a workspace or process. */
 export function creationEngines(
   options: {
     connection: CodexConnection;
     scratchRoot: string;
+    workspaceRoot?: string;
     version: string;
     engineId: string;
   },

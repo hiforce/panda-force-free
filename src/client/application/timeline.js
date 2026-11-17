@@ -6,6 +6,7 @@ import { closestElement } from "./../dom.js";
 
 import { pandaInterfaceMark } from "../panda-brand.js";
 import { DEFAULT_TURN_PAGE_SIZE, createTurnWindow } from "../ui-core.js";
+import { creationSessionRoute } from "../creation/session-route.js";
 
 // Owns timeline frames, render batches and pagination controls; item presentation is delegated.
 /** @param {import("./ports.js").FeatureOptions<"renderBatch" | "selection" | "viewUpdates" | "mutations" | "state" | "$" | "t" | "escapeHtml", "status" | "viewport" | "history" | "notices" | "queue" | "timing" | "messages", "timeline">} options */
@@ -156,6 +157,7 @@ export function assembleTimeline({
     else if (!loadMore) viewportPort.scrollBottom();
   }
   function showEmpty() {
+    if (creationSessionRoute()) return;
     queuePort.renderMessageQueue();
     const root = $("#conversation");
     setMessageHtml(

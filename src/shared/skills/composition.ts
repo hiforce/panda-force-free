@@ -40,6 +40,8 @@ export interface SkillCompositionAuthority {
   available: ReadonlySet<SkillCapability>;
   granted: ReadonlySet<SkillCapability>;
   entitled: ReadonlySet<string>;
+  /** Free conversations can use style or template guidance without a document workflow. */
+  workflowRequired?: boolean;
 }
 /** Selection order is preserved. Instructions and parameters remain separate data, never authority. */
 export function composeSkills(
@@ -54,7 +56,8 @@ export function composeSkills(
     return { selection, skill, qualifiedId: selection.pack.manifest.id + "/" + skill.id };
   });
   skillAssert(new Set(definitions.map((item) => item.qualifiedId)).size === definitions.length, "duplicateSkill");
-  skillAssert(definitions.filter((item) => item.skill.role === "workflow").length === 1, "workflowRequired");
+  const workflows = definitions.filter((item) => item.skill.role === "workflow").length;
+  skillAssert(authority.workflowRequired === false ? workflows <= 1 : workflows === 1, "workflowRequired");
   const selected = new Set(definitions.map((item) => item.qualifiedId)),
     capabilities = new Set<SkillCapability>(),
     merged: Record<string, string> = {};

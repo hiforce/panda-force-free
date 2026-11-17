@@ -102,12 +102,59 @@ export const creationMySQLModels: readonly MySQLModel[] = [
       { name: "creation_actions_task", unique: false, columns: ["namespace", "taskId"] },
     ],
   },
+  {
+    name: "panda_force_creation_messages",
+    columns: [
+      t("namespace", 256),
+      t("id", 128),
+      t("owner", 200),
+      t("taskId", 128),
+      n("generation"),
+      t("requestDigest", 64),
+      t("payloadDigest", 64),
+      t("state", 16),
+      n("dispatchGeneration", true),
+      n("createdAt"),
+      n("updatedAt"),
+    ],
+    indexes: [
+      pk("namespace", "id"),
+      { name: "creation_messages_task", unique: false, columns: ["namespace", "taskId", "createdAt", "id"] },
+    ],
+  },
+  {
+    name: "panda_force_creation_history_hidden",
+    columns: [t("namespace", 256), t("id", 128), t("owner", 200)],
+    indexes: [
+      pk("namespace", "id"),
+      { name: "creation_history_owner", unique: false, columns: ["namespace", "owner", "id"] },
+    ],
+  },
+  {
+    name: "panda_force_creation_history_actions",
+    columns: [t("namespace", 256), t("id", 128), t("owner", 200), t("request", 64), t("result"), n("createdAt")],
+    indexes: [pk("namespace", "id")],
+  },
+  {
+    name: "panda_force_creation_goals",
+    columns: [t("namespace", 256), t("id", 128), t("owner", 200), t("event")],
+    indexes: [pk("namespace", "id")],
+  },
 ];
 const creation = mysqlModelModule("creation", creationMySQLModels, {
   readWrite: true,
   importFrom: ["sqlite"],
 });
-const shippedSteps = creation.migrations.mysql![0]!.steps;
+const allSteps = creation.migrations.mysql![0]!.steps;
+const shippedSteps = allSteps.filter(
+  (step) =>
+    ![
+      "panda_force_creation_messages",
+      "panda_force_creation_goals",
+      "panda_force_creation_history_hidden",
+      "panda_force_creation_history_actions",
+    ].includes(step.id),
+);
 export const mysqlCreationModule = {
   ...creation,
   migrations: {
@@ -118,6 +165,14 @@ export const mysqlCreationModule = {
         historicalSteps: [shippedSteps],
       },
       { version: 2, steps: shippedSteps.filter((step) => step.id === "panda_force_creation_progress") },
+      { version: 3, steps: allSteps.filter((step) => step.id === "panda_force_creation_messages") },
+      { version: 4, steps: allSteps.filter((step) => step.id === "panda_force_creation_goals") },
+      {
+        version: 5,
+        steps: allSteps.filter((step) =>
+          ["panda_force_creation_history_hidden", "panda_force_creation_history_actions"].includes(step.id),
+        ),
+      },
     ],
   },
 };

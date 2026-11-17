@@ -22,6 +22,8 @@ export function memberApiAllowed(path: string, method: string) {
     return method === "GET";
   if (path === "/api/local-users/password") return method === "POST";
   if (path.startsWith("/api/personal/")) return true;
+  if (path === "/api/creation-materials") return method === "POST";
+  if (path === "/api/creation-materials/original") return ["GET", "HEAD"].includes(method);
   if (
     [
       "/api/project-documents/capabilities",

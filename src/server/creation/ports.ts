@@ -26,7 +26,7 @@ export interface CreationOutputTasks {
 }
 export interface CreationOutputContent {
   /** Validation and durable staging finish before application authority admits an output. */
-  stage(value: unknown): Promise<string>;
+  stage(value: unknown, task?: import("./contracts.js").CreationTaskSpec): Promise<string>;
 }
 export interface CreationExecutionTasks {
   get(owner: string, id: string): CreationResult<CreationTask>;
@@ -40,4 +40,23 @@ export interface CreationArtifactWriter {
 export interface CreationProgressStore {
   record(lease: CreationLease, event: CreationProgress): void | Promise<void>;
   list(owner: string, id: string, conversation?: boolean): CreationProgress[] | Promise<CreationProgress[]>;
+}
+
+/** A continuation freezes the real current source and updates that document through a durable revision receipt. */
+export interface CreationDocumentRevisions {
+  read(
+    owner: string,
+    projectId: string,
+    documentId: string,
+  ): Promise<{
+    projectId?: string;
+    treeVersion?: number;
+    base: import("../../shared/documents/contracts.js").DocumentRevisionReference;
+    document: { title: string; body: import("../../shared/documents/rich-body.js").RichDocumentBody };
+  }>;
+  save(
+    task: import("./contracts.js").CreationTaskSpec,
+    digest: string,
+    body: import("../../shared/documents/rich-body.js").RichDocumentBody,
+  ): Promise<import("../../shared/creation/contracts.js").CreationArtifact>;
 }

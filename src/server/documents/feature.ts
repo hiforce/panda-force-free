@@ -27,6 +27,10 @@ import { DocumentNavigationRepository } from "./navigation/repository.js";
 import { ProjectDocumentNavigation } from "./navigation/service.js";
 import { projectDocumentTreeRoutes } from "./navigation/routes.js";
 import { asyncLegacyNavigation } from "./navigation/async-legacy.js";
+import { DocumentOwnershipRepository } from "./ownership/repository.js";
+import { assertOwnershipVisible } from "./ownership/record.js";
+import { sqliteOwnershipBatch } from "./ownership/sql-batch.js";
+import { createSQLDocumentOwnershipTransfers } from "./ownership/sql-application.js";
 
 /** The feature composition owns persistence and adapter lifetime, never the shared engine. */
 export function createDocumentFeature(options: {
@@ -40,11 +44,13 @@ export function createDocumentFeature(options: {
     const spaces = new SpaceRepository(db),
       documents = new DocumentRepository(db),
       sources = new DocumentSourceReader(options.allowedRoots),
-      assetRepository = new DocumentAssetRepository(db);
+      assetRepository = new DocumentAssetRepository(db),
+      ownership = new DocumentOwnershipRepository(db);
     const detail = (id: string) => {
       const value = documents.get(id),
         space = spaces.get(value.document.spaceId);
       options.requireProject(space.projectId);
+      assertOwnershipVisible(ownership.get(space.id, id));
       return { ...value, engine: space.engine, sourceMode: space.sourceMode };
     };
     const assets = new DocumentAssets(assetRepository, join(options.stateRoot, "data", "document-assets"), detail);
@@ -85,6 +91,14 @@ export function createDocumentFeature(options: {
     });
     const navigation = new ProjectDocumentNavigation(new DocumentNavigationRepository(db), library, service);
     return {
+      transfers: createSQLDocumentOwnershipTransfers({
+        batch: sqliteOwnershipBatch(db),
+        library,
+        navigation,
+        assetRoot: join(options.stateRoot, "data", "document-assets"),
+        authorize: options.requireProject,
+      }),
+      ownership,
       persistence: db,
       ingestion,
       profiles,

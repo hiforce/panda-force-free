@@ -1,0 +1,312 @@
+/* Native sessions and creation entry points share input geometry and rhythm. */
+.message-composer {
+  position: relative;
+  --composer-inset: var(--pf-space-5);
+  --composer-input-min: 128px;
+  --composer-input-max: min(360px, 38dvh);
+  border: 1px solid var(--pf-line);
+  border-radius: 20px;
+  background: var(--pf-card);
+  box-shadow: var(--pf-shadow);
+}
+.message-composer-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  max-height: min(520px, 60dvh, calc(var(--app-viewport-height, 100dvh) * 0.65));
+}
+.message-composer-body[hidden] {
+  display: none;
+}
+.message-composer-disclosure {
+  position: absolute;
+  inset-block-start: var(--pf-space-2);
+  inset-inline-end: var(--pf-space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--pf-touch-target);
+  min-height: var(--pf-touch-target);
+  border: 0;
+  border-radius: var(--pf-radius-sm);
+  background: transparent;
+  color: var(--pf-muted);
+  font: inherit;
+  cursor: pointer;
+  z-index: 1;
+}
+.message-composer-disclosure:hover {
+  color: var(--pf-ink);
+  background: var(--pf-soft);
+}
+.message-composer-disclosure:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: -2px;
+}
+.message-composer-disclosure .icon-slot,
+.message-composer-disclosure svg {
+  width: 18px;
+  height: 18px;
+}
+.message-composer-collapsed-summary {
+  display: none;
+}
+.message-composer .composer-disclosure-first {
+  --composer-content-inset-end: calc(var(--composer-inset) + var(--pf-touch-target));
+}
+.message-composer.composer-collapsed {
+  min-height: 0;
+}
+.composer-collapsed .message-composer-disclosure {
+  position: static;
+  width: 100%;
+  min-height: 52px;
+  justify-content: space-between;
+  gap: var(--pf-space-3);
+  padding: var(--pf-space-2) var(--composer-inset);
+  text-align: start;
+}
+.composer-collapsed .message-composer-collapsed-summary {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--pf-text-body);
+}
+.message-composer:focus-within {
+  border-color: color-mix(in srgb, var(--pf-accent) 50%, var(--pf-line));
+  box-shadow: var(--pf-shadow);
+}
+.message-composer-embedded {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.message-composer-embedded:focus-within {
+  box-shadow: none;
+}
+.message-composer .message-composer-input {
+  display: block;
+  width: 100%;
+  min-height: var(--composer-input-min);
+  max-height: var(--composer-input-max);
+  padding: var(--pf-space-5) var(--composer-content-inset-end, var(--composer-inset)) var(--pf-space-3)
+    var(--composer-inset);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--pf-ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.75;
+  resize: none;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  box-shadow: none;
+}
+.message-composer .message-composer-input::placeholder {
+  color: var(--pf-muted);
+}
+.message-composer .message-composer-footer {
+  min-height: 64px;
+  gap: var(--pf-space-2);
+  padding: var(--pf-space-2) var(--composer-inset) var(--pf-space-4);
+  border: 0;
+  background: transparent;
+}
+.message-composer :is(.composer-attachments, .composer-context-tray, .creative-selected-skills) {
+  gap: var(--pf-space-2);
+  padding: var(--pf-space-4) var(--composer-content-inset-end, var(--composer-inset)) 0 var(--composer-inset);
+  margin: 0;
+  max-height: 160px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.message-composer-contexts {
+  min-height: 0;
+  flex: none;
+}
+.message-composer-contexts[hidden],
+.message-composer-tray[hidden],
+.message-composer-tray-manage[hidden] {
+  display: none;
+}
+.message-composer-tray {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-space-2);
+  min-width: 0;
+  padding: var(--pf-space-3) var(--composer-content-inset-end, var(--composer-inset)) 0 var(--composer-inset);
+}
+.message-composer-tray > :is(.composer-attachments, .creative-selected-skills) {
+  display: flex;
+  flex-wrap: nowrap;
+  flex: 1;
+  min-width: 0;
+  max-height: 76px;
+  padding: 0;
+  margin: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+}
+.message-composer-tray :is(.composer-attachment, .creative-skill-chip) {
+  flex: none;
+  max-width: 100%;
+}
+.message-composer-tray-manage {
+  flex: none;
+  min-height: var(--pf-touch-target);
+  padding: var(--pf-space-1);
+  background: transparent;
+  border: 0;
+  border-radius: var(--pf-radius-sm);
+  color: var(--pf-muted);
+  font: inherit;
+  font-size: var(--pf-text-meta);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.message-composer-tray-manage:hover {
+  color: var(--pf-ink);
+  background: var(--pf-soft);
+}
+.message-composer-tray-manage:focus-visible {
+  outline: 2px solid var(--pf-accent);
+}
+.message-composer-context-dialog {
+  padding: 0;
+  width: min(600px, calc(100vw - 32px));
+  max-height: min(720px, 80dvh);
+}
+.message-composer-context-list {
+  min-height: 0;
+  padding: var(--pf-space-4);
+  max-height: 65dvh;
+  overflow-y: auto;
+}
+.message-composer-context-list .composer-attachments {
+  display: grid;
+  max-height: none;
+  padding: 0;
+}
+.message-composer-context-list .composer-attachment {
+  width: 100%;
+  max-width: none;
+}
+.message-composer-context-list .composer-attachment-name {
+  flex: 1;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.message-composer-context-list .composer-attachment-remove {
+  width: var(--pf-touch-target);
+  height: var(--pf-touch-target);
+}
+.message-composer.composer-short-viewport {
+  --composer-input-min: 64px;
+}
+.composer-short-viewport .message-composer-footer {
+  position: sticky;
+  bottom: 0;
+  flex-shrink: 0;
+  background: var(--pf-card);
+  z-index: 2;
+}
+.composer-short-viewport .message-composer-body {
+  overflow-y: auto;
+}
+.composer-contexts-summary {
+  display: flex;
+  gap: var(--pf-space-2);
+  padding: var(--pf-space-2) calc(var(--composer-inset) + var(--pf-touch-target)) 0 var(--composer-inset);
+}
+.composer-contexts-summary .message-composer-tray {
+  padding: 0;
+}
+.composer-contexts-summary .message-composer-tray > :is(.composer-attachments, .creative-selected-skills) {
+  display: none;
+}
+.composer-contexts-summary.has-single-skill {
+  flex-direction: column;
+  align-items: stretch;
+}
+.composer-contexts-summary .message-composer-tray.message-composer-tray-single-skill > .creative-selected-skills {
+  display: flex;
+}
+.message-composer :is(.composer-circle-button, .composer-text-button, .gadget-document-skill) {
+  min-height: var(--pf-touch-target);
+}
+.message-composer .composer-circle-button {
+  width: var(--pf-touch-target);
+  flex-basis: var(--pf-touch-target);
+}
+.message-composer :is(.send-button, .gadget-document-send) {
+  width: var(--pf-touch-target);
+  height: var(--pf-touch-target);
+  flex: 0 0 var(--pf-touch-target);
+  border-radius: var(--pf-radius-sm);
+}
+.message-composer .gadget-document-skill {
+  font-size: var(--pf-text-body);
+  white-space: nowrap;
+  flex: none;
+}
+.user-message-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pf-space-2);
+  margin-block-start: var(--pf-space-2);
+}
+.user-message-skills > span {
+  padding: var(--pf-space-1) var(--pf-space-2);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-soft);
+  color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .message-composer-context-dialog {
+    width: 100%;
+    max-height: min(80dvh, calc(var(--app-viewport-height, 100dvh) - 18px));
+  }
+  .message-composer {
+    --composer-inset: var(--pf-space-4);
+    --composer-input-min: 104px;
+    --composer-input-max: min(240px, 30dvh);
+    border-radius: 16px;
+  }
+  .message-composer .message-composer-footer {
+    min-height: 60px;
+    padding-block-end: var(--pf-space-3);
+  }
+}
+@media (max-height: 520px) {
+  .message-composer {
+    --composer-input-min: 64px;
+    --composer-input-max: 24dvh;
+  }
+  .message-composer-contexts {
+    display: flex;
+    gap: var(--pf-space-2);
+    padding: var(--pf-space-2) calc(var(--composer-inset) + var(--pf-touch-target)) 0 var(--composer-inset);
+  }
+  .message-composer-contexts .message-composer-tray {
+    padding: 0;
+  }
+  .message-composer-tray > :is(.composer-attachments, .creative-selected-skills) {
+    display: none;
+  }
+}
+@media (max-width: 400px) {
+  .message-composer .message-composer-footer {
+    flex-wrap: wrap;
+  }
+  .message-composer .composer-right {
+    margin-inline-start: auto;
+  }
+}

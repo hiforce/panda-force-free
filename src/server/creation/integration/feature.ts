@@ -7,6 +7,7 @@ import { join } from "node:path";
 import type { RouteContext } from "../../http/router.js";
 import type { CreationDocumentPort } from "./document-port.js";
 import type { SkillCatalog } from "../../skills/catalog/service.js";
+import { createSkillSummaryReader } from "../../skills/catalog/summaries.js";
 import type { CreationEngines } from "../runtime/contracts.js";
 import type { CreationProfiles } from "./profiles.js";
 import { reportDiagnostic } from "../../../shared/diagnostics.js";
@@ -27,22 +28,40 @@ import { creationAuthority } from "./authority.js";
 import { creationRoutes } from "./routes.js";
 import { SQLiteCreationProgress } from "../storage/progress.js";
 import type { CreationProgressStore } from "../ports.js";
+import { SQLiteCreationGoals } from "../storage/goals.js";
+import type { CreationGoalStore } from "../goals/contracts.js";
+import { SQLiteCreationMessages } from "../storage/messages.js";
+import { FileCreationMessages } from "./message-files.js";
+import { DOCUMENT_CREATION_CAPABILITIES } from "../../../shared/creation/contracts.js";
+import { CreationMessages } from "../messages/service.js";
+import type { CreationMessageStore } from "../messages/contracts.js";
+import { FileCreationWorkspaces } from "./conversation-workspaces.js";
+import { CreationSavedArtifacts } from "./saved-artifacts.js";
+import { CreationWorkspaceOutput } from "./workspace-output.js";
+import { archivedCreationOutput } from "./archived-output.js";
 
 /** This composition owns its database and files. Documents, skills, auth and engine adapters keep their own lifetimes. */
 export function createCreationFeature(options: {
   stateRoot: string;
+  workspaceRoot?: string;
   owner(context: RouteContext): string;
   authorize(owner: string, projectId: string): Promise<void>;
   documents: CreationDocumentPort;
+  archive?: import("./document-archive.js").CreationDocumentArchive;
+  destinations?: import("../document-destinations.js").CreationDocumentDestinations;
+  directories?: import("../file-directories.js").CreationFileDirectories;
   skills: SkillCatalog;
   profiles: CreationProfiles;
   engines: CreationEngines;
+  materials?: import("../materials.js").CreationMaterialPort;
   concurrency?: number;
   storage?: {
     tasks: CreationSubmissionTasks & CreationOutputTasks & CreationManagement & CreationRunTasks;
     queue: CreationScheduling & CreationHistory;
     questions: CreationQuestionStore;
     progress?: CreationProgressStore;
+    messages?: CreationMessageStore;
+    goals?: CreationGoalStore;
     close?(): void | Promise<void>;
   };
 }) {
@@ -51,6 +70,12 @@ export function createCreationFeature(options: {
   try {
     const tasks = options.storage?.tasks ?? new CreationTaskRepository(db!),
       queue = options.storage?.queue ?? new CreationQueue(db!, tasks as CreationTaskRepository),
+      workspaces = new FileCreationWorkspaces(
+        options.workspaceRoot ?? join(root, "working"),
+        join(root, "workspace-bindings"),
+        tasks,
+        options.authorize,
+      ),
       inputs = new FileCreationInputs(join(root, "inputs")),
       questionFiles = new FileCreationQuestions(join(root, "questions")),
       questions = new CreationQuestions(
@@ -58,9 +83,56 @@ export function createCreationFeature(options: {
         questionFiles,
         options.authorize,
       ),
-      documents = new FileCreationDocumentOutput(join(root, "outputs"), options.documents, true),
+      documents = new FileCreationDocumentOutput(
+        join(root, "outputs"),
+        options.documents,
+        true,
+        inputs,
+        tasks,
+        options.archive,
+      ),
       progress = options.storage?.progress ?? (db ? new SQLiteCreationProgress(db) : undefined),
-      outputs = new CreationOutputs(tasks, documents, documents),
+      goals =
+        options.storage?.goals ??
+        (db ? new SQLiteCreationGoals(db, tasks as CreationTaskRepository, queue as CreationQueue) : undefined),
+      messageStore = options.storage?.messages ?? (db ? new SQLiteCreationMessages(db) : undefined),
+      messages = messageStore
+        ? new CreationMessages(
+            new FileCreationMessages(join(root, "messages")),
+            messageStore,
+            tasks,
+            inputs,
+            async (owner, request, requestDigest) =>
+              request.selections.length
+                ? options.skills.capture(
+                    { id: request.id, requestBinding: requestDigest, selections: request.selections },
+                    owner,
+                    {
+                      outputType: "document",
+                      available: new Set(DOCUMENT_CREATION_CAPABILITIES),
+                      granted: new Set(DOCUMENT_CREATION_CAPABILITIES),
+                      entitled: new Set(),
+                      workflowRequired: false,
+                    },
+                  )
+                : null,
+            options.authorize,
+            options.materials,
+          )
+        : undefined,
+      savedArtifacts = new CreationSavedArtifacts(join(root, "saved-artifacts"), documents, options.authorize),
+      workspaceOutput = new CreationWorkspaceOutput(
+        join(root, "exports"),
+        documents,
+        savedArtifacts,
+        workspaces,
+        inputs,
+        tasks,
+        options.documents.images,
+        options.directories,
+      ),
+      archivedOutput = archivedCreationOutput(workspaceOutput, documents, options.archive),
+      outputs = new CreationOutputs(tasks, archivedOutput, archivedOutput),
       worker = new CreationWorker(
         tasks,
         queue,
@@ -73,6 +145,12 @@ export function createCreationFeature(options: {
         30000,
         (error) => reportDiagnostic("creation-engine", error),
         progress,
+        messages,
+        options.materials,
+        goals,
+        workspaces,
+        options.destinations,
+        options.directories,
       ),
       runner = new CreationRunner(
         queue,
@@ -84,7 +162,15 @@ export function createCreationFeature(options: {
         () => options.profiles.settings.enabled,
       ),
       access = creationAuthority(options),
-      submissions = new CreationSubmissions(tasks, inputs, access.authority, Date.now, documents),
+      submissions = new CreationSubmissions(
+        tasks,
+        inputs,
+        access.authority,
+        Date.now,
+        options.materials,
+        messages,
+        (owner, id) => savedArtifacts.read(owner, id),
+      ),
       service = new CreationService(
         tasks,
         queue,
@@ -96,6 +182,13 @@ export function createCreationFeature(options: {
         runner,
         Date.now,
         progress,
+        messages,
+        createSkillSummaryReader(options.skills),
+        goals,
+        workspaces,
+        options.documents.location,
+        (owner, id) => savedArtifacts.read(owner, id),
+        (task) => workspaceOutput.location(task),
       );
     let closing: Promise<void> | null = null;
     return {

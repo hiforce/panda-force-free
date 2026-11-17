@@ -6,5 +6,6 @@
   "goalObjective": "Goal objective",
   "goalObjectiveCannotBeEmpty": "Goal objective cannot be empty",
   "goalUpdated": "Goal updated",
-  "goalCleared": "Goal cleared"
+  "goalCleared": "Goal cleared",
+  "pause": "Pause goal"
 }

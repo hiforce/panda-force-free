@@ -83,8 +83,8 @@ function fixture(overrides: { timeoutMs?: number; purpose?: "creation" | "knowle
         },
       });
     },
-    complete(id = "owned-run") {
-      const turn = { id, status: "completed" };
+    complete(id = "owned-run", status = "completed", error?: unknown) {
+      const turn = { id, status, ...(error === undefined ? {} : { error }) };
       wire.onMessage({
         method: "turn/completed",
         params: { threadId: "owned-session", turn },
@@ -278,6 +278,22 @@ test("persistent application runs resume only the supplied thread and retain the
   expect(resumed.params?.sandbox).toBe("read-only");
   expect(resumed.params?.approvalPolicy).toBe("never");
   expect(f.requests.some((request) => request.method === "thread/start")).toBe(false);
+});
+
+test("failed application turns retain safe quota classification instead of discarding the engine failure", async () => {
+  const f = fixture({ purpose: "bots" });
+  const running = f.run();
+  await until(() => f.turns() === 1);
+  await Bun.sleep(1);
+  f.complete("foreign-run", "failed", { codexErrorInfo: "unauthorized" });
+  f.complete("owned-run", "failed", {
+    codexErrorInfo: "rateLimitExceeded",
+    message: "Private provider quota, request URL and credential",
+  });
+  const result = await running;
+  expect(result).toEqual({ sessionId: "owned-session", runId: "owned-run", status: "failed", failure: "rateLimited" });
+  expect(JSON.stringify(result)).not.toContain("Private");
+  expect(f.turns()).toBe(1);
 });
 
 test("application image tool results use native image content instead of URL text", async () => {

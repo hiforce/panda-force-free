@@ -87,7 +87,7 @@ export function createSessionWorkspace(options) {
     if (overview) tools.back();
   }
   function updateOpenState() {
-    const active = options.isSessionPage() && Boolean(read().id);
+    const active = options.isSessionPage() && Boolean(read().id) && read().inspectorAvailable !== false;
     const utility =
       document.body.classList.contains("side-panel-open") ||
       document.body.classList.contains("summary-panel-open") ||
@@ -134,12 +134,29 @@ export function createSessionWorkspace(options) {
   function refresh() {
     const view = read(),
       active = options.isSessionPage() && Boolean(view.id);
+    const hasInspector = active && view.inspectorAvailable !== false;
     const changed = document.body.classList.contains("session-layout") !== active;
     toggleClass("session-layout", active);
     if (changed) options.layoutChanged();
-    info.hidden = !active;
-    actionButton.hidden = !active;
-    summary.hidden = !active;
+    info.hidden = !hasInspector;
+    actionButton.hidden = !hasInspector;
+    summary.hidden = !hasInspector;
+    const creation = active && view.contextKind === "creation";
+    toggleClass("creation-entry-layout", creation && !hasInspector);
+    actionButton.hidden ||= creation;
+    requireElement("#sessionToolsTab").hidden = creation;
+    requireElement("#sessionInspectorFooter").hidden = creation || selectedTab !== "overview";
+    const extension = requireElement("#sessionDomainSections");
+    extension.hidden = !creation;
+    if (creation) options.renderSections?.(extension);
+    else if (extension.childNodes.length) extension.replaceChildren();
+    if (creation && selectedTab !== "overview") setTab("overview");
+    for (const button of inspector.querySelectorAll('[data-session-action="permissions"]'))
+      if (button instanceof HTMLElement) button.hidden = creation;
+    requireElement("#permissionPicker").hidden = creation;
+    requireElement("#queueButton").hidden = creation;
+    requireElement("#sessionAssociateProject").disabled = creation;
+    requireElement("#sessionHeadingProject").disabled = creation;
     for (const [id, controls] of [
       ["#modelButton", "modelMenu"],
       ["#modeButton", "permissionMenu"],
@@ -148,7 +165,7 @@ export function createSessionWorkspace(options) {
       button.setAttribute("aria-haspopup", active ? "dialog" : "menu");
       button.setAttribute("aria-controls", active ? "sessionSettingsDialog" : controls);
     }
-    placeControls(active);
+    placeControls(hasInspector);
     if (view.id !== activeId || !active) {
       activeId = view.id;
       for (const dialog of dialogs) if (dialog.open) dialog.close();
@@ -175,6 +192,10 @@ export function createSessionWorkspace(options) {
     setOpaqueText(requireElement("#sessionMirrorModel"), view.modelLabel);
     setOpaqueText(requireElement("#sessionMirrorEffort"), view.effortLabel);
     setOpaqueText(requireElement("#sessionMirrorPermission"), view.permissionLabel);
+    if (creation) {
+      setOpaqueText(requireElement("#modelLabel"), view.modelLabel);
+      setOpaqueText(requireElement("#effortLabel"), view.effortLabel);
+    }
     requireElement("#sessionWorkingFolder").title = view.cwd;
     const status = view.status;
     const signature = JSON.stringify([status, i18n.locale]);

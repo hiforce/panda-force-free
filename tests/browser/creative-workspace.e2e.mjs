@@ -31,7 +31,7 @@ try {
         const r =
           data === undefined
             ? await c.request.get(fixture.base + path)
-            : await c.request.post(fixture.base + path, { data });
+            : await c.request.post(fixture.base + path, { data, headers: { Origin: fixture.base } });
         assert.ok(r.ok(), await r.text());
         return r.json();
       };
@@ -84,8 +84,7 @@ try {
         await p.screenshot({ path: ".artifacts/workspace-layout/creative/" + name + "-" + width + ".png" });
         if (await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw Error("Overflow " + name);
       };
-      await p.goto(fixture.base + "/create");
-      await p.locator("[data-system-composer]").waitFor();
+      await p.goto(fixture.base + "/create?view=works");
       await p
         .locator("[data-creative-status]")
         .filter({ hasText: /Loading|加载/ })
@@ -101,7 +100,7 @@ try {
           throw e;
         });
       await snap("editor");
-      await p.goto(fixture.base + "/create");
+      await p.goto(fixture.base + "/create?view=works");
       await p.locator(".creative-card").first().waitFor();
       await snap("create-saved");
       assert.equal(await p.locator("[data-creative-more]").isVisible(), false);
@@ -114,7 +113,7 @@ try {
       await p.locator("[data-creative-heading]").filter({ hasText: project.name }).waitFor();
       await snap("project");
       await p.goto(fixture.base + "/create");
-      await p.locator("#gadgetDocumentPrompt").fill("A draft that survives skill selection.");
+      await p.locator("#prompt").fill("A draft that survives skill selection.");
       await p.goto(fixture.base + "/skills/writing");
       await p
         .locator("[data-template-action=detail]")
@@ -122,33 +121,21 @@ try {
         .first()
         .click();
       await p.locator("[data-template-detail=apply]:visible").click();
-      await p.locator("[data-system-composer]").waitFor();
-      assert.equal(await p.locator("#gadgetDocumentPrompt").inputValue(), "A draft that survives skill selection.");
+      await p.locator(".creation-entry-composer #composer").waitFor();
+      assert.equal(await p.locator("#prompt").inputValue(), "A draft that survives skill selection.");
       assert.ok(
         await p
-          .locator("[data-gd-selected]")
+          .locator("#composerSkills")
           .innerText()
           .then((t) => t.includes(locale === "en" ? "Blog outline" : "博客结构")),
       );
       await p.locator("[data-creative-remove-skill]").last().click();
-      await p.locator("[data-gd-start]").click();
-      await p.locator(".creation-dialog[open] [data-creation-submit]:enabled").waitFor();
-      assert.equal(
-        await p.locator(".creation-dialog[open] [name=prompt]").inputValue(),
-        "A draft that survives skill selection.",
-      );
-      await p.locator(".creation-dialog[open] [data-creation-submit]").click();
+      await p.locator("#sendButton").click();
       await p.locator(".creation-task .user-input-card").first().waitFor();
-      const taskId = await p
-        .locator(".creation-task")
-        .filter({ has: p.locator(".user-input-card") })
-        .first()
-        .getAttribute("data-creation-task");
       await p.locator(".creation-task .user-input-option").first().click();
       await p.locator(".creation-task .user-input-submit").first().click();
-      await p.locator(`[data-creation-task="${taskId}"] [data-creation-action=open]`).waitFor();
+      await p.locator("[data-creation-open]:visible").waitFor();
       await snap("creation-task");
-      await p.locator("[data-creation-close]").click();
       await p.goto(fixture.base + "/skills/writing");
       await p.locator(".template-card").first().waitFor();
       await snap("skills");
@@ -159,7 +146,9 @@ try {
       await p.locator('[data-publish-format="x-article"]').click();
       await p.locator("[data-template-grid]").waitFor();
       await snap("channel");
-      await p.locator("[data-publish-project]").selectOption(project.id);
+      await p.goto(fixture.base + "/publish/x?project=" + project.id);
+      await p.locator('[data-publish-format="x-article"]').click();
+      assert.equal(new URL(p.url()).searchParams.get("project"), project.id);
       await p
         .locator(".publish-object")
         .filter({ hasText: "Writing account " + width })
@@ -178,7 +167,7 @@ try {
         await p.setViewportSize({ width: 320, height: 900 });
         for (const route of ["/create", "/skills/writing", "/publish/x"]) {
           await p.goto(fixture.base + route);
-          await p.locator("#workbenchContent").waitFor();
+          await p.locator(route === "/create" ? ".creation-entry-composer #composer" : "#workbenchContent").waitFor();
           assert.equal(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         }
       }

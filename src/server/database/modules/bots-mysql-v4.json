@@ -1,0 +1,48 @@
+{
+  "table": "panda_force_bot_recoveries",
+  "sql": "CREATE TABLE IF NOT EXISTS panda_force_bot_recoveries (owner VARCHAR(191) COLLATE utf8mb4_bin NOT NULL, id CHAR(36) COLLATE utf8mb4_bin NOT NULL, signature CHAR(64) COLLATE utf8mb4_bin NOT NULL, result MEDIUMTEXT COLLATE utf8mb4_bin NOT NULL, PRIMARY KEY(owner,id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+  "definition": {
+    "name": "panda_force_bot_recoveries",
+    "columns": [
+      {
+        "name": "owner",
+        "type": "varchar(191)",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "id",
+        "type": "char(36)",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "signature",
+        "type": "char(64)",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "result",
+        "type": "mediumtext",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["owner", "id"]
+      }
+    ]
+  }
+}

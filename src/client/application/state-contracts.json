@@ -43,7 +43,8 @@
     "persistentErrors": "notices",
     "backgroundAgentsVisible": "features",
     "cloudStartingState": "features",
-    "placeholderText": "features"
+    "placeholderText": "features",
+    "composerSkills": "composer"
   },
   "features": {
     "sessionWorkspace": {
@@ -71,9 +72,10 @@
         "newSessionProjectId",
         "planMode",
         "projectless",
-        "workspaceContext"
+        "workspaceContext",
+        "composerSkills"
       ],
-      "write": ["composerAttachments", "composerMentions", "planMode"]
+      "write": ["composerAttachments", "composerMentions", "planMode", "composerSkills"]
     },
     "connection": {
       "read": ["connected", "pending"],

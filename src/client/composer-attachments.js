@@ -1,5 +1,6 @@
 import { attachmentUrlName, canonicalAttachmentUrl } from "../shared/attachment-urls.js";
 import { stripAttachmentWorkspaceContext } from "../shared/attachment-workspace.js";
+import { stripSessionSkillContext } from "../shared/session-skills.js";
 
 export const ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
 export const ATTACHMENT_MAX_COUNT = 10;
@@ -80,31 +81,35 @@ export function attachmentsFromInput(input = []) {
 
 /** @param {readonly {type: string; text?: string}[]} input */
 export function composerTextFromInput(input = []) {
-  return stripAttachmentWorkspaceContext(
-    input
-      .filter((part) => part.type === "text")
-      .map((part) =>
-        (part.text || "").replace(/^Attached file: (".*")\n([^\n]+)$/gm, (whole, name) => {
-          try {
-            JSON.parse(name);
-            return "";
-          } catch {
-            return whole;
-          }
-        }),
-      )
-      .join("\n"),
+  return stripSessionSkillContext(
+    stripAttachmentWorkspaceContext(
+      input
+        .filter((part) => part.type === "text")
+        .map((part) =>
+          (part.text || "").replace(/^Attached file: (".*")\n([^\n]+)$/gm, (whole, name) => {
+            try {
+              JSON.parse(name);
+              return "";
+            } catch {
+              return whole;
+            }
+          }),
+        )
+        .join("\n"),
+    ),
   ).trim();
 }
 
 /** @param {readonly {type: string; text?: string; path?: string; url?: string}[]} input */
 export function composerInputKey(input = []) {
   return JSON.stringify([
-    stripAttachmentWorkspaceContext(
-      input
-        .filter((part) => part.type === "text")
-        .map((part) => part.text)
-        .join("\n"),
+    stripSessionSkillContext(
+      stripAttachmentWorkspaceContext(
+        input
+          .filter((part) => part.type === "text")
+          .map((part) => part.text)
+          .join("\n"),
+      ),
     ).replace(
       /^(Attached file: ".*")\n([^\n]+)$/gm,
       (whole, name, url) => `${name}\n${canonicalAttachmentUrl(url) || url}`,

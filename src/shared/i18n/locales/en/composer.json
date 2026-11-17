@@ -47,5 +47,12 @@
   "compactionStarted": "Compaction started",
   "reviewStarted": "Review started",
   "noActiveTask": "No active task",
-  "taskIdentity": "Task {id}"
+  "taskIdentity": "Task {id}",
+  "followUpHint": "Add details, files or skills to continue…",
+  "collapseInput": "Collapse input",
+  "expandInput": "Expand input",
+  "collapsedInputHint": "Input collapsed · Expand to continue",
+  "collapsedInputContents": "Files: {files, number} · Skills: {skills, number}",
+  "manageFilesCount": "Files {count, number}",
+  "manageSkillsCount": "Skills {count, number}"
 }

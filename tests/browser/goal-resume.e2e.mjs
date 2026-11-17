@@ -30,6 +30,7 @@ try {
     const browser = await engine.launch({ headless: true, ...(engine === chromium ? { args: ["--no-sandbox"] } : {}) });
     try {
       await fixture.rpc("thread/goal/set", { threadId: "old-alpha", status: "paused", origin: "user" });
+      await fixture.rpc("thread/goal/set", { threadId: "old-beta", status: "blocked", origin: "user" });
       const context = await browser.newContext({ viewport: { width, height: 900 }, locale });
       await fixture.signIn(context);
       await context.addInitScript((locale) => {
@@ -166,6 +167,25 @@ try {
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       await page.screenshot({ path: `${directory}/${width}.png`, fullPage: false });
+      await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-beta"));
+      await page.waitForFunction(() => globalThis.__pandaForceDebug.state.active?.id === "old-beta");
+      if (!(await page.locator("#sessionInspector").isVisible())) await page.locator("#sessionInfoButton").click();
+      if (!(await page.locator("#sessionGoalPlan").evaluate((node) => node.open)))
+        await page.locator("#sessionGoalPlan > summary").click();
+      await page.locator(".goal-status-toggle").click();
+      const preservedDraft = await page.locator("#prompt").inputValue();
+      console.log("Verifying shared goal playback", width);
+      await page.locator("#resumeGoalDialog").click();
+      await page.locator("#pauseGoalDialog").waitFor({ state: "visible" });
+      await page.locator("#pauseGoalDialog").click();
+      await page.locator("#resumeGoalDialog").waitFor({ state: "visible" });
+      if (width < 1081) {
+        await page.locator("#clearGoalDialog").click();
+        await page.locator("#goalDialog").waitFor({ state: "hidden" });
+        await page.waitForFunction(() => !globalThis.__pandaForceDebug.state.goals.has("old-beta"));
+      } else await page.locator("#cancelGoalDialog").click();
+      assert.equal(await page.locator("#prompt").inputValue(), preservedDraft);
+      console.log("Verified shared goal playback", width);
       assert.deepEqual(errors, []);
       evidence.push({
         width,
@@ -176,6 +196,8 @@ try {
         failureRetry: true,
         reloadRecovery: true,
         crossSessionAcknowledgementIsolation: true,
+        sharedPauseIcon: true,
+        sharedClearIcon: width < 1081,
       });
       await context.close();
     } finally {

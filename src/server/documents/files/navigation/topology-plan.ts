@@ -15,6 +15,7 @@ import type { FileTreeCommand } from "./commands.js";
 import type { FileTreeSnapshot } from "./read.js";
 import { emptyNavigation } from "./read.js";
 import { prepareCreatedSource, prepareRenamedSource, type PrepareDocumentSource } from "./source-plan.js";
+import { readDocumentOwnership } from "../../../project-content/ownership-file.js";
 
 export async function planTreeAction(
   project: ProjectContentProject,
@@ -54,6 +55,9 @@ export async function planTreeAction(
   } else {
     documentId = command.documentId;
     if (command.kind === "restore") {
+      const ownership = await readDocumentOwnership(plan, documentId);
+      if (ownership && ownership.kind !== "active") throw new DocumentError("notFound", 404);
+      if (ownership && ownership.to.projectId !== command.projectId) throw new DocumentError("conflict", 409);
       const tombstone = state.trash.find((row) => row.documentId === documentId);
       if (!tombstone) throw new DocumentError("notFound", 404);
       const placements =

@@ -10,6 +10,7 @@ import { ProjectWorkspaceService } from "../projects/workspaces/service.js";
 import type { ApplicationConfig, ApplicationOwnerResolver } from "./types.js";
 import type { ApplicationProjects } from "./projects.js";
 import type { createApplicationExtensions } from "./extensions.js";
+import { authorizedLegacyDocumentRoutes } from "../documents/integration/authorized-legacy-routes.js";
 /** Compose project authorization and both document representations without starting content workers. */
 export async function createApplicationDocuments(
   config: ApplicationConfig,
@@ -109,6 +110,12 @@ export async function createApplicationDocuments(
     },
     contentAccess.require,
   );
+  const authorizedLegacyRoutes = authorizedLegacyDocumentRoutes(
+    documentFeature.routes,
+    documentFeature,
+    (context, project) =>
+      contentAccess.requireLegacy(resolveOwner(context), project, context.req.method === "GET" ? "read" : "contribute"),
+  );
   fileDocuments.routes.push(
     ...documentTemplateCreationRoutes(
       portableTemplateFeature.documents,
@@ -120,6 +127,7 @@ export async function createApplicationDocuments(
   return {
     backend,
     documentFeature,
+    authorizedLegacyRoutes,
     fileDocuments,
     contentAccess,
     projectWorkspaces,

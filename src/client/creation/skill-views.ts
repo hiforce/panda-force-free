@@ -110,6 +110,24 @@ export function creationSkillOptions(
     `<p class="creation-skill-picker-hint">${e(t(loading ? "creation.loadingSkill" : query || accept ? "creation.noSkillMatches" : "creation.noSkills"))}</p>`
   );
 }
+export function creationDiscoverySkill(
+  t: Translate,
+  entry: CreationSkillEntry,
+  selected: readonly CreationSkillSelection[],
+) {
+  const key = creationSkillKey(entry.reference),
+    chosen = selected.some((value) => creationSkillKey(value) === key),
+    name = skillText(entry.definition.name);
+  const categories = {
+    research: "creative.research",
+    writing: "creative.writing",
+    image: "creative.image",
+    slides: "creative.slides",
+    video: "creative.video",
+    web: "creative.web",
+  } as const;
+  return `<article class="creation-discovery-card"><button type="button" class="creation-discovery-cover" data-skill-action="details" data-skill-key="${e(key)}" aria-label="${e(t("creation.skillDetails") + ": " + name)}">${creationSkillCover(entry)}</button><div class="creation-discovery-copy"><h3>${e(name)}</h3><p>${e(skillText(entry.definition.description))}</p><footer><span>${e(t(categories[entry.definition.category]))}</span><button type="button" class="session-text-button" data-skill-action="add" data-skill-key="${e(key)}" data-skill-id="${e(entry.reference.id)}" aria-pressed="${chosen}" ${entry.enabled ? "" : "disabled"} aria-label="${e(t(entry.enabled ? (chosen ? "creation.selectedSkill" : "creation.selectSkill") : "creation.skillUnavailable") + ": " + name)}">${codexIcon(chosen ? "check" : "plus")}<span class="creation-discovery-use-label">${e(t(entry.enabled ? (chosen ? "creation.selectedSkill" : "creation.useSkill") : "creation.skillUnavailable"))}</span></button></footer></div></article>`;
+}
 export function creationSkillBrowserFrame(t: Translate, titleId: string) {
   return `<header class="creation-heading"><div><h2 id="${titleId}">${e(t("creation.browseSkills"))}</h2><p>${e(t("creation.browserHint"))}</p></div><button type="button" class="wb-button icon-button" data-skill-browser-close aria-label="${e(t("creation.close"))}">${codexIcon("x")}</button></header><div class="creation-skill-browser-search wb-form"><label class="wb-field"><span class="sr-only">${e(t("creation.searchSkills"))}</span><input type="search" data-skill-search autocomplete="off" placeholder="${e(t("creation.browserSearchHint"))}"></label><div data-skill-categories></div></div><div class="creation-skill-browser-scroll" tabindex="0"><div class="creation-skill-options"></div><p class="creation-skill-picker-hint" role="status" data-skill-browser-error hidden></p><button type="button" class="wb-button" data-skill-action="more" hidden></button></div><footer class="creation-skill-browser-footer"><span class="creation-skill-browser-count" role="status" data-skill-browser-count></span><a href="/skills/writing" aria-label="${e(t("creation.viewAll"))}" title="${e(t("creation.viewAll"))}">${codexIcon("settings")}<span>${e(t("creation.viewAll"))}</span></a><button type="button" class="wb-button primary" data-skill-browser-close>${e(t("creation.doneSelecting"))}</button></footer>`;
 }

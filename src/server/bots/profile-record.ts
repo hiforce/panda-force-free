@@ -50,5 +50,6 @@ export function editedBotRecord(current: BotConfig, value: Record<string, unknow
     if (typeof value.active !== "boolean") throw new BotError("invalidInput");
     next.active = value.active;
   }
+  if (next.model !== current.model || (value.active === true && !current.active)) delete next.executionRetryAt;
   return next;
 }

@@ -33,6 +33,7 @@ export async function createAppFixture({
   questionnaireRollout = false,
   sharedApprovals = false,
   usageRollout = false,
+  nativeInputHistory = false,
   unnamedSessions = false,
   sessionPresentation = /** @type {{titles: string[]; timestamp: number} | null} */ (null),
   models = null,
@@ -208,6 +209,10 @@ const engineFiles=${JSON.stringify(engineFiles)};
 const threads=${JSON.stringify(initial)};
 const queues=new Map();
 const applicationThreads=new Set(), applicationCalls=new Map();
+function applicationSave(pending){
+ const callId='save-'+pending.run;applicationCalls.set(callId,{...pending,kind:'save'});
+ send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_documents_create',arguments:{title:'Generated handbook',body:{schema:1,format:'richtext',document:{type:'doc',content:[{type:'heading',attrs:{level:2},content:[{type:'text',text:'A useful result'}]},{type:'paragraph',content:[{type:'text',text:pending.choice?.text||'An editable document from an answered task.'}]}]}},...(pending.choice?.projectId?{archiveTo:{projectId:pending.choice.projectId}}:{}),...(pending.choice?.fileDirectory?{fileDirectory:pending.choice.fileDirectory}:{})}}});
+}
 const knowledgeThreads=new Map(),knowledgeCalls=new Map();
 function knowledgeCall(pending,tool,args){
  const id='knowledge-'+(++count);knowledgeCalls.set(id,pending);
@@ -247,8 +252,22 @@ const handleLine=line=>{
     const pending=applicationCalls.get(m.id);
     if(pending){applicationCalls.delete(m.id);
       if(pending.kind==='question'){
-        const next={...pending,kind:'save'}; const callId='save-'+pending.run;
-        applicationCalls.set(callId,next); send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_documents_create',arguments:{title:'Generated handbook',body:{schema:1,format:'richtext',document:{type:'doc',content:[{type:'heading',attrs:{level:2},content:[{type:'text',text:'A useful result'}]},{type:'paragraph',content:[{type:'text',text:'An editable document from an answered task.'}]}]}}}}});
+        const callId='context-'+pending.run;applicationCalls.set(callId,{...pending,kind:'context'});
+        send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_creation_context',arguments:{}}});
+      }else if(pending.kind==='context'&&m.result?.success&&JSON.parse(m.result.contentItems[0].text).materials.length){
+        const material=JSON.parse(m.result.contentItems[0].text).materials[0],callId='material-'+pending.run;
+        applicationCalls.set(callId,{...pending,kind:'material'});send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_creation_material_read',arguments:{id:material.id}}});
+      }else if(pending.kind==='context'||pending.kind==='material'){
+        const choice=existsSync(${JSON.stringify(join(dir, "creation-output-choice.json"))})?JSON.parse(readFileSync(${JSON.stringify(join(dir, "creation-output-choice.json"))},'utf8')):null;
+        if(choice?.projectId){const callId='destinations-'+pending.run;applicationCalls.set(callId,{...pending,kind:'destinations',choice});send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_documents_destinations',arguments:{search:choice.projectId}}});}
+        else if(choice?.fileDirectory){const callId='file-directory-'+pending.run;applicationCalls.set(callId,{...pending,kind:'file-directory',choice});send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_document_file_directory',arguments:{directory:choice.fileDirectory}}});}
+        else applicationSave({...pending,choice});
+      }else if(pending.kind==='file-directory'){
+        if(m.result?.success&&JSON.parse(m.result.contentItems[0].text).directory)applicationSave(pending);
+        else send({method:'turn/completed',params:{threadId:pending.thread,turn:{id:pending.run,status:'completed'}}});
+      }else if(pending.kind==='destinations'){
+        if(m.result?.success&&JSON.parse(m.result.contentItems[0].text).projects.some(project=>project.id===pending.choice.projectId))applicationSave(pending);
+        else send({method:'turn/completed',params:{threadId:pending.thread,turn:{id:pending.run,status:'completed'}}});
       }else send({method:'turn/completed',params:{threadId:pending.thread,turn:{id:pending.run,status:'completed'}}});
     }
     appendFileSync(${JSON.stringify(trace)},JSON.stringify({type:'response',...m})+'\\n');return}
@@ -263,6 +282,10 @@ const handleLine=line=>{
   else if(m.method==='account/read')result={account};
   else if(m.method==='account/logout')account=null;
   else if(m.method==='thread/goal/get')result={goal:goalResult(p.threadId)};
+  else if(m.method==='thread/goal/clear'&&goalDb){
+    goalDb.query('DELETE FROM thread_goals WHERE thread_id=?').run(p.threadId);
+    result={goal:null};send({method:'thread/goal/cleared',params:{threadId:p.threadId,turnId:null}});
+  }
   else if(m.method==='thread/goal/set'&&goalDb){
     if(p.status==='active'&&existsSync(${JSON.stringify(join(dir, "goal-resume-fail"))})){
       unlinkSync(${JSON.stringify(join(dir, "goal-resume-fail"))});send({id:m.id,error:{message:'Fixture resume failed'}});return;
@@ -298,12 +321,21 @@ const handleLine=line=>{
     const thread=threads.find(t=>t.id===p.threadId);
     if(${unnamedSessions}&&thread&&!thread.preview)thread.preview=(p.input||[]).filter(x=>x.type==='text').map(x=>x.text).join('\\n');
     result={turn:{id:'turn-'+(++count),status:applicationThreads.has(p.threadId)||knowledgeThreads.has(p.threadId)?'inProgress':'completed',items:[]}};
+    if(${nativeInputHistory}&&thread){
+      const item={id:'input-'+result.turn.id,type:'userMessage',content:p.input,clientId:p.clientUserMessageId};
+      thread.turns.push({...result.turn,items:[item]});
+      send({method:'turn/started',params:{threadId:p.threadId,turn:{...result.turn,status:'inProgress'}}});
+      send({method:'item/completed',params:{threadId:p.threadId,turnId:result.turn.id,item}});
+      send({method:'turn/completed',params:{threadId:p.threadId,turn:result.turn}});
+    }
     if(knowledgeThreads.has(p.threadId)){
       const manifest=JSON.parse(p.input.find(item=>item.type==='text').text),pending={thread:p.threadId,run:result.turn.id,manifest,sourceIndex:0,stage:knowledgeThreads.get(p.threadId)==='review'?'review-source':'source'};
       if(pending.stage==='source'&&manifest.purpose.includes('ask-audience')&&!manifest.dialogue.answers.length){pending.stage='question';knowledgeCall(pending,'panda_knowledge_ask',{questions:[{question:'Who is this knowledge for?',options:['Developers','Writers']}]});}
       else knowledgeCall(pending,pending.stage==='source'?'panda_knowledge_context':'panda_knowledge_review_source',{id:manifest.sources[0].id,start:0});
     }
     if(applicationThreads.has(p.threadId)){
+      send({method:'item/agentMessage/delta',params:{threadId:p.threadId,turnId:result.turn.id,itemId:'writing-'+result.turn.id,delta:'I am reviewing the requirements and organizing the document.'}});
+      send({method:'thread/tokenUsage/updated',params:{threadId:p.threadId,tokenUsage:{total:{inputTokens:840,outputTokens:160,totalTokens:1000},modelContextWindow:200000}}});
       const run=result.turn.id, id='question-'+run; applicationCalls.set(id,{kind:'question',thread:p.threadId,run});
       setTimeout(()=>send({id,method:'item/tool/requestUserInput',params:{threadId:p.threadId,turnId:run,questions:[{id:'audience',header:'Audience',isOther:true,question:'Who should this document help?',options:[{label:'New users',description:'A short practical introduction.'},{label:'Maintainers',description:'Implementation and operational detail.'}]}]}}),20);
     }
@@ -343,6 +375,7 @@ else createInterface({input:process.stdin}).on('line',handleLine);
   for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, shutdown);
   let serverLogs = "";
   const fixture = {
+    logs: () => serverLogs,
     dir,
     alpha,
     beta,
@@ -359,6 +392,11 @@ else createInterface({input:process.stdin}).on('line',handleLine);
       } finally {
         catalog.close();
       }
+    },
+    creationOutput(choice) {
+      const path = join(dir, "creation-output-choice.json");
+      if (choice) writeFileSync(path, JSON.stringify(choice));
+      else if (existsSync(path)) rmSync(path);
     },
     calls() {
       try {

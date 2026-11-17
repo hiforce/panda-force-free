@@ -12,6 +12,8 @@ import { MySQLCreationLedger, personalCreationLedgerNamespace } from "../../src/
 import { openCreationDatabase } from "../../src/server/creation/storage/database.js";
 import { CreationTaskRepository } from "../../src/server/creation/storage/repository.js";
 import { CreationQuestionRepository } from "../../src/server/creation/storage/questions.js";
+import { SQLiteCreationGoals } from "../../src/server/creation/storage/goals.js";
+import { CreationQueue } from "../../src/server/creation/storage/queue.js";
 import { consolidateCreationSnapshots, importCreationSQLite } from "../../src/server/creation/storage/mysql-import.js";
 const enabled = !!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE;
 const spec = (
@@ -38,14 +40,30 @@ test.skipIf(!enabled)(
           namespace,
           snapshotPath: join(root, `ledger-${i}.sqlite`),
         })),
-        s = spec();
+        s = spec(),
+        paused = spec();
       let questionId = "";
       for (const path of paths) {
         const db = openCreationDatabase(path.snapshotPath);
         try {
           const tasks = new CreationTaskRepository(db),
-            questions = new CreationQuestionRepository(db, tasks);
+            questions = new CreationQuestionRepository(db, tasks),
+            goals = new SQLiteCreationGoals(db, tasks, new CreationQueue(db, tasks));
           tasks.create(s, 10000);
+          goals.command(
+            "owner",
+            s.id,
+            { id: randomUUID(), action: "create", objective: "Retain the complete imported goal" },
+            10000,
+          );
+          tasks.create(paused, 10000);
+          goals.command(
+            "owner",
+            paused.id,
+            { id: randomUUID(), action: "create", objective: "Keep the paused creation" },
+            10000,
+          );
+          goals.command("owner", paused.id, { id: randomUUID(), action: "pause" }, 10001);
           const lease = tasks.claim("owner", s.id, 10000, 30000),
             scope = tasks.bind(lease, "session", "run", 10000);
           questionId = questions.register(scope, "b".repeat(64), 10001).id;
@@ -65,6 +83,11 @@ test.skipIf(!enabled)(
         personal = new MySQLCreationLedger(f.sql, personalCreationLedgerNamespace("owner"));
       expect((await app.get("owner", s.id)).spec).toEqual(s);
       expect((await personal.get("owner", s.id)).spec).toEqual(s);
+      for (const ledger of [app, personal]) {
+        expect((await ledger.goals.read("owner", s.id))?.goal?.objective).toBe("Retain the complete imported goal");
+        expect((await ledger.goals.read("owner", paused.id))?.goal?.status).toBe("paused");
+        expect((await ledger.get("owner", paused.id)).state).toBe("cancelled");
+      }
       await expect(app.get("other", s.id)).rejects.toThrow("notFound");
       expect((await app.questions.pending("owner", s.id))!.id).toBe(questionId);
       expect(await app.scheduling.claim(50000)).toBeNull();
@@ -159,6 +182,120 @@ test.skipIf(!enabled)(
       expect(done.state).toBe("cancelled");
       expect(done.artifact).toEqual(artifact);
       expect(await second.complete("owner", s.id, "d".repeat(64), artifact, 10010)).toEqual(done);
+    } finally {
+      await f.close();
+    }
+  },
+  60000,
+);
+
+test.skipIf(!enabled)(
+  "creation message ordering, dispatch recovery and output fencing remain transactional in MySQL",
+  async () => {
+    const f = await isolatedMySQLDatabase("messages");
+    try {
+      await new DatabaseRegistry().register(mysqlCreationModule).upgrade(new MySQLSchemaConnection(f.sql));
+      const ledger = new MySQLCreationLedger(f.sql, "application"),
+        s = spec();
+      await ledger.create(s, 10000);
+      const lease = await ledger.claim("owner", s.id, 10001, 30000),
+        execution = await ledger.bind(lease, "session", "run", 10002);
+      const first = {
+        id: "ffffffff-ffff-4fff-afff-ffffffffffff",
+        owner: "owner",
+        taskId: s.id,
+        generation: lease.generation,
+        requestDigest: "b".repeat(64),
+        payloadDigest: "c".repeat(64),
+        state: "received" as const,
+        dispatchGeneration: null,
+        createdAt: 10003,
+        updatedAt: 10003,
+      };
+      const second = { ...first, id: "00000000-0000-4000-a000-000000000000", requestDigest: "d".repeat(64) };
+      await ledger.messages.accept(first);
+      await ledger.messages.accept(second);
+      expect((await ledger.messages.list("owner", s.id)).map((message) => message.id)).toEqual([first.id, second.id]);
+      expect((await ledger.messages.accept(first)).id).toBe(first.id);
+      await expect(ledger.admit({ ...execution, contextVersion: first.id }, "e".repeat(64), 10005)).rejects.toThrow(
+        "conflict",
+      );
+      expect((await ledger.messages.claim(lease, 10006))!.id).toBe(first.id);
+      await ledger.scheduling.release(lease, 10007);
+      const next = await ledger.claim("owner", s.id, 10008, 30000),
+        scope = await ledger.bind(next, "next-session", "next-run", 10009);
+      expect((await ledger.messages.claim(next, 10010))!.id).toBe(second.id);
+      expect((await ledger.messages.find("owner", first.id))!.state).toBe("uncertain");
+      await ledger.messages.settle(lease, first.id, "delivered", 10011);
+      expect((await ledger.messages.find("owner", first.id))!.state).toBe("uncertain");
+      await ledger.messages.seen(next, [first.id, second.id], 10012);
+      expect((await ledger.admit({ ...scope, contextVersion: second.id }, "f".repeat(64), 10013)).state).toBe(
+        "committing",
+      );
+      await expect(ledger.messages.accept({ ...first, id: randomUUID() })).rejects.toThrow("conflict");
+    } finally {
+      await f.close();
+    }
+  },
+  60000,
+);
+
+test.skipIf(!enabled)(
+  "creation goals retain owner isolation, atomic pause/resume and save fences in MySQL",
+  async () => {
+    const f = await isolatedMySQLDatabase("goals");
+    try {
+      const registry = new DatabaseRegistry().register(mysqlCreationModule),
+        schema = new MySQLSchemaConnection(f.sql);
+      await registry.upgrade(schema);
+      expect(await mysqlCreationModule.inspect(schema)).toEqual([]);
+      const app = new MySQLCreationLedger(f.sql, "application"),
+        other = new MySQLCreationLedger(f.sql, "personal:other"),
+        s = spec();
+      await app.create(s, 10000);
+      await other.create(s, 10000);
+      const lease = await app.claim("owner", s.id, 10001, 30000),
+        scope = await app.bind(lease, "session", "run", 10001);
+      const created = await app.goals.command(
+        "owner",
+        s.id,
+        { id: randomUUID(), action: "create", objective: "Include field inheritance" },
+        10002,
+        scope,
+      );
+      expect(await other.goals.read("owner", s.id)).toBeNull();
+      await expect(app.goals.read("different-owner", s.id)).rejects.toThrow("notFound");
+      await expect(app.admit(scope, "b".repeat(64), 10003)).rejects.toThrow("conflict");
+      const pause = { id: randomUUID(), action: "pause" as const };
+      expect((await app.goals.command("owner", s.id, pause, 10004)).goal?.status).toBe("paused");
+      expect((await app.get("owner", s.id)).state).toBe("cancelled");
+      await expect(
+        app.goals.command(
+          "owner",
+          s.id,
+          { id: randomUUID(), action: "create", objective: "Stale model target" },
+          10005,
+          scope,
+        ),
+      ).rejects.toThrow("leaseLost");
+      const resume = { id: randomUUID(), action: "resume" as const };
+      const resumed = await app.goals.command("owner", s.id, resume, 10006);
+      expect((await app.goals.command("owner", s.id, resume, 10007)).at).toBe(resumed.at);
+      const next = await app.claim("owner", s.id, 10008, 30000),
+        nextScope = await app.bind(next, "session-next", "run-next", 10008);
+      const goal = await app.goals.read("owner", s.id);
+      expect(goal?.goal?.id).toBe(created.goal?.id);
+      expect((await app.admit({ ...nextScope, goalVersion: goal!.at }, "b".repeat(64), 10009)).state).toBe(
+        "committing",
+      );
+      await expect(
+        app.goals.command(
+          "owner",
+          s.id,
+          { id: randomUUID(), action: "set", objective: "Too late to change admitted output" },
+          10010,
+        ),
+      ).rejects.toThrow("conflict");
     } finally {
       await f.close();
     }

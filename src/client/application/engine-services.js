@@ -47,7 +47,7 @@ export function assembleStatus({ viewUpdates, $, t, i18n, titleOf, shortPath, es
     clearThreadError,
   };
 }
-/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations" | "$" | "t" | "escapeHtml", "transport" | "timing" | "notices", "goals">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "state" | "mutations" | "$" | "t" | "escapeHtml", "transport" | "timing" | "notices" | "workbench", "goals">} options */
 export function assembleGoals({
   viewUpdates,
   transportPort,
@@ -55,10 +55,30 @@ export function assembleGoals({
   t,
   escapeHtml,
   timingPort,
+  workbenchPort,
   noticesPort,
   state,
   mutations,
 }) {
+  const creation = () => workbenchPort.workbench?.creationSession();
+  const managed = (id) => typeof id === "string" && id.startsWith("creation:");
+  const activeId = () => creation()?.key || state.active?.id;
+  async function goalRpc(method, params) {
+    if (!managed(params.threadId)) return transportPort.rpc(method, params);
+    const domain = creation();
+    if (!domain || domain.key !== params.threadId)
+      throw new Error(t("workbench.conversationChangedReopenTheQuestionBeforeSubmitting"));
+    if (method === "thread/goal/get") return { goal: domain.goal() };
+    if (method === "thread/goal/clear") return { goal: await domain.goalCommand({ action: "clear" }) };
+    if (method === "thread/goal/set")
+      return {
+        goal: await domain.goalCommand({
+          action: params.objective ? "set" : params.status === "paused" ? "pause" : "resume",
+          ...(params.objective ? { objective: params.objective } : {}),
+        }),
+      };
+    throw new Error(t("creation.taskActionFailed"));
+  }
   const {
     closeGoalDialog,
     openGoalDialog,
@@ -70,7 +90,13 @@ export function assembleGoals({
   } = createGoalController({
     $,
     t,
-    rpc: /** @param {Parameters<typeof transportPort.rpc>} args */ (...args) => transportPort.rpc(...args),
+    rpc: goalRpc,
+    activeId,
+    readGoal: (id) => {
+      const domain = creation();
+      return managed(id) ? (domain?.key === id ? domain?.goal() : null) : state.goals.get(id);
+    },
+    isManaged: managed,
     timestampSeconds: /** @param {Parameters<typeof timingPort.timestampSeconds>} args */ (...args) =>
       timingPort.timestampSeconds(...args),
     escapeHtml,
@@ -83,6 +109,18 @@ export function assembleGoals({
     onChange: (threadId) => viewUpdates.request("goals", threadId),
   });
   async function submitGoalCommand(thread, command, options = {}) {
+    const domain = creation();
+    if (domain) {
+      if (command.objective || ["clear", "pause", "resume"].includes(command.command)) {
+        await domain.goalCommand({
+          action: command.objective ? "set" : command.command,
+          ...(command.objective ? { objective: command.objective } : {}),
+        });
+      } else if (domain.goal()) openGoalDialog(domain.key);
+      else noticesPort.toast(t("creation.createGoal"));
+      viewUpdates.request("goals");
+      return;
+    }
     if (!thread?.id) {
       noticesPort.toast(t("workbench.startATaskFirst"));
       return;

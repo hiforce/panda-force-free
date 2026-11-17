@@ -79,6 +79,7 @@ export interface ApplicationState {
   planMode: boolean;
   composerMentions: Suggestion[];
   composerAttachments: ComposerAttachment[];
+  composerSkills: import("../../shared/creation/contracts.js").CreationSkillSelection[];
   models: EngineModel[];
   modelLoadStatus: "loading" | "ready" | "error";
   selectedModel: string;

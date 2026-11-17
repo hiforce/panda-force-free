@@ -14,7 +14,8 @@ export interface CreationSubmissionAuthority {
   /** Called again after asynchronous capture and staging; project existence is not a durable permission grant. */
   authorize(owner: string, projectId: string): Promise<void>;
   target(owner: string, request: CreationRequest): Promise<void>;
-  profile(id: string): Promise<CreationEngineProfile>;
+  revision?: import("./ports.js").CreationDocumentRevisions["read"];
+  profile(id: string, selection?: { model?: string; effort?: string }): Promise<CreationEngineProfile>;
   capture(owner: string, request: CreationRequest, requestDigest: string): Promise<SkillCapture>;
 }
 /** Submission is idempotent before mutable catalogs are consulted. Only the first accepted input snapshot enters the queue. */
@@ -24,12 +25,51 @@ export class CreationSubmissions {
     private readonly inputs: CreationInputs,
     private readonly authority: CreationSubmissionAuthority,
     private readonly now: () => number = Date.now,
-    private readonly output?: {
-      read(digest: string): Promise<NonNullable<import("./input.js").CreationInputSnapshot["previous"]>["document"]>;
-    },
+    private readonly materials?: import("./materials.js").CreationMaterialPort,
+    private readonly messages?: Pick<import("./messages/service.js").CreationMessages, "context">,
+    private readonly savedArtifact?: (
+      owner: string,
+      id: string,
+    ) => Promise<import("./contracts.js").CreationArtifact | null>,
   ) {}
+  async recover(owner: string, id: string, operationId: string) {
+    const task = await this.tasks.find(owner, creationUuid(id));
+    if (!task) throw new CreationError("notFound");
+    await this.authority.authorize(owner, task.spec.projectId);
+    if (task.artifact || task.failure !== "targetChanged" || !["failed", "committing"].includes(task.state))
+      throw new CreationError("conflict");
+    const input = await this.inputs.read(task.spec);
+    const updates = (await this.messages?.context(owner, id)) || [];
+    const skills = updates.length
+      ? updates.at(-1)!.payload.skills?.composition.skills || []
+      : input.skills.composition.skills;
+    return this.write(
+      owner,
+      {
+        id: creationUuid(operationId),
+        previousTaskId: task.spec.id,
+        projectId: task.spec.projectId,
+        treeVersion: task.spec.target.treeVersion,
+        parentId: task.spec.target.parentId,
+        locale: task.spec.target.locale,
+        prompt: input.prompt,
+        profileId: input.profile.id,
+        ...(input.profile.model ? { model: input.profile.model } : {}),
+        ...(input.profile.effort ? { effort: input.profile.effort } : {}),
+        attachments: (input.materials || []).map(({ id }) => ({ materialId: id })),
+        selections: skills.map(({ packageId, version, digest, id, parameters }) => ({
+          packageId,
+          version,
+          digest,
+          id,
+          parameters,
+        })),
+      },
+      { taskId: task.spec.id, inputDigest: task.spec.inputDigest },
+    );
+  }
   async followUp(owner: string, id: string, value: unknown) {
-    const request = creationRecord(value, ["id", "prompt"]),
+    const request = creationRecord(value, ["id", "prompt", "selections", "model", "effort", "attachments"]),
       task = await this.tasks.find(owner, creationUuid(id));
     if (!task) throw new CreationError("notFound");
     await this.authority.authorize(owner, task.spec.projectId);
@@ -43,19 +83,31 @@ export class CreationSubmissions {
       parentId: task.spec.target.parentId,
       locale: task.spec.target.locale,
       profileId: input.profile.id,
-      selections: input.skills.composition.skills.map(({ packageId, version, digest, id, parameters }) => ({
-        packageId,
-        version,
-        digest,
-        id,
-        parameters,
-      })),
+      ...(request.model === undefined ? {} : { model: request.model }),
+      ...(request.effort === undefined ? {} : { effort: request.effort }),
+      ...(request.attachments === undefined ? {} : { attachments: request.attachments }),
+      selections:
+        request.selections ??
+        input.skills.composition.skills.map(({ packageId, version, digest, id, parameters }) => ({
+          packageId,
+          version,
+          digest,
+          id,
+          parameters,
+        })),
     });
   }
   async submit(actor: string, value: unknown) {
+    return this.write(actor, value);
+  }
+  private async write(
+    actor: string,
+    value: unknown,
+    recoveryFrom?: import("./input.js").CreationInputSnapshot["recoveryFrom"],
+  ) {
     const owner = creationText(actor, 200),
       request = creationRequest(value),
-      signature = creationRequestDigest(request);
+      signature = creationRequestDigest(recoveryFrom ? { request, recoveryFrom } : request);
     await this.authority.authorize(owner, request.projectId);
     const prior = await this.tasks.find(owner, request.id);
     if (prior) {
@@ -66,18 +118,50 @@ export class CreationSubmissions {
     }
     await this.authority.target(owner, request);
     let previous: import("./input.js").CreationInputSnapshot["previous"];
+    let document: import("../../shared/documents/contracts.js").DocumentRevisionReference | undefined;
+    let documentProjectId: string | undefined, documentTreeVersion: number | undefined;
+    let recoveredProfile: CreationEngineProfile | undefined;
     if (request.previousTaskId) {
       const task = await this.tasks.find(owner, request.previousTaskId);
       if (!task || task.spec.projectId !== request.projectId) throw new CreationError("notFound");
       await this.authority.authorize(owner, task.spec.projectId);
-      if (task.state !== "succeeded" || !task.artifact || !task.outputDigest || !this.output)
+      const recovery = recoveryFrom?.taskId === task.spec.id && recoveryFrom.inputDigest === task.spec.inputDigest;
+      if (!recovery && (task.state !== "succeeded" || !task.artifact || !task.outputDigest))
         throw new CreationError("conflict");
       const input = await this.inputs.read(task.spec);
-      previous = { prompt: input.prompt, document: await this.output.read(task.outputDigest) };
+      if (recovery) recoveredProfile = input.profile;
+      if (!this.authority.revision) throw new CreationError("unavailable");
+      let source = task,
+        saved = source.artifact ?? (await this.savedArtifact?.(owner, source.spec.id));
+      for (let depth = 0; !saved && !source.spec.target.document && depth < 32; depth++) {
+        if (!source.spec.previousTaskId) break;
+        const parent = await this.tasks.find(owner, source.spec.previousTaskId);
+        if (!parent || parent.spec.projectId !== task.spec.projectId) throw new CreationError("notFound");
+        source = parent;
+        saved = source.artifact ?? (await this.savedArtifact?.(owner, source.spec.id));
+      }
+      const documentId = saved?.documentId || source.spec.target.document?.documentId;
+      if (!documentId) throw new CreationError("conflict");
+      const current = await this.authority.revision(
+        owner,
+        source.spec.target.documentProjectId ?? source.spec.projectId,
+        documentId,
+      );
+      previous = { prompt: input.prompt, document: current.document };
+      document = current.base;
+      documentProjectId = current.projectId;
+      documentTreeVersion = current.treeVersion;
     }
-    const profile = structuredClone(await this.authority.profile(request.profileId));
+    const permitted = await this.authority.profile(
+      request.profileId,
+      recoveryFrom ? undefined : { model: request.model, effort: request.effort },
+    );
+    if (recoveredProfile && recoveredProfile.engineId !== permitted.engineId) throw new CreationError("unavailable");
+    const profile = structuredClone(recoveredProfile || permitted);
     if (profile.id !== request.profileId) throw new CreationError("unavailable");
     const skills = await this.authority.capture(owner, request, signature);
+    if (request.attachments?.length && !this.materials) throw new CreationError("unavailable");
+    const materials = request.attachments?.length ? await this.materials!.prepare(owner, request.attachments) : [];
     const inputDigest = await this.inputs.put({
       schema: 1,
       taskId: request.id,
@@ -87,7 +171,9 @@ export class CreationSubmissions {
       prompt: request.prompt,
       profile,
       skills,
+      ...(materials.length ? { materials } : {}),
       ...(previous ? { previous } : {}),
+      ...(recoveryFrom ? { recoveryFrom } : {}),
     });
     await this.authority.authorize(owner, request.projectId);
     try {
@@ -101,8 +187,10 @@ export class CreationSubmissions {
           kind: "document",
           target: {
             parentId: request.parentId,
-            treeVersion: request.treeVersion,
+            treeVersion: documentTreeVersion ?? request.treeVersion,
             locale: request.locale,
+            ...(document ? { document } : {}),
+            ...(documentProjectId ? { documentProjectId } : {}),
           },
           inputDigest,
           skillCaptureId: skills.id,

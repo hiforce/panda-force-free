@@ -8,7 +8,13 @@ export interface CreationTaskSpec {
   projectId: string;
   operationId: string;
   kind: "document";
-  target: { parentId: string | null; treeVersion: number; locale: string };
+  target: {
+    parentId: string | null;
+    treeVersion: number;
+    locale: string;
+    document?: import("../../shared/documents/contracts.js").DocumentRevisionReference;
+    documentProjectId?: string;
+  };
   inputDigest: string;
   skillCaptureId: string | null;
   previousTaskId?: string;
@@ -35,6 +41,8 @@ export interface CreationLease {
 export interface CreationExecution extends CreationLease {
   sessionId: string;
   runId: string;
+  contextVersion?: string;
+  goalVersion?: number;
 }
 export class CreationError extends Error {
   constructor(
