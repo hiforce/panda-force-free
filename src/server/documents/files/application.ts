@@ -1,3 +1,4 @@
+import type { OriginalStorageFeature } from "../../object-storage/feature.js";
 import type { MetadataStore } from "../../../shared/async-value.js";
 import { builtinSiteThemes, type SiteThemeCatalog } from "../../../shared/presentation/themes.js";
 import { FileOriginalQueries } from "../../content-sources/reader.js";
@@ -29,6 +30,7 @@ import { fileOwnershipLocation } from "../ownership/location.js";
 /** Activation belongs to the application cutover, after all publishing consumers use the same file-backed source. */
 export function createFileDocumentApplication(options: {
   root: string;
+  originalStorage?: Pick<OriginalStorageFeature, "objects" | "purges">;
   assetRoot: string;
   allowedRoots?: string[];
   themes?: MetadataStore<SiteThemeCatalog>;
@@ -62,12 +64,17 @@ export function createFileDocumentApplication(options: {
     },
     projectContent: projects,
     queries,
-    originals: new FileOriginalQueries(projects, options.assetRoot),
+    originals: new FileOriginalQueries(projects, options.assetRoot, undefined, options.originalStorage?.objects),
     editor,
     changes,
     navigation,
     assets,
-    creations: new FileCreativeAssets(projects, options.assetRoot),
+    creations: new FileCreativeAssets(
+      projects,
+      options.assetRoot,
+      options.originalStorage?.objects,
+      options.originalStorage?.purges,
+    ),
     spaces,
     placements,
     snapshots,

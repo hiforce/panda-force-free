@@ -11,6 +11,7 @@ const HEARTBEAT_INTERVAL_MS = 20000;
 const READ_METHODS = new Set([
   "model/list",
   "permissionProfile/list",
+  "modelProvider/capabilities/read",
   "account/read",
   "account/rateLimits/read",
   "thread/list",
@@ -138,13 +139,20 @@ export function createCodexBridge({
     });
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (data) => console.error("[codex app-server]", String(data).trimEnd()));
+    child.on("error", (error) => {
+      if (codex !== child) return;
+      codex = null;
+      for (const waiter of readyWaiters) waiter.reject(error);
+      readyWaiters.clear();
+      handleDisconnect(null, null);
+    });
     child.on("exit", (code, signal) => {
       if (codex === child) codex = null;
       handleDisconnect(code, signal);
     });
     initialize().catch((error) => {
       console.error("[panda-force] initialize failed", error);
-      terminate();
+      if (codex === child) terminate();
     });
   }
 

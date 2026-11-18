@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { readdir } from "node:fs/promises";
@@ -109,7 +110,7 @@ test("an admitted output creates one real file-backed document and Git commit, w
       result = await f.outputs().invoke(f.scope, generated);
     expect(result.state).toBe("succeeded");
     expect(result.artifact?.operationId).toBe(f.spec.operationId);
-    const artifact = result.artifact!,
+    const artifact = creationDocumentArtifact(result.artifact)!,
       head = await f.snapshots.head(),
       detail = await f.application().queries.detail("project-1", artifact.documentId),
       tree = await f.application().navigation.tree("project-1");
@@ -166,7 +167,7 @@ test("a crash after Git commit recovers its original receipt without creating a 
     ).toEqual([f.spec.id]);
     const recovered = await f.outputs().reconcile(owner, f.spec.id);
     expect(recovered.state).toBe("succeeded");
-    expect(recovered.artifact?.documentId).toBe(generated.documentId);
+    expect(creationDocumentArtifact(recovered.artifact)?.documentId).toBe(generated.documentId);
     expect(await f.snapshots.head()).toBe(before);
     const detail = await f.application().queries.detail("project-1", generated.documentId);
     expect(detail.document.title).toBe("A newer manual title");

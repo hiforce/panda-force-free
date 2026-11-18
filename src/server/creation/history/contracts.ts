@@ -23,7 +23,7 @@ export function creationHistoryCommand(value: unknown): CreationHistoryCommand {
 export const historySignature = (command: CreationHistoryCommand) =>
   createHash("sha256").update(stableJson(command)).digest("hex");
 export const historyDocument = (task: CreationTask) =>
-  task.spec.target.document?.documentId || task.artifact?.documentId || null;
+  task.spec.target.document?.documentId || (task.artifact?.kind === "document" ? task.artifact.documentId : null);
 export function historyReceipt(value: string, id: string): CreationHistoryReceipt {
   const row = creationRecord(JSON.parse(value), ["id", "hidden"]);
   if (row.id !== id) throw new CreationError("unavailable");

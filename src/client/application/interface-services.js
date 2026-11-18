@@ -153,7 +153,7 @@ export function assembleSettings({ $, t, shortPath, modelsPort, panelsPort, view
       users: createLazySettingsPage(t, "users"),
       "plugins-settings": createExtensionSettings(t),
       "search-settings": createLazySettingsPage(t, "search"),
-      storage: createLazySettingsPage(t, "database"),
+      storage: createLazySettingsPage(t, "storage"),
       bots: createLazySettingsPage(t, "bots", {
         read: () => modelsPort.sessionControlView(),
         load: () => modelsPort.loadModels(),

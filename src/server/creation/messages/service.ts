@@ -31,7 +31,7 @@ export class CreationMessages {
     const task = await this.tasks.get(owner, creationUuid(taskId));
     await this.authorize(owner, task.spec.projectId);
     const source = await this.inputs.read(task.spec),
-      row = creationRecord(value, ["id", "prompt", "selections", "attachments", "model", "effort"]);
+      row = creationRecord(value, ["id", "prompt", "selections", "attachments", "model", "effort", "outputType"]);
     const request = creationRequest({
       id: row.id,
       projectId: task.spec.projectId,
@@ -40,6 +40,9 @@ export class CreationMessages {
       locale: task.spec.target.locale,
       prompt: row.prompt,
       profileId: source.profile.id,
+      ...((row.outputType ?? source.outputType) === undefined
+        ? {}
+        : { outputType: row.outputType ?? source.outputType }),
       selections: row.selections ?? [],
       attachments: row.attachments ?? [],
       ...(row.model === undefined ? {} : { model: row.model }),
@@ -52,6 +55,7 @@ export class CreationMessages {
       return prior;
     }
     if (replayOnly) return null;
+    if (request.outputType !== source.outputType) throw new CreationError("conflict");
     if (!["queued", "running"].includes(task.state) || task.outputDigest || task.cancelRequested)
       throw new CreationError("conflict");
     const capture = await this.capture(owner, request, requestDigest);

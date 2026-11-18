@@ -1,3 +1,4 @@
+import type { OriginalObjectStorage } from "../object-storage/originals.js";
 import type { ProjectContentView } from "../project-content/read-view.js";
 import type { OwnedProjectDirectory } from "../project-content/owned-directory.js";
 import type { SavedSourceKind, SavedSourceText } from "../../shared/content-sources/contracts.js";
@@ -17,6 +18,7 @@ export class FileOriginalQueries {
     private readonly projects: DocumentProjectReads,
     private readonly assetRoot: string,
     private readonly parse?: SavedSourceParser,
+    private readonly objects?: OriginalObjectStorage,
   ) {}
   /** Internal writers can reuse the neutral saved-source verifier under their existing final lease. */
   saved(
@@ -26,7 +28,7 @@ export class FileOriginalQueries {
     kinds: readonly SavedSourceKind[],
     ids?: ReadonlySet<string>,
   ) {
-    return savedOriginalSources(view, owned, this.assetRoot, project, kinds, ids);
+    return savedOriginalSources(view, owned, this.assetRoot, project, kinds, ids, this.objects);
   }
   private read<T>(
     project: string,
@@ -39,7 +41,15 @@ export class FileOriginalQueries {
       await this.projects.authorize(project);
       const result = await this.projects.ifPresent(project, async (owner, view) => ({
         value: await work(
-          await savedOriginalSources(view, owner.owned, this.assetRoot, project, selection.kinds, selection.ids),
+          await savedOriginalSources(
+            view,
+            owner.owned,
+            this.assetRoot,
+            project,
+            selection.kinds,
+            selection.ids,
+            this.objects,
+          ),
         ),
       }));
       await this.projects.authorize(project);
@@ -99,7 +109,7 @@ export class FileOriginalQueries {
           },
         );
         if (!captured) throw new ProjectContentError("conflict");
-        // All original bytes are verified before this lease-free worker phase.
+        // Deferred object reads and native parsing run without retaining a project lease.
         for (const prepared of captured.value) {
           check();
           const value = await materializeSavedSource(prepared, signal, this.parse);

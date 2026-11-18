@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { test, expect } from "bun:test";
 import { randomUUID } from "node:crypto";
 import type { CreationTaskDetail } from "../../src/shared/creation/contracts.js";
@@ -136,7 +137,9 @@ test("editing a finished goal creates one writing round that updates the same do
     expect(replay.status).toBe(200);
     expect(replay.body.task.id).toBe(first.body.task.id);
     const done = await f.until(first.body.task.id, (task) => task.state === "succeeded");
-    expect(done.artifact?.documentId).toBe(original.artifact?.documentId);
+    expect(creationDocumentArtifact(done.artifact)?.documentId).toBe(
+      creationDocumentArtifact(original.artifact)?.documentId,
+    );
     expect((await f.task(taskId)).artifact).toEqual(original.artifact);
   } finally {
     await f.close();

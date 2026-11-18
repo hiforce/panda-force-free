@@ -130,6 +130,9 @@ export class FileCreationMaterials implements CreationMaterialPort {
       }),
     };
   }
+  async readOriginal(owner: string, material: CreationMaterial): Promise<Uint8Array> {
+    return new Uint8Array(await this.original(owner, material));
+  }
   routes(owner: (context: RouteContext) => string): Route[] {
     const protect = creationProtection(owner);
     return [

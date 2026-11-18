@@ -16,6 +16,7 @@ export interface CreationWorkspaceExport {
   archiveDirectory?: string;
   archiveDirectoryIdentity?: string;
   conversationId: string;
+  lineageId?: string;
   filename: string;
   previous: string | null;
   title: string;
@@ -36,6 +37,7 @@ function plan(value: unknown): CreationWorkspaceExport {
       "archiveDirectory",
       "archiveDirectoryIdentity",
       "conversationId",
+      "lineageId",
       "filename",
       "previous",
       "title",
@@ -75,6 +77,7 @@ function plan(value: unknown): CreationWorkspaceExport {
           archiveDirectoryIdentity: creationDigest(row.archiveDirectoryIdentity),
         }),
     conversationId: creationUuid(row.conversationId),
+    ...(row.lineageId === undefined ? {} : { lineageId: creationUuid(row.lineageId) }),
     filename,
     previous: row.previous === null ? null : creationUuid(row.previous),
     title: creationText(row.title, 200),

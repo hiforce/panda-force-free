@@ -1,4 +1,5 @@
-import type { CreationAvailability, CreationTaskView } from "../../shared/creation/contracts.js";
+import { LazyCreativeAssetsPanel } from "../creative/assets-lazy.js";
+import type { CreationAvailability, CreationTaskView, CreationArtifact } from "../../shared/creation/contracts.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import { setMessageHtml, errorText } from "../i18n.js";
 
@@ -8,6 +9,7 @@ import { CreationSubmission } from "./submission.js";
 import { CreationSkills } from "./skills.js";
 import { CreationCards } from "./cards.js";
 import { creationFrame, creationLoadingFrame, type CreationLocation } from "./views.js";
+import { defaultCreationOutput } from "../../shared/creation/default-output.js";
 
 export interface CreationContext {
   projectId: string;
@@ -15,6 +17,7 @@ export interface CreationContext {
   locations: CreationLocation[];
   parentId: string | null;
   open(documentId: string): Promise<void>;
+  openArtifact?(artifact: Exclude<CreationArtifact, { kind: "document" }>): Promise<void>;
   manual(parentId: string | null): Promise<void>;
   history?: boolean;
   prompt?: string;
@@ -28,6 +31,7 @@ export class DocumentCreationPanel {
   private timer: ReturnType<typeof setTimeout> | undefined;
   private skills: CreationSkills | null = null;
   private afterClose: (() => void) | undefined;
+  private readonly assets: LazyCreativeAssetsPanel;
   constructor(
     private readonly t: Translate,
     private readonly identity: string,
@@ -36,6 +40,7 @@ export class DocumentCreationPanel {
     this.dialog.id = document.getElementById("projectDocumentCreation")
       ? "projectDocumentCreation-" + crypto.randomUUID()
       : "projectDocumentCreation";
+    this.assets = new LazyCreativeAssetsPanel(t, this.dialog.id + "Assets", identity);
     this.dialog.className = "creation-dialog";
     document.body.append(this.dialog);
     this.dialog.addEventListener("cancel", (event) => {
@@ -52,6 +57,7 @@ export class DocumentCreationPanel {
     this.epoch++;
     this.reads++;
     clearTimeout(this.timer);
+    this.assets.close();
     this.skills?.close();
     this.skills = null;
     this.dialog.close();
@@ -155,9 +161,14 @@ export class DocumentCreationPanel {
         get("[data-creation-tasks]"),
         this.t,
         merge,
-        (id) => {
+        (artifact) => {
           this.close();
-          void context.open(id).catch(report);
+          if (artifact.kind === "document") void context.open(artifact.documentId).catch(report);
+          else if (context.openArtifact) void context.openArtifact(artifact).catch(report);
+          else
+            void this.assets
+              .follow(artifact.projectId, artifact.assetId, async () => {}, artifact.version)
+              .catch(report);
         },
         report,
         creationApi,
@@ -235,6 +246,7 @@ export class DocumentCreationPanel {
             profileId,
             parentId,
             selections,
+            outputType: defaultCreationOutput(options),
             id: crypto.randomUUID(),
             projectId: context.projectId,
             treeVersion: context.treeVersion(),

@@ -52,11 +52,13 @@ Most workspace/document capabilities are built in. AI operations need a configur
 
 ## Personal creation and reusable assets
 
-- Keep personal documents and supported slide/web assets in the creation center, separate from project copies.
+- Keep personal documents, images, videos, editable PPTX presentations, web pages and imported files in the creation center, separate from independent project copies.
 - Create a blank document directly or request an AI draft with selected skills and source context.
 - Inspect durable creation-job progress, questions, errors and actual result links; reopen results for further editing.
 - Copy a personal work into selected projects as independent content; edit one copy without silently overwriting others.
-- Import supported slide sources and web bundles, inspect resources and preview editable outputs. Full professional image/video production is not included.
+- Generate actual images through the configured Codex native image capability, editable PPTX presentations, self-contained HTML pages and silent motion-graphics MP4 video. Missing capabilities report an error instead of substituting a planning document.
+- Continue supported edits from the authorized saved original. Videos combine captions and permitted images; generated footage, narration and music are not provided by this renderer. PPTX has a text preview and an editable original download; it is not a full browser Office editor.
+- Open images, video, audio, PDF and text in supported native viewers, inspect isolated static HTML previews and download other original formats from the project document directory.
 
 ## Document organization and editing
 
@@ -154,6 +156,7 @@ Explore the [anonymous product-publishing use case](https://github.com/hiforce/p
 - Persist product state, engine state, workspaces and attachments in separately configurable locations/volumes.
 - Choose SQLite or an external MySQL database for application-owned business records during setup; inspect selected database status in settings.
 - Use registered module schema migrations, prerequisite checks, backups and controlled migration/cutover workflows. File assets and engine journals are separate from business database records.
+- Administrators can select S3-compatible storage for new creative originals by file type, independently of static CDN settings. Originals remain behind application authentication; existing files keep their saved provider. Trash retains files for recovery, while permanent deletion queues exact-version cleanup and durable retries. See [original storage](./storage.md#s3-compatible-storage-for-saved-originals-develop-source).
 - Keep credentials, encrypted connection data, application logs and administrator settings out of public source snapshots.
 - Configure supported optional search, preview, build, attachment-storage and cluster services without making Kubernetes a prerequisite for ordinary installation.
 

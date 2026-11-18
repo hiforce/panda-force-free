@@ -114,7 +114,7 @@ export function createCreativeWorkspace(
       ...assets
         .filter(
           (asset) =>
-            (filter === "trash" ? asset.state === "trashed" : asset.state === "saved") &&
+            (filter === "trash" ? ["trashed", "purging"].includes(asset.state) : asset.state === "saved") &&
             (filter === "all" || filter === "trash" || filter === asset.kind),
         )
         .map((value) => ({ kind: "asset" as const, value })),
@@ -420,7 +420,7 @@ export function createCreativeWorkspace(
       filters.setAttribute("aria-label", t("creative.assetContentType"));
       setMessageHtml(
         filters,
-        (["all", "document", "slides", "web", "trash"] as const)
+        (["all", "document", "image", "video", "slides", "web", "file", "trash"] as const)
           .map(
             (kind) =>
               `<button type="button" class="wb-button" data-creative-filter="${kind}" aria-pressed="${kind === "all"}">${messageHtml(kind === "trash" ? "creative.assetFileTrash" : `creative.${kind}`, {}, t)}</button>`,

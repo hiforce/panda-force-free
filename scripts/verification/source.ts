@@ -2,7 +2,13 @@ import { CLIENT_ENTRYPOINTS } from "../../src/shared/client-entrypoints.js";
 import { BUILTIN_SKILL_COVERS } from "../../src/shared/skills/cover-assets.js";
 import { CREATION_STYLES, TEMPLATE_PREVIEW_ASSETS } from "../../src/shared/template-previews/assets.js";
 import { INSTALL_ASSETS } from "../../src/shared/install-assets.js";
-import { KNOWLEDGE_STYLES, CLI_STYLES, BOT_STYLES, DATABASE_STYLES } from "../../src/shared/interface-assets.js";
+import {
+  KNOWLEDGE_STYLES,
+  CLI_STYLES,
+  BOT_STYLES,
+  DATABASE_STYLES,
+  ORIGINAL_STORAGE_STYLES,
+} from "../../src/shared/interface-assets.js";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -57,6 +63,7 @@ const publicFiles = [
   ...CLI_STYLES.map((path) => path.slice(1)),
   ...BOT_STYLES.map((path) => path.slice(1)),
   ...DATABASE_STYLES.map((path) => path.slice(1)),
+  ...ORIGINAL_STORAGE_STYLES.map((path) => path.slice(1)),
   "source-import.css",
   "publishing.css",
   "builds.css",

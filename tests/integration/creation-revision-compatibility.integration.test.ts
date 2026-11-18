@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -107,8 +108,13 @@ test("old queued continuations freeze one document target before an uncertain wr
     const inputs = new FileCreationInputs(join(f.root, "creation", "inputs")),
       snapshot = await inputs.read(parent.spec),
       port = creationFileDocuments(f.files.application());
-    const previous = (await port.revisions!.read(parent.spec.owner, parent.spec.projectId, parent.artifact!.documentId))
-      .document;
+    const previous = (
+      await port.revisions!.read(
+        parent.spec.owner,
+        parent.spec.projectId,
+        creationDocumentArtifact(parent.artifact)!.documentId,
+      )
+    ).document;
     const legacy = { ...parent.spec, id: randomUUID(), operationId: randomUUID(), previousTaskId: parent.spec.id };
     legacy.target = { ...legacy.target, treeVersion: 1 };
     legacy.skillCaptureId = legacy.id;
@@ -124,7 +130,7 @@ test("old queued continuations freeze one document target before an uncertain wr
       legacy,
     );
     const result = await open().commit(legacy, digest);
-    expect(result).toMatchObject({ documentId: parent.artifact!.documentId, revision: 2 });
+    expect(result).toMatchObject({ documentId: creationDocumentArtifact(parent.artifact)!.documentId, revision: 2 });
     expect(creationArtifact(result, legacy)).toEqual(result);
     const application = f.files.application(),
       current = await application.queries.editor("project-1", result.documentId);

@@ -42,6 +42,10 @@ export class FilePackageContent<T> {
     return join(root, digest + this.extension);
   }
   async put(value: T): Promise<void> {
+    await this.insert(value);
+  }
+  /** Returns true only to the process that durably linked this immutable identity. */
+  async insert(value: T): Promise<boolean> {
     const digest = this.codec.digest(value),
       bytes = new Uint8Array(await this.codec.encode(value));
     if (bytes.length > this.codec.maxBytes) throw new PackageContentError("contentUnavailable");
@@ -51,6 +55,7 @@ export class FilePackageContent<T> {
       target = this.target(root, digest),
       temporary = join(root, `${digest}.${randomUUID()}.tmp`),
       file = await open(temporary, "wx", 0o600);
+    let inserted = false;
     try {
       try {
         await file.writeFile(bytes);
@@ -60,6 +65,7 @@ export class FilePackageContent<T> {
       }
       try {
         await link(temporary, target);
+        inserted = true;
       } catch (error) {
         if (errorCode(error) !== "EEXIST") throw error;
         await this.read(digest);
@@ -73,13 +79,24 @@ export class FilePackageContent<T> {
     } finally {
       await unlink(temporary);
     }
+    return inserted;
   }
   async read(digest: string): Promise<T> {
     return (await this.readSized(digest)).value;
   }
   async readSized(digest: string): Promise<{ value: T; bytes: number }> {
-    const root = await this.directory(),
-      bytes = await readPackageFile(this.target(root, digest), this.codec.maxBytes);
+    const root = await this.directory();
+    let bytes!: Uint8Array;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        bytes = await readPackageFile(this.target(root, digest), this.codec.maxBytes);
+        break;
+      } catch (error) {
+        // Removing the winner's temporary hard link changes ctime without changing the immutable original.
+        // Reopen and verify a fresh complete read; arbitrary metadata changes remain failures.
+        if (!(error instanceof PackageContentError) || !error.retryableLinkTransition || attempt >= 2) throw error;
+      }
+    }
     const value = await this.codec.decode(bytes);
     if (this.codec.digest(value) !== digest) throw new PackageContentError("contentUnavailable");
     return { value, bytes: bytes.length };

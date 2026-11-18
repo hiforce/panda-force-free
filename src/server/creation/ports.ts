@@ -58,5 +58,5 @@ export interface CreationDocumentRevisions {
     task: import("./contracts.js").CreationTaskSpec,
     digest: string,
     body: import("../../shared/documents/rich-body.js").RichDocumentBody,
-  ): Promise<import("../../shared/creation/contracts.js").CreationArtifact>;
+  ): Promise<import("../../shared/creation/contracts.js").CreationDocumentArtifact>;
 }

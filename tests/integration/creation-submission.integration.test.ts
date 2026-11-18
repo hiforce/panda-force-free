@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
@@ -195,13 +196,15 @@ test("two concurrently submitted tasks append under the same logical parent desp
         });
       },
       [one, two] = await Promise.all([invoke(a, "First generated"), invoke(b, "Second generated")]);
-    expect(one.artifact?.documentId).not.toBe(two.artifact?.documentId);
+    expect(creationDocumentArtifact(one.artifact)?.documentId).not.toBe(
+      creationDocumentArtifact(two.artifact)?.documentId,
+    );
     const tree = await f.application().navigation.tree("project-1");
     expect(tree.nodes).toHaveLength(4);
     for (const result of [one, two])
-      expect(tree.nodes.find((node) => node.documentId === result.artifact?.documentId)?.parentId).toBe(
-        f.request.parentId,
-      );
+      expect(
+        tree.nodes.find((node) => node.documentId === creationDocumentArtifact(result.artifact)?.documentId)?.parentId,
+      ).toBe(f.request.parentId);
     const head = await f.snapshots.head();
     await outputs.reconcile(owner, a.spec.id);
     await outputs.reconcile(owner, b.spec.id);

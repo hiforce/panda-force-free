@@ -1,3 +1,4 @@
+import type { OriginalStorageFeature } from "../object-storage/feature.js";
 import { createMySQLDocumentFeature } from "../documents/mysql-feature.js";
 import { createContentAccess } from "../content-access/integration/feature.js";
 import { scopedFileDocuments } from "../content-access/integration/files.js";
@@ -20,6 +21,7 @@ export async function createApplicationDocuments(
   sharedEngine: boolean,
   localAdministrator: () => string | null,
   changed: (project: string, owner?: string) => void,
+  originalStorage?: OriginalStorageFeature,
 ) {
   const { pluginFeature, portableTemplateFeature } = plugins;
   const {
@@ -57,6 +59,7 @@ export async function createApplicationDocuments(
   await mkdir(config.documentAssetRoot, { recursive: true, mode: 0o700 });
 
   const fileDocuments = createFileDocumentApplication({
+    originalStorage,
     root: config.documentContentRoot,
     assetRoot: config.documentAssetRoot,
     allowedRoots: config.fileRoots,
@@ -102,6 +105,7 @@ export async function createApplicationDocuments(
   if (!config.allowExternalDirectories) await projectWorkspaces.initialize();
   const scopedDocuments = scopedFileDocuments(
     {
+      originalStorage,
       root: config.documentContentRoot,
       assetRoot: config.documentAssetRoot,
       allowedRoots: config.fileRoots,
@@ -125,6 +129,7 @@ export async function createApplicationDocuments(
   );
 
   return {
+    originalStorage,
     backend,
     documentFeature,
     authorizedLegacyRoutes,

@@ -7,6 +7,7 @@ import type { FileDocumentNavigation } from "../../documents/files/navigation/se
 import type { CreationInputs } from "../input.js";
 import { richDocumentInput } from "../../documents/rich-codec.js";
 import { DocumentError } from "../../documents/errors.js";
+import { assertCreationOutput } from "../output-type.js";
 import { CreationError, CreationWriteError, type CreationTaskSpec } from "../contracts.js";
 import { creationRecord, creationText } from "../validation.js";
 import type { CreationArtifactWriter, CreationOutputContent } from "../ports.js";
@@ -66,6 +67,7 @@ export class FileCreationDocumentOutput implements CreationOutputContent, Creati
     this.targets = new CreationRevisionTargets(root + "-revision-targets");
   }
   async stage(value: unknown, task?: CreationTaskSpec): Promise<string> {
+    if (task) assertCreationOutput(task, "document");
     const output = documentOutput(value);
     if (output.archiveTo) {
       if (!task || !this.archive) throw new CreationError("invalidOutput");
@@ -118,10 +120,12 @@ export class FileCreationDocumentOutput implements CreationOutputContent, Creati
     if (images.some((id) => !allowed.has(id))) throw new CreationError("invalidOutput");
   }
   private async save(task: CreationTaskSpec, digest: string) {
+    assertCreationOutput(task, "document");
     task = await this.targets.resolve(task, this.inputs, this.documents.revisions, this.tasks);
     const output = await this.files.read(digest);
     await this.validateImages(output, task);
-    if (task.previousTaskId && !task.target.document) throw new DocumentError("conflict", 409);
+    if (task.previousTaskId && !task.target.document && !(await this.inputs?.read(task))?.previousAsset)
+      throw new DocumentError("conflict", 409);
     if (task.target.document) {
       if (!this.documents.revisions) throw new CreationError("unavailable");
       const title = (await this.inputs?.read(task))?.previous?.document.title;

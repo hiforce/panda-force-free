@@ -1,3 +1,5 @@
+import { CREATIVE_ASSET_KINDS } from "../../../shared/creative/assets.js";
+import { creativeKindMatchesName } from "../../../shared/creative/file-types.js";
 import { createHash } from "node:crypto";
 import type { CreativeAsset, CreativeResource } from "../../../shared/creative/assets.js";
 import { CREATIVE_ASSET_LIMITS as limits } from "../../../shared/creative/assets.js";
@@ -51,17 +53,20 @@ export function creativeAsset(value: unknown): CreativeAsset {
     "createdAt",
     "updatedAt",
     "copiedFrom",
+    "originalStore",
+    "hasObjectHistory",
+    "purge",
   ]);
   if (v.schema !== 1 || !Array.isArray(v.resources) || v.resources.length > limits.resources)
     throw new ProjectContentError("invalidFile");
-  const kind = fileChoice(v.kind, ["slides", "web"]),
+  const kind = fileChoice(v.kind, CREATIVE_ASSET_KINDS),
     source = resource(v.source, kind === "web" ? limits.htmlBytes : limits.sourceBytes),
     resources = v.resources.map((r) => resource(r, limits.resourceBytes, 0)),
     names = [source.name, ...resources.map((r) => r.name)].map((n) => n.toLowerCase());
   if (
     new Set(names).size !== names.length ||
     source.size + resources.reduce((n, r) => n + r.size, 0) > limits.totalBytes ||
-    !source.name.toLowerCase().endsWith(kind === "web" ? ".html" : ".pptx")
+    !creativeKindMatchesName(kind, source.name)
   )
     throw new ProjectContentError("invalidFile");
   let copiedFrom: CreativeAsset["copiedFrom"];
@@ -76,6 +81,19 @@ export function creativeAsset(value: unknown): CreativeAsset {
       commit,
     };
   }
+  const state = fileChoice(v.state, ["saved", "trashed", "purging", "purged"]);
+  if (
+    (v.originalStore !== undefined && v.originalStore !== "object") ||
+    (v.hasObjectHistory !== undefined && v.hasObjectHistory !== true) ||
+    (v.originalStore === "object" && v.hasObjectHistory !== true) ||
+    ["purging", "purged"].includes(state) !== (v.purge !== undefined)
+  )
+    throw new ProjectContentError("invalidFile");
+  let purge: CreativeAsset["purge"];
+  if (v.purge !== undefined) {
+    const p = fileRecord(v.purge, ["operationId", "requestedVersion"]);
+    purge = { operationId: projectContentId(p.operationId), requestedVersion: fileDigest(p.requestedVersion) };
+  }
   const record: CreativeAsset = {
     schema: 1,
     id: creativeAssetId(v.id),
@@ -85,7 +103,10 @@ export function creativeAsset(value: unknown): CreativeAsset {
     locale: fileLocale(v.locale),
     version: fileDigest(v.version),
     previousVersion: v.previousVersion === null ? null : fileDigest(v.previousVersion),
-    state: fileChoice(v.state, ["saved", "trashed"]),
+    state,
+    ...(v.originalStore === "object" ? { originalStore: "object" as const } : {}),
+    ...(v.hasObjectHistory === true ? { hasObjectHistory: true as const } : {}),
+    ...(purge ? { purge } : {}),
     source,
     resources,
     createdAt: fileInteger(v.createdAt),

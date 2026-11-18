@@ -1552,3 +1552,11 @@
     width: var(--pf-touch-target);
   }
 }
+
+.creation-skill-delivery {
+  margin-block: var(--pf-space-2);
+  color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}

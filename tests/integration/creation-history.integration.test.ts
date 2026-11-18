@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { creationAppFixture } from "../support/creation-app.js";
@@ -10,7 +11,7 @@ test("clearing one document hides all its writing rounds, retains documents and 
     const follow = { id: randomUUID(), taskId: original.id, prompt: "Add acceptance criteria" };
     expect((await f.files.call("/api/document-creations/message", "POST", follow)).status).toBe(202);
     const revision = await f.until(follow.id, (task) => task.state === "succeeded"),
-      documentId = revision.artifact!.documentId;
+      documentId = creationDocumentArtifact(revision.artifact)!.documentId;
     expect((await f.files.call("/api/document-creations?project=*")).body.tasks.map((task: any) => task.id)).toEqual([
       revision.id,
     ]);

@@ -22,6 +22,7 @@ interface IngressWorkers {
   samples: Starts;
 }
 interface BackgroundShutdown {
+  originals?: Closes;
   cli: Closes;
   bots: Closes;
   search: Closes;
@@ -73,6 +74,7 @@ export async function drainApplicationBackground(ports: BackgroundShutdown) {
   await ports.cli.close();
   await Promise.all([
     ports.bots.close(),
+    ports.originals?.close(),
     ports.search.close(),
     ports.closeCreativeText(),
     ports.knowledge.close(),

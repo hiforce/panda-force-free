@@ -40,6 +40,7 @@ export class CreationWorker {
     private readonly workspaces?: import("../workspaces.js").CreationWorkspaces,
     private readonly destinations?: CreationDocumentDestinations,
     private readonly directories?: CreationFileDirectories,
+    private readonly rendering?: import("./rendering.js").CreationRendering,
   ) {}
   async run(claim: CreationClaim, shutdown: AbortSignal, permit: CreationRunPermit) {
     const lease = { ...claim.lease },
@@ -131,7 +132,9 @@ export class CreationWorker {
           this.now,
           () => interaction.version(),
           () => interaction.goalVersion(),
-          () => (!input.recoveryFrom && !creationPreviousPaged(input)) || interaction.ready(),
+          () =>
+            (input.outputType === undefined && !input.recoveryFrom && !creationPreviousPaged(input)) ||
+            interaction.ready(),
           this.destinations,
           this.directories,
         ),
@@ -144,13 +147,51 @@ export class CreationWorker {
           this.materials,
           this.goals,
           claim.task.spec.target.locale,
-        );
+        ),
+        boundExecution = (call: import("../../../shared/engine/application-tools.js").ApplicationToolCall) => {
+          if (!execution || execution.sessionId !== call.sessionId || execution.runId !== call.runId)
+            throw new CreationError("leaseLost");
+          return { ...execution };
+        },
+        active = async (call: import("../../../shared/engine/application-tools.js").ApplicationToolCall) => {
+          signal.throwIfAborted();
+          await this.authorize(lease.owner, claim.task.spec.projectId);
+          await this.tasks.assertExecution(boundExecution(call), this.now());
+          signal.throwIfAborted();
+        },
+        media =
+          input.outputType === undefined
+            ? undefined
+            : this.rendering?.open({
+                task: claim.task.spec,
+                input,
+                signal,
+                execution: boundExecution,
+                active,
+                assert: async (call) => {
+                  await active(call);
+                  if (!interaction.ready()) throw new CreationError("conflict");
+                  const context = await this.userMessages?.context(lease.owner, lease.taskId),
+                    goal = await this.goals?.read(lease.owner, lease.taskId);
+                  if (
+                    context?.filter(({ record }) => record.taskId === lease.taskId).at(-1)?.record.id !==
+                      interaction.version() ||
+                    goal?.at !== interaction.goalVersion()
+                  )
+                    throw new CreationError("conflict");
+                  return {
+                    ...boundExecution(call),
+                    ...(interaction.version() ? { contextVersion: interaction.version() } : {}),
+                    ...(interaction.goalVersion() === undefined ? {} : { goalVersion: interaction.goalVersion() }),
+                  };
+                },
+              });
       signal.throwIfAborted();
       if (engine.id !== input.profile.engineId) throw new CreationError("unavailable");
       const result = await engine.run(
         {
           ...creationRunInput(input, history, Boolean(this.destinations), Boolean(this.directories)),
-          tools: [...tools.definitions, ...interaction.definitions],
+          tools: [...tools.definitions, ...interaction.definitions, ...(media?.definitions ?? [])],
         },
         {
           signal,
@@ -216,6 +257,10 @@ export class CreationWorker {
           call: async (call) => {
             await this.authorize(lease.owner, claim.task.spec.projectId);
             signal.throwIfAborted();
+            if (media?.definitions.some((tool) => tool.name === call.name)) {
+              if (call.name === "panda_artifacts_save") await record("saving");
+              return media.call(call);
+            }
             if ([DOCUMENT_DESTINATIONS_TOOL, FILE_DIRECTORY_TOOL].includes(call.name)) return tools.call(call);
             if (call.name !== CREATE_DOCUMENT_TOOL) return interaction.call(call);
             await record("saving");

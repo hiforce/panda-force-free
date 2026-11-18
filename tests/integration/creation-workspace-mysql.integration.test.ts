@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
@@ -28,7 +29,7 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
       });
       const first = await app.create("Write the initial document"),
         original = await app.until(first.request.id, (task) => task.state === "succeeded"),
-        path = original.artifact!.file!.path,
+        path = creationDocumentArtifact(original.artifact)!.file!.path,
         initial = await readFile(path, "utf8");
       await writeFile(path, "Manual filesystem content");
       app.onRun(async (_input, callbacks, scope) => {
@@ -46,7 +47,7 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
       expect((await app.files.call("/api/document-creations/retry", "POST", retry)).status).toBe(200);
       const saved = await app.until(request.id, (task) => task.state === "succeeded");
       expect(saved.artifact).toMatchObject({
-        documentId: original.artifact!.documentId,
+        documentId: creationDocumentArtifact(original.artifact)!.documentId,
         revision: 2,
         file: { path, format: "markdown" },
       });

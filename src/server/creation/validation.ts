@@ -1,5 +1,6 @@
 import type { CreationProgress } from "../../shared/creation/contracts.js";
 import { visibleTokenUsage } from "../../shared/engine/application-visible-events.js";
+import { creationOutputType } from "./output-type.js";
 import { isRecord } from "../../shared/records.js";
 import { CreationError, type CreationArtifact, type CreationTaskSpec } from "./contracts.js";
 
@@ -65,8 +66,7 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
     ]),
     target = creationRecord(v.target, ["parentId", "treeVersion", "locale", "document", "documentProjectId"]),
     locale = creationText(target.locale, 35);
-  if (v.schema !== 1 || v.kind !== "document" || !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(locale))
-    throw new CreationError("invalidInput");
+  if (v.schema !== 1 || !/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(locale)) throw new CreationError("invalidInput");
   if (target.documentProjectId !== undefined && !target.document) throw new CreationError("invalidInput");
   return {
     schema: 1,
@@ -74,7 +74,7 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
     owner: creationText(v.owner),
     projectId: creationId(v.projectId),
     operationId: creationUuid(v.operationId),
-    kind: "document",
+    kind: creationOutputType(v.kind),
     target: {
       parentId: target.parentId === null ? null : creationId(target.parentId),
       treeVersion: creationInteger(target.treeVersion),
@@ -88,6 +88,7 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
   };
 }
 export function creationArtifact(value: unknown, task: CreationTaskSpec): CreationArtifact {
+  if (isRecord(value) && value.kind !== "document") return creationAssetArtifact(value, task);
   const v = creationRecord(value, [
     "kind",
     "projectId",
@@ -116,7 +117,7 @@ export function creationArtifact(value: unknown, task: CreationTaskSpec): Creati
   )
     throw new CreationError("invalidInput");
   if (
-    v.kind !== task.kind ||
+    (task.kind !== "auto" && v.kind !== task.kind) ||
     v.projectId !== (task.target.documentProjectId ?? task.projectId) ||
     v.operationId !== task.operationId ||
     !Number.isSafeInteger(v.treeVersion) ||
@@ -159,6 +160,49 @@ export function creationArtifact(value: unknown, task: CreationTaskSpec): Creati
           },
         }
       : {}),
+  };
+}
+
+export function creationAssetArtifact(
+  value: unknown,
+  task: Pick<CreationTaskSpec, "kind" | "projectId" | "operationId">,
+): import("../../shared/creation/contracts.js").CreationAssetArtifact {
+  const row = creationRecord(value, [
+      "kind",
+      "projectId",
+      "assetId",
+      "operationId",
+      "version",
+      "commit",
+      "title",
+      "source",
+    ]),
+    source = creationRecord(row.source, ["name", "digest", "size"]),
+    kind = creationOutputType(row.kind),
+    size = creationInteger(source.size),
+    name = creationText(source.name, 512);
+  if (
+    kind === "auto" ||
+    kind === "document" ||
+    (task.kind !== "auto" && task.kind !== kind) ||
+    row.projectId !== task.projectId ||
+    row.operationId !== task.operationId ||
+    row.assetId !== "c-" + task.operationId ||
+    !size ||
+    size > 32 * 1024 * 1024 ||
+    /[\\/]/.test(name) ||
+    !/^[a-f0-9]{40}$/.test(String(row.commit))
+  )
+    throw new CreationError("conflict");
+  return {
+    kind,
+    projectId: task.projectId,
+    assetId: String(row.assetId),
+    operationId: task.operationId,
+    version: creationDigest(row.version),
+    commit: String(row.commit),
+    title: creationText(row.title, 200),
+    source: { name, digest: creationDigest(source.digest), size },
   };
 }
 

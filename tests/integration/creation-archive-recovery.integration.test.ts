@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
@@ -98,11 +99,15 @@ test("a partial archive keeps the creation goal active; fresh services resume th
     const completed = await f.until(first.request.id, (task) => task.state === "succeeded");
     expect(completed.goal?.status).toBe("completed");
     expect(completed.documentStatus).toBe("available");
-    expect(completed.artifact?.location?.projectId).toBe("project-2");
+    expect(creationDocumentArtifact(completed.artifact)?.location?.projectId).toBe("project-2");
     expect(f.runs()).toBe(1);
     expect((await f.files.application().navigation.tree("project-2")).nodes).toHaveLength(1);
     expect(
-      (await f.files.application().queries.detail("project-2", completed.artifact!.documentId)).document.revision,
+      (
+        await f.files
+          .application()
+          .queries.detail("project-2", creationDocumentArtifact(completed.artifact)!.documentId)
+      ).document.revision,
     ).toBe(1);
   } finally {
     proceed.resolve();

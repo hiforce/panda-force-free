@@ -61,7 +61,7 @@ export function creationInteractionTools(
     definitions.push({
       name: "panda_creation_goal",
       description:
-        "Read the creation goal, or create one only when the user explicitly asks for a goal. A goal covers this primary document and grants no additional permissions. Existing user goals cannot be replaced by this tool; read the context and follow their latest objective.",
+        "Read the creation goal, or create one only when the user explicitly asks for a goal. A goal covers this primary artifact and grants no additional permissions. Existing user goals cannot be replaced by this tool; read the context and follow their latest objective.",
       inputSchema: {
         type: "object",
         additionalProperties: false,
@@ -205,6 +205,8 @@ export function creationInteractionTools(
         ? updates.at(-1)!.payload.skills?.composition.skills || []
         : input.skills.composition.skills;
       const text = stableJson({
+        ...(input.outputType === undefined ? {} : { requestedOutputType: input.outputType }),
+        ...(input.previousAsset ? { previousAsset: input.previousAsset } : {}),
         ...(previous
           ? {
               previousDocument: {

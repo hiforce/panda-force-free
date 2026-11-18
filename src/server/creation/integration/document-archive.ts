@@ -1,5 +1,6 @@
 import { stableJson } from "../../../shared/stable-json.js";
-import type { CreationArtifact, CreationTaskSpec } from "../contracts.js";
+import type { CreationTaskSpec } from "../contracts.js";
+import type { CreationDocumentArtifact } from "../../../shared/creation/contracts.js";
 import { CreationError, CreationWriteError } from "../contracts.js";
 import { creationId, creationRecord } from "../validation.js";
 import { DocumentError } from "../../documents/errors.js";
@@ -19,13 +20,13 @@ export interface CreationDocumentArchive {
   authorize(owner: string, destination: CreationArchiveDestination): Promise<void>;
   commit(
     task: CreationTaskSpec,
-    artifact: CreationArtifact,
+    artifact: CreationDocumentArtifact,
     output: {
       title: string;
       body: RichDocumentBody;
       archiveTo?: CreationArchiveDestination;
     },
-  ): Promise<CreationArtifact>;
+  ): Promise<CreationDocumentArtifact>;
 }
 /** The primary receipt and its exact saved version bind an archive; the model cannot select another source document. */
 export function creationDocumentArchive(

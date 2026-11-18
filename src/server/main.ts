@@ -1,3 +1,4 @@
+import { createOriginalStorageFeature } from "./object-storage/feature.js";
 import { EngineImages } from "./workspace/engine-images.js";
 import { engineImageRoutes } from "./http/engine-image-routes.js";
 import { isApplicationSession } from "./engines/application-tools/sessions.js";
@@ -55,6 +56,7 @@ import {
   CLI_STYLES,
   BOT_STYLES,
   DATABASE_STYLES,
+  ORIGINAL_STORAGE_STYLES,
   GADGET_STYLES,
   GADGET_RUNTIME_ASSETS,
 } from "../shared/interface-assets.js";
@@ -180,6 +182,21 @@ const {
   nativeSampleFeature,
   templatePreviewFeature,
 } = extensions;
+const originalStorageAdministrators = new Set(
+  (process.env.PANDA_FORCE_STORAGE_ADMINISTRATORS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
+const originalStorage = createOriginalStorageFeature({
+  stateRoot: config.stateRoot,
+  contentRoot: config.documentContentRoot,
+  privateParent: process.env.PANDA_FORCE_ORIGINAL_STORAGE_PARENT,
+  authenticationConfigured: () => config.authMode !== "none" && authState.browserPasswordConfigured(),
+  administrator: (context) =>
+    sharedWorkspaceAllowed(context.req) &&
+    (!!authState.administrator || originalStorageAdministrators.has(publicationOwner(authState, context))),
+});
 let searchChanged: (project: string, owner?: string) => void = () => {};
 const documents = await createApplicationDocuments(
   config,
@@ -189,6 +206,7 @@ const documents = await createApplicationDocuments(
   appServerConnection.mode === "shared",
   () => (authState.administrator ? publicationOwner(authState, {}) : null),
   (project, owner) => searchChanged(project, owner),
+  originalStorage,
 );
 const { documentFeature, fileDocuments, contentAccess, projectWorkspaces, scopedDocuments, requireDocumentProject } =
   documents;
@@ -491,6 +509,7 @@ const dispatchApiRoute = createRouter([
   ...gadgetFeature.routes,
   ...contentAccess.routes,
   ...databaseManagement.routes,
+  ...originalStorage.routes,
   ...botFeature.routes,
   ...cliFeature.routes,
   ...searchFeature.routes,
@@ -674,6 +693,7 @@ const server = createServer(
         ...CLI_STYLES,
         ...BOT_STYLES,
         ...DATABASE_STYLES,
+        ...ORIGINAL_STORAGE_STYLES,
         ...GADGET_STYLES,
         ...GADGET_RUNTIME_ASSETS,
         "/database-maintenance.bundle.js",
@@ -825,6 +845,7 @@ server.listen(port, host, () => {
 });
 
 botFeature.start();
+originalStorage.start();
 
 function shutdown() {
   if (shuttingDown) return;
@@ -839,6 +860,7 @@ function shutdown() {
     search: searchFeature,
     closeCreativeText,
     closeMaterialText,
+    originals: originalStorage,
     knowledge: knowledgeFeature,
     creation: creationFeature,
     personal: personalContent,

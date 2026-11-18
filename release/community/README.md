@@ -10,6 +10,8 @@ Built on [Codex WebUI](https://github.com/lezi-fun/codex-webui) by [lezi-fun](ht
 
 > This README describes the **develop source**. Published images such as `hiforceai/panda-force:0.0.21` do not automatically contain develop changes. Build from this branch to try the interface and functions shown below.
 
+Develop source also creates actual images, editable PPTX presentations, HTML pages and silent motion graphics MP4 videos, with native previews and original downloads in project documents. Optional administrator-configured [S3-compatible original storage](./panda-docs/docs/storage.md#s3-compatible-storage-for-saved-originals-develop-source) keeps access private through the application; trash is recoverable, and permanent deletion cleans the owned S3 versions. These source features are separate from the currently published container image.
+
 ## What you can do
 
 - **Talk and code with AI:** stream replies, inspect tools and file changes, handle approvals and questions, queue messages and follow session usage.

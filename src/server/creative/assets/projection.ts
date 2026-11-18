@@ -11,6 +11,8 @@ function projection(value: unknown): CreativeText {
   const result = value as CreativeText | undefined;
   if (
     !result ||
+    (result.previewTruncated !== undefined && typeof result.previewTruncated !== "boolean") ||
+    (result.previewUnavailable !== undefined && typeof result.previewUnavailable !== "boolean") ||
     typeof result.text !== "string" ||
     Buffer.byteLength(result.text) > limits.textBytes ||
     !Array.isArray(result.sections) ||

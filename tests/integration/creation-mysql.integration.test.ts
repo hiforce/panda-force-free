@@ -302,3 +302,51 @@ test.skipIf(!enabled)(
   },
   60000,
 );
+
+test.skipIf(!enabled)(
+  "creation MySQL retains typed asset receipts and rejects a different completed output",
+  async () => {
+    const f = await isolatedMySQLDatabase("creation");
+    try {
+      await new DatabaseRegistry().register(mysqlCreationModule).upgrade(new MySQLSchemaConnection(f.sql));
+      for (const kind of ["image", "slides", "video", "web"] as const) {
+        const s = { ...spec(), kind },
+          ledger = new MySQLCreationLedger(f.sql, "typed-assets");
+        await ledger.create(s, 1);
+        const scope = await ledger.bind(await ledger.claim(s.owner, s.id, 2, 30000), "owned-session", "owned-run", 3),
+          receipt = {
+            kind,
+            projectId: s.projectId,
+            operationId: s.operationId,
+            assetId: "c-" + s.operationId,
+            version: "b".repeat(64),
+            commit: "c".repeat(40),
+            title: "Saved original",
+            source: { name: "original.bin", digest: "d".repeat(64), size: 123 },
+          };
+        await ledger.admit(scope, "f".repeat(64), 4);
+        await expect(
+          ledger.complete(
+            s.owner,
+            s.id,
+            "f".repeat(64),
+            {
+              kind: "document",
+              projectId: s.projectId,
+              operationId: s.operationId,
+              documentId: "wrong-document",
+              treeVersion: 1,
+            },
+            5,
+          ),
+        ).rejects.toThrow();
+        expect((await ledger.get(s.owner, s.id)).state).toBe("committing");
+        await ledger.complete(s.owner, s.id, "f".repeat(64), receipt, 5);
+        expect((await new MySQLCreationLedger(f.sql, "typed-assets").get(s.owner, s.id)).artifact).toEqual(receipt);
+      }
+    } finally {
+      await f.close();
+    }
+  },
+  60000,
+);

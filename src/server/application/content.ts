@@ -95,12 +95,17 @@ export async function createApplicationContent(
     requireProject: requireDocumentProject,
     authorizeProject: (owner, project) => contentAccess.require(owner, project, "contribute"),
     documents: archives.wrap(projectDocuments),
+    assets: async (owner, project) => {
+      await contentAccess.require(owner, project, "contribute");
+      return scopedDocuments(owner, "contribute").creations;
+    },
     archive: archives.archive,
     directories,
     destinations: archives.destinations,
     skills: skillFeature.catalog,
   });
   const personalContent: PersonalContent = new PersonalContent({
+    originalStorage: documents.originalStorage,
     authorize: (owner) => contentAccess.require(owner, "personal", "contribute"),
     contentRoot: config.documentContentRoot,
     assetRoot: config.documentAssetRoot,
@@ -125,6 +130,11 @@ export async function createApplicationContent(
           if (id !== "personal") throw new DocumentError("notFound", 404);
         },
         documents: archives.wrap(creationFileDocuments(documents)),
+        assets: async (_actor, project) => {
+          if (_actor !== owner || project !== "personal") throw new DocumentError("notFound", 404);
+          await contentAccess.require(owner, "personal", "contribute");
+          return documents.creations;
+        },
         archive: archives.archive,
         directories,
         destinations: archives.destinations,

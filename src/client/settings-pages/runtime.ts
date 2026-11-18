@@ -1,3 +1,4 @@
+import { createStorageSettings } from "../original-storage/composed.js";
 import { createDatabaseSettings } from "../database/settings.js";
 import { createBotSettings, createBotWorkspace } from "../bots/settings.js";
 import { createCliSettings } from "../cli/settings.js";
@@ -11,5 +12,6 @@ export const settingsPageFactories = {
   clients: createCliSettings,
   search: createSearchSettings,
   database: createDatabaseSettings,
+  storage: createStorageSettings,
   users: createUsersSettings,
 };

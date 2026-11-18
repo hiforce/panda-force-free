@@ -64,9 +64,11 @@ function selection(value: unknown): FrozenSkillSelection {
 }
 /** Validate the immutable execution snapshot without reopening mutable packages or reinterpreting their definitions. */
 export function decodeSkillComposition(value: unknown, options: { workflowRequired?: boolean } = {}): SkillComposition {
-  const row = record(value, ["schema", "outputType", "skills", "capabilities", "constraints"]);
+  const row = record(value, ["schema", "mode", "outputType", "skills", "capabilities", "constraints"]);
   skillAssert(row.schema === 1, "invalidManifest", "schema");
-  const skills = list(row.skills, selection, 1, SKILL_LIMITS.selections, "skills"),
+  skillAssert(row.mode === undefined || row.mode === "guidance", "invalidManifest", "mode");
+  const guidance = row.mode === "guidance",
+    skills = list(row.skills, selection, guidance ? 0 : 1, SKILL_LIMITS.selections, "skills"),
     capabilities = list(
       row.capabilities,
       (value) => oneOf(value, SKILL_CAPABILITIES, "capabilities"),
@@ -77,7 +79,7 @@ export function decodeSkillComposition(value: unknown, options: { workflowRequir
   unique(skills, (skill) => skill.qualifiedId, "skills");
   unique(capabilities, (capability) => capability, "capabilities");
   const workflows = skills.filter((skill) => skill.role === "workflow").length;
-  skillAssert(options.workflowRequired === false ? workflows <= 1 : workflows === 1, "workflowRequired");
+  skillAssert(guidance || options.workflowRequired === false ? workflows <= 1 : workflows === 1, "workflowRequired");
   skillAssert(
     skills.reduce(
       (size, skill) =>
@@ -91,6 +93,7 @@ export function decodeSkillComposition(value: unknown, options: { workflowRequir
   );
   return {
     schema: 1,
+    ...(guidance ? { mode: "guidance" as const } : {}),
     outputType: oneOf(row.outputType, SKILL_OUTPUTS, "outputType"),
     skills,
     capabilities,
@@ -119,7 +122,7 @@ export function decodeSkillCapture(value: unknown, options: { workflowRequired?:
           origin: skillOrigin(entry.origin),
         };
       },
-      1,
+      composition.mode === "guidance" ? 0 : 1,
       SKILL_LIMITS.selections,
       "origins",
     );

@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { creationAppFixture } from "../support/creation-app.js";
@@ -42,7 +43,9 @@ test("owner-wide creation history retains process and same-document revisions ac
       (await f.files.call("/api/document-creations/follow-up", "POST", { ...request, prompt: "Different request" }))
         .status,
     ).toBe(409);
-    expect(revised.artifact!.documentId).toBe(completed.artifact!.documentId);
+    expect(creationDocumentArtifact(revised.artifact)!.documentId).toBe(
+      creationDocumentArtifact(completed.artifact)!.documentId,
+    );
     expect(f.scopes.at(-1)!.input.prompt).toContain("Original result");
     expect(f.scopes.at(-1)!.input.prompt).toContain(request.prompt);
     expect((await f.files.call("/api/document-creations/detail?id=" + revised.id)).body.task.previousTaskId).toBe(

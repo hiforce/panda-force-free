@@ -85,13 +85,14 @@ export class CreationWorkspaceOutput implements CreationOutputContent, CreationA
       source = await this.content.read(digest),
       target = this.content.resolveTarget ? await this.content.resolveTarget(task) : task,
       input = await this.inputs.read(task),
-      located = await this.locations.current(task.owner, workspace.conversationId),
+      lineage = input.documentFileLineage ?? workspace.conversationId,
+      located = await this.locations.current(task.owner, lineage),
       title = task.previousTaskId && input.previous ? input.previous.document.title : source.title,
       imageIds = richDocumentInput(source.body).images,
       folder = "creation-assets-" + workspace.conversationId,
       paths = new Map<string, string>(),
       images: CreationWorkspaceExport["images"] = [];
-    let previous: CreationLocatedFile | null = located ?? (await this.previous(task));
+    let previous: CreationLocatedFile | null = located ?? (input.previousAsset ? null : await this.previous(task));
     const directory = previous
       ? await this.directory(task, workspace, previous.directory, previous.directoryIdentity)
       : workspace;
@@ -102,13 +103,13 @@ export class CreationWorkspaceOutput implements CreationOutputContent, CreationA
         if (located || !(error instanceof CreationError) || error.code !== "conflict") throw error;
         previous = await this.versions.discover(task.owner, previous, directory);
       }
-      if (!located) await this.locations.advance(task.owner, workspace.conversationId, null, previous);
+      if (!located) await this.locations.advance(task.owner, lineage, null, previous);
     }
     const archive =
       source.fileDirectory === undefined ? null : await this.directories?.open(task, source.fileDirectory);
     if (source.fileDirectory !== undefined && !archive) throw new CreationError("invalidOutput");
     if (archive && archive.path !== directory.path) {
-      const filename = previous?.filename ?? creationDocumentFilename(title, workspace.conversationId);
+      const filename = previous?.filename ?? creationDocumentFilename(title, lineage);
       try {
         await lstat(join(archive.path, filename));
         throw new CreationError("conflict");
@@ -146,7 +147,8 @@ export class CreationWorkspaceOutput implements CreationOutputContent, CreationA
         ? { archiveDirectory: archive.path, archiveDirectoryIdentity: archive.identity }
         : {}),
       conversationId: workspace.conversationId,
-      filename: previous?.filename ?? creationDocumentFilename(title, workspace.conversationId),
+      ...(input.documentFileLineage ? { lineageId: input.documentFileLineage } : {}),
+      filename: previous?.filename ?? creationDocumentFilename(title, lineage),
       previous: previous?.id ?? null,
       title,
       markdown: authoredMarkdown(title, source.body, paths),
@@ -167,7 +169,8 @@ export class CreationWorkspaceOutput implements CreationOutputContent, CreationA
   async location(task: CreationTaskSpec) {
     const workspace = await this.workspaces.lookup(task.owner, task.id);
     if (!workspace) return null;
-    const current = await this.locations.current(task.owner, workspace.conversationId);
+    const input = await this.inputs.read(task),
+      current = await this.locations.current(task.owner, input.documentFileLineage ?? workspace.conversationId);
     if (!current) return null;
     const directory = await this.directory(task, workspace, current.directory, current.directoryIdentity);
     await directory.verify();
@@ -184,6 +187,7 @@ export class CreationWorkspaceOutput implements CreationOutputContent, CreationA
         throw new CreationError("conflict");
       await workspace.verify();
       const artifact = await this.primary.commit(task, digest);
+      if (artifact.kind !== "document") throw new CreationError("invalidOutput");
       if (artifact.title && artifact.title !== plan.title) throw new CreationError("conflict");
       const images = (target: CreationFileDirectory) =>
         writeWorkspaceImages(this.root, task, plan, target, workspace.path, (id) => this.plans.images.read(id));
@@ -196,7 +200,7 @@ export class CreationWorkspaceOutput implements CreationOutputContent, CreationA
         plan.markdown,
         plan.previous ?? undefined,
       );
-      await this.locations.advance(task.owner, workspace.conversationId, plan.previous, {
+      await this.locations.advance(task.owner, plan.lineageId ?? workspace.conversationId, plan.previous, {
         ...version,
         ...(plan.directoryIdentity ? { directoryIdentity: plan.directoryIdentity } : {}),
       });

@@ -175,5 +175,10 @@
   "savedFile": "已儲存檔案",
   "failedFileChanged": "對話檔案已被修改，或檔案名稱已被占用。既有檔案已保留，請檢查後再重試。",
   "documentUnavailable": "文件目前所在位置暫時無法使用。",
-  "documentProject": "文件所屬專案：{project}"
+  "documentProject": "文件所屬專案：{project}",
+  "imageDocumentOnly": "此技能提供影像規劃指引，最終成品依你的需求與可用創作工具決定。",
+  "slidesDocumentOnly": "此技能提供簡報規劃指引，最終成品依你的需求與可用創作工具決定。",
+  "videoDocumentOnly": "此技能提供影片規劃指引，最終成品依你的需求與可用創作工具決定。",
+  "webDocumentOnly": "此技能提供網頁規劃指引，最終成品依你的需求與可用創作工具決定。",
+  "skillGuidance": "創作指引"
 }

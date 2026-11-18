@@ -2,7 +2,14 @@ import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { createHash } from "node:crypto";
 
-export class PackageContentError extends Error {}
+export class PackageContentError extends Error {
+  constructor(
+    message: string,
+    readonly retryableLinkTransition = false,
+  ) {
+    super(message);
+  }
+}
 
 /** Immutable package files are bounded before allocation and checked for replacement or growth after reading. */
 export async function readPackageFile(path: string, maxBytes: number): Promise<Uint8Array> {
@@ -27,7 +34,16 @@ export async function readPackageFile(path: string, maxBytes: number): Promise<U
       before.mtimeMs !== after.mtimeMs ||
       before.ctimeMs !== after.ctimeMs
     )
-      throw new PackageContentError("contentUnavailable");
+      throw new PackageContentError(
+        "contentUnavailable",
+        offset === before.size &&
+          before.size === after.size &&
+          before.ino === after.ino &&
+          before.dev === after.dev &&
+          before.mtimeMs === after.mtimeMs &&
+          before.nlink === 2 &&
+          after.nlink === 1,
+      );
     return buffer.subarray(0, offset);
   } finally {
     await file.close();

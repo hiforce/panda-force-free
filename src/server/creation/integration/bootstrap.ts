@@ -10,6 +10,11 @@ import { createCreationFeature } from "./feature.js";
 import { CreationProfiles, creationProfileSettings } from "./profiles.js";
 import { creationEngines } from "./engines.js";
 import { creationRoutes } from "./routes.js";
+import { ImageRenderJournal } from "./rendering/image-journal.js";
+import { NativeImageRenderer } from "./rendering/native-image.js";
+import { CreationGeneratedOriginals } from "./rendering/generated-originals.js";
+import { nativeCreationGenerators } from "./rendering/generators.js";
+import { NativeCreationVideoRenderer } from "./rendering/native-video.js";
 
 /** Resolve only the engine's advertised default; retries retain this exact model in their immutable input. */
 export function creationDefaultModel(value: unknown): string {
@@ -37,6 +42,7 @@ export function createNativeCreationFeature(
     directories?: import("../file-directories.js").CreationFileDirectories;
     skills: SkillCatalog;
     materials?: import("../materials.js").CreationMaterialPort;
+    assets?: import("./media-output.js").CreationAssetAccess;
     storage?: Parameters<typeof createCreationFeature>[0]["storage"];
   },
   env: NodeJS.ProcessEnv = process.env,
@@ -56,9 +62,30 @@ export function createNativeCreationFeature(
     );
   if (settings.invalid) reportDiagnostic("creation-configuration", new CreationError("invalidInput"));
   try {
+    const journal =
+        options.assets && options.engineId === "codex"
+          ? new ImageRenderJournal(join(options.stateRoot, "creation", "image-renders"))
+          : undefined,
+      renderer = journal
+        ? new NativeImageRenderer(journal, { connection: options.connection, scratchRoot, version: options.version })
+        : undefined;
     return createCreationFeature({
       ...options,
       workspaceRoot,
+      ...(journal && renderer && options.assets
+        ? {
+            image: {
+              journal,
+              renderer,
+              assets: options.assets,
+              available: () => renderer.available(),
+              generated: new CreationGeneratedOriginals(join(options.stateRoot, "creation", "generated-originals")),
+              generators: nativeCreationGenerators(
+                new NativeCreationVideoRenderer(join(options.stateRoot, "creation", "video-renders"), env),
+              ),
+            },
+          }
+        : {}),
       authorize: async (owner, projectId) => {
         try {
           await options.requireProject(projectId);

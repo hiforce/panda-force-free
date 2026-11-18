@@ -3,25 +3,22 @@ import { stableJson } from "../../../shared/stable-json.js";
 import { decodeSkillCapture } from "../../../shared/skills/capture-codec.js";
 import { FilePackageContent } from "../../packages/content-store.js";
 import { CreationError, type CreationTaskSpec } from "../contracts.js";
-import type { CreationEngineProfile, CreationInputs, CreationInputSnapshot } from "../input.js";
-import { creationDigest, creationId, creationRecord, creationText, creationUuid } from "../validation.js";
+import type { CreationInputs, CreationInputSnapshot } from "../input.js";
+import {
+  creationAssetArtifact,
+  creationDigest,
+  creationId,
+  creationRecord,
+  creationText,
+  creationUuid,
+} from "../validation.js";
 import { creationRunInput } from "../run-input.js";
 import { richDocumentInput } from "../../documents/rich-codec.js";
 
-export function creationEngineProfile(value: unknown): CreationEngineProfile {
-  const row = creationRecord(value, ["id", "engineId", "model", "effort"]);
-  return {
-    id: creationId(row.id),
-    engineId: creationId(row.engineId),
-    ...(row.model === undefined ? {} : { model: creationText(row.model, 128) }),
-    ...(row.effort === undefined ? {} : { effort: creationId(row.effort) }),
-  };
-}
-export function creationPrompt(value: unknown): string {
-  if (typeof value !== "string" || !value.trim() || value.includes("\0") || Buffer.byteLength(value) > 65536)
-    throw new CreationError("invalidInput");
-  return value;
-}
+import { creationOutputType } from "../output-type.js";
+import { creationEngineProfile, creationPrompt } from "../input-values.js";
+export { creationEngineProfile, creationPrompt } from "../input-values.js";
+
 function snapshot(value: unknown): CreationInputSnapshot {
   const row = creationRecord(value, [
       "schema",
@@ -30,12 +27,16 @@ function snapshot(value: unknown): CreationInputSnapshot {
       "projectId",
       "requestDigest",
       "prompt",
+      "outputType",
+      "documentFileLineage",
       "profile",
       "skills",
       "previous",
+      "previousAsset",
       "materials",
       "recoveryFrom",
     ]),
+    outputType = row.outputType === undefined ? undefined : creationOutputType(row.outputType),
     skills = decodeSkillCapture(row.skills),
     taskId = creationUuid(row.taskId),
     owner = creationText(row.owner, 200),
@@ -45,8 +46,11 @@ function snapshot(value: unknown): CreationInputSnapshot {
     skills.id !== taskId ||
     skills.owner !== owner ||
     skills.requestBinding !== requestDigest ||
-    skills.composition.outputType !== "document" ||
-    !skills.composition.capabilities.includes("project.documents.create")
+    (outputType !== undefined && skills.composition.mode !== "guidance") ||
+    (skills.composition.mode === "guidance"
+      ? outputType === undefined || skills.composition.outputType !== (outputType === "auto" ? "document" : outputType)
+      : skills.composition.outputType !== "document" ||
+        !skills.composition.capabilities.includes("project.documents.create"))
   )
     throw new CreationError("invalidInput");
   return {
@@ -56,11 +60,36 @@ function snapshot(value: unknown): CreationInputSnapshot {
     projectId: creationId(row.projectId),
     requestDigest,
     prompt: creationPrompt(row.prompt),
+    ...(outputType === undefined ? {} : { outputType }),
+    ...(row.documentFileLineage === undefined ? {} : { documentFileLineage: creationUuid(row.documentFileLineage) }),
     profile: creationEngineProfile(row.profile),
     skills,
     ...(row.materials === undefined ? {} : { materials: decodeCreationMaterials(row.materials) }),
     ...(row.previous === undefined ? {} : { previous: previousInput(row.previous) }),
+    ...(row.previousAsset === undefined ? {} : { previousAsset: previousAssetInput(row.previousAsset) }),
     ...(row.recoveryFrom === undefined ? {} : { recoveryFrom: recoveryInput(row.recoveryFrom) }),
+  };
+}
+function previousAssetInput(value: unknown): NonNullable<CreationInputSnapshot["previousAsset"]> {
+  const row = creationRecord(value, ["taskId", "prompt", "artifact"]),
+    artifact = creationRecord(row.artifact, [
+      "kind",
+      "projectId",
+      "assetId",
+      "operationId",
+      "version",
+      "commit",
+      "title",
+      "source",
+    ]);
+  return {
+    taskId: creationUuid(row.taskId),
+    prompt: creationPrompt(row.prompt),
+    artifact: creationAssetArtifact(artifact, {
+      kind: "auto",
+      projectId: creationId(artifact.projectId),
+      operationId: creationUuid(artifact.operationId),
+    }),
   };
 }
 function recoveryInput(value: unknown) {
@@ -117,6 +146,7 @@ export class FileCreationInputs implements CreationInputs {
       value.taskId !== task.id ||
       value.owner !== task.owner ||
       value.projectId !== task.projectId ||
+      (value.outputType ?? "document") !== task.kind ||
       value.skills.id !== task.skillCaptureId
     )
       throw new CreationError("unavailable");

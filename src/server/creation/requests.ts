@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { stableJson } from "../../shared/stable-json.js";
 import { SKILL_LIMITS } from "../../shared/skills/contracts.js";
 import type { CreationRequest } from "./input.js";
+import { creationOutputType } from "./output-type.js";
 import { CreationError } from "./contracts.js";
 import {
   creationDigest,
@@ -48,6 +49,7 @@ export function creationRequest(value: unknown): CreationRequest {
       "model",
       "effort",
       "attachments",
+      "outputType",
     ]),
     locale = creationText(row.locale, 35),
     prompt = row.prompt;
@@ -69,6 +71,7 @@ export function creationRequest(value: unknown): CreationRequest {
     locale,
     prompt,
     profileId: creationId(row.profileId),
+    ...(row.outputType === undefined ? {} : { outputType: creationOutputType(row.outputType) }),
     ...(row.model === undefined ? {} : { model: creationText(row.model, 128) }),
     ...(row.effort === undefined ? {} : { effort: creationId(row.effort) }),
     ...(row.attachments === undefined ? {} : { attachments: creationAttachments(row.attachments) }),

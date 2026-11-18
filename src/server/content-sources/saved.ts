@@ -1,3 +1,4 @@
+import type { OriginalObjectStorage } from "../object-storage/originals.js";
 import { createHash } from "node:crypto";
 import type { SavedSourceKind, SavedSourceMetadata } from "../../shared/content-sources/contracts.js";
 import { SAVED_SOURCE_LIMITS as limits } from "../../shared/content-sources/contracts.js";
@@ -22,6 +23,7 @@ export async function savedOriginalSources(
   project: string,
   kinds: readonly SavedSourceKind[] = ["document"],
   requested?: ReadonlySet<string>,
+  objects?: OriginalObjectStorage,
 ) {
   if (owned.projectId !== project) throw new ProjectContentError("invalidFile");
   const selection = savedSourceSelection(kinds, requested),
@@ -31,7 +33,7 @@ export async function savedOriginalSources(
       selectedKinds.has("document") && (!ids || ids.size) ? await savedDocumentSources(view, project, ids) : null,
     rows = new Map<string, SavedSourceMetadata>(),
     assets = new Map<string, CreativeAsset>(),
-    files = new CreativeAssetFiles(assetRoot);
+    files = new CreativeAssetFiles(assetRoot, objects);
   let metadataBytes = 0;
   const add = (value: SavedSourceMetadata) => {
     if (rows.has(value.id)) throw new ProjectContentError("invalidFile");
@@ -58,7 +60,13 @@ export async function savedOriginalSources(
     for (const entry of creativeEntries(view)) {
       if (ids && !ids.has(entry.id)) continue;
       const asset = await creativeMetadata(view, project, entry.id, true);
-      if (asset.state !== "saved" || !selectedKinds.has(asset.kind)) continue;
+      if (
+        asset.state !== "saved" ||
+        (asset.kind !== "web" && asset.kind !== "slides") ||
+        !selectedKinds.has(asset.kind)
+      )
+        continue;
+      files.authorize(asset);
       assets.set(asset.id, asset);
       add({
         id: asset.id,
@@ -95,8 +103,20 @@ export async function savedOriginalSources(
         text: { text, sections },
       };
     }
-    const asset = assets.get(id)!,
-      original = await files.original(view, owned, asset);
+    const asset = assets.get(id)!;
+    if (asset.originalStore === "object") {
+      const snapshot = await files.capture(view, owned, asset);
+      return {
+        metadata: structuredClone(metadata),
+        bytes: asset.source.size,
+        deferredNative: {
+          kind: asset.kind,
+          name: asset.source.name,
+          read: files.deferred(snapshot),
+        },
+      };
+    }
+    const original = await files.original(view, owned, asset);
     return {
       metadata: structuredClone(metadata),
       bytes: original.bytes.byteLength,
@@ -113,7 +133,11 @@ export async function savedOriginalSources(
       const metadata = rows.get(id);
       if (!metadata) throw new ProjectContentError("notFound");
       if (signal?.aborted) throw new ProjectContentError("unavailable");
-      if (metadata.binding.kind !== "document") await files.original(view, owned, assets.get(id)!);
+      if (metadata.binding.kind !== "document") {
+        const asset = assets.get(id)!;
+        if (asset.originalStore === "object") await files.verifyReferences(owned, asset);
+        else await files.original(view, owned, asset);
+      }
       view.assertHeld();
     },
   };

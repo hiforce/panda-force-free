@@ -19,6 +19,7 @@ import { createCreationFeature } from "../../src/server/creation/integration/fea
 import { CreationProfiles } from "../../src/server/creation/integration/profiles.js";
 import { richDocumentFromMarkdown } from "../../src/server/documents/rich-codec.js";
 import { CreationError } from "../../src/server/creation/contracts.js";
+import { creativeAssetRoutes } from "../../src/server/creative/assets/routes.js";
 
 type RunInput = Parameters<ApplicationToolEngine["run"]>[0];
 export type CreationTestHandler = (
@@ -30,10 +31,14 @@ export async function creationAppFixture(
   options: {
     storage?: Parameters<typeof createCreationFeature>[0]["storage"];
     home?: string;
+    assets?: boolean;
     content?(
       files: Awaited<ReturnType<typeof projectFileApiFixture>>,
       root: string,
-    ): Pick<Parameters<typeof createCreationFeature>[0], "documents" | "archive" | "destinations" | "directories">;
+    ): Pick<
+      Parameters<typeof createCreationFeature>[0],
+      "documents" | "archive" | "destinations" | "directories" | "image"
+    >;
   } = {},
 ) {
   const routes: Route[] = [],
@@ -69,6 +74,13 @@ export async function creationAppFixture(
   };
   const materials = new FileCreationMaterials(join(root, "materials"));
   const materialRoutes = materials.routes(() => actor);
+  const assetRoutes = options.assets
+    ? creativeAssetRoutes({
+        owner: () => actor,
+        read: async () => files.application().creations,
+        write: async () => files.application().creations,
+      })
+    : [];
   const open = () => {
     const profiles = new CreationProfiles(
       {
@@ -109,7 +121,7 @@ export async function creationAppFixture(
     });
   };
   let feature = open();
-  routes.push(...skills.routes, ...materialRoutes, ...feature.routes);
+  routes.push(...skills.routes, ...materialRoutes, ...assetRoutes, ...feature.routes);
   feature.start();
   return {
     files,
@@ -160,7 +172,7 @@ export async function creationAppFixture(
       await feature.close();
       files.reopen();
       feature = open();
-      routes.splice(0, routes.length, ...skills.routes, ...materialRoutes, ...feature.routes);
+      routes.splice(0, routes.length, ...skills.routes, ...materialRoutes, ...assetRoutes, ...feature.routes);
       feature.start();
     },
     async close() {

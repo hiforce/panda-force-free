@@ -32,13 +32,17 @@ import { SQLiteCreationGoals } from "../storage/goals.js";
 import type { CreationGoalStore } from "../goals/contracts.js";
 import { SQLiteCreationMessages } from "../storage/messages.js";
 import { FileCreationMessages } from "./message-files.js";
-import { DOCUMENT_CREATION_CAPABILITIES } from "../../../shared/creation/contracts.js";
 import { CreationMessages } from "../messages/service.js";
 import type { CreationMessageStore } from "../messages/contracts.js";
 import { FileCreationWorkspaces } from "./conversation-workspaces.js";
 import { CreationSavedArtifacts } from "./saved-artifacts.js";
 import { CreationWorkspaceOutput } from "./workspace-output.js";
 import { archivedCreationOutput } from "./archived-output.js";
+import { TypedCreationOutput } from "./typed-output.js";
+import { FileCreationMediaOutput, type CreationAssetAccess } from "./media-output.js";
+import { creationImageTools } from "./image-tools.js";
+import { CreationError } from "../contracts.js";
+import { creationCaptureCapabilities } from "./capabilities.js";
 
 /** This composition owns its database and files. Documents, skills, auth and engine adapters keep their own lifetimes. */
 export function createCreationFeature(options: {
@@ -54,6 +58,14 @@ export function createCreationFeature(options: {
   profiles: CreationProfiles;
   engines: CreationEngines;
   materials?: import("../materials.js").CreationMaterialPort;
+  image?: {
+    journal: import("./rendering/image-journal.js").ImageRenderJournal;
+    renderer: Parameters<typeof creationImageTools>[0]["renderer"];
+    assets: CreationAssetAccess;
+    available(): Promise<boolean>;
+    generated?: import("./rendering/generated-originals.js").CreationGeneratedOriginals;
+    generators?: readonly import("./rendering/generators.js").CreationArtifactGenerator[];
+  };
   concurrency?: number;
   storage?: {
     tasks: CreationSubmissionTasks & CreationOutputTasks & CreationManagement & CreationRunTasks;
@@ -102,20 +114,33 @@ export function createCreationFeature(options: {
             messageStore,
             tasks,
             inputs,
-            async (owner, request, requestDigest) =>
-              request.selections.length
+            async (owner, request, requestDigest) => {
+              const capabilities = new Set(
+                creationCaptureCapabilities(
+                  request.outputType,
+                  options.image
+                    ? [
+                        ...((await options.image.available()) ? ["image" as const] : []),
+                        ...(options.image.generators?.map((g) => g.kind) ?? []),
+                      ]
+                    : [],
+                ),
+              );
+              return request.selections.length
                 ? options.skills.capture(
                     { id: request.id, requestBinding: requestDigest, selections: request.selections },
                     owner,
                     {
-                      outputType: "document",
-                      available: new Set(DOCUMENT_CREATION_CAPABILITIES),
-                      granted: new Set(DOCUMENT_CREATION_CAPABILITIES),
+                      outputType: request.outputType && request.outputType !== "auto" ? request.outputType : "document",
+                      ...(request.outputType === undefined ? {} : { guidanceOnly: true }),
+                      available: capabilities,
+                      granted: capabilities,
                       entitled: new Set(),
                       workflowRequired: false,
                     },
                   )
-                : null,
+                : null;
+            },
             options.authorize,
             options.materials,
           )
@@ -132,7 +157,27 @@ export function createCreationFeature(options: {
         options.directories,
       ),
       archivedOutput = archivedCreationOutput(workspaceOutput, documents, options.archive),
-      outputs = new CreationOutputs(tasks, archivedOutput, archivedOutput),
+      mediaOutput = options.image
+        ? new FileCreationMediaOutput(
+            join(root, "media-outputs"),
+            options.image.journal,
+            options.image.assets,
+            options.image.generated,
+          )
+        : undefined,
+      mediaSaved = mediaOutput
+        ? new CreationSavedArtifacts(join(root, "saved-artifacts"), mediaOutput, options.authorize)
+        : undefined,
+      output = mediaOutput
+        ? new TypedCreationOutput(join(root, "output-routes"), archivedOutput, {
+            stage: (value, task) => mediaOutput.stage(value, task),
+            commit: (task, digest) => mediaSaved!.commit(task, digest),
+          })
+        : archivedOutput,
+      outputs = new CreationOutputs(tasks, output, output),
+      rendering = options.image
+        ? creationImageTools({ ...options.image, outputs, tasks, materials: options.materials, messages })
+        : undefined,
       worker = new CreationWorker(
         tasks,
         queue,
@@ -151,6 +196,7 @@ export function createCreationFeature(options: {
         workspaces,
         options.destinations,
         options.directories,
+        rendering,
       ),
       runner = new CreationRunner(
         queue,
@@ -161,7 +207,30 @@ export function createCreationFeature(options: {
         options.concurrency ?? 2,
         () => options.profiles.settings.enabled,
       ),
-      access = creationAuthority(options),
+      access = creationAuthority({
+        ...options,
+        rendering,
+        original: options.image
+          ? async (owner, artifact) => {
+              const source = await (
+                await options.image!.assets(owner, artifact.projectId)
+              ).original(artifact.projectId, artifact.assetId);
+              if (
+                source.asset.id !== artifact.assetId ||
+                source.asset.kind !== artifact.kind ||
+                source.asset.project !== artifact.projectId
+              )
+                throw new CreationError("notFound");
+              return {
+                ...artifact,
+                version: source.asset.version,
+                commit: source.commit,
+                title: source.asset.title,
+                source: source.asset.source,
+              };
+            }
+          : undefined,
+      }),
       submissions = new CreationSubmissions(
         tasks,
         inputs,

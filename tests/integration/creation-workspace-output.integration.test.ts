@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { readFile, readdir, rm, unlink, writeFile } from "node:fs/promises";
@@ -69,8 +70,8 @@ test("manual conversation file edits stop the next round before changing its sav
   try {
     const first = await f.create("First document"),
       original = await f.until(first.request.id, (task) => task.state === "succeeded"),
-      path = original.artifact!.file!.path,
-      id = original.artifact!.documentId,
+      path = creationDocumentArtifact(original.artifact)!.file!.path,
+      id = creationDocumentArtifact(original.artifact)!.documentId,
       before = await f.files.application().queries.detail("project-1", id);
     await writeFile(path, "Manual filesystem corrections");
     const request = { taskId: original.id, id: randomUUID(), prompt: "Add acceptance criteria" };
@@ -109,13 +110,21 @@ test("a follow-up from an older writing round updates the current document and t
     const third = await followUp(original.id, "Add acceptance criteria to the current document");
     expect(third.failure).toBeNull();
     expect(third.state).toBe("succeeded");
-    expect(third.artifact?.documentId).toBe(original.artifact?.documentId);
-    expect(third.artifact?.file?.path).toBe(original.artifact?.file?.path);
-    expect(await readFile(original.artifact!.file!.path, "utf8")).toContain("Saved writing round 3");
-    expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(1);
-    expect((await readdir(dirname(original.artifact!.file!.path))).filter((name) => name.endsWith(".md"))).toHaveLength(
-      1,
+    expect(creationDocumentArtifact(third.artifact)?.documentId).toBe(
+      creationDocumentArtifact(original.artifact)?.documentId,
     );
+    expect(creationDocumentArtifact(third.artifact)?.file?.path).toBe(
+      creationDocumentArtifact(original.artifact)?.file?.path,
+    );
+    expect(await readFile(creationDocumentArtifact(original.artifact)!.file!.path, "utf8")).toContain(
+      "Saved writing round 3",
+    );
+    expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(1);
+    expect(
+      (await readdir(dirname(creationDocumentArtifact(original.artifact)!.file!.path))).filter((name) =>
+        name.endsWith(".md"),
+      ),
+    ).toHaveLength(1);
   } finally {
     await f.close();
   }

@@ -1,3 +1,5 @@
+import { CREATIVE_ASSET_KINDS } from "../../../shared/creative/assets.js";
+import { creativeKindMatchesName } from "../../../shared/creative/file-types.js";
 import type { CreativeAsset, CreativeAssetKind } from "../../../shared/creative/assets.js";
 import { CREATIVE_ASSET_LIMITS as limits } from "../../../shared/creative/assets.js";
 import { fileChoice, fileDigest, fileLocale, fileText } from "../../project-content/codec-values.js";
@@ -19,7 +21,7 @@ export interface CreativeSaveInput {
 }
 /** Copy all mutable input before IO; neither a model nor a client may borrow another asset's digest. */
 export function creativeSaveInput(input: CreativeSaveInput) {
-  const kind = fileChoice(input.kind, ["slides", "web"]),
+  const kind = fileChoice(input.kind, CREATIVE_ASSET_KINDS),
     id = creativeAssetId(input.id),
     operationId = projectContentId(input.operationId),
     expectedVersion = input.expectedVersion === null ? null : fileDigest(input.expectedVersion),
@@ -42,7 +44,7 @@ export function creativeSaveInput(input: CreativeSaveInput) {
   if (
     new Set(names).size !== names.length ||
     bytes.length + resources.reduce((n, r) => n + r.bytes.length, 0) > limits.totalBytes ||
-    !name.toLowerCase().endsWith(kind === "web" ? ".html" : ".pptx")
+    !creativeKindMatchesName(kind, name)
   )
     throw new DocumentError("invalidInput");
   return { id, operationId, expectedVersion, kind, title, locale, name, bytes, resources };

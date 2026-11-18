@@ -12,12 +12,22 @@ import type { Route } from "../../src/server/http/router.js";
 import { projectDraftFixture } from "./project-draft-fixture.js";
 
 /** A real HTTP boundary and real file/Git store; the test host supplies authentication without starting a shared engine. */
-export async function projectFileApiFixture(options: { allowedRoots?: string[]; extraRoutes?: Route[] } = {}) {
+export async function projectFileApiFixture(
+  options: {
+    allowedRoots?: string[];
+    extraRoutes?: Route[];
+    originalStorage?: (
+      root: string,
+      assetRoot: string,
+    ) => NonNullable<Parameters<typeof createFileDocumentApplication>[0]["originalStorage"]>;
+  } = {},
+) {
   const files = await projectDraftFixture(),
     assetRoot = await mkdtemp(join(tmpdir(), "panda-file-assets-")),
     root = resolve(files.owned.directory, "../.."),
     grants = new Set(["project-1"]),
     authorization = "Bearer isolated-document-test";
+  const originalStorage = options.originalStorage?.(root, assetRoot);
   let actor = "operator:test-user";
   const server = createServer(),
     state = { authorizations: 0 };
@@ -26,6 +36,10 @@ export async function projectFileApiFixture(options: { allowedRoots?: string[]; 
     application = createFileDocumentApplication({
       root,
       assetRoot,
+      originalStorage,
+      authorizeUnderLease(id) {
+        if (!grants.has(id)) throw new DocumentError("notFound", 404);
+      },
       allowedRoots: options.allowedRoots,
       requireProject(id) {
         state.authorizations++;
@@ -77,6 +91,7 @@ export async function projectFileApiFixture(options: { allowedRoots?: string[]; 
       },
       async close() {
         await new Promise<void>((done, reject) => server.close((error) => (error ? reject(error) : done())));
+        await originalStorage?.purges.close();
         await files.close();
         await rm(assetRoot, { recursive: true, force: true });
       },

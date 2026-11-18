@@ -25,6 +25,7 @@ import { DocumentTreeMenu } from "./tree-menu.js";
 import { DocumentTreeTrash } from "./trash.js";
 import { AuthoringDirectory } from "./directory.js";
 import { AuthoringHeader } from "./header.js";
+import { AuthoringAssetDirectory } from "./asset-directory.js";
 import { DocumentTemplatePicker } from "./template-picker.js";
 import { LazyDocumentCreationPanel } from "../../creation/lazy-panel.js";
 import { KnowledgePanel, KnowledgeRecordView } from "../../knowledge/lazy.js";
@@ -67,6 +68,11 @@ export function createProjectDocumentWorkspace(options: {
     view = new DocumentTreeView(t, options.identityKey);
   const directory = new AuthoringDirectory(root, controls);
   const header = new AuthoringHeader(root, t);
+  const files = new AuthoringAssetDirectory(t, options.identityKey, () => {
+    if (directory.mobile.matches) directory.set(false, true);
+    menu.close();
+    drag?.cancel();
+  });
   const session = new DocumentTreeSession(documentTreeApi, treeRecovery(options.identityKey), renderTree);
   const onSaved = (record: import("../../../shared/documents/contracts.js").DocumentRecord) => {
     session.update(record);
@@ -186,8 +192,14 @@ export function createProjectDocumentWorkspace(options: {
     index = new DocumentTreeIndex(session.snapshot);
     const host = get("#documentTree");
     if (host) {
+      const top = host.scrollTop,
+        active = document.activeElement;
+      const fileFocus = active instanceof HTMLElement && files.element.contains(active) ? active : null;
       if (session.loading && !index.tree.nodes.length) setMessageHtml(host, empty(t, "documents.loading"));
       else view.render(host, index, editor.id, session.busy || session.loading || !!session.pending || opening);
+      host.append(files.element);
+      host.scrollTop = top;
+      fileFocus?.focus({ preventScroll: true });
     }
     controls();
   }
@@ -292,6 +304,7 @@ export function createProjectDocumentWorkspace(options: {
     trash.close();
     templatePicker.close();
     creation.close();
+    files.close();
     knowledge.close();
     recordView.close();
     lastKnowledge = "";
@@ -335,6 +348,7 @@ export function createProjectDocumentWorkspace(options: {
     session.open(project);
     get<HTMLInputElement>("#documentSearch")!.oninput = () => {
       view.search(get<HTMLInputElement>("#documentSearch")!.value, renderTree);
+      files.search(get<HTMLInputElement>("#documentSearch")!.value);
       menu.close();
       drag?.cancel();
     };
@@ -381,6 +395,8 @@ export function createProjectDocumentWorkspace(options: {
       workspaceReady = true;
       if (fileMode) {
         root.querySelector('[data-authoring-action="sources"]')?.remove();
+        files.open(project);
+        get("#documentTree")!.append(files.element);
       }
       const selected =
         documentId ||
@@ -439,6 +455,9 @@ export function createProjectDocumentWorkspace(options: {
           await session.refresh();
           if (generation === epoch) await select(id);
         },
+        async openArtifact(artifact) {
+          if (generation === epoch) await files.follow(artifact.projectId, artifact.assetId, artifact.version);
+        },
         manual: (parentId) => execute(() => actions.create(parentId)),
       });
       return;
@@ -450,6 +469,8 @@ export function createProjectDocumentWorkspace(options: {
     }
     if (["directory", "reader-directory"].includes(action)) {
       menu.close();
+      const more = get<HTMLDetailsElement>(".document-editor-more");
+      if (more) more.open = false;
       directory.toggle();
       return;
     }
@@ -472,6 +493,7 @@ export function createProjectDocumentWorkspace(options: {
     if (action === "refresh-tree") {
       menu.close();
       drag?.cancel();
+      void files.refresh();
       await session.refresh();
       return;
     }
@@ -513,6 +535,7 @@ export function createProjectDocumentWorkspace(options: {
       if (action === "root") {
         view.query = "";
         get<HTMLInputElement>("#documentSearch")!.value = "";
+        files.search("");
         renderTree();
         return;
       }

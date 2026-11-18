@@ -19,14 +19,8 @@ import { creationRecordTitle } from "./record-view.js";
 import { creationRecordView } from "./record-view.js";
 import { createHorizontalCarousel } from "../horizontal-carousel.js";
 
-export const creationStateLabels = {
-  queued: "creation.queued",
-  running: "creation.running",
-  committing: "creation.committing",
-  succeeded: "creation.succeeded",
-  failed: "creation.failed",
-  cancelled: "creation.cancelled",
-} as const;
+import { creationStateMessage } from "./state.js";
+export { creationStateLabels } from "./state.js";
 export const creationActive = (task: CreationTaskView) =>
   !task.failure && ["queued", "running", "committing"].includes(task.state);
 /** Both entry pages share owner-scoped records; the modal and native thread are never the navigation identity. */
@@ -347,7 +341,9 @@ export class CreationActivity {
           const key = JSON.stringify([
             scope,
             task.projectId,
-            task.document?.documentId || task.artifact?.documentId || task.id,
+            task.document?.documentId ||
+              (task.artifact?.kind === "document" ? task.artifact.documentId : task.artifact?.assetId) ||
+              task.id,
           ]);
           if (seen.has(key)) return false;
           seen.add(key);
@@ -505,12 +501,12 @@ export class CreationActivity {
                                 ? task.failure === "targetChanged"
                                   ? "creation.reviewRequired"
                                   : "creation.failed"
-                                : creationStateLabels[task.state],
+                                : creationStateMessage(task),
                         ),
                         this.locale || "en",
                         this.t,
                       )
-                    : `<a class="creation-activity-row" href="${e(this.path(task.id, scope))}" data-activity-task="${e(task.id)}" data-scope="${scope}" data-state="${task.state}"><span class="creation-activity-icon">${codexIcon("file")}</span><span class="creation-activity-copy"><strong title="${e(task.prompt)}">${e(task.prompt)}</strong><span class="creation-activity-meta"><small>${e(scope === "personal" ? this.t("creation.personalDestination") : this.projects().find((project) => project.id === task.projectId)?.name || this.t("creation.projectDestination"))}</small><time>${e(new Intl.DateTimeFormat(this.locale || "en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(task.createdAt))}</time></span><span class="creation-activity-state"><i></i>${e(this.t(task.goal?.status === "paused" ? "common.goalPaused" : task.question ? "creation.waiting" : task.failure ? (task.failure === "targetChanged" ? "creation.reviewRequired" : "creation.failed") : creationStateLabels[task.state]))}</span></span>${codexIcon("chevronRight")}</a>`
+                    : `<a class="creation-activity-row" href="${e(this.path(task.id, scope))}" data-activity-task="${e(task.id)}" data-scope="${scope}" data-state="${task.state}"><span class="creation-activity-icon">${codexIcon("file")}</span><span class="creation-activity-copy"><strong title="${e(task.prompt)}">${e(task.prompt)}</strong><span class="creation-activity-meta"><small>${e(scope === "personal" ? this.t("creation.personalDestination") : this.projects().find((project) => project.id === task.projectId)?.name || this.t("creation.projectDestination"))}</small><time>${e(new Intl.DateTimeFormat(this.locale || "en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(task.createdAt))}</time></span><span class="creation-activity-state"><i></i>${e(this.t(task.goal?.status === "paused" ? "common.goalPaused" : task.question ? "creation.waiting" : task.failure ? (task.failure === "targetChanged" ? "creation.reviewRequired" : "creation.failed") : creationStateMessage(task)))}</span></span>${codexIcon("chevronRight")}</a>`
                 }<button type="button" class="creation-history-remove" data-history-clear="${e(task.id)}" data-scope="${scope}" ${messageAttributes("title", "creation.clearRecord", {}, this.t)} aria-label="${e(this.t("creation.clearRecord") + ": " + creationRecordTitle(task))}" ${this.history.blocked ? "disabled" : ""}>${codexIcon("trash")}</button></div>`,
             )
             .join("")

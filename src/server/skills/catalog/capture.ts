@@ -29,7 +29,7 @@ export class InstalledSkillCapture {
       binding = skillDigest(input.requestBinding);
     if (
       !Array.isArray(input.selections) ||
-      !input.selections.length ||
+      (!input.selections.length && !authority.guidanceOnly) ||
       input.selections.length > SKILL_LIMITS.selections
     )
       throw new SkillRegistryError("invalidInput");
@@ -48,7 +48,11 @@ export class InstalledSkillCapture {
         requestBinding: binding,
         selections,
         outputType: authority.outputType,
-        ...(authority.workflowRequired === false ? { compositionMode: "conversation-guidance" } : {}),
+        ...(authority.guidanceOnly
+          ? { compositionMode: "artifact-guidance" }
+          : authority.workflowRequired === false
+            ? { compositionMode: "conversation-guidance" }
+            : {}),
       }),
       prior = await this.registry.captured(ownerId, id, request);
     if (prior) return prior;

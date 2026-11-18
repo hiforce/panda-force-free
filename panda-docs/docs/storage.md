@@ -27,6 +27,20 @@ Container-private directories, host-only `/mnt/data` and `/tmp` are not delivery
 
 Legacy local attachments and configured OSS uploads remain readable through their existing routes. OSS input storage does not make engine-generated output files available automatically: those outputs still belong in the shared workspace. No automatic search, basename guessing or copying from arbitrary host paths is performed when a link fails.
 
+## S3-compatible storage for saved originals (develop source)
+
+In **Settings → Storage**, an installation administrator can choose local storage or an S3-compatible connection for new images, videos, presentations, web pages and other creative files. Select the file types to route, then provide the bucket, region, optional object prefix and access credentials. Advanced options include a custom root endpoint and path-style addressing. An empty endpoint uses the regional AWS S3 endpoint. The provider must support the standard conditional-write, metadata, exact-version and byte-range operations used by the application.
+
+Local storage is the default. Saving these settings does not contact the provider or move existing files. New writes check read authority and connectivity before uploading. Connection changes retain the frozen locations of existing originals; use the saved-connection credential repair form when an older connection needs replacement keys. Empty credential fields preserve saved keys, and leaving the page clears newly entered secrets. The server never returns stored keys to the browser. The connection needs read, write and cleanup permissions, including access to the application's object versions when bucket versioning is enabled.
+
+Viewing, playback and download remain on the application origin behind login and project authorization. The application does not set public ACLs, change bucket policies or issue browser presigned links. A bucket an administrator has independently made public retains that policy. Login authentication must remain enabled to use application-managed S3 originals.
+
+Moving a file to Trash preserves its originals and resources for restoration. **Delete permanently** records an irreversible deletion request and queues cleanup of that asset's known S3 object versions and resources. Independent copies use separate object keys. Interrupted or denied cleanup remains visible and retryable, including after an application restart; an uncertain upload is not reported as deleted just because a temporary existence check finds no object.
+
+This configuration is separate from static CDN credentials and from conversation attachment storage. It covers saved creative originals and their resources; native engine history and private renderer recovery caches keep their existing storage. Keep the application metadata and project content in backups alongside the S3 objects so saved locations and cleanup receipts remain available. No shared engine state is automatically removed when an original is deleted.
+
+Configuration, independent credential records and cleanup journals live in the private `original-storage` directory under the application state root, which the standard Compose state volume already persists. Administrators needing a different parent may set `PANDA_FORCE_ORIGINAL_STORAGE_PARENT` in the service environment and mount that parent on persistent storage; the application still uses its dedicated `original-storage` child. These settings require a build from the current develop source and are not a claim that an older published image includes this feature.
+
 ## Managed project folders (0.0.15+)
 
 Version 0.0.15 adds managed project workspaces. Earlier images ignore these settings. Use version 0.0.15 or later before relying on directory filtering.

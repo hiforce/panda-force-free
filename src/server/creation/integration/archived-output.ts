@@ -12,7 +12,9 @@ export function archivedCreationOutput(
     stage: (value, task) => workspace.stage(value, task),
     commit: async (task: CreationTaskSpec, digest: string) => {
       const artifact = await workspace.commit(task, digest);
-      return archive ? archive.commit(task, artifact, await source.read(digest)) : artifact;
+      return archive && artifact.kind === "document"
+        ? archive.commit(task, artifact, await source.read(digest))
+        : artifact;
     },
   };
 }

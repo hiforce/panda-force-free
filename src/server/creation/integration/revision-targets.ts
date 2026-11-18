@@ -54,6 +54,7 @@ export class CreationRevisionTargets {
     tasks?: { get(owner: string, id: string): CreationTask | Promise<CreationTask> },
   ): Promise<CreationTaskSpec> {
     if (task.target.document || !task.previousTaskId) return task;
+    if ((await inputs?.read(task))?.previousAsset) return task;
     if (!inputs || !revisions || !tasks) throw new CreationError("unavailable");
     const identity = { owner: task.owner, taskId: task.id, projectId: task.projectId, inputDigest: task.inputDigest };
     let target: RevisionTarget;
@@ -62,7 +63,8 @@ export class CreationRevisionTargets {
     } catch (error) {
       if (errorCode(error) !== "ENOENT") throw error;
       const parent = await tasks.get(task.owner, task.previousTaskId);
-      if (parent.spec.projectId !== task.projectId || !parent.artifact) throw new DocumentError("conflict", 409);
+      if (parent.spec.projectId !== task.projectId || parent.artifact?.kind !== "document")
+        throw new DocumentError("conflict", 409);
       const source = (await inputs.read(task)).previous?.document;
       const current = await revisions.read(task.owner, task.projectId, parent.artifact.documentId);
       if (

@@ -47,11 +47,12 @@ export class AuthoringDirectory {
         .querySelector<HTMLButtonElement>('[data-authoring-action="directory-dismiss"]')
         ?.focus({ preventScroll: true });
     else if (restore) {
-      const floating = this.root.querySelector<HTMLButtonElement>('[data-authoring-action="reader-directory"]');
-      (floating?.getClientRects().length
-        ? floating
-        : this.root.querySelector<HTMLButtonElement>('[data-authoring-action="directory"]')
-      )?.focus({ preventScroll: true });
+      const trigger = [
+        ...this.root.querySelectorAll<HTMLElement>(
+          '[data-authoring-action="reader-directory"], [data-authoring-action="directory"], .document-editor-more > summary',
+        ),
+      ].find((node) => node.getClientRects().length);
+      trigger?.focus({ preventScroll: true });
     }
   }
   toggle() {

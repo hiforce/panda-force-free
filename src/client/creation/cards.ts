@@ -1,19 +1,12 @@
-import type { CreationTaskView, CreationTaskState, CreationFailure } from "../../shared/creation/contracts.js";
+import type { CreationTaskView, CreationFailure, CreationArtifact } from "../../shared/creation/contracts.js";
 import type { MessageId, Translate } from "../../shared/i18n/messages.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { setMessageHtml, errorText, messageHtml } from "../i18n.js";
 
 import { createUserInputCard } from "../user-input.js";
+import { creationStateMessage } from "./state.js";
 import { creationApi, CreationApiError } from "./api.js";
 
-const states: Record<CreationTaskState, MessageId> = {
-  queued: "creation.queued",
-  running: "creation.running",
-  committing: "creation.committing",
-  succeeded: "creation.succeeded",
-  failed: "creation.failed",
-  cancelled: "creation.cancelled",
-};
 const failures: Record<CreationFailure, MessageId> = {
   interrupted: "creation.failedInterrupted",
   timedOut: "creation.failedTimedOut",
@@ -31,7 +24,7 @@ export class CreationCards {
     private readonly host: HTMLElement,
     private readonly t: Translate,
     private readonly changed: (task?: CreationTaskView) => void,
-    private readonly open: (id: string) => void,
+    private readonly open: (artifact: CreationArtifact) => void,
     private readonly report: (reason: unknown) => void,
     private readonly api: typeof creationApi = creationApi,
     private readonly options: { brief?: boolean; openAction?: boolean } = {},
@@ -53,7 +46,7 @@ export class CreationCards {
           task.goal?.status,
           task.question?.id,
           task.failure,
-          task.artifact?.documentId,
+          task.artifact,
           task.cancelRequested,
           task.generation,
         ]),
@@ -83,13 +76,13 @@ export class CreationCards {
         `<button type="button" class="wb-button ${extra}" data-creation-action="${action}">${messageHtml(label, {}, t)}</button>`;
     setMessageHtml(
       node,
-      `<header><strong data-creation-state>${messageHtml(task.goal?.status === "paused" ? "common.goalPaused" : task.question ? "creation.waiting" : task.failure ? (task.failure === "targetChanged" ? "creation.reviewRequired" : "creation.failed") : states[task.state], {}, t)}</strong><small>${e(new Intl.DateTimeFormat(document.documentElement.lang || "en", { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</small></header>${this.options.brief === false ? "" : `<p class="creation-task-brief">${e(task.prompt)}</p>`}${task.failure ? `<p class="creation-task-failure">${messageHtml(failures[task.failure], {}, t)}</p>` : ""}<div data-creation-question></div><footer>${task.artifact && this.options.openAction !== false ? button("creation.openDocument", "open", "primary") : ""}${["queued", "running", "committing"].includes(task.state) && !task.cancelRequested ? button("creation.cancel", "cancel", "danger") : ""}${!task.artifact && (["failed", "cancelled"].includes(task.state) || (task.state === "committing" && task.failure)) ? button(task.goal?.status === "paused" ? "common.resumeGoal" : task.failure === "targetChanged" && (task.document || task.previousTaskId) ? "creation.retryLatest" : "creation.retry", "retry") : ""}<p data-task-error role="alert" hidden></p></footer>`,
+      `<header><strong data-creation-state>${messageHtml(creationStateMessage(task), {}, t)}</strong><small>${e(new Intl.DateTimeFormat(document.documentElement.lang || "en", { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</small></header>${this.options.brief === false ? "" : `<p class="creation-task-brief">${e(task.prompt)}</p>`}${task.failure ? `<p class="creation-task-failure">${messageHtml(failures[task.failure], {}, t)}</p>` : ""}<div data-creation-question></div><footer>${task.artifact && this.options.openAction !== false ? button(task.artifact.kind === "document" ? "creation.openDocument" : "creative.open", "open", "primary") : ""}${["queued", "running", "committing"].includes(task.state) && !task.cancelRequested ? button("creation.cancel", "cancel", "danger") : ""}${!task.artifact && (["failed", "cancelled"].includes(task.state) || (task.state === "committing" && task.failure)) ? button(task.goal?.status === "paused" ? "common.resumeGoal" : task.failure === "targetChanged" && (task.document || task.previousTaskId) ? "creation.retryLatest" : "creation.retry", "retry") : ""}<p data-task-error role="alert" hidden></p></footer>`,
     );
     node.onclick = (event) => {
       const trigger = (event.target as Element).closest<HTMLButtonElement>("[data-creation-action]");
       if (!trigger || trigger.disabled || this.busy.has(task.id)) return;
       if (trigger.dataset.creationAction === "open" && task.artifact) {
-        this.open(task.artifact.documentId);
+        this.open(task.artifact);
         return;
       }
       this.busy.add(task.id);

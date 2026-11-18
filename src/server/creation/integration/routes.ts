@@ -57,6 +57,7 @@ export function creationRoutes(
           "prompt",
           "selections",
           "attachments",
+          "outputType",
           "model",
           "effort",
         ]);

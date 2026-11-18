@@ -14,6 +14,8 @@ export interface CreationInputSnapshot {
   projectId: string;
   requestDigest: string;
   prompt: string;
+  outputType?: import("../../shared/creation/contracts.js").CreationRequestedOutput;
+  documentFileLineage?: string;
   profile: CreationEngineProfile;
   skills: SkillCapture;
   materials?: readonly import("../../shared/creation/contracts.js").CreationMaterial[];
@@ -21,6 +23,11 @@ export interface CreationInputSnapshot {
   previous?: {
     prompt: string;
     document: { title: string; body: import("../../shared/documents/rich-body.js").RichDocumentBody };
+  };
+  previousAsset?: {
+    taskId: string;
+    prompt: string;
+    artifact: import("../../shared/creation/contracts.js").CreationAssetArtifact;
   };
 }
 export interface CreationInputs {

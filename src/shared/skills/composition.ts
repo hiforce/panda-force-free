@@ -29,6 +29,7 @@ export interface FrozenSkillSelection {
 }
 export interface SkillComposition {
   schema: 1;
+  mode?: "guidance";
   outputType: SkillOutput;
   skills: readonly FrozenSkillSelection[];
   capabilities: readonly SkillCapability[];
@@ -42,6 +43,8 @@ export interface SkillCompositionAuthority {
   entitled: ReadonlySet<string>;
   /** Free conversations can use style or template guidance without a document workflow. */
   workflowRequired?: boolean;
+  /** Application-owned guidance preserves package instructions without delegating final artifact choice. */
+  guidanceOnly?: boolean;
 }
 /** Selection order is preserved. Instructions and parameters remain separate data, never authority. */
 export function composeSkills(
@@ -57,7 +60,10 @@ export function composeSkills(
   });
   skillAssert(new Set(definitions.map((item) => item.qualifiedId)).size === definitions.length, "duplicateSkill");
   const workflows = definitions.filter((item) => item.skill.role === "workflow").length;
-  skillAssert(authority.workflowRequired === false ? workflows <= 1 : workflows === 1, "workflowRequired");
+  skillAssert(
+    authority.guidanceOnly || authority.workflowRequired === false ? workflows <= 1 : workflows === 1,
+    "workflowRequired",
+  );
   const selected = new Set(definitions.map((item) => item.qualifiedId)),
     capabilities = new Set<SkillCapability>(),
     merged: Record<string, string> = {};
@@ -65,7 +71,9 @@ export function composeSkills(
   const skills: FrozenSkillSelection[] = definitions.map(({ selection, skill, qualifiedId }) => {
     const { pack } = selection;
     skillAssert(
-      skill.outputTypes.includes(authority.outputType) && skill.composition.appliesTo.includes(authority.outputType),
+      authority.guidanceOnly === true ||
+        (skill.outputTypes.includes(authority.outputType) &&
+          skill.composition.appliesTo.includes(authority.outputType)),
       "incompatibleOutput",
       qualifiedId,
     );
@@ -107,6 +115,7 @@ export function composeSkills(
   });
   return freezeSkillValue({
     schema: 1,
+    ...(authority.guidanceOnly ? { mode: "guidance" as const } : {}),
     outputType: authority.outputType,
     skills,
     capabilities: [...capabilities],

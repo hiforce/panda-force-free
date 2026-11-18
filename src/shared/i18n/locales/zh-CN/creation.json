@@ -175,5 +175,10 @@
   "savedFile": "已保存文件",
   "failedFileChanged": "会话文件已被修改，或文件名已被占用。已有文件已保留，请检查后再重试。",
   "documentUnavailable": "文档当前位置暂不可用。",
-  "documentProject": "文档归属：{project}"
+  "documentProject": "文档归属：{project}",
+  "imageDocumentOnly": "此技能提供图像策划指导，最终成品由你的需求和可用的创作工具决定。",
+  "slidesDocumentOnly": "此技能提供幻灯片策划指导，最终成品由你的需求和可用的创作工具决定。",
+  "videoDocumentOnly": "此技能提供视频策划指导，最终成品由你的需求和可用的创作工具决定。",
+  "webDocumentOnly": "此技能提供网页策划指导，最终成品由你的需求和可用的创作工具决定。",
+  "skillGuidance": "创作指导"
 }

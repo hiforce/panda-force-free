@@ -109,3 +109,11 @@ Packaged web previews use `@csstools/css-tokenizer` 3.0.4 (MIT) to decode CSS UR
 ## PDF text extraction
 
 The generated text parser in `src/server/materials/vendor/pdf-parser.mjs` redistributes [unpdf 2.2.1](https://github.com/unjs/unpdf) and its serverless Mozilla PDF.js build. unpdf uses the MIT License; PDF.js uses the Apache License 2.0. Included PDFium JBIG2, Mozilla decoder and OpenJPEG portions retain their Apache/BSD notices. The complete upstream notices are kept under [LICENSES/unpdf](./LICENSES/unpdf), and the pinned package integrity, build recipe and generated-source hash are recorded in `src/server/materials/vendor/provenance.json`. This application uses text extraction; optional native rendering packages are not required.
+
+## Default editable presentation template
+
+The application presentation template was generated with [python-pptx 1.0.2](https://github.com/scanny/python-pptx) and retains its default Office theme and layout data. python-pptx is used only while preparing the embedded template; it is not an application runtime dependency. The MIT copyright and grant are retained in [LICENSES/python-pptx-template-MIT.txt](./LICENSES/python-pptx-template-MIT.txt).
+
+## Optional video tools and CJK fonts
+
+Docker source builds obtain FFmpeg, Fontconfig and Noto CJK fonts from the configured Linux package repository. Their distribution notices remain installed with those packages, including `/usr/share/doc/ffmpeg/copyright` and `/usr/share/doc/fonts-noto-cjk/copyright`. Administrator-supplied tools and fonts retain their own notices.

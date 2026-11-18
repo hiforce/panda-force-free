@@ -13,6 +13,7 @@ services:
       HOME: /home/codex
       CODEX_HOME: /home/codex/.codex
       PANDA_FORCE_HOME: /var/lib/panda-force
+      XDG_CACHE_HOME: "${PANDA_FORCE_CACHE_HOME:-/var/lib/panda-force/cache}"
       SHELL: /bin/bash
       PANDA_FORCE_CWD: /home/codex/workspace
       PANDA_FORCE_PROJECTS_ROOT: "${PANDA_FORCE_PROJECTS_ROOT:-/home/codex/workspace/projects}"
@@ -20,6 +21,9 @@ services:
       PANDA_FORCE_REVIEW_ROOT: /home/codex/workspace
       PANDA_FORCE_APP_SERVER_MODE: isolated
       PANDA_FORCE_AUTH_MODE: password
+      PANDA_FORCE_CREATION_FFMPEG: "${PANDA_FORCE_CREATION_FFMPEG:-/usr/bin/ffmpeg}"
+      PANDA_FORCE_CREATION_FFPROBE: "${PANDA_FORCE_CREATION_FFPROBE:-/usr/bin/ffprobe}"
+      PANDA_FORCE_CREATION_VIDEO_FONT_FAMILY: "${PANDA_FORCE_CREATION_VIDEO_FONT_FAMILY:-Noto Sans CJK SC}"
       PANDA_FORCE_PASSWORD: "${PANDA_FORCE_PASSWORD:-}"
       TZ: "${TZ:-UTC}"
       NODE_ENV: production

@@ -34,7 +34,7 @@ export class AuthoringHeader {
         this.pathKey = key;
       }
     }
-    const target = mobile ? context : utilities;
+    const target = mobile && !this.root.classList.contains("is-editing") ? context : utilities;
     if (this.refresh && target && this.refresh.parentElement !== target) target.append(this.refresh);
   }
 }

@@ -49,6 +49,10 @@
     "tests/unit/application-tool-engine.test.ts",
     "tests/support/creation-app.ts",
     "tests/unit/creation-capacity.test.ts",
+    "tests/unit/creation-rendering-slots.test.ts",
+    "tests/unit/creation-original-sources.test.ts",
+    "tests/unit/creation-generated-originals.test.ts",
+    "tests/unit/creation-video-process.test.ts",
     "tests/unit/template-import-file.test.ts",
     "tests/unit/*search*.test.ts",
     "tests/unit/knowledge-*.test.ts",
@@ -66,6 +70,16 @@
     "tests/integration/creation-questions.integration.test.ts",
     "tests/integration/creation-schema.integration.test.ts",
     "tests/integration/saved-original*.integration.test.ts",
-    "tests/unit/saved-source-batches.test.ts"
+    "tests/unit/saved-source-batches.test.ts",
+    "tests/unit/native-image-rendering.test.ts",
+    "tests/unit/codex-process.test.ts",
+    "tests/unit/package-content-concurrency.test.ts",
+    "tests/unit/creation-output-types.test.ts",
+    "tests/unit/skill-guidance.test.ts",
+    "tests/support/object-storage-fixture.ts",
+    "tests/unit/object-storage-*.test.ts",
+    "tests/integration/object-storage-*.integration.test.ts",
+    "tests/integration/creative-assets-s3.integration.test.ts",
+    "tests/unit/creative-asset-slots.test.ts"
   ]
 }

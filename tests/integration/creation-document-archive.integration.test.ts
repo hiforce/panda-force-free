@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -102,9 +103,12 @@ for (const driver of ["files", "sqlite", "mysql"] as const)
         const first = await f.create("Write this document and archive it into Archive project"),
           saved = await f.until(first.request.id, (task) => task.state === "succeeded" || Boolean(task.failure));
         expect(saved.failure).toBeNull();
-        expect(saved.artifact?.location).toMatchObject({ projectId: "project-2", revision: 1 });
-        const id = saved.artifact!.documentId,
-          filename = saved.artifact!.file!.path;
+        expect(creationDocumentArtifact(saved.artifact)?.location).toMatchObject({
+          projectId: "project-2",
+          revision: 1,
+        });
+        const id = creationDocumentArtifact(saved.artifact)!.documentId,
+          filename = creationDocumentArtifact(saved.artifact)!.file!.path;
         expect(saved.document).toMatchObject({ documentId: id, projectId: "project-2" });
         expect(saved.documentStatus).toBe("available");
         expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(0);

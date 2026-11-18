@@ -175,5 +175,10 @@
   "savedFile": "Saved file",
   "failedFileChanged": "The conversation file was changed or its filename is occupied. Your file is preserved. Review it before retrying.",
   "documentUnavailable": "The document is temporarily unavailable at its current location.",
-  "documentProject": "Document location: {project}"
+  "documentProject": "Document location: {project}",
+  "imageDocumentOnly": "This skill supplies image planning guidance. The finished artifact follows your request and the available creation tools.",
+  "slidesDocumentOnly": "This skill supplies presentation planning guidance. The finished artifact follows your request and the available creation tools.",
+  "videoDocumentOnly": "This skill supplies video planning guidance. The finished artifact follows your request and the available creation tools.",
+  "webDocumentOnly": "This skill supplies web planning guidance. The finished artifact follows your request and the available creation tools.",
+  "skillGuidance": "Planning guidance"
 }

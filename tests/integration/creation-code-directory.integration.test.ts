@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../src/shared/creation/contracts.js";
 import { expect, test } from "bun:test";
 import sharp from "sharp";
 import { randomUUID } from "node:crypto";
@@ -79,7 +80,7 @@ test("a requested code-directory move removes the old Markdown and restarted old
     });
     const first = await f.create("Write a document"),
       original = await f.until(first.request.id, (task) => task.state === "succeeded");
-    const before = original.artifact!.file!.path;
+    const before = creationDocumentArtifact(original.artifact)!.file!.path;
     move = true;
     const id = randomUUID();
     expect(
@@ -94,8 +95,10 @@ test("a requested code-directory move removes the old Markdown and restarted old
     const archived = await f.until(id, (task) => task.state === "succeeded" || Boolean(task.failure));
     expect(archived.failure).toBeNull();
     const path = join(f.code, "docs", basename(before));
-    expect(archived.artifact?.file?.path).toBe(path);
-    expect(archived.artifact?.documentId).toBe(original.artifact?.documentId);
+    expect(creationDocumentArtifact(archived.artifact)?.file?.path).toBe(path);
+    expect(creationDocumentArtifact(archived.artifact)?.documentId).toBe(
+      creationDocumentArtifact(original.artifact)?.documentId,
+    );
     expect(await lstat(before).catch(() => null)).toBeNull();
     expect(await readFile(path, "utf8")).toContain("Writing round 2");
     await f.restart();
@@ -112,7 +115,10 @@ test("a requested code-directory move removes the old Markdown and restarted old
     ).toBe(202);
     const updated = await f.until(next, (task) => task.state === "succeeded" || Boolean(task.failure));
     expect(updated.failure).toBeNull();
-    expect(updated.artifact).toMatchObject({ documentId: original.artifact!.documentId, file: { path } });
+    expect(updated.artifact).toMatchObject({
+      documentId: creationDocumentArtifact(original.artifact)!.documentId,
+      file: { path },
+    });
     expect(await readFile(path, "utf8")).toContain("Writing round 3");
     expect((await readdir(dirname(path))).filter((name) => name.endsWith(".md"))).toEqual([basename(path)]);
     expect((await readdir(dirname(before))).filter((name) => name.endsWith(".md"))).toHaveLength(0);
@@ -128,10 +134,12 @@ for (const kind of ["foreign", "equal", "symlink", "outside", "revoked"] as cons
     try {
       const first = await f.create("Write the original"),
         original = await f.until(first.request.id, (task) => task.state === "succeeded"),
-        path = original.artifact!.file!.path,
+        path = creationDocumentArtifact(original.artifact)!.file!.path,
         target = join(f.code, "docs", basename(path)),
         text = await readFile(path, "utf8"),
-        document = await f.files.application().queries.detail("project-1", original.artifact!.documentId);
+        document = await f.files
+          .application()
+          .queries.detail("project-1", creationDocumentArtifact(original.artifact)!.documentId);
       if (kind === "foreign" || kind === "equal")
         await writeFile(target, kind === "equal" ? text : "Keep this user file", { flag: "wx" });
       if (kind === "symlink") await symlink(path, target);
@@ -161,7 +169,11 @@ for (const kind of ["foreign", "equal", "symlink", "outside", "revoked"] as cons
       const stopped = await f.until(id, (task) => Boolean(task.failure));
       expect(stopped.artifact).toBeNull();
       expect(await readFile(path, "utf8")).toBe(text);
-      expect(await f.files.application().queries.detail("project-1", original.artifact!.documentId)).toEqual(document);
+      expect(
+        await f.files
+          .application()
+          .queries.detail("project-1", creationDocumentArtifact(original.artifact)!.documentId),
+      ).toEqual(document);
       if (kind === "foreign") expect(await readFile(target, "utf8")).toBe("Keep this user file");
       if (kind === "equal") expect(await readFile(target, "utf8")).toBe(text);
       if (kind === "symlink") expect((await lstat(target)).isSymbolicLink()).toBe(true);
@@ -176,7 +188,7 @@ test("original images remain relative and byte-identical after a code-directory 
     const first = await f.create("Write an illustrated document"),
       original = await f.until(first.request.id, (task) => task.state === "succeeded"),
       app = f.files.application(),
-      documentId = original.artifact!.documentId,
+      documentId = creationDocumentArtifact(original.artifact)!.documentId,
       pixels = await sharp({ create: { width: 3, height: 3, channels: 3, background: "#407090" } })
         .png()
         .toBuffer(),
@@ -228,15 +240,17 @@ test("original images remain relative and byte-identical after a code-directory 
     ).toBe(202);
     const moved = await f.until(id, (task) => task.state === "succeeded" || Boolean(task.failure));
     expect(moved.failure).toBeNull();
-    const path = moved.artifact!.file!.path,
+    const path = creationDocumentArtifact(moved.artifact)!.file!.path,
       markdown = await readFile(path, "utf8"),
       relative = markdown.match(/\]\((creation-assets-[a-f0-9-]+\/[a-f0-9]+\.png)\)/)?.[1];
     expect(relative).toBeTruthy();
     expect(new Uint8Array(await readFile(join(dirname(path), relative!)))).toEqual(new Uint8Array(bytes));
-    expect((await f.task(original.id)).artifact?.file?.path).toBe(path);
-    expect((await f.task(original.id)).workspaceDirectory).toBe(dirname(original.artifact!.file!.path));
+    expect(creationDocumentArtifact((await f.task(original.id)).artifact)?.file?.path).toBe(path);
+    expect((await f.task(original.id)).workspaceDirectory).toBe(
+      dirname(creationDocumentArtifact(original.artifact)!.file!.path),
+    );
     await f.restart();
-    expect((await f.task(original.id)).artifact?.file?.path).toBe(path);
+    expect(creationDocumentArtifact((await f.task(original.id)).artifact)?.file?.path).toBe(path);
     const before = await f.files.application().queries.detail("project-1", documentId);
     await writeFile(path, "Manual code-directory correction");
     const next = randomUUID();
@@ -307,9 +321,11 @@ test("an interrupted code-file handoff cannot complete its goal; restart retries
     ).toBe(200);
     const recovered = await f.until(first.request.id, (task) => task.state === "succeeded");
     expect(recovered.goal?.status).toBe("completed");
-    expect(recovered.artifact?.documentId).toBe(documents[0]!.documentId);
-    expect(dirname(recovered.artifact!.file!.path)).toBe(join(f.code, "docs"));
-    expect(await readFile(recovered.artifact!.file!.path, "utf8")).toContain("Keep the same saved source");
+    expect(creationDocumentArtifact(recovered.artifact)?.documentId).toBe(documents[0]!.documentId);
+    expect(dirname(creationDocumentArtifact(recovered.artifact)!.file!.path)).toBe(join(f.code, "docs"));
+    expect(await readFile(creationDocumentArtifact(recovered.artifact)!.file!.path, "utf8")).toContain(
+      "Keep the same saved source",
+    );
     expect(await f.files.application().queries.detail("project-1", documents[0]!.documentId)).toEqual(saved);
     expect(f.runs()).toBe(1);
     expect((await readdir(recovered.workspaceDirectory!)).filter((name) => name.endsWith(".md"))).toHaveLength(0);

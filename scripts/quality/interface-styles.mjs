@@ -9,6 +9,7 @@ export const interfaceStyleFiles = [
   "public/cli.css",
   "public/bots.css",
   "public/database.css",
+  "public/original-storage.css",
   "public/settings-workspace.css",
   "public/creative.css",
   "public/creation.css",
@@ -57,6 +58,7 @@ export function inspectInterfaceStyles(files) {
     "public/creation.css",
     "public/bots.css",
     "public/database.css",
+    "public/original-storage.css",
     owner,
   ]) {
     const css = (files[file] || "").replace(/\/\*[\s\S]*?\*\//g, "");

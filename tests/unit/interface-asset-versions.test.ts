@@ -1,5 +1,7 @@
+import { fileURLToPath } from "node:url";
+import { resolvePublicAsset } from "../../src/server/auth/security.js";
 import { test, expect } from "bun:test";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
@@ -108,4 +110,14 @@ test("legacy origin URLs redirect to compiled CDN assets without forwarding unre
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("every linked application stylesheet has a public static route", () => {
+  const root = fileURLToPath(new URL("../../public/", import.meta.url)),
+    html = readFileSync(join(root, "index.html"), "utf8");
+  const styles = [...html.matchAll(/<link\b[^>]*rel="stylesheet"[^>]*>/g)]
+    .map(([tag]) => /href="(\/[^"?]+\.css)"/.exec(tag)?.[1])
+    .filter((value): value is string => !!value);
+  expect(styles.length).toBeGreaterThan(10);
+  for (const url of styles) expect(resolvePublicAsset(url, root)).toBe(join(root, url.slice(1)));
 });

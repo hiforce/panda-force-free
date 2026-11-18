@@ -1,5 +1,10 @@
 import type { CreationArtifact, CreationFailure, CreationTaskState } from "../../shared/creation/contracts.js";
-export type { CreationArtifact, CreationFailure, CreationTaskState } from "../../shared/creation/contracts.js";
+export type {
+  CreationArtifact,
+  CreationDocumentArtifact,
+  CreationFailure,
+  CreationTaskState,
+} from "../../shared/creation/contracts.js";
 /** Application-owned output identity is independent of a model call or engine request ID. */
 export interface CreationTaskSpec {
   schema: 1;
@@ -7,7 +12,7 @@ export interface CreationTaskSpec {
   owner: string;
   projectId: string;
   operationId: string;
-  kind: "document";
+  kind: import("../../shared/creation/contracts.js").CreationRequestedOutput;
   target: {
     parentId: string | null;
     treeVersion: number;

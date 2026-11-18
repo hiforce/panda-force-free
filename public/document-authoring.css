@@ -634,8 +634,8 @@
     display: none;
   }
   .document-authoring-editor-header .document-editor-more > summary {
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 44px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -743,7 +743,8 @@
   .authoring-directory-heading .wb-button {
     display: inline-flex;
     padding: 8px;
-    min-width: 40px;
+    min-width: 44px;
+    min-height: 44px;
     align-items: center;
     justify-content: center;
   }
@@ -1268,6 +1269,94 @@
   }
   .document-authoring-context > [data-authoring-action="refresh-tree"] {
     padding: 6px 8px;
+  }
+}
+
+/* Files share the directory's existing scroll region without changing document tree identities. */
+.authoring-files {
+  border-top: 1px solid var(--pf-line);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+.authoring-files-heading,
+.authoring-files-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.authoring-files-heading > strong {
+  color: var(--pf-ink);
+  font-size: 13px;
+  padding-inline: 6px;
+}
+.authoring-files .wb-button {
+  min-height: 40px;
+  white-space: normal;
+  font-size: 12px;
+}
+.authoring-files-tabs {
+  justify-content: start;
+}
+.authoring-files-tabs [aria-pressed="true"] {
+  border-color: var(--pf-accent);
+  color: var(--pf-accent);
+  background: var(--pf-soft);
+}
+.authoring-files-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px 8px 22px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--pf-ink);
+  text-align: start;
+  cursor: pointer;
+}
+.authoring-files-item:hover {
+  background: var(--pf-soft);
+}
+.authoring-files-item:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: -2px;
+}
+.authoring-files-item > svg {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: var(--pf-muted);
+}
+.authoring-files-item > span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.authoring-files-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+.authoring-files-item small,
+.authoring-files-status {
+  color: var(--pf-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.authoring-files-status {
+  margin: 8px 6px;
+}
+@media (max-width: 700px) {
+  .authoring-files .wb-button,
+  .document-editor-more [data-authoring-action="reader-directory"] {
+    min-height: 44px;
   }
 }
 

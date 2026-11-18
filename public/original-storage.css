@@ -1,0 +1,95 @@
+/* Original storage owns its internal arrangement; settings and shared forms own gutters and control geometry. */
+.original-storage-page,
+.original-storage-settings,
+.original-storage-settings fieldset,
+.original-storage-s3 {
+  display: grid;
+  gap: var(--pf-space-4);
+  min-width: 0;
+}
+.original-storage-page {
+  gap: var(--pf-space-5);
+}
+.original-storage-page > div + div {
+  border-block-start: 1px solid var(--pf-line);
+  padding-block-start: var(--pf-space-5);
+}
+.original-storage-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--pf-space-3);
+}
+.original-storage-heading > div {
+  min-width: 0;
+}
+.original-storage-settings {
+  color: var(--pf-ink);
+  font-size: var(--pf-text-body);
+  line-height: 1.7;
+}
+.original-storage-settings :is(h2, p) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.original-storage-settings h2 {
+  font-size: var(--pf-text-title);
+  line-height: 1.5;
+}
+.original-storage-settings fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.original-storage-settings legend {
+  padding: 0;
+  margin-block-end: var(--pf-space-2);
+}
+.original-storage-settings summary {
+  min-height: var(--pf-touch-target);
+  align-content: center;
+  cursor: pointer;
+}
+.original-storage-settings details > :not(summary) {
+  margin-block-start: var(--pf-space-3);
+}
+.original-storage-heading p,
+.original-storage-hint {
+  color: var(--pf-muted);
+}
+.original-storage-kinds,
+.original-storage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pf-space-2) var(--pf-space-4);
+}
+.original-storage-settings fieldset > button {
+  justify-self: start;
+}
+.original-storage-notice:empty {
+  display: none;
+}
+.original-storage-notice,
+.original-storage-recovery,
+.original-storage-policy {
+  display: grid;
+  gap: var(--pf-space-2);
+  padding: var(--pf-space-3);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-soft);
+}
+.original-storage-repair {
+  border-block-start: 1px solid var(--pf-line);
+  padding-block-start: var(--pf-space-3);
+}
+@media (max-width: 767px) {
+  .original-storage-heading {
+    flex-direction: column;
+  }
+}
+
+.original-storage-settings [hidden] {
+  display: none;
+}

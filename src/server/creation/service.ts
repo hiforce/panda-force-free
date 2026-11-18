@@ -1,3 +1,4 @@
+import { creationDocumentArtifact } from "../../shared/creation/contracts.js";
 import type { CreationResult } from "./ports.js";
 import type { CreationAvailability, CreationTaskView } from "../../shared/creation/contracts.js";
 import type { CreationInputs } from "./input.js";
@@ -56,7 +57,7 @@ export class CreationService {
     ) => Promise<import("./contracts.js").CreationArtifact | null>,
     private readonly fileLocation?: (
       task: import("./contracts.js").CreationTaskSpec,
-    ) => Promise<NonNullable<import("./contracts.js").CreationArtifact["file"]> | null>,
+    ) => Promise<NonNullable<import("./contracts.js").CreationDocumentArtifact["file"]> | null>,
   ) {}
   private using<T>(work: () => Promise<T>) {
     if (this.closed) return Promise.reject(new CreationError("unavailable"));
@@ -95,7 +96,9 @@ export class CreationService {
       (current.state === "committing" && current.outputDigest && current.failure
         ? await this.savedArtifact?.(owner, current.spec.id)
         : null);
-    const documentId = primary?.documentId ?? current.spec.target.document?.documentId;
+    const documentArtifact = creationDocumentArtifact(primary),
+      documentTarget = !primary || primary.kind === "document" ? current.spec.target.document : undefined;
+    const documentId = documentArtifact?.documentId ?? documentTarget?.documentId;
     const location =
       documentId && this.documentLocation
         ? await this.documentLocation(
@@ -111,6 +114,7 @@ export class CreationService {
       state: current.state,
       generation: current.generation,
       prompt: input.prompt,
+      outputType: current.spec.kind,
       model: input.model,
       effort: input.effort,
       artifact: current.artifact,
@@ -133,15 +137,15 @@ export class CreationService {
                   }
                 : {}),
               title: primary?.title || input.documentTitle || input.prompt.slice(0, 100),
-              revision: primary?.revision || current.spec.target.document?.version || 1,
+              revision: documentArtifact?.revision || documentTarget?.version || 1,
             },
           }
-        : current.spec.target.document
+        : documentTarget
           ? {
               document: {
-                documentId: current.spec.target.document.documentId,
+                documentId: documentTarget.documentId,
                 title: current.artifact?.title || input.documentTitle || input.prompt.slice(0, 100),
-                revision: current.artifact?.revision || current.spec.target.document.version,
+                revision: creationDocumentArtifact(current.artifact)?.revision || documentTarget.version,
               },
             }
           : {}),
@@ -212,7 +216,9 @@ export class CreationService {
       const current = await this.tasks.get(owner, id);
       const workspace = await this.workspaces?.lookup(owner, id);
       const file =
-        task.artifact && this.fileLocation ? await this.fileLocation(current.spec).catch(() => null) : undefined;
+        task.artifact?.kind === "document" && this.fileLocation
+          ? await this.fileLocation(current.spec).catch(() => null)
+          : undefined;
       const presentedMessages = await Promise.all(
         messages.map(async (message) => ({
           ...message,
@@ -222,7 +228,9 @@ export class CreationService {
       await this.authorize(owner, task.projectId);
       return {
         ...task,
-        ...(task.artifact && file !== undefined ? { artifact: { ...task.artifact, file: file ?? undefined } } : {}),
+        ...(task.artifact?.kind === "document" && file !== undefined
+          ? { artifact: { ...task.artifact, file: file ?? undefined } }
+          : {}),
         ...(workspace ? { workspaceDirectory: workspace.path } : {}),
         goal: creationGoalView(goalEvent, task),
         goalVersion: goalEvent?.at || 0,

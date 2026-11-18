@@ -18,6 +18,7 @@ export class CreativeBundleSelection {
     private project: string,
     private signal: AbortSignal,
     private changed: () => void,
+    private readonly enabled = true,
   ) {
     this.epoch = modal.generation;
     this.selectElement.onchange = changed;
@@ -48,7 +49,7 @@ export class CreativeBundleSelection {
     this.file = file;
     this.ready = false;
     this.selectElement.replaceChildren();
-    wrapper.hidden = !file?.name.toLowerCase().endsWith(".zip");
+    wrapper.hidden = !this.enabled || !file?.name.toLowerCase().endsWith(".zip");
     retry.hidden = true;
     this.changed();
     if (wrapper.hidden || !file) return;

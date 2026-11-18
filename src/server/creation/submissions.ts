@@ -15,6 +15,10 @@ export interface CreationSubmissionAuthority {
   authorize(owner: string, projectId: string): Promise<void>;
   target(owner: string, request: CreationRequest): Promise<void>;
   revision?: import("./ports.js").CreationDocumentRevisions["read"];
+  original?(
+    owner: string,
+    artifact: import("../../shared/creation/contracts.js").CreationAssetArtifact,
+  ): Promise<import("../../shared/creation/contracts.js").CreationAssetArtifact>;
   profile(id: string, selection?: { model?: string; effort?: string }): Promise<CreationEngineProfile>;
   capture(owner: string, request: CreationRequest, requestDigest: string): Promise<SkillCapture>;
 }
@@ -53,6 +57,7 @@ export class CreationSubmissions {
         parentId: task.spec.target.parentId,
         locale: task.spec.target.locale,
         prompt: input.prompt,
+        ...(input.outputType === undefined ? {} : { outputType: input.outputType }),
         profileId: input.profile.id,
         ...(input.profile.model ? { model: input.profile.model } : {}),
         ...(input.profile.effort ? { effort: input.profile.effort } : {}),
@@ -69,7 +74,15 @@ export class CreationSubmissions {
     );
   }
   async followUp(owner: string, id: string, value: unknown) {
-    const request = creationRecord(value, ["id", "prompt", "selections", "model", "effort", "attachments"]),
+    const request = creationRecord(value, [
+        "id",
+        "prompt",
+        "selections",
+        "model",
+        "effort",
+        "attachments",
+        "outputType",
+      ]),
       task = await this.tasks.find(owner, creationUuid(id));
     if (!task) throw new CreationError("notFound");
     await this.authority.authorize(owner, task.spec.projectId);
@@ -83,6 +96,9 @@ export class CreationSubmissions {
       parentId: task.spec.target.parentId,
       locale: task.spec.target.locale,
       profileId: input.profile.id,
+      ...((request.outputType ?? input.outputType) === undefined
+        ? {}
+        : { outputType: request.outputType ?? input.outputType }),
       ...(request.model === undefined ? {} : { model: request.model }),
       ...(request.effort === undefined ? {} : { effort: request.effort }),
       ...(request.attachments === undefined ? {} : { attachments: request.attachments }),
@@ -118,6 +134,8 @@ export class CreationSubmissions {
     }
     await this.authority.target(owner, request);
     let previous: import("./input.js").CreationInputSnapshot["previous"];
+    let previousAsset: import("./input.js").CreationInputSnapshot["previousAsset"];
+    let documentFileLineage: string | undefined;
     let document: import("../../shared/documents/contracts.js").DocumentRevisionReference | undefined;
     let documentProjectId: string | undefined, documentTreeVersion: number | undefined;
     let recoveredProfile: CreationEngineProfile | undefined;
@@ -129,8 +147,8 @@ export class CreationSubmissions {
       if (!recovery && (task.state !== "succeeded" || !task.artifact || !task.outputDigest))
         throw new CreationError("conflict");
       const input = await this.inputs.read(task.spec);
+      documentFileLineage = input.documentFileLineage;
       if (recovery) recoveredProfile = input.profile;
-      if (!this.authority.revision) throw new CreationError("unavailable");
       let source = task,
         saved = source.artifact ?? (await this.savedArtifact?.(owner, source.spec.id));
       for (let depth = 0; !saved && !source.spec.target.document && depth < 32; depth++) {
@@ -140,17 +158,29 @@ export class CreationSubmissions {
         source = parent;
         saved = source.artifact ?? (await this.savedArtifact?.(owner, source.spec.id));
       }
-      const documentId = saved?.documentId || source.spec.target.document?.documentId;
-      if (!documentId) throw new CreationError("conflict");
-      const current = await this.authority.revision(
-        owner,
-        source.spec.target.documentProjectId ?? source.spec.projectId,
-        documentId,
-      );
-      previous = { prompt: input.prompt, document: current.document };
-      document = current.base;
-      documentProjectId = current.projectId;
-      documentTreeVersion = current.treeVersion;
+      if (saved && saved.kind !== "document") {
+        if (request.outputType === undefined || !this.authority.original) throw new CreationError("unavailable");
+        previousAsset = {
+          taskId: source.spec.id,
+          prompt: input.prompt,
+          artifact: await this.authority.original(owner, saved),
+        };
+        documentFileLineage = request.id;
+      } else {
+        if (!this.authority.revision) throw new CreationError("unavailable");
+        const documentId =
+          (saved?.kind === "document" ? saved.documentId : undefined) || source.spec.target.document?.documentId;
+        if (!documentId) throw new CreationError("conflict");
+        const current = await this.authority.revision(
+          owner,
+          source.spec.target.documentProjectId ?? source.spec.projectId,
+          documentId,
+        );
+        previous = { prompt: input.prompt, document: current.document };
+        document = current.base;
+        documentProjectId = current.projectId;
+        documentTreeVersion = current.treeVersion;
+      }
     }
     const permitted = await this.authority.profile(
       request.profileId,
@@ -169,10 +199,13 @@ export class CreationSubmissions {
       projectId: request.projectId,
       requestDigest: signature,
       prompt: request.prompt,
+      ...(request.outputType === undefined ? {} : { outputType: request.outputType }),
       profile,
       skills,
       ...(materials.length ? { materials } : {}),
       ...(previous ? { previous } : {}),
+      ...(previousAsset ? { previousAsset } : {}),
+      ...(documentFileLineage ? { documentFileLineage } : {}),
       ...(recoveryFrom ? { recoveryFrom } : {}),
     });
     await this.authority.authorize(owner, request.projectId);
@@ -184,7 +217,7 @@ export class CreationSubmissions {
           owner,
           projectId: request.projectId,
           operationId: creationOperation(owner, request.id),
-          kind: "document",
+          kind: request.outputType ?? "document",
           target: {
             parentId: request.parentId,
             treeVersion: documentTreeVersion ?? request.treeVersion,

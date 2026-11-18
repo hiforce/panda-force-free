@@ -1,3 +1,5 @@
+import type { CreativeAssetPurgeResult } from "../../shared/creative/assets.js";
+import { creativeImportKind } from "../../shared/creative/file-types.js";
 import type {
   CreativeAsset,
   CreativeAssetDetail,
@@ -31,6 +33,8 @@ export const creativeAssetsApi = {
     ),
   content: (project: string, id: string, version: string) =>
     "/api/creative-assets/content?" + new URLSearchParams({ project, id, version }),
+  view: (project: string, id: string, version: string) =>
+    "/api/creative-assets/view?" + new URLSearchParams({ project, id, version }),
   bundle: (project: string, id: string, version: string) =>
     "/api/creative-assets/export-bundle?" + new URLSearchParams({ project, id, version }),
   async inspectBundle(project: string, file: File, signal?: AbortSignal) {
@@ -55,8 +59,8 @@ export const creativeAssetsApi = {
     signal?: AbortSignal,
     entry?: string,
   ) {
-    const bundle = file.name.toLowerCase().endsWith(".zip"),
-      kind = previous?.kind ?? (file.name.toLowerCase().endsWith(".pptx") ? "slides" : "web"),
+    const bundle = file.name.toLowerCase().endsWith(".zip") && (!previous || previous.kind === "web"),
+      kind = previous?.kind ?? creativeImportKind(file.name),
       response = await request(
         (bundle ? "/api/creative-assets/import-bundle?" : "/api/creative-assets/import?") +
           new URLSearchParams({
@@ -98,6 +102,27 @@ export const creativeAssetsApi = {
       state: "trashed",
       operationId,
     }),
+  permanentDelete: (asset: CreativeAsset, operationId: string, signal?: AbortSignal) =>
+    documentJson<CreativeAssetPurgeResult>(
+      "/api/creative-assets/permanent-delete",
+      "POST",
+      {
+        project: asset.project,
+        id: asset.id,
+        version: asset.version,
+        operationId,
+      },
+      signal,
+    ),
+  purge: (asset: CreativeAsset, retry = false, signal?: AbortSignal) =>
+    documentJson<CreativeAssetPurgeResult>(
+      retry
+        ? "/api/creative-assets/purge"
+        : "/api/creative-assets/purge?" + new URLSearchParams({ project: asset.project, id: asset.id }),
+      retry ? "POST" : "GET",
+      retry ? { project: asset.project, id: asset.id } : undefined,
+      signal,
+    ),
   restore: (asset: CreativeAsset, operationId: string) =>
     documentJson<{ asset: CreativeAsset }>("/api/creative-assets/availability", "POST", {
       project: asset.project,

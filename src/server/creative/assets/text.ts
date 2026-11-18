@@ -5,11 +5,15 @@ import { NativePresentation } from "../../slides/office/package.js";
 import { PRESENTATION_NAMESPACES } from "../../slides/office/namespaces.js";
 import { xmlDescendants, type XmlElement } from "../../packages/opc/xml.js";
 import { DocumentError } from "../../documents/errors.js";
+import { creativeFilePreview } from "../../../shared/creative/file-types.js";
+import { validateCreativeMedia } from "./media.js";
 
 export interface CreativeText {
   text: string;
   sections: { id: string; start: number; end: number }[];
   previewHtml?: string;
+  previewTruncated?: boolean;
+  previewUnavailable?: boolean;
 }
 function assemble(parts: { id: string; text: string }[]): CreativeText {
   const pieces: string[] = [];
@@ -86,6 +90,25 @@ function htmlText(bytes: Uint8Array) {
 export async function creativeText(kind: CreativeAssetKind, name: string, bytes: Uint8Array): Promise<CreativeText> {
   if (bytes.length > (kind === "web" ? limits.htmlBytes : limits.sourceBytes)) throw new DocumentError("tooLarge", 413);
   if (kind === "web") return htmlText(bytes);
+  if (kind !== "slides") {
+    await validateCreativeMedia(kind, name, bytes);
+    if (kind === "file" && creativeFilePreview(name).kind === "text") {
+      let full: string;
+      try {
+        full = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      } catch {
+        return { text: "", sections: [], previewUnavailable: true };
+      }
+      let text = full.slice(0, limits.filePreviewCharacters);
+      if (/[\uD800-\uDBFF]$/.test(text)) text = text.slice(0, -1);
+      return {
+        text,
+        sections: [{ id: "file-text", start: 0, end: text.length }],
+        ...(full.length > text.length ? { previewTruncated: true } : {}),
+      };
+    }
+    return { text: "", sections: [] };
+  }
   const presentation = await NativePresentation.open(bytes, name);
   if (presentation.index.kind !== "pptx") throw new DocumentError("invalidInput");
   const ns = PRESENTATION_NAMESPACES.find((n) => n.dialect === presentation.index.dialect)!;

@@ -38,6 +38,8 @@ export async function createAppFixture({
   sessionPresentation = /** @type {{titles: string[]; timestamp: number} | null} */ (null),
   models = null,
   applicationCreation = false,
+  applicationImage = "",
+  applicationArtifact = /** @type {{kind: "slides" | "web" | "video"; arguments: object} | null} */ (null),
   applicationKnowledge = false,
   account = null,
   engineFiles = {},
@@ -208,7 +210,7 @@ let account=${JSON.stringify(account)};
 const engineFiles=${JSON.stringify(engineFiles)};
 const threads=${JSON.stringify(initial)};
 const queues=new Map();
-const applicationThreads=new Set(), applicationCalls=new Map();
+const applicationThreads=new Set(), applicationCalls=new Map(), imageThreads=new Set();
 function applicationSave(pending){
  const callId='save-'+pending.run;applicationCalls.set(callId,{...pending,kind:'save'});
  send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_documents_create',arguments:{title:'Generated handbook',body:{schema:1,format:'richtext',document:{type:'doc',content:[{type:'heading',attrs:{level:2},content:[{type:'text',text:'A useful result'}]},{type:'paragraph',content:[{type:'text',text:pending.choice?.text||'An editable document from an answered task.'}]}]}},...(pending.choice?.projectId?{archiveTo:{projectId:pending.choice.projectId}}:{}),...(pending.choice?.fileDirectory?{fileDirectory:pending.choice.fileDirectory}:{})}}});
@@ -254,6 +256,10 @@ const handleLine=line=>{
       if(pending.kind==='question'){
         const callId='context-'+pending.run;applicationCalls.set(callId,{...pending,kind:'context'});
         send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_creation_context',arguments:{}}});
+      }else if(pending.kind==='context'&&${Boolean(applicationImage || applicationArtifact)}){
+        const artifact=${JSON.stringify(applicationArtifact)},callId='render-'+pending.run;applicationCalls.set(callId,{...pending,kind:'image',artifactKind:artifact?.kind||'image'});send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:artifact?.kind==='slides'?'panda_slides_render':artifact?.kind==='web'?'panda_web_render':artifact?.kind==='video'?'panda_videos_render':'panda_images_render',arguments:artifact?.arguments||{slot:1,prompt:'A finished computer history illustration'}}});
+      }else if(pending.kind==='image'&&m.result?.success){
+        const handle=JSON.parse(m.result.contentItems[0].text).handle,callId='save-image-'+pending.run;applicationCalls.set(callId,{...pending,kind:'save'});send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_artifacts_save',arguments:{kind:pending.artifactKind||'image',handle,title:'Computer history'}}});
       }else if(pending.kind==='context'&&m.result?.success&&JSON.parse(m.result.contentItems[0].text).materials.length){
         const material=JSON.parse(m.result.contentItems[0].text).materials[0],callId='material-'+pending.run;
         applicationCalls.set(callId,{...pending,kind:'material'});send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_creation_material_read',arguments:{id:material.id}}});
@@ -275,7 +281,8 @@ const handleLine=line=>{
   appendFileSync(${JSON.stringify(trace)},JSON.stringify({method:m.method,params:p})+'\\n');
   if('pandaProjectless' in p)throw new Error('PandaForce metadata leaked into native RPC');
   let result={};
-  if(m.method==='fs/getMetadata') result={isFile:typeof engineFiles[p.path]==='string',isDirectory:false,isSymlink:false,createdAtMs:0,modifiedAtMs:1};
+  if(m.method==='modelProvider/capabilities/read')result={imageGeneration:${Boolean(applicationImage)},webSearch:false};
+  else if(m.method==='fs/getMetadata') result={isFile:typeof engineFiles[p.path]==='string',isDirectory:false,isSymlink:false,createdAtMs:0,modifiedAtMs:1};
   else if(m.method==='fs/readFile') result={dataBase64:engineFiles[p.path]||''};
   else if(m.method==='initialize')result={codexHome:${JSON.stringify(dir)}};
   else if(m.method==='model/list')result={data:${JSON.stringify(models)}||[{id:'gpt-fixture',model:'gpt-fixture',displayName:'GPT Fixture',defaultReasoningEffort:'medium',supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]};
@@ -303,11 +310,13 @@ const handleLine=line=>{
   else if(m.method==='thread/list'){const offset=Number(p.cursor)||0,limit=p.limit||50;result={data:threads.slice(offset,offset+limit),nextCursor:offset+limit<threads.length?String(offset+limit):null}}
   else if(m.method==='thread/start'){
     if(p.model==='fail'){send({id:m.id,error:{message:'Fixture creation failed'}});return}
-    const thread={id:'new-'+(++count),name:${unnamedSessions} ? null : 'New session '+count,preview:'',cwd:p.cwd,status:{type:'idle'},createdAt:Date.now()/1000,updatedAt:Date.now()/1000,turns:[],canAcceptDirectInput:true};
+    const imageRenderer=${Boolean(applicationImage)}&&p.permissions==='panda_image_renderer';
+    const thread={id:imageRenderer?crypto.randomUUID():'new-'+(++count),name:${unnamedSessions} ? null : 'New session '+count,preview:'',cwd:p.cwd,status:{type:'idle'},createdAt:Date.now()/1000,updatedAt:Date.now()/1000,turns:[],canAcceptDirectInput:true};
     if(${applicationCreation}&&p.dynamicTools?.some(tool=>tool.name==='panda_documents_create'))applicationThreads.add(thread.id);
     if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_draft'))knowledgeThreads.set(thread.id,'draft');
     if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_review_decision'))knowledgeThreads.set(thread.id,'review');
-    threads.unshift(thread);send({method:'thread/started',params:{thread}});result={thread};
+    if(imageRenderer)imageThreads.add(thread.id);
+    threads.unshift(thread);send({method:'thread/started',params:{thread}});result={thread,...(imageRenderer?{activePermissionProfile:{id:p.permissions},approvalPolicy:'never',cwd:p.cwd}:{})};
   }else if(m.method==='thread/name/set'){
     const thread=threads.find(t=>t.id===p.threadId);
     if(thread){thread.name=p.name;send({method:'thread/name/updated',params:{threadId:p.threadId,threadName:p.name}})}
@@ -321,6 +330,7 @@ const handleLine=line=>{
     const thread=threads.find(t=>t.id===p.threadId);
     if(${unnamedSessions}&&thread&&!thread.preview)thread.preview=(p.input||[]).filter(x=>x.type==='text').map(x=>x.text).join('\\n');
     result={turn:{id:'turn-'+(++count),status:applicationThreads.has(p.threadId)||knowledgeThreads.has(p.threadId)?'inProgress':'completed',items:[]}};
+    if(imageThreads.has(p.threadId)){result={turn:{id:crypto.randomUUID(),status:'completed',items:[{id:crypto.randomUUID(),type:'imageGeneration',status:'completed',failure:null,result:${JSON.stringify(applicationImage)}}]}};thread.turns.push(result.turn);}
     if(${nativeInputHistory}&&thread){
       const item={id:'input-'+result.turn.id,type:'userMessage',content:p.input,clientId:p.clientUserMessageId};
       thread.turns.push({...result.turn,items:[item]});
@@ -334,6 +344,7 @@ const handleLine=line=>{
       else knowledgeCall(pending,pending.stage==='source'?'panda_knowledge_context':'panda_knowledge_review_source',{id:manifest.sources[0].id,start:0});
     }
     if(applicationThreads.has(p.threadId)){
+      if(${Boolean(applicationImage || applicationArtifact)}){const run=result.turn.id,id='context-'+run;applicationCalls.set(id,{kind:'context',thread:p.threadId,run});setTimeout(()=>send({id,method:'item/tool/call',params:{threadId:p.threadId,turnId:run,callId:id,tool:'panda_creation_context',arguments:{}}}),20);send({id:m.id,result});return;}
       send({method:'item/agentMessage/delta',params:{threadId:p.threadId,turnId:result.turn.id,itemId:'writing-'+result.turn.id,delta:'I am reviewing the requirements and organizing the document.'}});
       send({method:'thread/tokenUsage/updated',params:{threadId:p.threadId,tokenUsage:{total:{inputTokens:840,outputTokens:160,totalTokens:1000},modelContextWindow:200000}}});
       const run=result.turn.id, id='question-'+run; applicationCalls.set(id,{kind:'question',thread:p.threadId,run});

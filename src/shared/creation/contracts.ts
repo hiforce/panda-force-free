@@ -3,6 +3,10 @@ import type { SkillCapability } from "../skills/contracts.js";
 import type { ComposerAttachment } from "../data-contracts.js";
 import type { TokenUsage } from "../engine/types.js";
 
+export const CREATION_OUTPUT_TYPES = ["document", "image", "slides", "video", "web"] as const;
+export type CreationOutputType = (typeof CREATION_OUTPUT_TYPES)[number];
+export type CreationRequestedOutput = CreationOutputType | "auto";
+
 export interface CreationEngineProfile {
   id: string;
   engineId: string;
@@ -39,6 +43,7 @@ export interface CreationRequest {
   model?: string;
   effort?: string;
   attachments?: readonly { materialId: string }[];
+  outputType?: CreationRequestedOutput;
 }
 export const DOCUMENT_CREATION_CAPABILITIES = ["project.documents.create"] as const;
 export interface CreationAvailability {
@@ -47,6 +52,7 @@ export interface CreationAvailability {
   defaultProfileId: string | null;
   defaultWorkflow: CreationSkillSelection | null;
   capabilities: readonly SkillCapability[];
+  outputTypes?: readonly CreationOutputType[];
 }
 export type CreationTaskState = "queued" | "running" | "committing" | "succeeded" | "failed" | "cancelled";
 export type CreationFailure =
@@ -73,7 +79,7 @@ export interface CreationProgress {
   streaming?: boolean;
   usage?: TokenUsage;
 }
-export interface CreationArtifact {
+export interface CreationDocumentArtifact {
   kind: "document";
   projectId: string;
   documentId: string;
@@ -85,6 +91,20 @@ export interface CreationArtifact {
   file?: { path: string; format: "markdown" };
   location?: { projectId: string; operationId: string; treeVersion: number; revisionId: string; revision: number };
 }
+export interface CreationAssetArtifact {
+  kind: Exclude<CreationOutputType, "document">;
+  projectId: string;
+  assetId: string;
+  operationId: string;
+  version: string;
+  commit: string;
+  title: string;
+  source: { name: string; digest: string; size: number };
+}
+export type CreationArtifact = CreationDocumentArtifact | CreationAssetArtifact;
+export function creationDocumentArtifact(value: CreationArtifact | null | undefined): CreationDocumentArtifact | null {
+  return value?.kind === "document" ? value : null;
+}
 /** Browser state contains no execution lease, engine request IDs, source digests or selected skill instructions. */
 export interface CreationTaskView {
   id: string;
@@ -92,6 +112,7 @@ export interface CreationTaskView {
   state: CreationTaskState;
   generation: number;
   prompt: string;
+  outputType?: CreationRequestedOutput;
   goal?: CreationGoal | null;
   model: string | null;
   effort?: string | null;

@@ -1,3 +1,4 @@
+import type { OriginalStorageFeature } from "../object-storage/feature.js";
 import { createHash } from "node:crypto";
 import { mkdir, lstat } from "node:fs/promises";
 import { join } from "node:path";
@@ -16,6 +17,7 @@ import { FileOriginalQueries } from "../content-sources/reader.js";
 type Documents = ReturnType<typeof createFileDocumentApplication>;
 type Creation = { routes: Route[]; start(): void; close(): Promise<void> };
 export interface PersonalContentOptions {
+  originalStorage?: Pick<OriginalStorageFeature, "objects" | "purges">;
   contentRoot: string;
   assetRoot: string;
   stateRoot: string;
@@ -91,10 +93,20 @@ export class PersonalContent {
     };
   }
   readCreations(owner: string) {
-    return new FileCreativeAssetReader(this.authorizedReads(owner), this.roots(owner)[1]!);
+    return new FileCreativeAssetReader(
+      this.authorizedReads(owner),
+      this.roots(owner)[1]!,
+      undefined,
+      this.options.originalStorage?.objects,
+    );
   }
   readOriginals(owner: string) {
-    return new FileOriginalQueries(this.authorizedReads(owner), this.roots(owner)[1]!);
+    return new FileOriginalQueries(
+      this.authorizedReads(owner),
+      this.roots(owner)[1]!,
+      undefined,
+      this.options.originalStorage?.objects,
+    );
   }
   async forOwner(owner: string) {
     await this.options.authorize?.(owner);
@@ -122,6 +134,7 @@ export class PersonalContent {
       await this.options.authorize?.(owner);
     };
     const documents = createFileDocumentApplication({
+      originalStorage: this.options.originalStorage,
       root: roots[0]!,
       assetRoot: roots[1]!,
       principal: () => owner,

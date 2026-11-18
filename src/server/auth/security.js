@@ -6,6 +6,7 @@ import {
   CLI_STYLES,
   BOT_STYLES,
   DATABASE_STYLES,
+  ORIGINAL_STORAGE_STYLES,
   GADGET_STYLES,
   GADGET_RUNTIME_ASSETS,
 } from "../../shared/interface-assets.js";
@@ -61,6 +62,7 @@ const PUBLIC_ASSETS = new Set([
   ...CLI_STYLES,
   ...BOT_STYLES,
   ...DATABASE_STYLES,
+  ...ORIGINAL_STORAGE_STYLES,
   ...GADGET_STYLES,
   ...GADGET_RUNTIME_ASSETS,
   "/source-import.css",

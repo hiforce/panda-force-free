@@ -10,6 +10,8 @@
 
 > 本 README 描述 **develop 分支源码**。`hiforceai/panda-force:0.0.21` 等已发布镜像不会自动包含 develop 的变更。体验下方界面及功能，请从此分支构建。
 
+develop 源码还支持生成实际图片、可编辑 PPTX、HTML 网页与无声动态排版 MP4，并在项目文档中预览或下载原件。管理员可选配独立的 [S3 兼容原件存储](./panda-docs/docs/storage.md#s3-compatible-storage-for-saved-originals-develop-source)：经应用授权访问，回收站可恢复，彻底删除时清理自有 S3 版本。以上源码功能与当前已发布容器镜像分开记录。
+
 ## 可以做什么
 
 - **AI 对话与编程：**流式接收回复、检查工具和文件变更、处理审批与问题、排队输入，并查看会话用量。

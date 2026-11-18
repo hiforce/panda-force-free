@@ -49,7 +49,7 @@ export async function creativePage(
     assets: CreativeAsset[] = [];
   for (const row of selected) {
     const asset = await creativeMetadata(view, project, row.id, true);
-    if (asset.state === state) assets.push(asset);
+    if (asset.state === state || (state === "trashed" && asset.state === "purging")) assets.push(asset);
   }
   return {
     assets,

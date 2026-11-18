@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WebSocketServer } from "ws";
-import { createCodexBridge } from "../../src/server/bridge/codex-process.ts";
+import { createCodexBridge } from "../../src/server/bridge/codex-process.js";
 
 async function fixture(reply: (message: any, socket: any) => void, initializeDelay = 0) {
   const directory = mkdtempSync(join(tmpdir(), "panda-bridge-"));
@@ -116,5 +116,29 @@ test("an oversized response is reported without repeating the same oversized que
     expect(reads).toBe(1);
   } finally {
     await f.close();
+  }
+});
+
+test("an isolated process startup failure rejects waiting callers without an unhandled child error", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "panda-missing-engine-"));
+  let stopping = false;
+  const bridge = createCodexBridge({
+    connection: { mode: "isolated" },
+    defaultCwd: join(directory, "missing"),
+    clientInfo: { name: "missing_engine_test", title: "Missing engine test", version: "1" },
+    isShuttingDown: () => stopping,
+    onMessage() {},
+    onConnected() {},
+    onDisconnected() {},
+  });
+  try {
+    await expect(bridge.request("modelProvider/capabilities/read", {})).rejects.toMatchObject({ code: "ENOENT" });
+    expect(bridge.connected).toBe(false);
+  } finally {
+    stopping = true;
+    bridge.cancelRestart();
+    bridge.rejectPending(Error("Test closed"));
+    bridge.terminate();
+    rmSync(directory, { recursive: true, force: true });
   }
 });

@@ -1,3 +1,16 @@
+import { CreativeAssetSlots } from "./slots.js";
+import { ObjectStorageError } from "../../object-storage/contracts.js";
+import { originalStorageErrorMessages } from "../../../shared/storage/messages.js";
+import { errorPayload } from "../../i18n/error-payload.js";
+import { CREATIVE_ASSET_KINDS } from "../../../shared/creative/assets.js";
+import { creativeFilePreview } from "../../../shared/creative/file-types.js";
+import {
+  respondCreativeInline,
+  respondCreativeBytes,
+  creativeByteSelection,
+  type CreativeByteSelection,
+} from "./inline.js";
+import sharp from "sharp";
 import type { Route, RouteContext } from "../../http/router.js";
 import { readJsonBody } from "../../http/body.js";
 import { respondJson } from "../../http/respond.js";
@@ -14,41 +27,51 @@ import { creativeWebBundleRoutes } from "./web-bundle-routes.js";
 
 /** Root selection is an application authorization decision, never a path, package type or client-supplied owner. */
 export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[] {
-  const active = new Map<string, number>();
-  let total = 0;
+  const slots = new CreativeAssetSlots();
   const protect = (
     handler: (context: RouteContext, signal: AbortSignal) => unknown | Promise<unknown>,
     heavy = false,
   ) =>
     documentRouteProtection(async (ctx) => {
-      const owner = heavy ? options.owner(ctx) : "",
-        count = active.get(owner) ?? 0;
-      if (heavy && (count >= 2 || total >= 4)) throw new DocumentError("busy", 429);
-      if (heavy) {
-        active.set(owner, count + 1);
-        total++;
-      }
       const controller = new AbortController(),
         abort = () => {
           if (!ctx.res.writableEnded) controller.abort();
         };
       ctx.req.once("aborted", abort);
       ctx.res.once("close", abort);
+      const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]);
+      let release = () => {};
       try {
-        await handler(ctx, AbortSignal.any([controller.signal, AbortSignal.timeout(45000)]));
+        if (heavy) release = await slots.acquire(options.owner(ctx), signal);
+        if (signal.aborted) throw new DocumentError("unavailable", 503);
+        await handler(ctx, signal);
       } catch (error) {
+        if (error instanceof ObjectStorageError) {
+          respondJson(
+            ctx.res,
+            error.code === "storageConflict"
+              ? 409
+              : ["storageDenied", "storageAuthenticationRequired"].includes(error.code)
+                ? 403
+                : 503,
+            {
+              ...errorPayload(
+                error.code === "storageConflict" ? "documents.conflict" : originalStorageErrorMessages[error.code],
+              ),
+              code: error.code,
+              retryable: error.retryable,
+            },
+            { "cache-control": "private, no-store" },
+          );
+          return;
+        }
         if (error instanceof ProjectContentError && error.code === "invalidFile")
           throw new DocumentError("invalidInput");
         throw error;
       } finally {
         ctx.req.removeListener("aborted", abort);
         ctx.res.removeListener("close", abort);
-        if (heavy) {
-          total--;
-          const remaining = (active.get(owner) ?? 1) - 1;
-          if (remaining) active.set(owner, remaining);
-          else active.delete(owner);
-        }
+        release();
       }
     });
   return [
@@ -94,7 +117,7 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
           owner = options.owner(ctx),
           project = projectContentId(q.get("project")),
           service = await options.write(owner, project),
-          kind = fileChoice(q.get("kind"), ["web", "slides"]),
+          kind = fileChoice(q.get("kind"), CREATIVE_ASSET_KINDS),
           input = {
             id: creativeAssetId(q.get("id")),
             operationId: projectContentId(q.get("operationId")),
@@ -114,42 +137,85 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
       handler: protect(async (ctx, signal) => {
         const project = projectContentId(ctx.url.searchParams.get("project")),
           service = await options.read(options.owner(ctx), project),
-          value = await service.read(project, creativeAssetId(ctx.url.searchParams.get("id")), signal, true);
+          value = await service.detail(project, creativeAssetId(ctx.url.searchParams.get("id")), signal);
         respondJson(ctx.res, 200, {
           asset: value.asset,
           text: value.text,
           sections: value.sections,
           ...(value.previewHtml ? { previewHtml: value.previewHtml } : {}),
+          ...(value.previewTruncated ? { previewTruncated: true } : {}),
+          ...(value.previewUnavailable ? { previewUnavailable: true } : {}),
         });
       }, true),
     },
     {
       path: "/api/creative-assets/content",
-      method: "GET",
-      handler: protect(async (ctx) => {
+      method: ["GET", "HEAD"],
+      handler: protect(async (ctx, signal) => {
         const project = projectContentId(ctx.url.searchParams.get("project")),
           service = await options.read(options.owner(ctx), project),
-          value = await service.original(project, creativeAssetId(ctx.url.searchParams.get("id"))),
-          name = ctx.url.searchParams.get("resource"),
-          resource =
-            name === null
-              ? { name: value.asset.source.name, bytes: value.bytes }
-              : value.resources.find((r) => r.name === name);
-        if (
-          ctx.url.searchParams.has("version") &&
-          fileDigest(ctx.url.searchParams.get("version")) !== value.asset.version
-        )
-          throw new DocumentError("conflict", 409);
-        if (!resource) throw new DocumentError("notFound", 404);
+          name = ctx.url.searchParams.get("resource") ?? undefined,
+          value = await service.resource(project, creativeAssetId(ctx.url.searchParams.get("id")), {
+            name,
+            signal,
+            version: ctx.url.searchParams.has("version") ? fileDigest(ctx.url.searchParams.get("version")) : undefined,
+            select: () => ({ head: ctx.req.method === "HEAD" }),
+          });
         ctx.res.writeHead(200, {
           "content-type": "application/octet-stream",
-          "content-length": String(resource.bytes.length),
+          "content-length": String(value.resource.size),
           "cache-control": "private, no-store",
           "x-content-type-options": "nosniff",
           "content-security-policy": "sandbox; default-src 'none'",
-          "content-disposition": "attachment; filename*=UTF-8''" + encodeURIComponent(resource.name),
+          "cross-origin-resource-policy": "same-origin",
+          "referrer-policy": "no-referrer",
+          "content-disposition": "attachment; filename*=UTF-8''" + encodeURIComponent(value.resource.name),
         });
-        ctx.res.end(resource.bytes);
+        ctx.res.end(value.bytes);
+      }, true),
+    },
+    {
+      path: "/api/creative-assets/view",
+      method: ["GET", "HEAD"],
+      handler: protect(async (ctx, signal) => {
+        const project = projectContentId(ctx.url.searchParams.get("project")),
+          service = await options.read(options.owner(ctx), project),
+          variant = ctx.url.searchParams.get("variant");
+        if (variant !== null && variant !== "cover") throw new DocumentError("invalidInput");
+        let selection: CreativeByteSelection | undefined;
+        const value = await service.resource(project, creativeAssetId(ctx.url.searchParams.get("id")), {
+          signal,
+          version: fileDigest(ctx.url.searchParams.get("version")),
+          select: (asset, resource) => {
+            const preview = creativeFilePreview(resource.name);
+            if (
+              ["slides", "web"].includes(asset.kind) ||
+              preview.kind === "download" ||
+              (variant === "cover" && preview.kind !== "image")
+            )
+              throw new DocumentError("invalidInput");
+            if (variant === "cover") return {};
+            selection = creativeByteSelection(ctx, resource.size, resource.digest);
+            return { head: selection.head, range: selection.range };
+          },
+        });
+        if (variant === "cover") {
+          const cover = await sharp(value.bytes!, { limitInputPixels: 40_000_000 })
+            .rotate()
+            .resize(512, 320, { fit: "inside", withoutEnlargement: true })
+            .webp({ quality: 75 })
+            .toBuffer();
+          respondCreativeInline(ctx, cover, "image/webp", "cover.webp", value.asset.source.digest + "-cover-v1");
+          return;
+        }
+        respondCreativeBytes(
+          ctx,
+          value.bytes,
+          creativeFilePreview(value.resource.name).mime,
+          value.resource.name,
+          value.resource.digest,
+          selection!,
+        );
       }, true),
     },
     {
@@ -183,6 +249,47 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
           ),
         );
       }, true),
+    },
+    {
+      path: "/api/creative-assets/permanent-delete",
+      method: "POST",
+      handler: protect(async (ctx) => {
+        const body = fileRecord(await readJsonBody(ctx.req), ["project", "id", "version", "operationId"]),
+          owner = options.owner(ctx),
+          project = projectContentId(body.project),
+          service = await options.write(owner, project);
+        respondJson(
+          ctx.res,
+          202,
+          await service.permanentDelete(
+            owner,
+            project,
+            creativeAssetId(body.id),
+            fileDigest(body.version),
+            projectContentId(body.operationId),
+          ),
+          { "cache-control": "private, no-store" },
+        );
+      }),
+    },
+    {
+      path: "/api/creative-assets/purge",
+      method: ["GET", "POST"],
+      handler: protect(async (ctx) => {
+        const body =
+            ctx.req.method === "POST"
+              ? fileRecord(await readJsonBody(ctx.req), ["project", "id"])
+              : { project: ctx.url.searchParams.get("project"), id: ctx.url.searchParams.get("id") },
+          owner = options.owner(ctx),
+          project = projectContentId(body.project),
+          service = await options.write(owner, project);
+        respondJson(
+          ctx.res,
+          200,
+          await service.purgeStatus(project, creativeAssetId(body.id), ctx.req.method === "POST"),
+          { "cache-control": "private, no-store" },
+        );
+      }),
     },
     {
       path: "/api/creative-assets/availability",

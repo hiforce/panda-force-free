@@ -2,6 +2,7 @@
 ARG BUILD_BASE=hiforceai/panda-force-build-base:deps-7fc21178477adfc2@sha256:d1b3e34b9afe1405a52181f54b233e2ad1eedc7eb45babfd58548afbdaf6adf5
 ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base:deps-7fc21178477adfc2@sha256:7d5b745416b1321c73ebd6cf1b08535d3757de8ddb63c7bdf67a6312265c32c8
 FROM ${BUILD_BASE} AS build
+USER root
 WORKDIR /app
 COPY scripts/build/dependencies.mjs /opt/panda-force-dependencies.mjs
 RUN node /opt/panda-force-dependencies.mjs capture /app /tmp/panda-force-base-dependencies.json /opt/panda-force-dependencies.sha256 \
@@ -38,7 +39,13 @@ RUN --mount=type=secret,id=cdn_credentials \
     fi
 
 FROM ${RUNTIME_BASE} AS runtime
+USER root
 WORKDIR /app
+ARG INSTALL_VIDEO_TOOLS=1
+RUN if [ "$INSTALL_VIDEO_TOOLS" = "1" ]; then \
+      apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
 COPY scripts/build/dependencies.mjs /opt/panda-force-dependencies.mjs
 RUN node /opt/panda-force-dependencies.mjs capture /app /tmp/panda-force-base-dependencies.json /opt/panda-force-dependencies.sha256 \
     && rm -rf patches
@@ -62,6 +69,7 @@ ENV BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 \
     HOME=/home/codex \
     CODEX_HOME=/home/codex/.codex \
     PANDA_FORCE_HOME=/var/lib/panda-force \
+    XDG_CACHE_HOME=/var/lib/panda-force/cache \
     PANDA_FORCE_DEFAULT_CWD=/home/codex/workspace \
     PANDA_FORCE_DEFAULT_APP_SERVER_MODE=isolated \
     HOST=0.0.0.0 \

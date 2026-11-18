@@ -2203,3 +2203,16 @@
     display: none;
   }
 }
+
+.creative-native-image {
+  display: block;
+  max-inline-size: 100%;
+  max-block-size: 70dvh;
+  margin-inline: auto;
+  object-fit: contain;
+}
+.creative-native-media {
+  display: block;
+  inline-size: 100%;
+  max-block-size: 70dvh;
+}

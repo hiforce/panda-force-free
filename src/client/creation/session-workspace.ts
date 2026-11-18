@@ -1,3 +1,7 @@
+import { creationStateMessage } from "./state.js";
+import { creationDocumentArtifact } from "../../shared/creation/contracts.js";
+import { LazyCreativeAssetsPanel } from "../creative/assets-lazy.js";
+import { creativeAssetsApi } from "../creative/assets-api.js";
 import { parkMessageComposer } from "../message-composer-placement.js";
 import type {
   CreationSessionDomain,
@@ -9,7 +13,7 @@ import type { EngineItem } from "../../shared/engine/types.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import { creationSessionRoute } from "./session-route.js";
 import { creationApiFor, CreationApiError } from "./api.js";
-import { CreationActivity, creationActive, creationStateLabels } from "./activity.js";
+import { CreationActivity, creationActive } from "./activity.js";
 import { CreationCards } from "./cards.js";
 import { previousCreationRounds } from "./activity-conversation.js";
 import { documentTreeApi } from "../documents/authoring/tree-api.js";
@@ -23,6 +27,7 @@ import { buildComposerInput } from "../composer-attachments.js";
 import { sessionSkillContext } from "../../shared/session-skills.js";
 import { CreationSkillDiscovery } from "./skill-discovery.js";
 import { defaultCreationEffort } from "../../shared/creation/effort.js";
+import { defaultCreationOutput } from "../../shared/creation/default-output.js";
 
 export interface CreationWorkspaceBridge {
   controls(): SessionControlView;
@@ -43,6 +48,7 @@ export interface CreationWorkspaceBridge {
 
 /** Creation owns public task data; one shared composer, renderer, viewport and inspector own all interaction surfaces. */
 export class CreationSessionWorkspace implements CreationSessionDomain {
+  private assetViewer: LazyCreativeAssetsPanel | null = null;
   private route: ReturnType<typeof creationSessionRoute> = null;
   private task?: CreationTaskDetail;
   private epoch = 0;
@@ -169,6 +175,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     clearTimeout(this.timer);
     this.activity?.hide();
     this.discovery.hide();
+    this.assetViewer?.close();
     this.sections.replaceChildren();
     this.actions.remove();
     this.task = undefined;
@@ -245,7 +252,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
                     ? task.failure === "targetChanged"
                       ? "creation.reviewRequired"
                       : "creation.failed"
-                    : creationStateLabels[task.state],
+                    : creationStateMessage(task),
             ),
             detail: "",
             icon: task.question
@@ -280,7 +287,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     const saved = this.savedDocument(),
       selected =
         this.task?.document ||
-        (saved?.artifact
+        (saved?.artifact?.kind === "document"
           ? {
               ...saved.artifact,
               title: saved.artifact.title || saved.prompt.slice(0, 100),
@@ -289,15 +296,16 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
           : undefined);
     const signature = JSON.stringify([
       selected,
+      saved?.artifact,
       this.task?.documentStatus,
-      saved?.artifact?.file,
+      creationDocumentArtifact(saved?.artifact)?.file,
       [...this.previous.keys()],
       this.task?.goal,
       document.documentElement.lang,
     ]);
     if (signature !== this.sectionSignature) {
       this.sectionSignature = signature;
-      this.selectedDocument.hidden = !selected;
+      this.selectedDocument.hidden = !selected && !saved?.artifact;
       this.versions.hidden = !saved?.artifact;
       this.brief.hidden = !this.task;
       if (this.task) {
@@ -317,12 +325,19 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
           });
         });
       }
+      if (saved?.artifact && saved.artifact.kind !== "document") {
+        const asset = saved.artifact;
+        setMessageHtml(
+          this.selectedDocument,
+          `<div class="session-section-heading"><h3>${messageHtml("creative.saved", {}, this.t)}</h3></div><p data-i18n-ignore>${e(asset.title)}</p><p class="session-caption" data-i18n-ignore>${e(asset.source.name)}</p><a class="wb-button" href="${e(creativeAssetsApi.content(asset.projectId, asset.assetId, asset.version))}" download>${messageHtml("creative.assetDownload", {}, this.t)}</a>`,
+        );
+      }
       if (selected) {
         const projectLabel =
             this.task?.document?.projectId === "personal"
               ? this.t("creation.personalDestination")
               : this.task?.document?.projectName,
-          file = saved?.artifact?.file,
+          file = creationDocumentArtifact(saved?.artifact)?.file,
           locationOpen = this.selectedDocument.querySelector<HTMLDetailsElement>(".creation-file-location")?.open;
         setMessageHtml(
           this.selectedDocument,
@@ -336,7 +351,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
             .filter(({ task }) => task.artifact)
             .map(
               ({ task }) =>
-                `<a class="creation-output-version" href="/creation/${encodeURIComponent(task.id)}?creationScope=${this.route?.scope}">${codexIcon("file")}<span><strong>${messageHtml("creation.savedRevision", { version: task.artifact!.revision || 1 }, this.t)}</strong><time>${e(new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</time></span></a>`,
+                `<a class="creation-output-version" href="/creation/${encodeURIComponent(task.id)}?creationScope=${this.route?.scope}">${codexIcon("file")}<span><strong>${task.artifact?.kind === "document" ? messageHtml("creation.savedRevision", { version: task.artifact.revision || 1 }, this.t) : messageHtml("creative.saved", {}, this.t)}</strong><time>${e(new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</time></span></a>`,
             )
             .join("")}`,
         );
@@ -370,7 +385,9 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   }
   private renderActions() {
     if (!this.route) return;
-    const parent = document.querySelector(".workspace-context-actions")!;
+    const artifact = this.savedDocument()?.artifact,
+      openLabel = artifact && artifact.kind !== "document" ? "creative.open" : "creation.openDocument",
+      parent = document.querySelector(".workspace-context-actions")!;
     if (this.actions.parentNode !== parent) parent.prepend(this.actions);
     const signature = JSON.stringify([
       this.route.id,
@@ -382,7 +399,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.actions.dataset.signature = signature;
     setMessageHtml(
       this.actions,
-      `<a class="icon-button" href="/create" data-creation-new>${codexIcon("plus")}</a><a class="icon-button" href="/create?view=works" data-creation-works>${codexIcon("folderOpen")}</a>${this.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon("file")}<span>${messageHtml("creation.openDocument", {}, this.t)}</span></button>` : ""}`,
+      `<a class="icon-button" href="/create" data-creation-new>${codexIcon("plus")}</a><a class="icon-button" href="/create?view=works" data-creation-works>${codexIcon("folderOpen")}</a>${this.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon("file")}<span>${messageHtml(openLabel, {}, this.t)}</span></button>` : ""}`,
     );
     localizeAttribute(
       this.actions.querySelector("[data-creation-new]"),
@@ -398,6 +415,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       {},
       this.t,
     );
+    localizeAttribute(this.actions.querySelector("[data-creation-open]"), "aria-label", openLabel, {}, this.t);
     this.actions
       .querySelector<HTMLButtonElement>("[data-creation-open]")
       ?.addEventListener("click", () => this.openDocument());
@@ -413,13 +431,27 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   private openDocument() {
     if (this.task?.documentStatus === "unavailable") return;
     const saved = this.savedDocument();
-    const document = this.task?.document || saved?.artifact;
+    const artifact = saved?.artifact;
+    if (artifact && artifact.kind !== "document") {
+      this.assetViewer ??= new LazyCreativeAssetsPanel(this.t, "creationArtifactViewer", this.identity);
+      const epoch = this.epoch;
+      void this.assetViewer
+        .follow(artifact.projectId, artifact.assetId, async () => {}, artifact.version)
+        .catch(() => {
+          if (epoch === this.epoch) localizeText(this.notice, "documents.unavailable", {}, this.t);
+        });
+      return;
+    }
+    const document = this.task?.document || creationDocumentArtifact(artifact);
     if (saved && document)
       this.navigate(
         "/documents?" +
           new URLSearchParams({
             project:
-              document.projectId ?? saved.artifact?.location?.projectId ?? saved.artifact?.projectId ?? saved.projectId,
+              document.projectId ??
+              creationDocumentArtifact(saved.artifact)?.location?.projectId ??
+              saved.artifact?.projectId ??
+              saved.projectId,
             document: document.documentId,
           }),
       );
@@ -731,8 +763,19 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
         model: control.model,
         effort: control.effort,
       };
-      if (route.id) this.pending = { id, request };
-      else {
+      if (route.id) {
+        this.sending.add(route.key);
+        try {
+          const outputType =
+            this.task?.artifact && this.task.state === "succeeded"
+              ? defaultCreationOutput(await this.api.options())
+              : undefined;
+          if (epoch !== this.epoch) return;
+          this.pending = { id, request: { ...request, ...(outputType ? { outputType } : {}) } };
+        } finally {
+          this.sending.delete(route.key);
+        }
+      } else {
         this.sending.add(route.key);
         try {
           const [options, tree] = await Promise.all([this.api.options(), documentTreeApi.read("personal")]);
@@ -747,6 +790,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
               parentId: null,
               locale: document.documentElement.lang,
               profileId: options.defaultProfileId,
+              outputType: defaultCreationOutput(options),
             },
           };
         } finally {

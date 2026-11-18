@@ -102,7 +102,7 @@ export class CreationFileRelocations {
       frozen.identity !== destination.identity
     )
       throw new CreationError("conflict");
-    const located = await locations.after(plan.owner, plan.conversationId, version.id);
+    const located = await locations.after(plan.owner, plan.lineageId ?? plan.conversationId, version.id);
     if (
       located &&
       (located.id !== id ||
@@ -146,11 +146,11 @@ export class CreationFileRelocations {
     await removeRelocatedFile(
       source,
       frozen,
-      plan.conversationId,
+      plan.lineageId ?? plan.conversationId,
       () => this.afterStep?.("taken") ?? Promise.resolve(),
     );
     await this.afterStep?.("removed");
-    await locations.advance(plan.owner, plan.conversationId, version.id, {
+    await locations.advance(plan.owner, plan.lineageId ?? plan.conversationId, version.id, {
       ...relocated,
       directoryIdentity: destination.identity,
     });

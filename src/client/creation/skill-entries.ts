@@ -11,6 +11,8 @@ export function creationSkillEntries(
   capabilities: readonly SkillCapability[],
   allOutputs = false,
 ): CreationSkillEntry[] {
+  const supported = (output: (typeof pack.manifest.skills)[number]["outputTypes"][number]) =>
+    output === "document" || capabilities.includes(`generate.${output}`);
   return pack.manifest.skills
     .map((original) => {
       const definition = skillDisplayDefinition(pack, original);
@@ -30,15 +32,14 @@ export function creationSkillEntries(
         visible: !internalExecutionSkill(pack, definition),
         enabled:
           availableInstalledSkill(pack, definition) &&
-          definition.outputTypes.includes("document") &&
-          definition.composition.appliesTo.includes("document") &&
+          definition.outputTypes.some(supported) &&
+          definition.composition.appliesTo.some(supported) &&
           definition.capabilities.every((value) => capabilities.includes(value)),
       };
     })
     .filter(
       (entry) =>
         allOutputs ||
-        (entry.definition.outputTypes.includes("document") &&
-          entry.definition.composition.appliesTo.includes("document")),
+        (entry.definition.outputTypes.some(supported) && entry.definition.composition.appliesTo.some(supported)),
     );
 }

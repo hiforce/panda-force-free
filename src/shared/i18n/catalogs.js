@@ -33,10 +33,11 @@ import m0_30 from "./locales/en/skillWorkspace.json";
 import m0_31 from "./locales/en/skills.json";
 import m0_32 from "./locales/en/social.json";
 import m0_33 from "./locales/en/sources.json";
-import m0_34 from "./locales/en/templates.json";
-import m0_35 from "./locales/en/usage.json";
-import m0_36 from "./locales/en/users.json";
-import m0_37 from "./locales/en/workbench.json";
+import m0_34 from "./locales/en/storage.json";
+import m0_35 from "./locales/en/templates.json";
+import m0_36 from "./locales/en/usage.json";
+import m0_37 from "./locales/en/users.json";
+import m0_38 from "./locales/en/workbench.json";
 export const englishMessages = {
   "accounts": m0_0,
   "approvals": m0_1,
@@ -72,8 +73,9 @@ export const englishMessages = {
   "skills": m0_31,
   "social": m0_32,
   "sources": m0_33,
-  "templates": m0_34,
-  "usage": m0_35,
-  "users": m0_36,
-  "workbench": m0_37,
+  "storage": m0_34,
+  "templates": m0_35,
+  "usage": m0_36,
+  "users": m0_37,
+  "workbench": m0_38,
 };
