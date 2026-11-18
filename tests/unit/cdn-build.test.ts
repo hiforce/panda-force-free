@@ -71,6 +71,19 @@ test("rewrites feature chunks, workers, CSS fonts and images before hashing and 
   expect(changed.assets["/style.css"]).toEqual(first.assets["/style.css"]);
 });
 
+test("preserves extension metadata while checking explicit relative and absolute static paths", async () => {
+  const f = fixture();
+  const metadata = 'export const accept = ".png,.jpg,.jpeg,.webp,.gif,.avif"; export const extension = ".png";';
+  f.options.assets.set("/file-picker.js", Buffer.from(metadata));
+  const manifest = await publishAssets(f.options);
+  expect(f.objects.get(manifest.assets["/file-picker.js"].key)!.toString()).toBe(metadata);
+  for (const path of ["/missing.png", "./missing.png", "../missing.png", "./missing.bundle.js?retry=1"]) {
+    const g = fixture();
+    g.options.assets.set("/missing.js", Buffer.from(`export const load = () => import(${JSON.stringify(path)});`));
+    await expect(publishAssets(g.options)).rejects.toThrow("Missing static dependency");
+  }
+});
+
 test("fails on missing or cyclic dependencies and corrupt objects", async () => {
   const f = fixture();
   f.options.assets.set("/bad.js", Buffer.from('import("/missing.bundle.js")'));

@@ -38,7 +38,7 @@ function references(path, text, assets) {
     else if (
       /\.(?:m?js|css|wasm|woff2?|ttf|otf|png|svg|jpe?g|webp|avif)(?:[?#]|$)/i.test(value) &&
       !clean.startsWith("/api/") &&
-      (value.startsWith("/") || value.startsWith("."))
+      /^(?:\/|\.\.?\/)/.test(value)
     )
       throw new Error(`Missing static dependency ${value} in ${path}`);
   };
