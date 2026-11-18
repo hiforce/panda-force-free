@@ -4,7 +4,7 @@ import { creativeFileExtension, creativeFilePreview } from "../../shared/creativ
 import { escapeHtml as e } from "../../shared/html.js";
 import { creativeAssetsApi } from "../creative/assets-api.js";
 import { request } from "../http-client.js";
-import { setMessageHtml } from "../i18n.js";
+import { setMessageHtml, messageHtml, messageAttributes, localizeText } from "../i18n.js";
 
 /** Receipts render immediately. Only visible image covers transfer bytes; opening uses the protected original viewer. */
 export function appendCreationArtifact(host: HTMLElement, artifact: CreationArtifact, t: Translate) {
@@ -24,7 +24,7 @@ export function appendCreationArtifact(host: HTMLElement, artifact: CreationArti
       : "";
   setMessageHtml(
     node,
-    `<h3 data-i18n-ignore>${e(artifact.title || t("creation.savedFile"))}</h3>${asset ? `<p class="creation-artifact-file" data-i18n-ignore>${e(asset.source.name)}</p><p class="creation-artifact-meta"><span data-i18n-ignore>${e(format)} · ${e(size)}</span><span data-artifact-dimensions></span></p>` : artifact.kind === "document" && artifact.file ? `<p class="creation-artifact-file" data-i18n-ignore>${e(artifact.file.path.split("/").at(-1) || "")}</p>` : ""}${image ? `<button type="button" class="creation-artifact-preview" data-creation-action="open" aria-label="${e(t("creative.assetOpenOriginal"))}"><img alt="${e(artifact.title || "")}" decoding="async" hidden><span data-artifact-loading role="status">${e(t("documents.loading"))}</span></button><p class="creation-artifact-error" role="status" hidden><span>${e(t("creation.previewFailed"))}</span> <button type="button" class="wb-button" data-artifact-retry>${e(t("common.retry"))}</button></p>` : ""}${asset && (media === "video" || media === "audio") ? `<${media} class="creation-artifact-media" hidden controls preload="none" playsinline aria-label="${e(asset.title)}"></${media}><button type="button" class="wb-button" data-artifact-play>${e(t("creation.playMedia"))}</button><p class="creation-artifact-error" data-artifact-media-error role="status" hidden>${e(t("creative.assetPreviewFailed"))} <button type="button" class="wb-button" data-artifact-media-retry>${e(t("common.retry"))}</button></p>` : ""}<div class="creation-artifact-actions"><button type="button" class="wb-button primary" data-creation-action="open">${e(t(artifact.kind === "document" ? "creation.openDocument" : image ? "creative.assetOpenOriginal" : "creative.open"))}</button>${asset ? `<a class="wb-button" href="${e(creativeAssetsApi.content(asset.projectId, asset.assetId, asset.version))}" download>${e(t("creative.assetDownload"))}</a>` : ""}</div>`,
+    `<h3 data-i18n-ignore>${artifact.title ? e(artifact.title) : messageHtml("creation.savedFile", {}, t)}</h3>${asset ? `<p class="creation-artifact-file" data-i18n-ignore>${e(asset.source.name)}</p><p class="creation-artifact-meta"><span data-i18n-ignore>${e(format)} · ${e(size)}</span><span data-artifact-dimensions></span></p>` : artifact.kind === "document" && artifact.file ? `<p class="creation-artifact-file" data-i18n-ignore>${e(artifact.file.path.split("/").at(-1) || "")}</p>` : ""}${image ? `<button type="button" class="creation-artifact-preview" data-creation-action="open" ${messageAttributes("aria-label", "creative.assetOpenOriginal", {}, t)}><img alt="${e(artifact.title || "")}" decoding="async" hidden><span data-artifact-loading role="status">${messageHtml("documents.loading", {}, t)}</span></button><p class="creation-artifact-error" role="status" hidden><span>${messageHtml("creation.previewFailed", {}, t)}</span> <button type="button" class="wb-button" data-artifact-retry>${messageHtml("common.retry", {}, t)}</button></p>` : ""}${asset && (media === "video" || media === "audio") ? `<${media} class="creation-artifact-media" hidden controls preload="none" playsinline aria-label="${e(asset.title)}"></${media}><button type="button" class="wb-button" data-artifact-play>${messageHtml("creation.playMedia", {}, t)}</button><p class="creation-artifact-error" data-artifact-media-error role="status" hidden>${messageHtml("creative.assetPreviewFailed", {}, t)} <button type="button" class="wb-button" data-artifact-media-retry>${messageHtml("common.retry", {}, t)}</button></p>` : ""}<div class="creation-artifact-actions"><button type="button" class="wb-button primary" data-creation-action="open">${messageHtml(artifact.kind === "document" ? "creation.openDocument" : image ? "creative.assetOpenOriginal" : "creative.open", {}, t)}</button>${asset ? `<a class="wb-button" href="${e(creativeAssetsApi.content(asset.projectId, asset.assetId, asset.version))}" download>${messageHtml("creative.assetDownload", {}, t)}</a>` : ""}</div>`,
   );
   host.append(node);
   const player = node.querySelector<HTMLMediaElement>(".creation-artifact-media");
@@ -110,10 +110,12 @@ export function appendCreationArtifact(host: HTMLElement, artifact: CreationArti
       const width = Number(response.headers.get("x-panda-image-width")),
         height = Number(response.headers.get("x-panda-image-height"));
       if ([width, height].every((n) => Number.isSafeInteger(n) && n > 0 && n <= 40000000))
-        node.querySelector<HTMLElement>("[data-artifact-dimensions]")!.textContent = t("creation.imageDimensions", {
-          width: String(width),
-          height: String(height),
-        });
+        localizeText(
+          node.querySelector<HTMLElement>("[data-artifact-dimensions]")!,
+          "creation.imageDimensions",
+          { width: String(width), height: String(height) },
+          t,
+        );
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(blob);
       img.src = objectUrl;

@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
 import sharp from "sharp";
 import { createAppFixture, waitFor } from "../support/app-fixture.mjs";
+import { serverTranslator } from "../../src/server/i18n/messages.js";
 
 const out = process.env.PANDA_SAVED_ARTIFACT_PROOF || ".artifacts/creation-saved-artifacts";
 await mkdir(out, { recursive: true });
@@ -149,12 +150,37 @@ for (const kind of ["image", "video", "slides", "web", "document"]) {
         await card.locator("h3").waitFor();
         assert.equal(await card.locator("h3").textContent(), saved.artifact.title);
         await page.locator("#prompt").fill("Keep this unsent follow-up");
+        const switchLanguage = async () => {
+          for (const next of [locale === "en" ? "zh-CN" : "en", locale]) {
+            await page.locator(`[data-chrome-menu="${width < 768 ? "preferences" : "language"}"]`).click();
+            if (width < 768) await page.locator('[data-chrome-action="menu"][data-value="language"]').click();
+            await page.locator(`[data-chrome-action="locale"][data-value="${next}"]`).click();
+            await waitFor(() =>
+              page
+                .locator("html")
+                .getAttribute("lang")
+                .then((value) => value === next),
+            );
+            const action =
+              kind === "document" ? card.locator('[data-creation-action="open"]') : card.locator("a[download]");
+            assert.equal(
+              await action.textContent(),
+              serverTranslator(next)(kind === "document" ? "creation.openDocument" : "creative.assetDownload"),
+            );
+            assert.equal(await card.locator("h3").textContent(), saved.artifact.title);
+            assert.equal(await page.locator("#prompt").inputValue(), "Keep this unsent follow-up");
+          }
+        };
         if (kind === "image") {
           await card.locator(".creation-artifact-error:visible").waitFor();
           await card.locator("[data-artifact-retry]").click();
           await waitFor(() =>
             card.locator("img").evaluate((img) => img.complete && !img.hidden && img.naturalWidth > 0),
           );
+          assert.equal(covers, 2);
+          const source = await card.locator("img").getAttribute("src");
+          await switchLanguage();
+          assert.equal(await card.locator("img").getAttribute("src"), source);
           assert.equal(covers, 2);
           assert.equal(await page.locator("#prompt").inputValue(), "Keep this unsent follow-up");
           assert.match(await card.locator("[data-artifact-dimensions]").textContent(), /1122.*1402/);
@@ -183,12 +209,18 @@ for (const kind of ["image", "video", "slides", "web", "document"]) {
             player.currentTime = 1;
           });
           assert.equal(await player.evaluate((player) => player.videoHeight), 1280);
+          await switchLanguage();
+          assert.equal(await player.evaluate((player) => player.currentTime), 1);
           await card.locator('[data-creation-action="open"]').click();
         } else if (kind === "document") {
+          await switchLanguage();
           await page.screenshot({ path: `${out}/${kind}-${locale}-${width}.png` });
           await card.locator('[data-creation-action="open"]').click();
           await page.waitForURL((url) => url.pathname === "/documents");
-        } else await card.locator('[data-creation-action="open"]').click();
+        } else {
+          await switchLanguage();
+          await card.locator('[data-creation-action="open"]').click();
+        }
         if (kind !== "document") {
           const dialog = page.locator(".creative-asset-dialog[open]");
           await dialog.locator("a[download]").first().waitFor();
@@ -240,6 +272,7 @@ for (const kind of ["image", "video", "slides", "web", "document"]) {
           coverRecovery: kind === "image",
           inlinePlayback: kind === "video",
           overflow: false,
+          liveLanguageSwitching: true,
           errors: 0,
         });
         console.log("Saved artifact verified", kind, locale, width);
