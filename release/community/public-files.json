@@ -3064,6 +3064,7 @@
   "tests/integration/site-samples.integration.test.ts",
   "tests/integration/skill-catalog.integration.test.ts",
   "tests/integration/skill-management.integration.test.ts",
+  "tests/integration/skill-removal-api.integration.test.ts",
   "tests/integration/skill-workspace-mysql.integration.test.ts",
   "tests/integration/skills-mysql.integration.test.ts",
   "tests/integration/social-accounts.integration.test.ts",

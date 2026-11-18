@@ -1391,8 +1391,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 160460,
-      "sha256": "04287d869aa896780ffbaa2da5c324493fa083410b5912f8b30ce4e1b6e9f0a3",
+      "bytes": 160521,
+      "sha256": "8cdfa3506be541ec063a4282924c787b7a5d070f7e6c9db7d69f38a776b1188f",
       "mode": "100644"
     },
     {
@@ -12689,8 +12689,8 @@
     },
     {
       "path": "src/server/skills/integration/management-routes.ts",
-      "bytes": 3398,
-      "sha256": "a131aaeb014be67df38c5cc67cb3aeed6be03309c848a4f59a1a3e067b037a00",
+      "bytes": 3704,
+      "sha256": "ec239b197e21861f7c63be698a6595f24ea4f1dcfe36263d9a1f5bbfa597ac40",
       "mode": "100644"
     },
     {
@@ -18394,6 +18394,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/integration/skill-removal-api.integration.test.ts",
+      "bytes": 5021,
+      "sha256": "43a6a38e17660854849f86adc00c89525d66f3c1628091a66685bdd9260103fe",
+      "mode": "100644"
+    },
+    {
       "path": "tests/integration/skill-workspace-mysql.integration.test.ts",
       "bytes": 4042,
       "sha256": "a7979e89f6d33dc5e1b60a373097117bcd6f2da9bcb5742df787d7ebfd761e9b",
@@ -21130,5 +21136,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "35f17c4897a9ee90dcda1202b164cb86e4b11b67e102162601245e8aca17b0c1"
+  "contentSha256": "fa0d4b2f3771e8a5ae4e71010d56b4fa216b78e3081440a7bb3bd4bd23c4226b"
 }

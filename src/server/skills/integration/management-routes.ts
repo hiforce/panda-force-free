@@ -84,5 +84,13 @@ export function skillManagementRoutes(catalog: SkillCatalog, owner: (context: Ro
         respondJson(res, 200, await catalog.detail(installed.id, installed.version));
       }),
     },
+    {
+      path: "/api/skill-packs/remove",
+      method: "POST",
+      handler: protect(async ({ req, res }, actor) => {
+        const removed = await catalog.remove(await readJsonBody(req, 4096), actor);
+        respondJson(res, 200, await catalog.detail(removed.id, removed.version));
+      }),
+    },
   ];
 }
