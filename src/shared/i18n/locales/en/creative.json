@@ -145,5 +145,8 @@
   "assetPurgeRetry": "Retry cleanup",
   "assetPurgeCheck": "Check cleanup",
   "assetPurgeFailed": "Cleanup has not completed. Check the storage connection or retry.",
-  "assetPurging": "Deleting permanently"
+  "assetPurging": "Deleting permanently",
+  "assetCoverLoading": "Loading thumbnail…",
+  "assetCoverFailed": "Thumbnail unavailable. Open the file or retry.",
+  "assetRetryCover": "Retry thumbnail"
 }

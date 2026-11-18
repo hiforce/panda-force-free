@@ -140,9 +140,22 @@ run(
       expect(head.status).toBe(200);
       expect(head.headers.get("content-length")).toBe(String(png.length));
       expect(gets).toBe(beforeHead);
+      const beforeCovers = gets,
+        beforeCoverPuts = puts;
+      const covers = await Promise.all(
+        Array.from({ length: 6 }, () => f.raw("/api/creative-assets/view?" + q + "&variant=cover")),
+      );
+      for (const cover of covers) {
+        expect(cover.status).toBe(200);
+        expect(cover.headers.get("content-type")).toBe("image/webp");
+        expect(cover.headers.get("cache-control")).toBe("private, no-store");
+        expect((await sharp(Buffer.from(await cover.arrayBuffer())).metadata()).width).toBe(24);
+      }
+      expect(gets).toBe(beforeCovers + 1);
+      expect(puts).toBe(beforeCoverPuts);
       const invalid = await f.raw("/api/creative-assets/view?" + q, "GET", undefined, { range: "bytes=999999-" });
       expect(invalid.status).toBe(416);
-      expect(gets).toBe(beforeHead);
+      expect(gets).toBe(beforeCovers + 1);
       const copy = await f
         .application()
         .creations.copyFrom(
@@ -158,6 +171,7 @@ run(
         .creations.setState("alice", "project-1", saved.asset.id, saved.asset.version, "trashed", randomUUID());
       expect(deletes).toBe(0);
       expect((await f.call("/api/creative-assets/item?" + q)).status).toBe(404);
+      expect((await f.raw("/api/creative-assets/view?" + q + "&variant=cover")).status).toBe(404);
       const restored = await f
         .application()
         .creations.setState("alice", "project-1", saved.asset.id, trashed.asset.version, "saved", randomUUID());

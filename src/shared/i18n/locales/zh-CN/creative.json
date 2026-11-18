@@ -145,5 +145,8 @@
   "assetPurgeRetry": "重试清理",
   "assetPurgeCheck": "核对清理进度",
   "assetPurgeFailed": "清理尚未完成，请检查存储连接或重试。",
-  "assetPurging": "正在彻底删除"
+  "assetPurging": "正在彻底删除",
+  "assetCoverLoading": "正在加载缩略图…",
+  "assetCoverFailed": "缩略图暂不可用，可打开文件或重试。",
+  "assetRetryCover": "重试缩略图"
 }

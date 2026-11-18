@@ -4,6 +4,8 @@ import type { DocumentRecord } from "../../shared/documents/contracts.js";
 import type { CreativeAsset } from "../../shared/creative/assets.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { codexIcon } from "../codex-icons.js";
+import { creativeAssetsApi } from "./assets-api.js";
+import { messageAttributes } from "../i18n.js";
 
 export type CreativeCard = { kind: "document"; value: DocumentRecord } | { kind: "asset"; value: CreativeAsset };
 export type CreativeFilter = "all" | "document" | "slides" | "web" | "image" | "video" | "file" | "trash";
@@ -17,10 +19,11 @@ export function creativeCards(t: Translate, rows: CreativeCard[], personal: bool
         copy = asset ? "data-creative-copy-asset" : "data-creative-copy",
         icon = asset ? creativeKindIcons[asset.kind] : "file",
         label = t(asset ? creativeKindMessages[asset.kind] : "creative.document");
+      const image = asset?.kind === "image" && asset.state === "saved";
       const preview = asset
-        ? `<div class="creative-asset-cover" data-asset-kind="${asset.kind}"><span class="creative-asset-format">${e(creativeFileExtension(asset.source.name).toUpperCase())}</span>${codexIcon(icon)}<span class="creative-asset-cover-lines" aria-hidden="true"></span></div>`
+        ? `<div class="creative-asset-cover" data-asset-kind="${asset.kind}"><span class="creative-asset-format">${e(creativeFileExtension(asset.source.name).toUpperCase())}</span>${image ? `<img class="creative-thumbnail" data-creative-cover="${e(creativeAssetsApi.view(asset.project, asset.id, asset.version) + "&variant=cover")}" alt="" decoding="async" hidden><span class="sr-only" data-creative-cover-status></span>` : ""}${codexIcon(icon)}<span class="creative-asset-cover-lines" aria-hidden="true"></span></div>`
         : `<div class="creative-document-preview"><div class="creative-document-page"><small>${e(label)}</small><strong data-i18n-ignore>${e(d.title)}</strong><span class="creative-preview-lines" aria-hidden="true"></span></div></div>`;
-      return `<article class="creative-card" data-creative-kind="${asset?.kind ?? "document"}"><button type="button" class="creative-card-open" ${open}="${e(d.id)}">${preview}<h2>${codexIcon(icon)}<span data-i18n-ignore>${e(d.title)}</span></h2></button><footer><small>${e(asset?.state === "purging" ? t("creative.assetPurging") : asset ? label : t("creative.saved"))} · ${e(date(d.updatedAt))}</small><button type="button" class="icon-button" ${asset && asset.state !== "saved" ? "data-creative-asset" : copy}="${e(d.id)}" ${asset || personal ? "" : "hidden"} aria-label="${e(t(asset?.state === "purging" ? "creative.assetPurgeCheck" : asset?.state === "trashed" ? "creative.assetRestore" : "creative.copy"))}">${codexIcon(asset?.state === "purging" ? "refresh" : asset?.state === "trashed" ? "undo" : "copy")}</button></footer></article>`;
+      return `<article class="creative-card" data-creative-kind="${asset?.kind ?? "document"}"><button type="button" class="creative-card-open" ${open}="${e(d.id)}">${preview}<h2>${codexIcon(icon)}<span data-i18n-ignore>${e(d.title)}</span></h2></button>${image ? `<button type="button" class="icon-button creative-cover-retry" data-creative-cover-retry ${messageAttributes("aria-label", "creative.assetRetryCover", {}, t)} ${messageAttributes("title", "creative.assetRetryCover", {}, t)} hidden>${codexIcon("refreshCw")}</button>` : ""}<footer><small>${e(asset?.state === "purging" ? t("creative.assetPurging") : asset ? label : t("creative.saved"))} · ${e(date(d.updatedAt))}</small><button type="button" class="icon-button" ${asset && asset.state !== "saved" ? "data-creative-asset" : copy}="${e(d.id)}" ${asset || personal ? "" : "hidden"} aria-label="${e(t(asset?.state === "purging" ? "creative.assetPurgeCheck" : asset?.state === "trashed" ? "creative.assetRestore" : "creative.copy"))}">${codexIcon(asset?.state === "purging" ? "refreshCw" : asset?.state === "trashed" ? "undo" : "copy")}</button></footer></article>`;
     })
     .join("");
 }

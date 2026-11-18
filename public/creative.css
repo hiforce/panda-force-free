@@ -479,6 +479,7 @@
   gap: 20px;
 }
 .creative-card {
+  position: relative;
   border: 1px solid var(--pf-line);
   border-radius: 12px;
   overflow: hidden;
@@ -578,6 +579,7 @@
   background: var(--pf-soft);
 }
 .creative-asset-cover {
+  position: relative;
   height: var(--creative-cover-height);
   display: grid;
   align-content: center;
@@ -587,6 +589,36 @@
   color: var(--pf-accent);
   background: linear-gradient(135deg, var(--pf-soft), var(--pf-card));
   border-block-end: 1px solid var(--pf-line);
+}
+.creative-asset-cover .creative-thumbnail:not([hidden]) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--pf-soft);
+}
+.creative-card[data-cover-state="ready"] .creative-asset-cover > .icon-slot,
+.creative-card[data-cover-state="ready"] .creative-asset-cover-lines {
+  visibility: hidden;
+}
+.creative-card[data-cover-state="ready"] .creative-asset-format {
+  z-index: 1;
+  padding: var(--pf-space-1);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-card);
+  align-self: start;
+  position: absolute;
+  inset-block-start: var(--pf-space-2);
+  inset-inline-start: var(--pf-space-2);
+}
+.creative-cover-retry {
+  position: absolute;
+  inset-block-start: calc(var(--creative-cover-height) - var(--pf-touch-target, 44px) - var(--pf-space-2));
+  inset-inline-end: var(--pf-space-2);
+  min-width: var(--pf-touch-target, 44px);
+  min-height: var(--pf-touch-target, 44px);
+  background: var(--pf-card);
 }
 .creative-asset-cover .icon-slot,
 .creative-asset-cover .icon-slot svg {

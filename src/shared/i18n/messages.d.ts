@@ -1553,6 +1553,8 @@ export interface MessageParameters {
   "creative.assetBundleSummary": { "bytes": string; "files": number };
   "creative.assetContentType": {  };
   "creative.assetCopiedVersion": {  };
+  "creative.assetCoverFailed": {  };
+  "creative.assetCoverLoading": {  };
   "creative.assetDownload": {  };
   "creative.assetDownloadBundle": {  };
   "creative.assetDownloadOnly": {  };
@@ -1590,6 +1592,7 @@ export interface MessageParameters {
   "creative.assetRefreshNeeded": {  };
   "creative.assetReplace": {  };
   "creative.assetRestore": {  };
+  "creative.assetRetryCover": {  };
   "creative.assetSaveVersion": {  };
   "creative.assetSearchLoaded": {  };
   "creative.assetSlide": { "index": number };

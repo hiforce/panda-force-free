@@ -145,5 +145,8 @@
   "assetPurgeRetry": "重試清理",
   "assetPurgeCheck": "查看清理進度",
   "assetPurgeFailed": "清理尚未完成，請檢查儲存連線或重試。",
-  "assetPurging": "正在永久刪除"
+  "assetPurging": "正在永久刪除",
+  "assetCoverLoading": "正在載入縮圖…",
+  "assetCoverFailed": "縮圖暫時無法顯示，可開啟檔案或重試。",
+  "assetRetryCover": "重試縮圖"
 }

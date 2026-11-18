@@ -10,7 +10,7 @@ import {
   creativeByteSelection,
   type CreativeByteSelection,
 } from "./inline.js";
-import sharp from "sharp";
+import { CreativeAssetCovers } from "./covers.js";
 import type { Route, RouteContext } from "../../http/router.js";
 import { readJsonBody } from "../../http/body.js";
 import { respondJson } from "../../http/respond.js";
@@ -27,7 +27,8 @@ import { creativeWebBundleRoutes } from "./web-bundle-routes.js";
 
 /** Root selection is an application authorization decision, never a path, package type or client-supplied owner. */
 export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[] {
-  const slots = new CreativeAssetSlots();
+  const slots = new CreativeAssetSlots(),
+    covers = new CreativeAssetCovers();
   const protect = (
     handler: (context: RouteContext, signal: AbortSignal) => unknown | Promise<unknown>,
     heavy = false,
@@ -182,37 +183,27 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
           service = await options.read(options.owner(ctx), project),
           variant = ctx.url.searchParams.get("variant");
         if (variant !== null && variant !== "cover") throw new DocumentError("invalidInput");
+        const id = creativeAssetId(ctx.url.searchParams.get("id")),
+          version = fileDigest(ctx.url.searchParams.get("version"));
+        if (variant === "cover") {
+          const cover = await covers.read(options.owner(ctx), service, project, id, version, signal);
+          ctx.res.setHeader("x-panda-image-width", String(cover.width));
+          ctx.res.setHeader("x-panda-image-height", String(cover.height));
+          respondCreativeInline(ctx, cover.bytes, "image/webp", "cover.webp", version + "-cover-v1");
+          return;
+        }
         let selection: CreativeByteSelection | undefined;
-        const value = await service.resource(project, creativeAssetId(ctx.url.searchParams.get("id")), {
+        const value = await service.resource(project, id, {
           signal,
-          version: fileDigest(ctx.url.searchParams.get("version")),
+          version,
           select: (asset, resource) => {
             const preview = creativeFilePreview(resource.name);
-            if (
-              ["slides", "web"].includes(asset.kind) ||
-              preview.kind === "download" ||
-              (variant === "cover" && preview.kind !== "image")
-            )
+            if (["slides", "web"].includes(asset.kind) || preview.kind === "download")
               throw new DocumentError("invalidInput");
-            if (variant === "cover") return {};
             selection = creativeByteSelection(ctx, resource.size, resource.digest);
             return { head: selection.head, range: selection.range };
           },
         });
-        if (variant === "cover") {
-          const image = sharp(value.bytes!, { limitInputPixels: 40_000_000 }),
-            metadata = await image.metadata(),
-            rotated = (metadata.orientation ?? 1) >= 5,
-            cover = await image
-              .rotate()
-              .resize(512, 320, { fit: "inside", withoutEnlargement: true })
-              .webp({ quality: 75 })
-              .toBuffer();
-          ctx.res.setHeader("x-panda-image-width", String(rotated ? metadata.height : metadata.width));
-          ctx.res.setHeader("x-panda-image-height", String(rotated ? metadata.width : metadata.height));
-          respondCreativeInline(ctx, cover, "image/webp", "cover.webp", value.asset.source.digest + "-cover-v1");
-          return;
-        }
         respondCreativeBytes(
           ctx,
           value.bytes,

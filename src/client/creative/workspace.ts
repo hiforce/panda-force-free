@@ -10,6 +10,7 @@ import { DocumentModal } from "../documents/modal.js";
 import { codexIcon } from "../codex-icons.js";
 import type { CreativeAsset } from "../../shared/creative/assets.js";
 import { creativeAssetsApi } from "./assets-api.js";
+import { CreativeCovers } from "./covers.js";
 import { creativeCards, type CreativeCard, type CreativeFilter } from "./cards.js";
 import { LazyCreativeAssetsPanel } from "./assets-lazy.js";
 import type { ProjectReadAhead } from "./read-ahead.js";
@@ -33,6 +34,7 @@ export function createCreativeWorkspace(
     limit = 24,
     locale = "",
     followedAsset = "";
+  const covers = new CreativeCovers(t);
   let scope = "personal";
   let tree: ProjectDocumentTree = { projectId: scope, version: 0, nodes: [] };
   let assets: CreativeAsset[] = [],
@@ -135,6 +137,7 @@ export function createCreativeWorkspace(
           ? projectEmptyView(t, contribute)
           : `<p class="resource-empty">${e(t(!docsLoaded || !assetsLoaded ? "documents.loading" : failed ? "creative.assetLoadFailed" : cursor ? "creative.assetMoreAvailable" : query ? "creative.assetNoMatches" : filter === "trash" ? "creative.assetTrashEmpty" : "creative.empty"))}</p>`),
     );
+    covers.render(host.querySelector<HTMLElement>("[data-creative-grid]")!);
     const more = host.querySelector<HTMLButtonElement>("[data-creative-more]")!;
     more.hidden = list.length <= limit && !cursor;
     more.disabled = paging;
@@ -366,6 +369,7 @@ export function createCreativeWorkspace(
         return;
       }
       request?.abort();
+      covers.close();
       assetPanel.close();
       modal.close();
       composer?.dispose();
@@ -476,6 +480,7 @@ export function createCreativeWorkspace(
         host.onchange = null;
       }
       epoch++;
+      covers.close();
       request?.abort();
       assetPanel.close();
       paging = false;
