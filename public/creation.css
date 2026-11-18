@@ -579,6 +579,67 @@
   color: var(--pf-muted);
   line-height: 1.7;
 }
+.creation-artifact {
+  display: grid;
+  gap: var(--pf-space-2);
+  margin-block-start: var(--pf-space-3);
+  min-width: 0;
+}
+.creation-artifact > h3 {
+  margin: 0;
+  font-size: var(--pf-text-body);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.creation-artifact-file,
+.creation-artifact-meta,
+.creation-artifact-error {
+  margin: 0;
+  font-size: var(--pf-text-meta);
+  color: var(--pf-muted);
+  overflow-wrap: anywhere;
+}
+.creation-artifact-meta,
+.creation-artifact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pf-space-2);
+}
+.creation-artifact-preview {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 512px;
+  min-height: 120px;
+  padding: var(--pf-space-2);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius);
+  background: var(--pf-card);
+  color: var(--pf-muted);
+  cursor: zoom-in;
+}
+.creation-artifact-preview:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 2px;
+}
+.creation-artifact-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+}
+.creation-artifact [hidden] {
+  display: none;
+}
+.creation-artifact-media {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  border-radius: var(--pf-radius);
+}
+.creation-artifact-actions > .wb-button {
+  min-height: var(--pf-touch-target, 44px);
+}
 .creation-task > footer {
   display: flex;
   flex-wrap: wrap;

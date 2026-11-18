@@ -30,6 +30,7 @@ export class DocumentCreationPanel {
   private reads = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private skills: CreationSkills | null = null;
+  private cards: CreationCards | null = null;
   private afterClose: (() => void) | undefined;
   private readonly assets: LazyCreativeAssetsPanel;
   constructor(
@@ -58,6 +59,8 @@ export class DocumentCreationPanel {
     this.reads++;
     clearTimeout(this.timer);
     this.assets.close();
+    this.cards?.dispose();
+    this.cards = null;
     this.skills?.close();
     this.skills = null;
     this.dialog.close();
@@ -173,6 +176,7 @@ export class DocumentCreationPanel {
         report,
         creationApi,
       );
+    this.cards = cards;
     this.skills = new CreationSkills(
       get("[data-creation-skills]"),
       this.t,

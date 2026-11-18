@@ -6,6 +6,7 @@ import { setMessageHtml, errorText, messageHtml } from "../i18n.js";
 import { createUserInputCard } from "../user-input.js";
 import { creationStateMessage } from "./state.js";
 import { creationApi, CreationApiError } from "./api.js";
+import { appendCreationArtifact } from "./artifact-card.js";
 
 const failures: Record<CreationFailure, MessageId> = {
   interrupted: "creation.failedInterrupted",
@@ -20,6 +21,7 @@ export class CreationCards {
   private readonly cards = new Map<string, { node: HTMLElement; key: string }>();
   private readonly retries = new Map<string, string>();
   private readonly busy = new Set<string>();
+  private readonly artifacts = new Map<HTMLElement, () => void>();
   constructor(
     private readonly host: HTMLElement,
     private readonly t: Translate,
@@ -29,9 +31,16 @@ export class CreationCards {
     private readonly api: typeof creationApi = creationApi,
     private readonly options: { brief?: boolean; openAction?: boolean } = {},
   ) {}
+  dispose() {
+    for (const cleanup of this.artifacts.values()) cleanup();
+    this.artifacts.clear();
+    this.cards.clear();
+  }
   render(tasks: readonly CreationTaskView[]) {
     for (const [id, card] of this.cards)
       if (!tasks.some((task) => task.id === id)) {
+        this.artifacts.get(card.node)?.();
+        this.artifacts.delete(card.node);
         card.node.remove();
         this.cards.delete(id);
       }
@@ -53,6 +62,10 @@ export class CreationCards {
         previous = this.cards.get(task.id);
       let node = previous?.node;
       if (!node || previous?.key !== key) {
+        if (node) {
+          this.artifacts.get(node)?.();
+          this.artifacts.delete(node);
+        }
         const fresh = this.card(task);
         previous?.node.replaceWith(fresh);
         node = fresh;
@@ -111,6 +124,12 @@ export class CreationCards {
           trigger.disabled = false;
         });
     };
+    if (task.artifact) {
+      const content = document.createElement("div");
+      node.querySelector("footer")!.before(content);
+      this.artifacts.set(node, appendCreationArtifact(content, task.artifact, t));
+      node.querySelector('footer [data-creation-action="open"]')?.remove();
+    }
     if (task.question) {
       const question = task.question;
       node.querySelector("[data-creation-question]")!.append(

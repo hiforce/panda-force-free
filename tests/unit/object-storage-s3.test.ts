@@ -122,6 +122,7 @@ test("permanent cleanup deletes only the checked version and preserves a replace
   const client = new PrivateS3Client(connection, credentials, async (url, options) => {
     expect(url.searchParams.get("versionId")).toBe(expected.versionId);
     calls.push(options.method!);
+    if (options.method === "DELETE") expect(new Headers(options.headers).has("if-match")).toBe(false);
     return options.method === "HEAD"
       ? new Response(null, { headers: responseHeaders(expected) })
       : new Response(null, { status: 204 });

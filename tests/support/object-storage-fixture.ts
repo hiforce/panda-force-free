@@ -110,6 +110,19 @@ export async function objectStorageFixture() {
         signal: AbortSignal.timeout(10000),
       });
     };
+    // Process health can precede writable metadata readiness during MinIO's first boot.
+    const probeBucket = "/fixture-ready-" + randomUUID();
+    while (true) {
+      const probe = await request("PUT", probeBucket);
+      await probe.body?.cancel();
+      if (probe.status === 200) break;
+      if (probe.status !== 503 || Date.now() >= deadline)
+        throw new Error("Owned S3 fixture writes unavailable: " + probe.status);
+      await Bun.sleep(100);
+    }
+    const removed = await request("DELETE", probeBucket);
+    await removed.body?.cancel();
+    if (removed.status !== 204) throw new Error("Owned S3 fixture readiness cleanup failed");
     return {
       credentials,
       connection,

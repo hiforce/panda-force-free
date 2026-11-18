@@ -180,5 +180,8 @@
   "slidesDocumentOnly": "此技能提供簡報規劃指引，最終成品依你的需求與可用創作工具決定。",
   "videoDocumentOnly": "此技能提供影片規劃指引，最終成品依你的需求與可用創作工具決定。",
   "webDocumentOnly": "此技能提供網頁規劃指引，最終成品依你的需求與可用創作工具決定。",
-  "skillGuidance": "創作指引"
+  "skillGuidance": "創作指引",
+  "previewFailed": "圖片預覽載入失敗。可重試、檢視原圖或下載。",
+  "imageDimensions": "{width} × {height} 畫素",
+  "playMedia": "播放"
 }

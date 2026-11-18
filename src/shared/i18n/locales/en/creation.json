@@ -180,5 +180,8 @@
   "slidesDocumentOnly": "This skill supplies presentation planning guidance. The finished artifact follows your request and the available creation tools.",
   "videoDocumentOnly": "This skill supplies video planning guidance. The finished artifact follows your request and the available creation tools.",
   "webDocumentOnly": "This skill supplies web planning guidance. The finished artifact follows your request and the available creation tools.",
-  "skillGuidance": "Planning guidance"
+  "skillGuidance": "Planning guidance",
+  "previewFailed": "The image preview could not load. Retry, open the original or download it.",
+  "imageDimensions": "{width} × {height} pixels",
+  "playMedia": "Play"
 }

@@ -2,6 +2,7 @@ import { creationStateMessage } from "./state.js";
 import { creationDocumentArtifact } from "../../shared/creation/contracts.js";
 import { LazyCreativeAssetsPanel } from "../creative/assets-lazy.js";
 import { creativeAssetsApi } from "../creative/assets-api.js";
+import { creativeKindIcons } from "../../shared/creative/file-types.js";
 import { parkMessageComposer } from "../message-composer-placement.js";
 import type {
   CreationSessionDomain,
@@ -183,6 +184,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.goalWriting = false;
     this.route = null;
     this.reading = false;
+    this.cards?.dispose();
     this.cards = undefined;
     this.previous.clear();
     this.rendered.clear();
@@ -399,7 +401,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.actions.dataset.signature = signature;
     setMessageHtml(
       this.actions,
-      `<a class="icon-button" href="/create" data-creation-new>${codexIcon("plus")}</a><a class="icon-button" href="/create?view=works" data-creation-works>${codexIcon("folderOpen")}</a>${this.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon("file")}<span>${messageHtml(openLabel, {}, this.t)}</span></button>` : ""}`,
+      `<a class="icon-button" href="/create" data-creation-new>${codexIcon("plus")}</a><a class="icon-button" href="/create?view=works" data-creation-works>${codexIcon("folderOpen")}</a>${this.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon(artifact && artifact.kind !== "document" ? creativeKindIcons[artifact.kind] : "file")}<span>${messageHtml(openLabel, {}, this.t)}</span></button>` : ""}`,
     );
     localizeAttribute(
       this.actions.querySelector("[data-creation-new]"),

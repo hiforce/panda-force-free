@@ -180,5 +180,8 @@
   "slidesDocumentOnly": "此技能提供投影片策劃指引，最終成品按你的要求及可用創作工具決定。",
   "videoDocumentOnly": "此技能提供影片策劃指引，最終成品按你的要求及可用創作工具決定。",
   "webDocumentOnly": "此技能提供網頁策劃指引，最終成品按你的要求及可用創作工具決定。",
-  "skillGuidance": "創作指引"
+  "skillGuidance": "創作指引",
+  "previewFailed": "未能載入圖片預覽。可重試、查看原圖或下載。",
+  "imageDimensions": "{width} × {height} 像素",
+  "playMedia": "播放"
 }

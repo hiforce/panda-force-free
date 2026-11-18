@@ -180,5 +180,8 @@
   "slidesDocumentOnly": "此技能提供幻灯片策划指导，最终成品由你的需求和可用的创作工具决定。",
   "videoDocumentOnly": "此技能提供视频策划指导，最终成品由你的需求和可用的创作工具决定。",
   "webDocumentOnly": "此技能提供网页策划指导，最终成品由你的需求和可用的创作工具决定。",
-  "skillGuidance": "创作指导"
+  "skillGuidance": "创作指导",
+  "previewFailed": "图片预览加载失败。可重试、查看原图或下载。",
+  "imageDimensions": "{width} × {height} 像素",
+  "playMedia": "播放"
 }

@@ -200,11 +200,16 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
           },
         });
         if (variant === "cover") {
-          const cover = await sharp(value.bytes!, { limitInputPixels: 40_000_000 })
-            .rotate()
-            .resize(512, 320, { fit: "inside", withoutEnlargement: true })
-            .webp({ quality: 75 })
-            .toBuffer();
+          const image = sharp(value.bytes!, { limitInputPixels: 40_000_000 }),
+            metadata = await image.metadata(),
+            rotated = (metadata.orientation ?? 1) >= 5,
+            cover = await image
+              .rotate()
+              .resize(512, 320, { fit: "inside", withoutEnlargement: true })
+              .webp({ quality: 75 })
+              .toBuffer();
+          ctx.res.setHeader("x-panda-image-width", String(rotated ? metadata.height : metadata.width));
+          ctx.res.setHeader("x-panda-image-height", String(rotated ? metadata.width : metadata.height));
           respondCreativeInline(ctx, cover, "image/webp", "cover.webp", value.asset.source.digest + "-cover-v1");
           return;
         }

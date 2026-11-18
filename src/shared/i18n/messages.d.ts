@@ -1430,6 +1430,7 @@ export interface MessageParameters {
   "creation.historyOnDemand": {  };
   "creation.historyUnavailable": {  };
   "creation.identityRequired": {  };
+  "creation.imageDimensions": { "height": string; "width": string };
   "creation.imageDocumentOnly": {  };
   "creation.initialCreation": {  };
   "creation.invalidInput": {  };
@@ -1466,6 +1467,8 @@ export interface MessageParameters {
   "creation.pendingSubmission": {  };
   "creation.personalDestination": {  };
   "creation.pickerHint": {  };
+  "creation.playMedia": {  };
+  "creation.previewFailed": {  };
   "creation.previousCreation": {  };
   "creation.previousRound": {  };
   "creation.privateAnswer": {  };

@@ -259,11 +259,11 @@ export class PrivateS3Client {
     const current = await this.head(key, expected.versionId, signal);
     if (!current) return;
     if (!sameObject(current, expected)) throw new ObjectStorageError("storageIntegrity");
-    // An explicit null version also removes the original after an administrator enables bucket versioning later.
+    // Delete the verified immutable key's exact version, including null after bucket versioning changes.
+    // AWS rejects combining If-Match with versionId; never fall back to deleting the current object.
     const result = await this.request("DELETE", key, {
       versionId: expected.versionId,
       signal,
-      headers: { "if-match": expected.etag },
     });
     await result.response.body?.cancel();
     if (![200, 204, 404].includes(result.response.status)) throw new ObjectStorageError("storageConflict");

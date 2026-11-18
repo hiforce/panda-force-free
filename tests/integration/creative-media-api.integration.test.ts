@@ -106,6 +106,9 @@ test("real media and passive files retain their original bytes across HTTP previ
       if (input.kind === "image") {
         const cover = await f.raw("/api/creative-assets/view?" + reference + "&variant=cover");
         expect(cover.status).toBe(200);
+        expect(cover.headers.get("x-panda-image-width")).toBe("48");
+        expect(cover.headers.get("x-panda-image-height")).toBe("32");
+        expect(cover.headers.get("cache-control")).toBe("private, no-store");
         expect((await sharp(Buffer.from(await cover.arrayBuffer())).metadata()).format).toBe("webp");
       }
       const copy = await f.call("/api/creative-assets/copy", "POST", {
