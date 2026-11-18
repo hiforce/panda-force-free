@@ -7103,8 +7103,8 @@
     },
     {
       "path": "src/server/creation/integration/rendering/native-video.ts",
-      "bytes": 9563,
-      "sha256": "0cb7b0cf09732430f58f937cbfd5ad7be94765dcd05d5f0d6b640fd52ae4146e",
+      "bytes": 10281,
+      "sha256": "56b5a7a24c0e3747b15e073777a78fc3bd20ef74f3fc7cacef891b60953e004c",
       "mode": "100644"
     },
     {
@@ -20021,8 +20021,8 @@
     },
     {
       "path": "tests/unit/creation-video-process.test.ts",
-      "bytes": 4197,
-      "sha256": "edf0c51b53e5a119cc9943fb997cc08d8ea40cf54159c63c1c8250e1d2ff3920",
+      "bytes": 5825,
+      "sha256": "f3c6d1a39f23e5241183762c8c63090da3393d69e3da6696d6f0965012857a2b",
       "mode": "100644"
     },
     {
@@ -21658,5 +21658,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "1d4ae264e8c458bc1084d4beeed30d06b72ceca914796f6e267ce5837c4f85ad"
+  "contentSha256": "1f125caf4513e629c6f86c73993c296d80ac14115378a14b5845e40859cb0731"
 }

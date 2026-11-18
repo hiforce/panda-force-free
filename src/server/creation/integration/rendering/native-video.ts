@@ -14,7 +14,11 @@ export class NativeCreationVideoRenderer {
   private readonly ffmpeg: string;
   private readonly ffprobe: string;
   private readonly family: string;
-  constructor(root: string, env: NodeJS.ProcessEnv = process.env) {
+  constructor(
+    root: string,
+    env: NodeJS.ProcessEnv = process.env,
+    private readonly readinessProbe: () => Promise<boolean> = () => this.check(),
+  ) {
     this.root = resolve(root);
     this.ffmpeg = env.PANDA_FORCE_CREATION_FFMPEG || "ffmpeg";
     this.ffprobe = env.PANDA_FORCE_CREATION_FFPROBE || "ffprobe";
@@ -22,9 +26,23 @@ export class NativeCreationVideoRenderer {
   }
   available() {
     if (this.probe && this.probe.expires > Date.now()) return this.probe.work;
-    const work = this.check().catch(() => false);
-    this.probe = { expires: Date.now() + 30000, work };
+    const work = this.probeReadiness().then((available) => {
+      if (this.probe?.work === work) this.probe.expires = Date.now() + (available ? 30000 : 1000);
+      return available;
+    });
+    this.probe = { expires: Infinity, work };
     return work;
+  }
+  private async probeReadiness() {
+    // Local capability checks may briefly fail during startup; never retain that result for the successful cache period.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        if (await this.readinessProbe()) return true;
+      } catch {
+        // Each bounded probe owns and closes its children before a second attempt.
+      }
+    }
+    return false;
   }
   private async check() {
     if (process.env.XDG_CACHE_HOME) {
@@ -39,12 +57,13 @@ export class NativeCreationVideoRenderer {
     )
       return false;
     const options = { signal: new AbortController().signal, timeoutMs: 2500 },
-      [encoder, filters, probe, font] = await Promise.all([
+      children = [
         creationVideoProcess(this.ffmpeg, ["-hide_banner", "-h", "encoder=libx264"], options),
         creationVideoProcess(this.ffmpeg, ["-hide_banner", "-filters"], options),
         creationVideoProcess(this.ffprobe, ["-version"], options),
         creationVideoProcess("fc-match", ["-f", "%{family}", this.family], options),
-      ]);
+      ] as const,
+      [encoder, filters, probe, font] = await Promise.all(children).finally(() => Promise.allSettled(children));
     if (
       !encoder.includes("Encoder libx264") ||
       !filters.includes("zoompan") ||

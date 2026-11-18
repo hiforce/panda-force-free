@@ -3,6 +3,7 @@ import { mkdtemp, readFile, access, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { creationVideoProcess } from "../../src/server/creation/integration/rendering/video-process.js";
+import { NativeCreationVideoRenderer } from "../../src/server/creation/integration/rendering/native-video.js";
 import { creationVideoComposition } from "../../src/server/creation/integration/rendering/video-composition.js";
 
 test("video process arguments are literal, child environment excludes application secrets, output and deadlines are bounded", async () => {
@@ -94,4 +95,46 @@ test("video composition rejects unbounded duration, unsupported fields and multi
     { scenes: [{ ...scene, text: "x\0y" }] },
   ])
     expect(() => creationVideoComposition(value)).toThrow();
+});
+
+test("video readiness coalesces callers, retries one cold failure and caches only a verified success for the long period", async () => {
+  let calls = 0;
+  let finish: ((value: boolean) => void) | undefined;
+  const renderer = new NativeCreationVideoRenderer(join(tmpdir(), "video-readiness"), {}, async () => {
+    if (++calls === 1) throw new DOMException("Cold process startup", "TimeoutError");
+    return new Promise<boolean>((resolve) => {
+      finish = resolve;
+    });
+  });
+  const first = renderer.available(),
+    second = renderer.available();
+  expect(first).toBe(second);
+  const deadline = Date.now() + 2000;
+  while (!finish) {
+    if (Date.now() > deadline) throw Error("Readiness retry did not start");
+    await Bun.sleep(1);
+  }
+  expect(calls).toBe(2);
+  finish(true);
+  expect(await first).toBe(true);
+  expect(await second).toBe(true);
+  expect(await renderer.available()).toBe(true);
+  expect(calls).toBe(2);
+});
+
+test("unavailable video tools stay unavailable after two checks and can recover promptly after installation repair", async () => {
+  let ready = false,
+    calls = 0;
+  const renderer = new NativeCreationVideoRenderer(join(tmpdir(), "video-readiness"), {}, async () => {
+    calls++;
+    return ready;
+  });
+  expect(await renderer.available()).toBe(false);
+  expect(calls).toBe(2);
+  expect(await renderer.available()).toBe(false);
+  expect(calls).toBe(2);
+  ready = true;
+  await Bun.sleep(1100);
+  expect(await renderer.available()).toBe(true);
+  expect(calls).toBe(3);
 });
