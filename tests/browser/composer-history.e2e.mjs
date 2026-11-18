@@ -27,14 +27,17 @@ try {
     }
   };
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("**/api/composer/history", (route) =>
-    route.fulfill({ json: { entries: [{ text: "older CLI message" }, { text: "first line\nsecond line" }] } }),
+  await page.route("**/api/composer/history?*", (route) =>
+    route.fulfill({
+      json: { entries: [{ text: "older CLI message" }, { text: "first line\nsecond line" }], nextCursor: null },
+    }),
   );
-  await page.goto(base, { waitUntil: "networkidle" });
+  await page.goto(base + "/new", { waitUntil: "networkidle" });
   await page.waitForFunction(() => globalThis.__pandaForceDebug?.syncTurnSnapshot);
   const prompt = page.locator("#prompt");
   await prompt.focus();
   await page.keyboard.press("ArrowUp");
+  await page.waitForFunction(() => document.querySelector("#prompt").value === "first line\nsecond line");
   assert.equal(await prompt.inputValue(), "first line\nsecond line");
   // Interior positions move vertically; endpoint positions continue recall.
   await page.evaluate(() => document.querySelector("#prompt").setSelectionRange(6, 6));

@@ -1,6 +1,6 @@
 import type { Route, RouteContext } from "../http/router.js";
 import { readJsonBody, RequestBodyError } from "../http/body.js";
-import { respondJson } from "../http/respond.js";
+import { respondJson, respondReadJson } from "../http/respond.js";
 import { matchesRequestOrigin } from "../auth/origin.js";
 import { errorPayload } from "../i18n/error-payload.js";
 import { SkillWorkspaceError } from "../../shared/skill-workspace.js";
@@ -54,14 +54,17 @@ export function skillWorkspaceRoutes(
     {
       path: "/api/skill-workspace",
       method: "GET",
-      handler: protect(async ({ url, res }, actor) => {
+      handler: protect(async ({ url, req, res }, actor) => {
         if (
           [...url.searchParams.keys()].some((key) => key !== "view") ||
           url.searchParams.getAll("view").length > 1 ||
           (url.searchParams.has("view") && url.searchParams.get("view") !== "categories")
         )
           throw new SkillWorkspaceError("invalidInput");
-        respondJson(res, 200, await service.snapshot(actor, url.searchParams.get("view") === "categories"));
+        const started = performance.now();
+        const snapshot = await service.snapshot(actor, url.searchParams.get("view") === "categories");
+        res.setHeader("Server-Timing", `skill-workspace;dur=${(performance.now() - started).toFixed(2)}`);
+        respondReadJson(req, res, 200, snapshot);
       }),
     },
     {

@@ -3,7 +3,7 @@ import { focusMenuSelection, bindMenuDismiss } from "./session-controls/menu.js"
 import { createSessionModelCache } from "./session-controls/model-cache.js";
 import { createModelCatalogLoader } from "./session-controls/model-loader.js";
 import { createTaskCompletionNotifications } from "./session-controls/notifications.js";
-import { errorMessage } from "../shared/errors.js";
+import { errorCode, errorMessage } from "../shared/errors.js";
 import { findElement, requireElement } from "./dom.js";
 import { localizeAttribute, messageAttributes, messageHtml, setMessageHtml, setOpaqueText } from "./i18n.js";
 import { codexIcon } from "./codex-icons.js";
@@ -26,6 +26,7 @@ export function createSessionControls({
   addPersistentError,
   mutations,
   onSettingsChanged = () => {},
+  onModelsLoaded = () => {},
 }) {
   const { syncTaskNotifySettings, setTaskNotifyEnabled, maybeNotifyTaskCompleted } = createTaskCompletionNotifications({
     $,
@@ -78,8 +79,15 @@ export function createSessionControls({
     accept: (models) => {
       mutations.set("models", models);
       renderModels();
+      onModelsLoaded();
     },
-    failed: (error) => addPersistentError(errorMessage(error, t("errors.couldNotLoadModels")), { key: "model-load" }),
+    failed: (error) =>
+      addPersistentError(
+        errorCode(error) === "model_catalog_timeout"
+          ? { messageId: "errors.modelLoadTimedOut" }
+          : errorMessage(error, t("errors.couldNotLoadModels")),
+        { key: "model-load" },
+      ),
   });
   function modelDisplay(model, stripPrefix = false) {
     const value = String(model?.displayName || model?.model || state.selectedModel || "Select model").trim();

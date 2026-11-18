@@ -121,6 +121,38 @@ test("model catalog joins concurrent callers, reports one terminal failure and p
   expect(accepted).toHaveLength(1);
 });
 
+test("model catalog identifies its own deadline and preserves native failures", async () => {
+  const failures: unknown[] = [];
+  let mode = "timeout";
+  const load = createModelCatalogLoader({
+    request: async (signal: AbortSignal) => {
+      if (mode === "timeout")
+        return new Promise((_, reject) =>
+          signal.addEventListener(
+            "abort",
+            () => reject(new DOMException("signal is aborted without reason", "AbortError")),
+            { once: true },
+          ),
+        );
+      if (mode === "native") throw new Error("Provider declined the request");
+      return { type: "rpc/result", result: { data: [{ id: "model-a", model: "model-a" }] } };
+    },
+    setStatus: () => {},
+    changed: () => {},
+    accept: () => {},
+    failed: (error: unknown) => failures.push(error),
+  });
+  expect(await load({ attempts: 1, timeoutMs: 5 })).toBe(false);
+  expect(failures[0]).toMatchObject({ code: "model_catalog_timeout" });
+  expect((failures[0] as Error).cause).toBeInstanceOf(DOMException);
+  mode = "native";
+  expect(await load({ attempts: 1 })).toBe(false);
+  expect((failures[1] as Error).message).toBe("Provider declined the request");
+  mode = "ready";
+  expect(await load({ attempts: 1 })).toBe(true);
+  expect(failures).toHaveLength(2);
+});
+
 test("render focus keeps complete selections, ignores external focus and supports non-text controls", () => {
   const root = documentFixture();
   root.innerHTML = '<textarea id="draft">A complete draft</textarea><input id="count" type="number" value="4">';

@@ -23,6 +23,7 @@ export class CreationSkillDiscovery {
   private loading = false;
   private cursor: string | null = null;
   private initialized = false;
+  private failed = false;
   private query = "";
   private signature = "";
   private closeDetails?: () => void;
@@ -93,6 +94,8 @@ export class CreationSkillDiscovery {
   private async load() {
     if (this.loading) return;
     this.loading = true;
+    this.failed = false;
+    this.notice.textContent = "";
     this.render();
     try {
       const result = await creationApi.skills(this.cursor || undefined);
@@ -106,6 +109,7 @@ export class CreationSkillDiscovery {
       this.initialized = true;
       this.notice.textContent = "";
     } catch {
+      this.failed = true;
       localizeText(this.notice, "creation.skillLoadFailed", {}, this.t);
       const retry = document.createElement("button");
       retry.type = "button";
@@ -124,6 +128,7 @@ export class CreationSkillDiscovery {
       this.selected(),
       this.query,
       this.loading,
+      this.failed,
       document.documentElement.lang,
       this.root.querySelector("[data-skill-category][aria-pressed=true]")?.getAttribute("data-skill-category"),
     ]);
@@ -157,7 +162,9 @@ export class CreationSkillDiscovery {
     setMessageHtml(
       this.grid,
       matches.map((entry) => creationDiscoverySkill(this.t, entry, this.selected())).join("") ||
-        `<p class="creation-skill-picker-hint">${this.t(this.loading ? "creation.loadingSkill" : this.query ? "creation.noSkillMatches" : "creation.noSkills")}</p>`,
+        (this.failed && !this.entries.length
+          ? ""
+          : `<p class="creation-skill-picker-hint">${this.t(this.loading || !this.initialized ? "creation.loadingSkill" : this.query || this.entries.length ? "creation.noSkillMatches" : "creation.noSkills")}</p>`),
     );
     this.more.hidden = !this.cursor;
     this.more.disabled = this.loading;

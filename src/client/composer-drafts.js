@@ -97,17 +97,43 @@ export function createComposerDrafts({
 
   const composerHistory = createComposerHistory();
   let composerHistoryLoaded = false;
-  async function loadComposerHistory() {
-    if (composerHistoryLoaded) return;
-    composerHistoryLoaded = true;
-    try {
-      const response = await fetch("/api/composer/history", { cache: "no-store" });
-      if (!response.ok) throw new Error();
-      const data = await response.json();
-      composerHistory.setPersistent(data.entries || []);
-    } catch {
-      composerHistoryLoaded = false;
-    }
+  /** @type {string | null} */
+  let historyCursor = null;
+  /** @type {Promise<void> | null} */
+  let historyRead = null;
+  function loadComposerHistory() {
+    if (historyRead) return historyRead;
+    if (composerHistoryLoaded && !historyCursor) return Promise.resolve();
+    historyRead = (async () => {
+      const signal = AbortSignal.timeout(15000);
+      for (;;) {
+        const query = new URLSearchParams({ limit: "20", ...(historyCursor ? { cursor: historyCursor } : {}) });
+        const response = await fetch("/api/composer/history?" + query, { cache: "no-store", signal });
+        if (!response.ok) {
+          if (response.status === 409) {
+            composerHistoryLoaded = false;
+            historyCursor = null;
+          }
+          if ([401, 403].includes(response.status)) composerHistory.setPersistent([]);
+          throw new Error("Input history read failed");
+        }
+        const data = await response.json();
+        if (
+          !Array.isArray(data.entries) ||
+          data.entries.some((entry) => typeof entry?.text !== "string") ||
+          (data.nextCursor !== null && (typeof data.nextCursor !== "string" || data.nextCursor === historyCursor))
+        )
+          throw new Error("Invalid input history response");
+        composerHistory.prependPersistent(data.entries);
+        historyCursor = data.nextCursor;
+        composerHistoryLoaded = true;
+        // A page containing only disallowed sessions is not the end of the caller's history.
+        if (data.entries.length || !historyCursor) return;
+      }
+    })().finally(() => {
+      historyRead = null;
+    });
+    return historyRead;
   }
 
   return {

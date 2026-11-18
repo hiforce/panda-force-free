@@ -38,6 +38,20 @@ export function createComposerHistory() {
       persistent = values.filter(valid).map(copy);
       reset();
     },
+    prependPersistent(values) {
+      const current = cursor === null ? null : entries()[cursor];
+      const previousCursor = cursor;
+      persistent = [...values.filter(valid).map(copy), ...persistent];
+      if (current) cursor = entries().findLastIndex((entry) => key(entry) === key(current));
+      else if (previousCursor !== null) cursor = entries().length;
+    },
+    canReadOlder(text, selectionStart, selectionEnd = selectionStart) {
+      return (
+        selectionStart === selectionEnd &&
+        (!text || (text === lastText && (selectionStart === 0 || selectionStart === text.length))) &&
+        (cursor === 0 || !entries().length)
+      );
+    },
     setReplay(values) {
       replay = values.filter(valid).map(copy);
       reset();

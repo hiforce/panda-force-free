@@ -855,6 +855,7 @@ export function startApplication() {
   install(
     composerInteractions,
     assembleComposerInteractions({
+      t: environment.t,
       mutations: environment.stateFor("composerInteractions").mutations,
       state: environment.stateFor("composerInteractions").state,
       $: environment.$,

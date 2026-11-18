@@ -21,6 +21,8 @@ export interface HistoryEntry {
 export interface ComposerHistory {
   reset(): void;
   setPersistent(entries: readonly HistoryEntry[]): void;
+  prependPersistent(entries: readonly HistoryEntry[]): void;
+  canReadOlder(text: string, start: number, end?: number): boolean;
   setReplay(entries: readonly HistoryEntry[]): void;
   record(entry: HistoryEntry): void;
   navigate(direction: number, text: string, start: number, end?: number): HistoryEntry | null;

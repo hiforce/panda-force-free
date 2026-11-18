@@ -54,5 +54,8 @@
   "collapsedInputHint": "Input collapsed · Expand to continue",
   "collapsedInputContents": "Files: {files, number} · Skills: {skills, number}",
   "manageFilesCount": "Files {count, number}",
-  "manageSkillsCount": "Skills {count, number}"
+  "manageSkillsCount": "Skills {count, number}",
+  "historyLoading": "Loading earlier inputs…",
+  "historyUnavailable": "Could not load input history. Press ↑ to retry; your current input is preserved.",
+  "historyEmpty": "No earlier input."
 }

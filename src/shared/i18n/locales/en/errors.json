@@ -37,5 +37,6 @@
   "unexpectedError": "Unexpected error",
   "engineRequestTimedOut": "Engine request timed out: {operation}",
   "bridgeRequestFailed": "Engine request failed",
-  "cdnBuildRequired": "CDN delivery is required, but the compiled assets are missing or invalid. Rebuild with the configured CDN settings."
+  "cdnBuildRequired": "CDN delivery is required, but the compiled assets are missing or invalid. Rebuild with the configured CDN settings.",
+  "modelLoadTimedOut": "Models took too long to load. Retry from the model selector."
 }

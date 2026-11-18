@@ -18,6 +18,11 @@ export interface SessionHistory {
   readComposerHistory(options?: {
     includeSession?: (id: string) => Promise<boolean>;
   }): Promise<Array<{ text: string }>>;
+  readComposerHistoryPage(options?: {
+    cursor?: string;
+    limit?: number;
+    includeSession?: (id: string) => Promise<boolean>;
+  }): Promise<{ entries: Array<{ text: string }>; nextCursor: string | null }>;
   subscribeSharedThread(value: unknown): Promise<void>;
   recordThreadStatus(threadId: string, status: unknown): void;
   recordFileChangeDiff(params: { threadId?: unknown; turnId?: unknown; changes?: unknown }): void;

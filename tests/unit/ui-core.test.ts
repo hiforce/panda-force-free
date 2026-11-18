@@ -212,3 +212,17 @@ describe("CLI composer history", () => {
     expect(history.navigate(-1, "", 0)).toEqual(entry);
   });
 });
+
+test("older persistent pages retain the recalled position without replacing edited input", () => {
+  const history = createComposerHistory();
+  expect(history.canReadOlder("", 0)).toBe(true);
+  expect(history.canReadOlder("an unsent draft", 0)).toBe(false);
+  history.prependPersistent([{ text: "recent" }]);
+  expect(history.navigate(-1, "", 0)?.text).toBe("recent");
+  expect(history.canReadOlder("recent", 6)).toBe(true);
+  history.prependPersistent([{ text: "earlier" }]);
+  expect(history.navigate(-1, "recent", 6)?.text).toBe("earlier");
+  expect(history.navigate(1, "earlier", 7)?.text).toBe("recent");
+  expect(history.canReadOlder("recent edited", 13)).toBe(false);
+  expect(history.navigate(-1, "recent edited", 13)).toBeNull();
+});

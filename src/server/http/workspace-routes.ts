@@ -10,7 +10,7 @@ import { resolveLocalImage } from "../workspace/images.js";
 import { searchWorkspaceFiles } from "../workspace/search.js";
 import { errorCode, errorMessage, errorStatus } from "./../../shared/errors.js";
 import type { RuntimeServices } from "./../services.js";
-import { respondError, respondJson } from "./respond.js";
+import { respondError, respondJson, respondReadJson } from "./respond.js";
 import type { Route } from "./router.js";
 import { streamResponseFile } from "./file-stream.js";
 
@@ -47,11 +47,22 @@ export function workspaceRoutes({
     {
       path: "/api/composer/history",
       method: "GET",
-      handler: async ({ res }) => {
+      handler: async ({ req, res, url }) => {
         try {
-          const entries = await threadHub.readComposerHistory(
-            directoryPolicy.allowExternal
-              ? undefined
+          if (
+            [...url.searchParams.keys()].some((key) => !["cursor", "limit"].includes(key)) ||
+            [...url.searchParams.keys()].some((key) => url.searchParams.getAll(key).length > 1)
+          )
+            return respondJson(res, 400, { messageId: "composer.historyUnavailable" });
+          const limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : 20;
+          if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50)
+            return respondJson(res, 400, { messageId: "composer.historyUnavailable" });
+          const started = performance.now();
+          const page = await threadHub.readComposerHistoryPage({
+            cursor: url.searchParams.get("cursor") ?? undefined,
+            limit,
+            ...(directoryPolicy.allowExternal
+              ? {}
               : {
                   includeSession: async (id) => {
                     try {
@@ -60,12 +71,15 @@ export function workspaceRoutes({
                       return false;
                     }
                   },
-                },
-          );
-          respondJson(res, 200, { entries });
+                }),
+          });
+          res.setHeader("Server-Timing", `input-history;dur=${(performance.now() - started).toFixed(2)}`);
+          respondReadJson(req, res, 200, page);
         } catch (error) {
           reportDiagnostic("composer.history", error);
-          respondJson(res, 500, { error: "Could not read composer history" });
+          respondJson(res, errorCode(error) === "composer_history_cursor" ? 409 : 500, {
+            messageId: "composer.historyUnavailable",
+          });
         }
       },
     },

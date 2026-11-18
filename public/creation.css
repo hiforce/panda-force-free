@@ -1,5 +1,6 @@
 /* Creation owns panel layout; shared workbench forms own control geometry and the product palette. */
-.creation-dialog [hidden] {
+.creation-dialog [hidden],
+.creation-skill-discovery [hidden] {
   display: none !important;
 }
 .creation-dialog {

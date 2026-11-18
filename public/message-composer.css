@@ -310,3 +310,14 @@
     margin-inline-start: auto;
   }
 }
+
+/* Input recall is requested explicitly and never occupies the initial composer layout. */
+.composer-history-status {
+  margin: 0;
+  padding: var(--pf-space-2) var(--composer-inset);
+  color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+}
+.composer-history-status[hidden] {
+  display: none;
+}

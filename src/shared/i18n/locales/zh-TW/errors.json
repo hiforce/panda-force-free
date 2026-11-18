@@ -37,5 +37,6 @@
   "unexpectedError": "出現意外錯誤",
   "engineRequestTimedOut": "引擎請求超時：{operation}",
   "bridgeRequestFailed": "引擎請求失敗",
-  "cdnBuildRequired": "已啟用 CDN，但編譯資源遺失或不完整。請使用已設定的 CDN 參數重新建置。"
+  "cdnBuildRequired": "已啟用 CDN，但編譯資源遺失或不完整。請使用已設定的 CDN 參數重新建置。",
+  "modelLoadTimedOut": "模型清單載入逾時，請從模型選擇器重試。"
 }

@@ -1,5 +1,5 @@
 import type { Route, RouteContext } from "../../http/router.js";
-import { respondJson } from "../../http/respond.js";
+import { respondJson, respondReadJson } from "../../http/respond.js";
 import { errorPayload } from "../../i18n/error-payload.js";
 import { reportDiagnostic } from "../../../shared/diagnostics.js";
 import type { SkillCatalog } from "../catalog/service.js";
@@ -21,9 +21,11 @@ export function skillCatalogRoutes(catalog: SkillCatalog, owner: (context: Route
           view = url.searchParams.get("view");
         if (view !== null && view !== "available") throw new SkillRegistryError("invalidInput");
         const availableOnly = activeOnly || view === "available",
+          started = performance.now(),
           page = await catalog.list(url.searchParams.get("cursor") ?? undefined, limit, availableOnly);
+        context.res.setHeader("Server-Timing", `skill-catalog;dur=${(performance.now() - started).toFixed(2)}`);
         if (!activeOnly)
-          return respondJson(context.res, 200, {
+          return respondReadJson(context.req, context.res, 200, {
             ...page,
             packages: availableOnly
               ? page.packages.filter((pack) =>
@@ -42,7 +44,11 @@ export function skillCatalogRoutes(catalog: SkillCatalog, owner: (context: Route
               ...skill,
             })),
         );
-        respondJson(context.res, 200, { revision: page.revision, skills, nextCursor: page.nextCursor });
+        respondReadJson(context.req, context.res, 200, {
+          revision: page.revision,
+          skills,
+          nextCursor: page.nextCursor,
+        });
       } catch (error) {
         if (error instanceof SkillRegistryError && error.code === "invalidInput")
           return respondJson(context.res, 400, { ...errorPayload("skills.invalidInput"), code: error.code });

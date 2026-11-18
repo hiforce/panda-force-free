@@ -68,6 +68,15 @@ export function assembleNotices({ mutations, $, state, t }) {
     );
     renderPersistentErrors();
   }
+  /** @param {string} key */
+  function removePersistentError(key) {
+    if (!state.persistentErrors.some((error) => error.key === key)) return;
+    mutations.set(
+      "persistentErrors",
+      state.persistentErrors.filter((error) => error.key !== key),
+    );
+    renderPersistentErrors();
+  }
   function dismissToast() {
     clearTimeout(toastTimer);
     toastAction = null;
@@ -111,6 +120,7 @@ export function assembleNotices({ mutations, $, state, t }) {
   return {
     getToastProject: () => toastAction?.project || null,
     addPersistentError,
+    removePersistentError,
     toast,
     dismissToast,
     renderPersistentErrors,

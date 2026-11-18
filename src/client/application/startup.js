@@ -66,7 +66,6 @@ export function assembleStartup({
       current = () => initialLoadGate.isCurrent(generation);
     accountPort.loadAccount(refreshAccount);
     void approvalsPort.refreshPendingApprovals();
-    composerPort.loadComposerHistory();
     void sidebarPort.loadProjectVisibility().catch(() => {});
     if (usagePort.usagePageVisible()) usagePort.loadUsage();
     if (!state.threads.length)

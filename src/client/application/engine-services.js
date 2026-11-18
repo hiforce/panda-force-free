@@ -285,10 +285,12 @@ export function assembleModels({
     postBridge: (path, payload, signal) => transportPort.postBridge(path, payload, signal),
     escapeHtml: (value) => escapeHtml(value),
     toast: /** @param {Parameters<typeof noticesPort.toast>} args */ (...args) => noticesPort.toast(...args),
-    addPersistentError: (message) => noticesPort.addPersistentError(message),
+    addPersistentError: /** @param {Parameters<typeof noticesPort.addPersistentError>} args */ (...args) =>
+      noticesPort.addPersistentError(...args),
     state,
     mutations,
     onSettingsChanged: () => viewUpdates.request("sessionWorkspace"),
+    onModelsLoaded: () => noticesPort.removePersistentError("model-load"),
   });
   function loadModels(options) {
     return workspacePreparation.track("models", loadModelsRaw(options));

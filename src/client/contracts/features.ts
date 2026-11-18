@@ -295,6 +295,7 @@ export interface ViewportPort {
 export interface NoticesPort {
   getToastProject: () => string | null;
   addPersistentError: (value: unknown, { key }?: { key?: string }) => void;
+  removePersistentError: (key: string) => void;
   toast: (
     text: string,
     duration?: number,

@@ -1259,6 +1259,9 @@ export interface MessageParameters {
   "composer.eachAttachmentMustBe25MibOrSmaller": {  };
   "composer.expandInput": {  };
   "composer.followUpHint": {  };
+  "composer.historyEmpty": {  };
+  "composer.historyLoading": {  };
+  "composer.historyUnavailable": {  };
   "composer.initBridgeRequired": {  };
   "composer.manageFilesCount": { "count": number };
   "composer.manageSkillsCount": { "count": number };
@@ -2290,6 +2293,7 @@ export interface MessageParameters {
   "errors.invalidSessionSelection": {  };
   "errors.messageNotSentConnectionInterrupted": {  };
   "errors.methodNotAllowed": {  };
+  "errors.modelLoadTimedOut": {  };
   "errors.projectNotFound": {  };
   "errors.tooManyAttemptsPleaseTryAgainInAFewMinutes": {  };
   "errors.unableToLoadUsageCheckCodexSignInAndRetry": {  };

@@ -54,5 +54,8 @@
   "collapsedInputHint": "输入框已收起，展开后继续对话",
   "collapsedInputContents": "{files, number} 个附件 · {skills, number} 个技能",
   "manageFilesCount": "附件 {count, number}",
-  "manageSkillsCount": "技能 {count, number}"
+  "manageSkillsCount": "技能 {count, number}",
+  "historyLoading": "正在读取较早的输入…",
+  "historyUnavailable": "未能加载输入历史，按 ↑ 重试；当前输入已保留。",
+  "historyEmpty": "没有更早的输入。"
 }

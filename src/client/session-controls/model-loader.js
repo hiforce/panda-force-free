@@ -22,7 +22,11 @@ export function createModelCatalogLoader({ request, setStatus, changed, accept, 
           accept(models);
           return true;
         } catch (error) {
-          lastError = error;
+          lastError = controller.signal.aborted
+            ? Object.assign(new Error("Model catalog request timed out", { cause: error }), {
+                code: "model_catalog_timeout",
+              })
+            : error;
           if (attempt + 1 < attempts) await new Promise((resolve) => setTimeout(resolve, retryDelayMs * (attempt + 1)));
         } finally {
           clearTimeout(timer);

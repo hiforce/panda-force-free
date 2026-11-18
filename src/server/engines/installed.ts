@@ -4,7 +4,7 @@ import { createQueueRecovery } from "../bridge/message-queue.js";
 import { readSharedRecoveryState } from "../bridge/shared-input.js";
 import { GoalStore, goalNotification } from "../conversation/goal-store.js";
 import { createThreadHub } from "../conversation/thread-hub.js";
-import { readComposerHistory } from "../conversation/composer-history.js";
+import { readComposerHistory, readComposerHistoryPage } from "../conversation/composer-history.js";
 import type { InstalledEngine, ReviewRecorder } from "./runtime-contract.js";
 import type { CodexConnection } from "./codex-transport.js";
 import { createCodexDriver } from "./codex.js";
@@ -75,6 +75,7 @@ export function createInstalledEngine({
     history: {
       ...history,
       readComposerHistory: (options) => readComposerHistory(resolve(history.sessionsRoot, ".."), options),
+      readComposerHistoryPage: (options) => readComposerHistoryPage(resolve(history.sessionsRoot, ".."), options),
     },
     goals: new GoalStore({
       home,

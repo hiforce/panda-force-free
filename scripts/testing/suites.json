@@ -173,6 +173,7 @@
     "browser/project-overview-loading.e2e.mjs",
     "browser/project-space-ai.e2e.mjs",
     "browser/creation-loading.e2e.mjs",
+    "browser/creation-discovery-recovery.e2e.mjs",
     "browser/engine-images.e2e.mjs",
     "browser/h5-creation-recovery.e2e.mjs"
   ],

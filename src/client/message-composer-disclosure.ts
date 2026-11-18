@@ -110,6 +110,7 @@ export function createComposerDisclosure(
         mergeStoredStates();
         scope = next;
         collapsed = states.get(scope) === true;
+        form.dispatchEvent(new CustomEvent("composer:scope-changed"));
       }
       refresh();
     },
