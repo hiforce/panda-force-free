@@ -1,6 +1,6 @@
 import type { Route, RouteContext } from "../../http/router.js";
 import { readJsonBody } from "../../http/body.js";
-import { respondJson } from "../../http/respond.js";
+import { respondJson, respondReadJson } from "../../http/respond.js";
 import { auditPrincipal } from "../../auth/audit-principal.js";
 import { documentRouteProtection as protect } from "../protection.js";
 import { DocumentError } from "../errors.js";
@@ -16,8 +16,8 @@ export function projectDocumentTreeRoutes(
     {
       path: "/api/project-document-tree",
       method: "GET",
-      handler: protect(async ({ res, url }) =>
-        respondJson(res, 200, await service.tree(text(url.searchParams.get("project"), 128))),
+      handler: protect(async ({ req, res, url }) =>
+        respondReadJson(req, res, 200, await service.tree(text(url.searchParams.get("project"), 128))),
       ),
     },
     {

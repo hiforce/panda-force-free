@@ -21,6 +21,8 @@ export function createSessionWorkspace(options) {
     executionSignature = "",
     controlLocation = "";
   let clock = 0;
+  let goalKey = "",
+    goalState = "";
   const controlHome = document.createComment("Session settings return here outside the desktop inspector");
   requireElement("#permissionPicker").before(controlHome);
   const goalHome = document.createComment("Goal status return location");
@@ -195,6 +197,17 @@ export function createSessionWorkspace(options) {
     if (creation) {
       setOpaqueText(requireElement("#modelLabel"), view.modelLabel);
       setOpaqueText(requireElement("#effortLabel"), view.effortLabel);
+      for (const attribute of ["aria-label", "title"])
+        localizeAttribute(
+          requireElement("#modelButton"),
+          attribute,
+          "common.modelAndReasoningSetting",
+          {
+            model: view.modelLabel,
+            level: view.effortLabel,
+          },
+          t,
+        );
     }
     requireElement("#sessionWorkingFolder").title = view.cwd;
     const status = view.status;
@@ -221,7 +234,14 @@ export function createSessionWorkspace(options) {
       status?.detail || t(hints[status?.state || ""] || "sessionview.idleHint"),
     );
     requireElement("#sessionPendingAction").hidden = !["approval", "question"].includes(status?.state || "");
-    requireElement("#sessionGoalPlan").hidden = !view.hasGoal;
+    const goalPlan = requireElement("#sessionGoalPlan"),
+      nextGoalKey = JSON.stringify([view.id, view.goal?.id || ""]),
+      nextGoalState = view.goal?.status || "";
+    goalPlan.hidden = !view.hasGoal;
+    if (nextGoalKey !== goalKey) goalPlan.open = nextGoalState === "active";
+    else if (nextGoalState === "active" && goalState !== "active") goalPlan.open = true;
+    goalKey = nextGoalKey;
+    goalState = nextGoalState;
     updateClock(view);
     if (view.status?.state === "running" && !document.hidden) {
       if (!clock) clock = window.setInterval(() => updateClock(read()), 1000);

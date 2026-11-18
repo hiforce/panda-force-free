@@ -23,5 +23,6 @@ export interface WorkbenchLayout {
   isFocused: () => boolean;
   setFocus: (focused: boolean) => void;
   setPanel: (panel: "navigation" | "details", open: boolean) => void;
+  setDocumentFocus: (active: boolean) => void;
   reconcileViewport: () => void;
 }

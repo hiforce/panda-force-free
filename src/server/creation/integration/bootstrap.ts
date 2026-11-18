@@ -70,7 +70,7 @@ export function createNativeCreationFeature(
       profiles: new CreationProfiles(
         settings,
         new Set(options.engineId === "codex" ? ["codex"] : []),
-        async () => creationDefaultModel(await options.models()),
+        async (_engineId, catalog) => creationDefaultModel(catalog ?? (await options.models())),
         options.models,
       ),
       engines: creationEngines({

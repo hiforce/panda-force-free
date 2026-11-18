@@ -21,7 +21,7 @@ try {
     try {
       const api = async (path, data, method = "post") => {
         if (path === "/api/projects" && data !== undefined && data.id === undefined) return app.legacyProject(data);
-        const res = await context.request[method](app.base + path, { data });
+        const res = await context.request[method](app.base + path, { headers: { Origin: app.base }, data });
         assert.ok(res.ok(), await res.text());
         return res.json();
       };

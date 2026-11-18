@@ -141,6 +141,7 @@ export function assembleSessionWorkspace({
           : null;
     const controls = modelsPort.sessionControlView();
     const model = controls.models.find((model) => model.id === controls.model);
+    const goal = id ? state.goals.get(id) : undefined;
     return {
       id,
       title: active?.name || active?.preview || "",
@@ -150,6 +151,7 @@ export function assembleSessionWorkspace({
       elapsedMs,
       usage: sessionUsageView(id ? state.tokenUsage.get(id) : undefined),
       hasGoal: Boolean(id && state.goals.has(id)),
+      goal: goal ? { id: goal.goalId, status: goal.status } : null,
       modelLabel: model?.label || t("workbench.modelUnavailable"),
       effortLabel: modelsPort.reasoningLabel(controls.effort),
       permissionLabel: controls.permissions.find((option) => option.id === controls.permission)?.label || "",

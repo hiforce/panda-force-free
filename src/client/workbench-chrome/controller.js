@@ -181,6 +181,9 @@ export function createWorkbenchChrome(options) {
     addEventListener("resize", position);
     addEventListener("panda-force:layout-changed", position);
     addEventListener("panda-force:appearance-changed", refresh);
+    addEventListener("panda-force:document-focus-changed", (event) => {
+      if (event instanceof CustomEvent) layout.setDocumentFocus(event.detail === true);
+    });
     mobile.addEventListener("change", () => {
       close(false);
       layout.reconcileViewport();
@@ -194,6 +197,8 @@ export function createWorkbenchChrome(options) {
       layout.setFocus(false);
       refresh();
     };
+    // The document workspace can mount before chrome listeners during a cold start.
+    layout.setDocumentFocus(document.body.dataset.documentNavigationFocus === "true");
     refresh();
   }
   return { bind, refresh };

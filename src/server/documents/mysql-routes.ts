@@ -1,6 +1,6 @@
 import { documentRouteProtection } from "./protection.js";
 import { readJsonBody } from "../http/body.js";
-import { respondJson } from "../http/respond.js";
+import { respondJson, respondReadJson } from "../http/respond.js";
 import type { Route } from "../http/router.js";
 import { DocumentError } from "./errors.js";
 import type { MySQLDocumentService } from "./mysql-service.js";
@@ -196,7 +196,7 @@ export function mysqlDocumentRoutes(
       method: ["GET", "PUT"],
       handler: protect(async ({ req, res, url }) => {
         const documentId = id(url);
-        if (req.method === "GET") return respondJson(res, 200, await service.detail(documentId));
+        if (req.method === "GET") return respondReadJson(req, res, 200, await service.detail(documentId));
         const input = await readJsonBody(req, 6 * 1024 * 1024);
         respondJson(res, 200, await service.saveDocument(documentId, input));
       }),

@@ -5,6 +5,7 @@ import { creationEngineProfile } from "./input-codec.js";
 import { CreationError } from "../contracts.js";
 import { creationId, creationRecord, creationText } from "../validation.js";
 import { isRecord } from "../../../shared/records.js";
+import { defaultCreationEffort } from "../../../shared/creation/effort.js";
 
 export interface CreationProfileSettings {
   profiles: readonly CreationEngineProfile[];
@@ -55,26 +56,38 @@ export class CreationProfiles {
   constructor(
     readonly settings: CreationProfileSettings,
     private readonly engines: ReadonlySet<string>,
-    private readonly defaultModel: (engineId: string) => Promise<string>,
+    private readonly defaultModel: (engineId: string, catalog?: unknown) => Promise<string>,
     private readonly models?: () => Promise<unknown>,
   ) {}
   async resolve(id: string, selection?: { model?: string; effort?: string }) {
     const configured = this.settings.profiles.find((profile) => profile.id === id);
     if (!this.settings.enabled || !configured || !this.engines.has(configured.engineId))
       throw new CreationError("unavailable");
+    const validate = Boolean(selection?.model || selection?.effort),
+      catalog = this.models && (validate || !configured.effort) ? await this.models() : undefined;
     const result = {
       ...configured,
-      model: configured.model ?? creationText(await this.defaultModel(configured.engineId), 128),
+      model: configured.model ?? creationText(await this.defaultModel(configured.engineId, catalog), 128),
     };
-    if (selection?.model || selection?.effort) {
-      const catalog = await this.models?.();
+    if (validate || catalog !== undefined) {
       if (!isRecord(catalog) || !Array.isArray(catalog.data)) throw new CreationError("unavailable");
       const model = catalog.data.find(
-        (entry) => isRecord(entry) && (entry.model ?? entry.id) === (selection.model || result.model),
+        (entry) => isRecord(entry) && (entry.model ?? entry.id) === (selection?.model || result.model),
       );
       if (!isRecord(model) || model.hidden === true) throw new CreationError("invalidInput");
       const efforts = Array.isArray(model.supportedReasoningEfforts) ? model.supportedReasoningEfforts : [];
-      const effort = selection.effort ?? model.defaultReasoningEffort;
+      const supported = efforts.flatMap((item) =>
+          isRecord(item) && typeof item.reasoningEffort === "string" ? [item.reasoningEffort] : [],
+        ),
+        effort =
+          selection?.effort ??
+          (!selection?.model || selection.model === result.model ? configured.effort : undefined) ??
+          (supported.length
+            ? defaultCreationEffort(
+                supported,
+                typeof model.defaultReasoningEffort === "string" ? model.defaultReasoningEffort : "",
+              )
+            : "");
       if (effort && !efforts.some((item) => isRecord(item) && item.reasoningEffort === effort))
         throw new CreationError("invalidInput");
       result.model = creationText(model.model ?? model.id, 128);

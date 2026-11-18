@@ -24,6 +24,7 @@ export interface SessionWorkspaceView {
   usage: SessionUsageView;
   elapsedMs: number | null;
   hasGoal: boolean;
+  goal?: { id: string; status: string } | null;
   modelLabel: string;
   effortLabel: string;
   permissionLabel: string;

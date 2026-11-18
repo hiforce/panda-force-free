@@ -5,6 +5,8 @@ import { storage, STORAGE_KEYS } from "../storage.js";
 export function createWorkbenchLayout(options) {
   /** @type {{navigation: boolean; details: boolean} | null} */
   let beforeFocus = null;
+  /** @type {{navigation: boolean} | null} */
+  let beforeDocument = null;
   /** @param {string | null} value @returns {import('../contracts/workbench-chrome.js').WorkspaceWidth} */
   const normalized = (value) => (value === "wide" || value === "fill" ? value : "comfortable");
   function readWidth() {
@@ -31,8 +33,29 @@ export function createWorkbenchLayout(options) {
   }
   function setPanel(panel, open) {
     if (beforeFocus) setFocus(false);
-    if (panel === "navigation") options.setSidebar(open);
+    if (panel === "navigation") options.setSidebar(open, { temporary: Boolean(beforeDocument) });
     else options.setDetails(open);
+  }
+  function setDocumentFocus(active) {
+    if (active === Boolean(beforeDocument)) return;
+    if (active) {
+      beforeDocument = {
+        navigation:
+          beforeFocus?.navigation ??
+          (matchMedia("(min-width:768px)").matches
+            ? options.readSidebar()
+            : storage.get(STORAGE_KEYS.sidebarOpen) !== "false"),
+      };
+      if (beforeFocus) beforeFocus.navigation = false;
+      document.body.classList.add("document-navigation-focus");
+      options.setSidebar(false, { temporary: true });
+    } else if (beforeDocument) {
+      const previous = beforeDocument;
+      beforeDocument = null;
+      document.body.classList.remove("document-navigation-focus");
+      if (beforeFocus) beforeFocus.navigation = previous.navigation;
+      else options.setSidebar(matchMedia("(min-width:768px)").matches && previous.navigation, { temporary: true });
+    }
   }
   function reconcileViewport() {
     if (!beforeFocus || matchMedia("(min-width: 768px)").matches) return;
@@ -43,5 +66,13 @@ export function createWorkbenchLayout(options) {
     options.setDetails(false, { temporary: true });
   }
   document.documentElement.dataset.workbenchWidth = normalized(storage.get(STORAGE_KEYS.layout));
-  return { readWidth, setWidth, isFocused: () => Boolean(beforeFocus), setFocus, setPanel, reconcileViewport };
+  return {
+    readWidth,
+    setWidth,
+    isFocused: () => Boolean(beforeFocus),
+    setFocus,
+    setPanel,
+    setDocumentFocus,
+    reconcileViewport,
+  };
 }

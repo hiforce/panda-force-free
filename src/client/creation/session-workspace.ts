@@ -22,6 +22,7 @@ import { storage, STORAGE_KEYS } from "../storage.js";
 import { buildComposerInput } from "../composer-attachments.js";
 import { sessionSkillContext } from "../../shared/session-skills.js";
 import { CreationSkillDiscovery } from "./skill-discovery.js";
+import { defaultCreationEffort } from "../../shared/creation/effort.js";
 
 export interface CreationWorkspaceBridge {
   controls(): SessionControlView;
@@ -189,9 +190,10 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
         base.models.find((model) => model.id === this.model) ||
         base.models.find((model) => model.id === base.model) ||
         base.models[0];
-    const effort = selected?.efforts.some((entry) => entry.id === this.effort)
-      ? this.effort
-      : selected?.defaultEffort || "";
+    const preferred = this.effort || (selected ? storage.get(STORAGE_KEYS.effortFor(selected.id)) : "") || "",
+      effort = selected?.efforts.some((entry) => entry.id === preferred)
+        ? preferred
+        : defaultCreationEffort(selected?.efforts.map((entry) => entry.id) || [], selected?.defaultEffort);
     return {
       ...base,
       sessionId: this.key,
@@ -258,6 +260,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       elapsedMs: task ? Math.max(0, (this.running ? Date.now() : task.updatedAt) - task.createdAt) : null,
       usage: sessionUsageView(task?.usage),
       hasGoal: Boolean(task?.goal),
+      goal: task?.goal ? { id: task.goal.id, status: task.goal.status } : null,
       modelLabel:
         control.models.find((entry) => entry.id === control.model)?.label || this.t("workbench.modelUnavailable"),
       effortLabel:

@@ -97,6 +97,10 @@ export function createWorkbench({
   const documents = createProjectDocumentWorkspace({
     t,
     identityKey,
+    onDocumentFocusChanged: (active) => {
+      document.body.dataset.documentNavigationFocus = String(active);
+      dispatchEvent(new CustomEvent("panda-force:document-focus-changed", { detail: active }));
+    },
     sources: documentSources,
     publishing: createDocumentPublicationWorkspace(t, {
       building,

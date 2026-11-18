@@ -14,7 +14,11 @@ const app = await createAppFixture({
         isDefault: true,
         displayName: "Fixture model",
         defaultReasoningEffort: "medium",
-        supportedReasoningEfforts: [{ reasoningEffort: "medium" }],
+        supportedReasoningEfforts: [
+          { reasoningEffort: "low" },
+          { reasoningEffort: "medium" },
+          { reasoningEffort: "xhigh" },
+        ],
       },
     ],
   }),
@@ -35,12 +39,23 @@ try {
         hasTouch: width < 768,
       });
       await app.signIn(context);
-      await context.addInitScript((locale) => {
-        if (window === top && /^https?:$/.test(location.protocol)) {
-          localStorage.setItem("panda-force-locale", locale);
-          localStorage.setItem("panda-force-theme", "aurora");
-        }
-      }, locale);
+      const auth = await (await context.request.get(app.base + "/api/auth/status")).json();
+      const identity =
+        auth.authMode +
+        ":" +
+        (auth.identity?.id || auth.identity?.username || "local") +
+        (auth.directoryScope ? ":" + auth.directoryScope : "");
+      await context.addInitScript(
+        ({ locale, identity }) => {
+          if (window === top && /^https?:$/.test(location.protocol)) {
+            localStorage.setItem("panda-force-browser-identity", identity);
+            localStorage.setItem("panda-force-locale", locale);
+            localStorage.setItem("panda-force-theme", "aurora");
+            if (locale === "zh-HK") localStorage.setItem("panda-force-effort:gpt-fixture", "medium");
+          }
+        },
+        { locale, identity },
+      );
       const page = await context.newPage(),
         errors = [],
         posts = [];
@@ -54,6 +69,24 @@ try {
       await page.locator(".creation-entry-composer #composer").waitFor();
       await page.locator('.creation-discovery-card [data-skill-id="software-prd"]:enabled').waitFor();
       await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.models.length > 0);
+      const modelHint = await page.evaluate(() =>
+        globalThis.__pandaForceI18n.t("common.modelAndReasoningSetting", {
+          model: document.querySelector("#modelLabel").textContent,
+          level: document.querySelector("#effortLabel").textContent,
+        }),
+      );
+      for (const attribute of ["title", "aria-label"])
+        assert.equal(await page.locator("#modelButton").getAttribute(attribute), modelHint);
+      await page.locator("#modelButton").click();
+      assert.equal(
+        await page.locator('input[name="session-effort"]:checked').inputValue(),
+        locale === "zh-HK" ? "medium" : "xhigh",
+      );
+      await page.screenshot({ path: `${out}/effort-${locale}-${width}.png` });
+      if (locale === "zh-TW") {
+        await page.locator('input[name="session-effort"][value="low"]').check();
+        await page.locator('#sessionSettingsForm [type="submit"]').click();
+      } else await page.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
       await page.locator('.creation-discovery-card [data-skill-id="software-prd"]').click();
       await page
         .locator("#prompt")
@@ -83,6 +116,11 @@ try {
         throw error;
       });
       assert.equal(result.status(), 202, await result.text());
+      assert.equal(
+        (await result.json()).task.effort,
+        locale === "zh-HK" ? "medium" : locale === "zh-TW" ? "low" : "xhigh",
+        "Creation defaults to extreme effort and preserves explicit choices",
+      );
       await page.waitForURL("**/creation/**");
       await page.locator(".creation-session-status .user-input-card").waitFor();
       const taskUrl = page.url();
@@ -112,19 +150,35 @@ try {
       await page.locator("#saveGoalDialog").click();
       await page.locator("#goalDialog").waitFor({ state: "hidden" });
       assert.equal(page.url(), taskUrl);
+      await page.waitForFunction(() => document.querySelector("#sessionGoalPlan")?.open === true);
+      await page.locator("#sessionGoalPlan").scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${out}/expanded-${locale}-${width}.png` });
+      await page.locator("#sessionGoalPlan > summary").click();
+      assert.equal(await page.locator("#sessionGoalPlan").evaluate((node) => node.open), false);
+      await page.evaluate(
+        (locale) => globalThis.__pandaForceI18n.setPreference(locale === "en" ? "zh-CN" : "en"),
+        locale,
+      );
+      await page.evaluate((locale) => globalThis.__pandaForceI18n.setPreference(locale), locale);
+      assert.equal(
+        await page.locator("#sessionGoalPlan").evaluate((node) => node.open),
+        false,
+        "Active refresh retains a deliberate collapse",
+      );
+      await page.reload();
+      await page.waitForFunction(() => document.querySelector("#goalStatus")?.getAttribute("data-state") === "active");
+      await page.waitForFunction(() => document.querySelector("#sessionGoalPlan")?.open === true);
       await closeInspector();
       await page.locator("#prompt").fill("Keep this unfinished message. " + locale);
       const uploaded = page.waitForResponse(
         (response) =>
           response.url().includes("/api/creation-materials?name=") && response.request().method() === "POST",
       );
-      await page
-        .locator("#attachmentInput")
-        .setInputFiles({
-          name: "fields.csv",
-          mimeType: "text/csv",
-          buffer: Buffer.from("field,required\nsize,true\n"),
-        });
+      await page.locator("#attachmentInput").setInputFiles({
+        name: "fields.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("field,required\nsize,true\n"),
+      });
       assert.equal((await uploaded).status(), 201);
       await page.waitForFunction(() =>
         globalThis.__pandaForceDebug.state.composerAttachments.some(
@@ -172,6 +226,11 @@ try {
       await page.locator("#resumeGoalDialog").click();
       await page.locator("#pauseGoalDialog").waitFor({ state: "visible" });
       await page.locator("#cancelGoalDialog").click();
+      assert.equal(
+        await page.locator("#sessionGoalPlan").evaluate((node) => node.open),
+        true,
+        "Resuming reveals the active goal",
+      );
       await closeInspector();
       assert.equal(await page.locator("#prompt").inputValue(), "Keep this unfinished message. " + locale);
       assert.match(await page.locator("#composerAttachments").textContent(), /fields.csv/);
@@ -202,6 +261,19 @@ try {
         );
         assert((await prior.json()).task.artifact);
       }
+      await closeInspector();
+      await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-alpha"));
+      await page.waitForFunction(
+        () => globalThis.__pandaForceDebug.state.active?.id === "old-alpha" && location.pathname === "/task/old-alpha",
+      );
+      const nativeHint = await page.evaluate(() =>
+        globalThis.__pandaForceI18n.t("common.modelAndReasoningSetting", {
+          model: document.querySelector("#modelLabel").textContent,
+          level: document.querySelector("#effortLabel").textContent,
+        }),
+      );
+      for (const attribute of ["title", "aria-label"])
+        assert.equal(await page.locator("#modelButton").getAttribute(attribute), nativeHint);
       const badCalls = app.calls().filter((call) => call.params?.threadId?.startsWith("creation:"));
       assert.equal(badCalls.length, 0, "Public creation identities never reach native engine RPCs");
       assert.deepEqual(errors, []);

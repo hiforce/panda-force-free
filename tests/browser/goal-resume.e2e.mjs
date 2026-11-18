@@ -104,7 +104,17 @@ try {
       assert.equal(native.tokenBudget, 2500);
       assert.equal(native.tokensUsed, 312);
       assert.equal(native.timeUsedSeconds, 84);
+      assert.equal(await page.locator("#sessionGoalPlan").evaluate((node) => node.open), true);
+
       await page.locator("#cancelGoalDialog").click();
+      await page.locator("#sessionGoalPlan > summary").click();
+      await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("zh-HK"));
+      await page.evaluate((locale) => globalThis.__pandaForceI18n.setPreference(locale), locale);
+      assert.equal(await page.locator("#sessionGoalPlan").evaluate((node) => node.open), false);
+      await page.reload();
+      await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
+      await page.waitForFunction(() => document.querySelector("#goalStatus")?.dataset.state === "active");
+      assert.equal(await page.locator("#sessionGoalPlan").evaluate((node) => node.open), true);
       await fixture.rpc("thread/goal/set", { threadId: "old-alpha", status: "paused", origin: "user" });
       await page.waitForFunction(() => globalThis.__pandaForceDebug.state.goals.get("old-alpha")?.status === "paused");
       await page.reload();
@@ -119,6 +129,7 @@ try {
       await page.locator(".goal-status-resume").click();
       await page.waitForFunction(() => globalThis.__pandaForceDebug.state.goals.get("old-alpha")?.status === "active");
       assert.equal(await page.locator(".goal-status-resume").count(), 0);
+      assert.equal(await page.locator("#sessionGoalPlan").evaluate((node) => node.open), true);
       await fixture.rpc("thread/goal/set", { threadId: "old-alpha", status: "paused", origin: "user" });
       await page.waitForFunction(() => globalThis.__pandaForceDebug.state.goals.get("old-alpha")?.status === "paused");
       await writeFile(`${fixture.dir}/goal-resume-wait`, "Hold the disposable acknowledgement");

@@ -18,7 +18,8 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
     const visible = mobile
       ? sidebar.classList.contains("mobile-open")
       : !document.body.classList.contains("sidebar-hidden");
-    if (!mobile && !temporary) storage.set(STORAGE_KEYS.sidebarOpen, String(open));
+    if (!mobile && !temporary && !document.body.classList.contains("document-navigation-focus"))
+      storage.set(STORAGE_KEYS.sidebarOpen, String(open));
     for (const selector of ["#toggleSidebar", "#workspaceNavigationToggle"]) {
       $(selector).setAttribute("aria-expanded", String(visible));
       $(selector).setAttribute("aria-pressed", String(visible));
@@ -30,7 +31,12 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
     sidebarLayoutMobile = mobile;
     setMessageHtml($("#toggleSidebar"), codexIcon(mobile ? "menu" : "panelLeft"));
     setMessageHtml($("#workspaceNavigationToggle"), codexIcon(mobile ? "menu" : "panelLeft"));
-    setSidebarOpen(!mobile && storage.get(STORAGE_KEYS.sidebarOpen) !== "false", { temporary: true });
+    setSidebarOpen(
+      !mobile &&
+        !document.body.classList.contains("document-navigation-focus") &&
+        storage.get(STORAGE_KEYS.sidebarOpen) !== "false",
+      { temporary: true },
+    );
   }
   function setSidebarSearchOpen(open) {
     const panel = $("#sidebarSearchPanel"),

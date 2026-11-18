@@ -1,6 +1,6 @@
 import type { Route, RouteContext } from "../http/router.js";
 import { readJsonBody } from "../http/body.js";
-import { respondJson } from "../http/respond.js";
+import { respondJson, respondReadJson } from "../http/respond.js";
 import { documentRouteProtection as protect } from "./protection.js";
 import { text } from "./validation.js";
 import type { ProjectDocumentEditor, ProjectDocumentQueries } from "./editor-port.js";
@@ -20,7 +20,7 @@ export function projectDocumentEditorRoutes(
       handler: protect(async (context) => {
         const { req, res, url } = context,
           [projectId, documentId] = scope(url);
-        if (req.method === "GET") return respondJson(res, 200, await queries.editor(projectId, documentId));
+        if (req.method === "GET") return respondReadJson(req, res, 200, await queries.editor(projectId, documentId));
         const actor = principal(context),
           input = await readJsonBody(req, req.method === "PUT" ? 6 * 1024 * 1024 : 8192),
           receipt =

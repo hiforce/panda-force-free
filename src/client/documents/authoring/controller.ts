@@ -35,6 +35,7 @@ export function createProjectDocumentWorkspace(options: {
   identityKey: string;
   sources: { show(host: HTMLElement, project: string): void; hide(): void };
   publishing: DocumentPublicationActions;
+  onDocumentFocusChanged?: (active: boolean) => void;
 }) {
   const { t } = options,
     root = document.createElement("section");
@@ -42,6 +43,12 @@ export function createProjectDocumentWorkspace(options: {
   const get = <T extends HTMLElement>(selector: string) => root.querySelector<T>(selector);
   let treeControlKey = "",
     treeControlRoot: Element | null = null;
+  let focused = false;
+  function focusDocument(active: boolean) {
+    if (focused === active) return;
+    focused = active;
+    options.onDocumentFocusChanged?.(active);
+  }
   let projectId = "",
     epoch = 0,
     lastRequested = "",
@@ -110,6 +117,7 @@ export function createProjectDocumentWorkspace(options: {
     root.classList.toggle("document-open", !!editor.record);
     root.classList.toggle("is-editing", editor.editing);
     document.body.classList.toggle("document-focus-editing", root.isConnected && !sourceView && editor.editing);
+    focusDocument(root.isConnected && !sourceView);
     const more = get(".document-workspace-more"),
       target = get(directory.mobile.matches ? ".authoring-directory-management" : ".documents-heading-actions");
     if (more && target && more.parentElement !== target) target.append(more);
@@ -296,6 +304,7 @@ export function createProjectDocumentWorkspace(options: {
   function enterSources() {
     clear();
     sourceView = true;
+    focusDocument(false);
     root.classList.remove("project-document-authoring");
     const url = new URL(location.href);
     url.searchParams.set("view", "sources");
@@ -315,6 +324,7 @@ export function createProjectDocumentWorkspace(options: {
     root.classList.add("project-document-authoring");
     projectId = project;
     lastRequested = documentId;
+    focusDocument(root.isConnected);
     const generation = epoch;
     const capabilityController = new AbortController();
     capabilityRead = capabilityController;
@@ -582,6 +592,7 @@ export function createProjectDocumentWorkspace(options: {
       clear();
       options.sources.hide();
       root.remove();
+      focusDocument(false);
     },
   };
 }

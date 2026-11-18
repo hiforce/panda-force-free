@@ -23,5 +23,10 @@ export function assembleWorkbenchChrome({
     hasSession: () => document.body.classList.contains("session-layout"),
     onError: (message) => noticesPort.toast(message),
   });
-  return { bind: chrome.bind };
+  return {
+    bind() {
+      sidebarLayoutPort.syncSidebarLayout();
+      chrome.bind();
+    },
+  };
 }

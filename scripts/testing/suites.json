@@ -49,6 +49,8 @@
     "browser/document-editor-controls.e2e.mjs",
     "browser/document-ingestion.e2e.mjs",
     "browser/document-mobile-modes.e2e.mjs",
+    "browser/document-navigation-focus.e2e.mjs",
+    "browser/document-navigation-loading.e2e.mjs",
     "browser/document-publication-links.e2e.mjs",
     "browser/document-reading-loading.e2e.mjs",
     "browser/document-spaces.e2e.mjs",
