@@ -221,7 +221,9 @@ export function createBotFeature(options: {
       await guard(async (context) => {
         const authorization = context.req.headers.authorization ?? "",
           grant = await store.authenticate(authorization.startsWith("Bearer ") ? authorization.slice(7) : "");
-        const match = /^\/api\/v1\/bots\/([a-z][a-z0-9_-]{1,63})\/tasks(?:\/([a-f0-9-]+))?$/.exec(context.url.pathname);
+        const match = /^\/api\/v1\/bots\/([a-z][a-z0-9_-]{1,63})\/tasks(?:\/([a-f0-9-]+)(?:\/(cancel))?)?$/.exec(
+          context.url.pathname,
+        );
         if (!match) throw new BotError("notFound", 404);
         const bot = await store.bot(grant.owner, match[1]!);
         if (!grant.botIds.includes(bot.id)) throw new BotError("forbidden", 403);
@@ -233,7 +235,16 @@ export function createBotFeature(options: {
           worker.tick();
           return;
         }
-        if (context.req.method === "GET" && match[2]) {
+        if (context.req.method === "POST" && match[2] && match[3] === "cancel") {
+          const current = await store.task(grant.owner, match[2]);
+          if (current.botId !== bot.id) throw new BotError("notFound", 404);
+          if (Object.keys(await json(context)).length) throw new BotError("invalidInput");
+          const task = await store.lifecycle(grant.owner, current.id, "cancel");
+          worker.interrupt(task.id);
+          respondJson(context.res, 200, { task });
+          return;
+        }
+        if (context.req.method === "GET" && match[2] && !match[3]) {
           const task = await store.task(grant.owner, match[2]);
           if (task.botId !== bot.id) throw new BotError("notFound", 404);
           respondJson(context.res, 200, { task });

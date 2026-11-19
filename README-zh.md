@@ -1,63 +1,138 @@
-![PandaForce — 用 AI 推进工作的工作台。](./panda-docs/static/img/panda-force-banner-redflame-v1.jpg)
+<p align="center">
+  <img src="./panda-docs/static/img/panda-mark.svg" width="112" alt="PandaForce 功夫小熊猫" />
+</p>
+<h1 align="center">PandaForce</h1>
+<p align="center"><strong>一只可爱的小熊猫，一身不断增长的 AI 功夫。</strong></p>
+<p align="center">用技能创作，让 Bot 干活，教你的熊猫学会新招式。</p>
+<p align="center"><a href="./README.md">English</a> · <a href="#先来做点好玩的">体验创作</a> · <a href="#认识你的-bot">配置 Bot</a> · <a href="#从当前分支构建运行">开始使用</a> · <a href="./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md">完整功能</a></p>
 
-# PandaForce
+PandaForce 是可以自行部署的 AI 工作台，也是一只会不断学功夫的可爱熊猫。给它一个主题，选一项技能，把想法做成插画、幻灯片、网页或文档；把重复工作通过 API 交给 Bot，再用技能和插件扩展它的拿手本领。
 
-可自行部署的 AI 工作台，集中管理会话、编程、文档、可复用技能、知识和发布。当前执行引擎为 Codex app-server。
+每项新技能都是一个新招式：讲历史的方法、整理研究的步骤，或者团队自己的创作流程。你选择技能、模型和工具，熊猫帮你把工作与上下文连起来。当前执行引擎为 **Codex app-server**。
 
-基于 [lezi-fun](https://github.com/lezi-fun) 的 [Codex WebUI](https://github.com/lezi-fun/codex-webui) 开发，感谢上游作者及所有贡献者。
+> 本页介绍 **develop 分支源码**。体验这些功能请从该分支构建；已发布的 `hiforceai/panda-force:0.0.21` 镜像有独立的功能基线。
 
-[English](./README.md) · **[完整功能清单](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md)** · [Feature catalog](./panda-docs/docs/features.md) · [安装指南](./panda-docs/docs/installation.md) · [CDN 配置](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/cdn-build.md)
+## 先来做点好玩的
 
-> 本 README 描述 **develop 分支源码**。`hiforceai/panda-force:0.0.21` 等已发布镜像不会自动包含 develop 的变更。体验下方界面及功能，请从此分支构建。
+### “请介绍一下希腊历史，漫画形式。”
 
-develop 源码还支持生成实际图片、可编辑 PPTX、HTML 网页与无声动态排版 MP4，并在项目文档中预览或下载原件。管理员可选配独立的 [S3 兼容原件存储](./panda-docs/docs/storage.md#s3-compatible-storage-for-saved-originals-develop-source)：经应用授权访问，回收站可恢复，彻底删除时清理自有 S3 版本。以上源码功能与当前已发布容器镜像分开记录。
+1. 打开 **创作**，选择 **知识插图策划** 技能（`science-illustration`）。
+2. 告诉熊猫你要一张**图片**，再给它一个主题：
 
-## 可以做什么
+   > 请介绍一下希腊历史，漫画形式。做成八格中文漫画，每格有年代、标题和一句说明。
 
-- **AI 对话与编程：**流式接收回复、检查工具和文件变更、处理审批与问题、排队输入，并查看会话用量。
-- **组织实际工作：**集中管理项目目录、会话、文档和产物；管理员可浏览允许的文件目录并使用集成终端。
-- **撰写和完善文档：**使用文档树与富文本编辑、表格、图片和代码块，自动保存及恢复草稿，审阅后再应用 AI 建议。
-- **复用技能和模板：**按分类浏览、检查版本及权限、安装兼容包，并组合当前可用技能与参数。
-- **创作与发布：**保存个人作品、复制到项目、准备网站构建及受支持渠道版本，或直接导出内容与素材。
-- **助理自动任务：**通过访问密钥接收外部任务，查看持久队列和判断依据，人工复核并重试失败回调。
-- **搜索与知识：**检索项目内容，按需接入关键词或向量后端，执行基于来源依据的知识工作流。
-- **本地账号管理：**配置 SMTP 后通过邮箱邀请成员，由成员自行设密，并使用六位邮件验证码找回密码。
-- **桌面和手机：**响应式布局、可调导航、主题，以及英文、简体中文、香港繁体和台湾繁体界面。
+3. 生成后直接预览、打开原图或下载。还想再改？继续在这次创作里说：
 
-[完整功能清单](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md) 覆盖 18 个功能领域、服务前提和当前限制。不同发布适配器的覆盖范围不同；企业成员沙箱、模型网关配额计费及通用 SSO 尚未交付。
+   > 对话更有趣一些，保留时间线，文字再大一点。
 
-## 使用案例：从供应商素材到商品发布上架
+<p align="center">
+  <a href="./panda-docs/static/img/greek-history-comic.png"><img src="./panda-docs/static/img/greek-history-comic.png" width="600" alt="PandaForce 实际生成的八格中文希腊历史漫画，从爱琴文明到现代共和国" /></a>
+</p>
 
-收到原始素材包后，企业商品系统先整理事实与版本，再提交 Bot 任务，完成**主题方案、商品卖点提炼和详情编写**。依据不足时进入**人工复核**；已审批动作连接企业已有的发布作业，最后单独**核验上架回执**。
+_这是 PandaForce 中实际创作的图片示例，点击可看原始 PNG。知识类生成内容在使用前仍需审阅。_
 
-![匿名素材到商品上架流程](./panda-docs/static/img/bot-usecase-flow-zh-CN.svg)
+技能负责帮助组织故事和画面，已配置的模型与绘图工具负责完成图片。你要的是插画，就应该得到实际图片；想看方案时，再明确要求策划文档。
 
-![深色助理界面的匿名商品任务队列](./panda-docs/static/img/bot-usecase-queue-zh-CN.webp)
+也可以试试“把计算机发展史画成知识时间线”“把这些笔记做成幻灯片”“为这个想法做一个介绍网页”。后续修改围绕同一个创作身份组织，对话与版本可以连续查看。
 
-**[查看完整案例：助理配置、受限访问密钥、API任务示例、复核、回调与上架回执 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-product-publishing.md)**
+| 想创作什么     | 可以保留什么                     |
+| -------------- | -------------------------------- |
+| 插画、知识图解 | 图片预览与原始图片文件           |
+| 幻灯片         | 可编辑 PPTX 和可用的预览         |
+| 网页           | HTML 源文件与隔离网页预览        |
+| 动态图文       | 基于已支持视觉场景合成的无声 MP4 |
+| 写作、研究     | 可编辑文档，以及已提供的来源     |
 
-企业系统负责素材解包、主题图片制作、审批、商品落库和最终上架；Panda 串联其中的 AI 任务与已声明动作。截图使用虚构任务和模拟结果，没有执行生产上架，案例不出现具体商品品牌或销售渠道名称。
-
-## 当前界面
-
-以下为当前源码的真实界面渲染，使用虚构演示数据，不含生产账号、业务任务或凭据。
-
-**工作台：直接进入项目与创作**
-
-![PandaForce 当前工作台、导航与创作输入区](./panda-docs/static/img/workspace-zh-CN.webp?v=aurora-20261116)
-
-**项目文档：目录、富文本内容与编辑工具**
-
-![PandaForce 项目文档编辑器](./panda-docs/static/img/documents-zh-CN.webp?v=aurora-20261116)
+具体产出取决于已配置的模型与工具。视频当前支持**无声动态排版**，并非通用文生电影服务。项目文档能在线预览支持的格式，其他文件也有原件下载入口。
 
 <details>
-<summary>查看技能库和手机界面</summary>
+<summary>看看技能库和文档工作区</summary>
 
-![PandaForce 技能库](./panda-docs/static/img/skills-zh-CN.webp?v=aurora-20261116)
+![PandaForce 技能库，使用虚构演示数据渲染](./panda-docs/static/img/skills-zh-CN.webp)
 
-<img src="./panda-docs/static/img/mobile-zh-CN.webp?v=aurora-20261116" width="320" alt="PandaForce 手机窄屏文档阅读界面" />
+![PandaForce 项目文档编辑器，使用虚构演示数据渲染](./panda-docs/static/img/documents-zh-CN.webp)
+
+<img src="./panda-docs/static/img/mobile-zh-CN.webp" width="320" alt="手机上的 PandaForce 文档阅读界面" />
 
 </details>
+
+### 用你自己的存储
+
+原件可以保存在本地，也可以配置**你自己的 S3 兼容存储**，勾选要存到对象存储的内容，例如生成的图片和视频。缩略图开箱可用，不用另外去 bucket 配置图片处理规则。
+
+私有 S3 原件先经过应用授权，再由**浏览器通过临时签名链接直接读取**，文件流量从对象存储到浏览器。“获取图片链接”会提供可复用链接并提示到期时间，最长有效 24 小时；你分享出去的人也能在有效期内访问。移入回收站可以恢复，彻底删除时清理自有远端原件。[查看存储说明 →](./panda-docs/docs/storage.md#s3-compatible-storage-for-saved-originals-develop-source)
+
+## 认识你的 Bot
+
+Bot 是有自己分工和人格的熊猫助理。你可以给它名字、头像、角色定位、表达方式和工作规则。细致的商品编辑与好奇的研究助理，可以有不同的人格、指令和模型，任务也各自管理。
+
+### 先配置一只熊猫
+
+1. 进入 **设置 → 助理管理**，创建 Bot，选择模型、头像并设置人格。
+2. 设置稳定的编号，例如 `catalog-panda`，写清楚它的工作规则。
+3. 签发只允许访问该 Bot 的 **API Key**，设置有效期，将只显示一次的密钥放入你的应用凭据管理中。
+4. 从业务系统提交工作，在 **助理** 中查看队列、依据和结果；信息不足时，由你进行人工复核。
+
+![真实应用中的 Bot 配置与人格，使用虚构演示数据](./panda-docs/static/img/bot-usecase-config-zh-CN.webp)
+
+### 提交、查询、取消任务
+
+将 `PANDA_URL`、`BOT_CODE`、`BOT_KEY` 设置为你的应用地址、Bot 编号和访问密钥。在仓库根目录运行，需安装 `curl` 和 `jq`：
+
+```bash
+export PANDA_URL="http://localhost:8899"
+export BOT_CODE="catalog-panda"
+# 从凭据管理中设置 BOT_KEY，不要将密钥提交进仓库。
+
+TASK_ID=$(curl --fail-with-body --silent --show-error \
+  "$PANDA_URL/api/v1/bots/$BOT_CODE/tasks" \
+  -H "Authorization: Bearer $BOT_KEY" \
+  -H "Idempotency-Key: ITEM-001-v1" \
+  -H "Content-Type: application/json" \
+  --data-binary @examples/bots/quickstart/task.zh-CN.json | jq -er '.task.id')
+
+curl --fail-with-body --silent --show-error \
+  "$PANDA_URL/api/v1/bots/$BOT_CODE/tasks/$TASK_ID" \
+  -H "Authorization: Bearer $BOT_KEY"
+
+# 不再需要这项工作时，取消排队或运行中的任务。
+curl --fail-with-body --silent --show-error \
+  "$PANDA_URL/api/v1/bots/$BOT_CODE/tasks/$TASK_ID/cancel" \
+  -H "Authorization: Bearer $BOT_KEY" \
+  -H "Content-Type: application/json" --data '{}'
+```
+
+首次提交返回 `202`；相同幂等键和内容会返回原任务。保存 `task.id`，通过查询接口轮询结果。已经取消的任务可以重复取消；已完成任务，或外部回调正在处理、结果尚不确定时返回 `409`。取消不能撤销已经发生的外部操作。
+
+| API                                                  | 认证方式                    |
+| ---------------------------------------------------- | --------------------------- |
+| `POST /api/bots`：创建 Bot                           | 应用登录会话 + Origin       |
+| `PATCH /api/bots/:id`：修改配置                      | 应用登录会话 + Origin       |
+| `POST /api/bots/keys`：签发受限密钥                  | 应用登录会话 + Origin       |
+| `POST /api/v1/bots/:code/tasks`：提交任务            | Bot Key + `Idempotency-Key` |
+| `GET /api/v1/bots/:code/tasks/:id`：查询任务         | Bot Key                     |
+| `POST /api/v1/bots/:code/tasks/:id/cancel`：取消任务 | Bot Key，提交空 JSON 对象   |
+
+**[查看管理 API 创建流程、可运行请求体、任务状态与接入说明 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-api-quickstart.md)**
+
+### 一个场景：让文案熊猫检查商品介绍
+
+商品系统把 `ITEM-001` 的已核实事实交给熊猫。Bot 写出文案并选择 `draft_ready`，缺少依据时请你复核。业务系统读取结果，在自己的审核流程中确认，再保存或发布。如果商品资料在处理途中撤回，就通过上面的 API 取消任务。
+
+更完整的“供应商素材 → 主题方案 → 商品详情 → 人工复核 → 上架回执”流程，可以看 **[完整接入案例](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-product-publishing.md)**。回调只执行业务系统声明的动作，并限制目标域名；模型给出判断不等于商品已经上架。
+
+Bot 卡片首页、每个 Bot 唯一的持续人机对话，以及 RSS、Slack、邮箱自动工作正在单独设计，不属于上面任务 API 已交付的能力。
+
+## 教熊猫学会更多功夫
+
+- **技能**：把写作、研究、视觉创作的方法做成可复用的指令、资源和参数。按分类浏览、安装、组合兼容技能，不必每次从空白提示词开始。
+- **插件与工具**：通过已支持的扩展契约增加能力，管理版本并明确授权。技能告诉熊猫如何做，配置好的工具帮助它实际完成动作。
+- **Bot**：把一套人格与工作规则接入业务 API，配合持久任务、人工复核和失败恢复。
+- **项目与知识**：把来源、会话、文档和创作成果组织起来，保留继续完善工作的上下文。
+
+“学功夫”是增加和改进这些可复用能力，不是在后台偷偷训练模型。配置你自己的模型凭据，再开启工作需要的工具。[技能](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md#技能与技能包) · [插件](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md#模板主题与扩展) · [模型配置](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md)
+
+工作台还包含流式对话与编程、管理员终端、富文本编辑、发布适配器、基于来源的知识流程和搜索。桌面与手机支持英文、简体中文、香港繁体和台湾繁体。**[查看完整功能和服务前提 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md)**
 
 ## 从当前分支构建运行
 

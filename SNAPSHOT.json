@@ -137,14 +137,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 9944,
-      "sha256": "29d432179670077befa81c2e827b832ea309e98baad1964c661f12b265e2e42a",
+      "bytes": 15222,
+      "sha256": "b581186fa067635760dc36d2f88dea9c13807a2863615b26457084e64d8b7077",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 10961,
-      "sha256": "a152bd2b621b9ae43cb1aaecdacadf1b1a0c9b6164b192d8a942c1b8ff89a0a0",
+      "bytes": 16364,
+      "sha256": "44d8cb1fecc1b141bf6801d4e731f420b9d0e1300bae614303aa584d27248b96",
       "mode": "100644"
     },
     {
@@ -274,6 +274,30 @@
       "mode": "100644"
     },
     {
+      "path": "examples/bots/quickstart/bot.json",
+      "bytes": 545,
+      "sha256": "48fb349222c0c75b363706695b38f075e1646aaf6d128cb11dddc92cdbef29c5",
+      "mode": "100644"
+    },
+    {
+      "path": "examples/bots/quickstart/bot.zh-CN.json",
+      "bytes": 528,
+      "sha256": "bdf53baf8f8b9aab90e47c5306ee690346012f8e2c864b8fbdbfb030b407fa1f",
+      "mode": "100644"
+    },
+    {
+      "path": "examples/bots/quickstart/task.json",
+      "bytes": 647,
+      "sha256": "eba8c44f2b21b95b807fd2e5ede8e5d3c93c6ffdd993b9cc21c20a0339f85e0b",
+      "mode": "100644"
+    },
+    {
+      "path": "examples/bots/quickstart/task.zh-CN.json",
+      "bytes": 563,
+      "sha256": "9d45274e24d9a94dc3e0e87700b44143a8c6bcc5edda2170435acd6a07f063cc",
+      "mode": "100644"
+    },
+    {
       "path": "examples/gadget/batch-summary/README.html",
       "bytes": 1641,
       "sha256": "163e5dc7db9e7acd6ac84c0d61ebd1ef07ff681d357e0c608577eef867c534cf",
@@ -313,6 +337,12 @@
       "path": "panda-docs/bun.lock",
       "bytes": 337234,
       "sha256": "aee5fe263b46108cfc0251081af80d84baba40d12d21b7af048b6e9d9595d77f",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/docs/bot-api-quickstart.md",
+      "bytes": 7638,
+      "sha256": "07f1d40764c63e9e79fe31efd8b62fb929596efbb4f2a51ee312e20c33841dd2",
       "mode": "100644"
     },
     {
@@ -424,6 +454,12 @@
       "mode": "100644"
     },
     {
+      "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-api-quickstart.md",
+      "bytes": 6946,
+      "sha256": "b4b9a87096a5d63a293d0deb02e731edafecda810bb901b5eb84956eb266f5ad",
+      "mode": "100644"
+    },
+    {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-product-publishing.md",
       "bytes": 12883,
       "sha256": "5dab8eab4319147fa798dd8eb3b3dff5144cea5e48c7991996ccf174649d5517",
@@ -455,8 +491,8 @@
     },
     {
       "path": "panda-docs/sidebars.js",
-      "bytes": 531,
-      "sha256": "e0407d6706f15723cbdf2818e691a0136ebf7f2c6f7e7be11eb81682510b2462",
+      "bytes": 553,
+      "sha256": "a5f71b99a16fd9c71df3609a949a2a81fd7844b926f9d1b72e718833276a14af",
       "mode": "100644"
     },
     {
@@ -601,6 +637,12 @@
       "path": "panda-docs/static/img/documents-zh-CN.webp",
       "bytes": 55796,
       "sha256": "64549156e8f1dd78e20e3c78ffcf62cafa1e40bbc51914f5683ffb4651fe12f3",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/static/img/greek-history-comic.png",
+      "bytes": 3329390,
+      "sha256": "7f66928a25209dad1282b586e38756018e722a96163c244cdf861334395a6c7b",
       "mode": "100644"
     },
     {
@@ -1367,14 +1409,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 9944,
-      "sha256": "29d432179670077befa81c2e827b832ea309e98baad1964c661f12b265e2e42a",
+      "bytes": 15222,
+      "sha256": "b581186fa067635760dc36d2f88dea9c13807a2863615b26457084e64d8b7077",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 10961,
-      "sha256": "a152bd2b621b9ae43cb1aaecdacadf1b1a0c9b6164b192d8a942c1b8ff89a0a0",
+      "bytes": 16364,
+      "sha256": "44d8cb1fecc1b141bf6801d4e731f420b9d0e1300bae614303aa584d27248b96",
       "mode": "100644"
     },
     {
@@ -1403,8 +1445,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 165621,
-      "sha256": "0268ce1ea16fda430a2b6a2c2f310f41a14e02e67b2b7840967610840fe24e47",
+      "bytes": 166038,
+      "sha256": "41b755d27e44b06997d917a147ab509fda8c950068553cf78cfd2a50e34c27d8",
       "mode": "100644"
     },
     {
@@ -5555,8 +5597,8 @@
     },
     {
       "path": "src/server/bots/feature.ts",
-      "bytes": 10902,
-      "sha256": "8f8f8acea4e75e3dc5b5cde9c03a2355209789c19ecb3a03b7a413fc3539ca7b",
+      "bytes": 11465,
+      "sha256": "4001717d3865f444c95080c310a7a19bbd1b816902dc5b0a68b00e7f239064f4",
       "mode": "100644"
     },
     {
@@ -17626,6 +17668,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/integration/bot-task-cancel-api.integration.test.ts",
+      "bytes": 9087,
+      "sha256": "a720fa5acee190cc0a4a7b200497348758bb3bc306d3311a3d18da22ddecc267",
+      "mode": "100644"
+    },
+    {
       "path": "tests/integration/browser-session-watch.integration.test.ts",
       "bytes": 3390,
       "sha256": "8bd5eabb08ff6de4e604f8fe8084294d0b7b1bf9df1ec20cbe19214ed2bee62e",
@@ -21748,5 +21796,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "ee74f1cdb1408b2ccb41a7d93579efc09727da0cb7e0677f86da919efab96bd9"
+  "contentSha256": "68b257a06b305461c57de3298ce56a98f3241d7fad5c7831043f574ea7f79143"
 }

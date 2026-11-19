@@ -1,0 +1,16 @@
+{
+  "title": "Review the description for ITEM-001",
+  "externalTaskId": "ITEM-001-v1",
+  "instructions": "Write a two-sentence draft using only the supplied facts. Select draft_ready when supported, or request review if required facts are missing. Do not publish anything.",
+  "input": {
+    "text": "ITEM-001 is a fictional ceramic mug. Capacity: 300 ml. Color: blue. Dishwasher compatibility is unknown; do not make a claim about it.",
+    "images": []
+  },
+  "actions": [
+    {
+      "id": "draft_ready",
+      "label": "Draft ready",
+      "when": "The draft is supported by the supplied facts and does not invent specifications."
+    }
+  ]
+}

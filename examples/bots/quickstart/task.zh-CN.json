@@ -1,0 +1,10 @@
+{
+  "title": "检查 ITEM-001 的商品介绍",
+  "externalTaskId": "ITEM-001-v1",
+  "instructions": "仅依据提供的事实写两句话介绍。依据充分时选择 draft_ready，缺少必需事实时请求复核。不要发布任何内容。",
+  "input": {
+    "text": "ITEM-001 是一个虚构的陶瓷杯，容量 300 毫升，蓝色。是否适用洗碗机未知，不要对这一点作出承诺。",
+    "images": []
+  },
+  "actions": [{ "id": "draft_ready", "label": "草稿已就绪", "when": "草稿有已提供事实支撑，未虚构规格。" }]
+}

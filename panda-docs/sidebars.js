@@ -3,7 +3,7 @@ export default {
     "overview",
     "features",
     { type: "category", label: "Getting started", items: ["installation", "kubernetes", "workspace"] },
-    { type: "category", label: "Use cases", items: ["bot-product-publishing"] },
+    { type: "category", label: "Use cases", items: ["bot-api-quickstart", "bot-product-publishing"] },
     {
       type: "category",
       label: "Administration",
