@@ -2,6 +2,7 @@ import { duplicateBotRecord as duplicate } from "./mysql-context.js";
 import { MySQLBotProfiles } from "./mysql-profiles.js";
 import { MySQLBotKeys } from "./mysql-keys.js";
 import { MySQLBotQueries } from "./mysql-queries.js";
+import { MySQLBotWorkspaceStorage } from "./workspace/mysql.js";
 import { MySQLBotContext } from "./mysql-context.js";
 import { SQL } from "bun";
 import { retryFailedMySQLBots } from "./mysql-recovery.js";
@@ -38,6 +39,7 @@ export class MySQLBotStore implements BotRepository {
   private readonly profiles: MySQLBotProfiles;
   private readonly credentials: MySQLBotKeys;
   private readonly queries: MySQLBotQueries;
+  readonly workspace: MySQLBotWorkspaceStorage;
 
   private constructor(
     private pool: SQL,
@@ -47,6 +49,7 @@ export class MySQLBotStore implements BotRepository {
     this.profiles = new MySQLBotProfiles(this.context, this.sessions);
     this.credentials = new MySQLBotKeys(this.context, this.profiles);
     this.queries = new MySQLBotQueries(this.context);
+    this.workspace = new MySQLBotWorkspaceStorage(this.context);
   }
   static async open(pool: SQL, options: { maxPendingPerOwner?: number } = {}) {
     const maxPendingPerOwner = options.maxPendingPerOwner ?? 10000;
@@ -145,6 +148,7 @@ export class MySQLBotStore implements BotRepository {
       });
   }
   tasks = (...args: Parameters<MySQLBotQueries["tasks"]>) => this.queries.tasks(...args);
+  botCounts = (...args: Parameters<MySQLBotQueries["botCounts"]>) => this.queries.botCounts(...args);
   retryFailed(owner: string, value: unknown) {
     return retryFailedMySQLBots(this.context, owner, value, this.maxPendingPerOwner);
   }

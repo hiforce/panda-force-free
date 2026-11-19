@@ -23,11 +23,10 @@ try {
       }, theme);
       await app.signIn(context);
       const api = async (path, data, method = data ? "post" : "get") => {
-        const response = await context.request[method](app.base + path, { data });
+        const response = await context.request[method](app.base + path, { data, headers: { Origin: app.base } });
         assert.ok(response.ok(), path + ":" + (await response.text()));
         return response.json();
       };
-      await api("/api/system/database/selection", { driver: "sqlite" });
       const bot = (
         await api("/api/bots", {
           name: locale === "en" ? "Product quality reviewer" : "商品质量审核",
@@ -87,7 +86,7 @@ try {
         errors = [];
       page.setDefaultTimeout(15000);
       page.on("pageerror", (error) => errors.push(error.message));
-      await page.goto(app.base + "/bots");
+      await page.goto(app.base + "/bots/tasks");
       await page.locator(`[data-detail="${seeded[0].id}"]`).waitFor();
       assert.equal(
         await page.locator('.workbench-navigation > [data-route="workspace"] + [data-route="bots"]').count(),
@@ -343,6 +342,7 @@ try {
       );
       await page.locator('a[href="/bots"]').click();
       await page.waitForURL("**/bots");
+      await page.locator('a[href="/bots/tasks"]').click();
       await page.locator("[data-bot-task-rows]").waitFor();
       assert.equal(await page.locator("#settingsDialog").evaluate((el) => el.open), false);
       assert.equal(await search.inputValue(), "TEAM VISOR");

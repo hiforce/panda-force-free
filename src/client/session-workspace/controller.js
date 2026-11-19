@@ -1,4 +1,3 @@
-import { storage, STORAGE_KEYS } from "../storage.js";
 import { codexIcon } from "../codex-icons.js";
 import { escapeHtml } from "../../shared/html.js";
 import { closestElement, requireElement } from "../dom.js";
@@ -13,7 +12,8 @@ export function createSessionWorkspace(options) {
   const { t, i18n, read } = options;
   const { inspector, info, actions: actionButton, summary } = createSessionWorkspaceView(t);
   let desktop = matchMedia("(min-width:1081px)").matches;
-  let desktopOpen = storage.get(STORAGE_KEYS.sessionDetailsOpen) !== "false",
+  let desktopOpen = false,
+    desktopPreference = false,
     mobileOpen = false,
     desiredOpen = false,
     selectedTab = "overview";
@@ -115,18 +115,19 @@ export function createSessionWorkspace(options) {
   function close({ temporary = false } = {}) {
     if (desktop) {
       desktopOpen = false;
-      if (!temporary) storage.set(STORAGE_KEYS.sessionDetailsOpen, "false");
+      if (!temporary) desktopPreference = false;
     } else mobileOpen = false;
     updateOpenState();
   }
   function open(tab = selectedTab, { temporary = false } = {}) {
+    refresh();
     options.beforeOpen();
     if (desktop) {
       desktopOpen = true;
-      if (!temporary) storage.set(STORAGE_KEYS.sessionDetailsOpen, "true");
+      if (!temporary) desktopPreference = true;
     } else mobileOpen = true;
     setTab(tab);
-    refresh();
+    updateOpenState();
   }
   function openUsage() {
     const view = read();
@@ -170,6 +171,7 @@ export function createSessionWorkspace(options) {
     placeControls(hasInspector);
     if (view.id !== activeId || !active) {
       activeId = view.id;
+      desktopOpen = desktopPreference = mobileOpen = false;
       for (const dialog of dialogs) if (dialog.open) dialog.close();
       tools.back();
     }
@@ -366,7 +368,7 @@ export function createSessionWorkspace(options) {
       if (desiredOpen) {
         if (desktop) {
           desktopOpen = false;
-          storage.set(STORAGE_KEYS.sessionDetailsOpen, "false");
+          desktopPreference = false;
         } else mobileOpen = false;
       }
       desiredOpen = false;
@@ -377,10 +379,7 @@ export function createSessionWorkspace(options) {
     matchMedia("(min-width:1081px)").addEventListener("change", (event) => {
       desktop = event.matches;
       mobileOpen = false;
-      if (desktop)
-        desktopOpen =
-          storage.get(STORAGE_KEYS.sessionDetailsOpen) !== "false" &&
-          !document.body.classList.contains("workbench-focus");
+      if (desktop) desktopOpen = desktopPreference && !document.body.classList.contains("workbench-focus");
       refresh();
     });
     i18n.subscribe(() => {

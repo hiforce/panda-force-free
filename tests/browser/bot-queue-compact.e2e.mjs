@@ -62,7 +62,7 @@ try {
         errors = [];
       page.setDefaultTimeout(12000);
       page.on("pageerror", (error) => errors.push(error.message));
-      await page.goto(app.base + "/bots");
+      await page.goto(app.base + "/bots/tasks");
       await page.locator(".bot-task-row").first().waitFor();
       await Promise.all([
         page.waitForResponse((r) => r.url().includes("/api/bots/queue?") && r.url().includes(bot.id)),

@@ -82,7 +82,7 @@ try {
         errors = [];
       page.on("pageerror", (error) => errors.push(error.message));
       page.setDefaultTimeout(15000);
-      await page.goto(app.base + "/bots");
+      await page.goto(app.base + "/bots/tasks");
       await page.locator(`[data-detail="${task.id}"]`).click();
       const dialog = page.locator("dialog.bot-detail[open]");
       await dialog.locator(".bot-review-question").filter({ hasText: expected }).waitFor();

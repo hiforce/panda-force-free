@@ -12,6 +12,7 @@ import { codexApplicationCalls } from "./codex-calls.js";
 import { ActiveRunBudget } from "../active-budget.js";
 import { rememberApplicationSession } from "./sessions.js";
 import { applicationVisibleEvents } from "../../../shared/engine/application-visible-events.js";
+import { forgetCodexApplicationSession } from "./codex-forget.js";
 
 function identity(value: unknown): string {
   if (typeof value !== "string" || !value || value.length > 128) throw new Error("Invalid application engine identity");
@@ -26,12 +27,13 @@ export function createCodexApplicationEngine(
     model?: string;
     effort?: string;
     timeoutMs?: number;
-    purpose?: "creation" | "knowledge" | "bots";
+    purpose?: "creation" | "knowledge" | "bots" | "bot-chat";
   },
   factory: CodexTransportFactory = createCodexBridge,
 ): ApplicationToolEngine {
   return {
     id: "codex",
+    forget: (sessionId) => forgetCodexApplicationSession(options, sessionId, factory),
     async run(value, callbacks) {
       callbacks.signal.throwIfAborted();
       const input = structuredClone(value),
@@ -115,7 +117,12 @@ export function createCodexApplicationEngine(
         defaultCwd: options.scratchDirectory,
         clientInfo: {
           name: "panda-" + (options.purpose ?? "creation"),
-          title: options.purpose === "knowledge" ? "PandaForce knowledge" : "PandaForce creation",
+          title:
+            options.purpose === "knowledge"
+              ? "PandaForce knowledge"
+              : options.purpose === "bot-chat"
+                ? "PandaForce Bot chat"
+                : "PandaForce creation",
           version: options.version,
         },
         isShuttingDown: () => closing,

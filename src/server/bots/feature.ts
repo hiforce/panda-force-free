@@ -15,6 +15,8 @@ import { createCodexApplicationEngine } from "../engines/application-tools/codex
 import { BotStore } from "./store.js";
 import { BotWorker } from "./worker.js";
 import { prepareBotProfile } from "./profile.js";
+import { createBotIntegrationFeature } from "./integrations/feature.js";
+import { createBotWorkspaceFeature } from "./workspace/feature.js";
 
 export function createBotFeature(options: {
   stateRoot: string;
@@ -22,6 +24,7 @@ export function createBotFeature(options: {
   connection: CodexConnection;
   owner(context: RouteContext): string;
   engine?: (bot: BotConfig) => ApplicationToolEngine;
+  chatEngine?: (bot: BotConfig) => ApplicationToolEngine;
   store?: BotRepository;
 }) {
   const store = options.store ?? new BotStore(join(options.stateRoot, "data", "bot-tasks.sqlite")),
@@ -41,6 +44,14 @@ export function createBotFeature(options: {
     scratchRoot,
   );
   let closed = false;
+  const integrations = createBotIntegrationFeature({
+    ...options,
+    store,
+    wakeTasks: () => {
+      worker.tick();
+    },
+  });
+  const workspace = createBotWorkspaceFeature({ ...options, store, engine: options.chatEngine });
   const guard = (handler: (context: RouteContext) => Promise<void>) => async (context: RouteContext) => {
     try {
       if (closed) throw new BotError("unavailable", 503);
@@ -145,6 +156,10 @@ export function createBotFeature(options: {
           return;
         }
         const bot = /^\/api\/bots\/([^/]+)$/.exec(pathname);
+        if (bot && method === "GET") {
+          respondJson(context.res, 200, { bot: await store.bot(owner, bot[1]!) });
+          return;
+        }
         if (bot && method === "PATCH") {
           const prepared = await prepareBotProfile(owner, await json(context));
           respondJson(context.res, 200, {
@@ -209,13 +224,17 @@ export function createBotFeature(options: {
     },
   ];
   return {
-    routes,
+    routes: [...integrations.routes, ...workspace.routes, ...routes],
     gadgetSummary: async (owner: string) => {
       const queue = await store.queue(owner, botQueueQuery(new URLSearchParams("limit=25")));
       return { counts: queue.counts ?? {}, total: queue.total };
     },
     isSession: (id: string) => store.hasSession(id),
-    start: () => worker.start(),
+    start: () => {
+      worker.start();
+      workspace.start();
+      integrations.start();
+    },
     async handle(context: RouteContext) {
       if (!context.url.pathname.startsWith("/api/v1/bots/")) return false;
       await guard(async (context) => {
@@ -256,6 +275,8 @@ export function createBotFeature(options: {
     },
     async close() {
       closed = true;
+      await integrations.close();
+      await workspace.close();
       await worker.close();
       await store.close();
     },

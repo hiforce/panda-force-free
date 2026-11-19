@@ -83,6 +83,15 @@ export const botMigrationTables: readonly MigrationTable[] = [
   direct("bot_avatars", ["owner", "id", "bytes"], ["owner", "id"], true),
   direct("bot_settings", ["owner", "retentionDays"], ["owner"], true),
   direct("bot_recoveries", ["owner", "id", "signature", "result"], ["owner", "id"], true),
+  {
+    ...direct(
+      "bot_workspace_records",
+      ["owner", "kind", "id", "botId", "version", "state", "dueAt", "expiresAt", "data"],
+      ["owner", "kind", "id"],
+      true,
+    ),
+    numericColumns: ["version", "dueAt", "expiresAt"],
+  },
 ];
 export const migrateBotSnapshot = (
   options: Omit<Parameters<typeof migrateSQLiteModule>[0], "module" | "tables" | "converterVersion">,
@@ -90,7 +99,7 @@ export const migrateBotSnapshot = (
   migrateSQLiteModule({
     ...options,
     limits: options.limits ?? { maxRecordBytes: 4 * 1024 * 1024, maxBatchBytes: 8 * 1024 * 1024 },
-    converterVersion: 3,
+    converterVersion: 4,
     module: "bots",
     tables: botMigrationTables,
   });

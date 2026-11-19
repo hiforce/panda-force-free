@@ -8,6 +8,7 @@ import { systemGadgetRegistry } from "../gadget/system/client.js";
 import { systemComposerMount } from "../gadget/system/composer/host.js";
 import { GadgetWorkspace } from "./gadget/workspace.js";
 import { createLazySettingsPage } from "./settings-pages/lazy.js";
+import { createBotNavigation } from "./bots/navigation.js";
 import { createLazyTemplateManager } from "./templates/lazy-settings.js";
 import { createLazyContentWorkspace } from "./creative/lazy-workspace.js";
 import { escapeHtml as escape } from "../shared/html.js";
@@ -64,6 +65,7 @@ export function createWorkbench({
   openFiles,
   onViewChange = () => {},
   creationBridge,
+  botModels = /** @type {import("./settings-pages/contracts.js").SettingsModelCatalog | undefined} */ (undefined),
 }) {
   createWorkbenchFrame(t);
   const shell = requireElement(".conversation-shell"),
@@ -158,7 +160,11 @@ export function createWorkbench({
     (path) => navigate(path),
     templateManager,
   );
-  const bots = createLazySettingsPage(t, "botWorkspace");
+  const bots = createLazySettingsPage(t, "botWorkspace", botModels);
+  const botNavigation = createBotNavigation(t, identityKey, () => ({
+    key: globalThis.__pandaForceIdentityKey,
+    canUseBots: globalThis.__pandaForceIdentity?.role !== "member",
+  }));
   const navigation = document.createElement("nav");
   navigation.className = "workbench-navigation";
   localizeAttribute(navigation, "aria-label", "workbench.workspaceNavigation", undefined, t);
@@ -435,7 +441,8 @@ export function createWorkbench({
         else if (route.page === "skills")
           skills.show(content, route.id || "all", new URL(location.href).searchParams.get("engine") || "");
         else if (route.page === "publish") publish.show(content, route.id, route.projectId);
-        else if (route.page === "bots") bots.show(content);
+        else if (route.page === "bots")
+          bots.show(content, { route: location.pathname + location.search, identity: identityKey });
         else if (route.page === "connections") renderConnections();
         else renderDeliverables();
       }
@@ -461,15 +468,17 @@ export function createWorkbench({
           : route.page === "task"
             ? "tasks"
             : route.page;
-    setMessageHtml(
-      navigation,
-      nav
-        .map(
-          ([key, label]) =>
-            `<button type="button" data-wb="route" data-route="${key}" class="${activePage === key ? "active" : ""}" ${activePage === key ? 'aria-current="page"' : ""}><span class="icon-slot">${codexIcon(iconNames[key])}</span><span>${messageHtml(label, undefined, t)}</span></button>`,
-        )
-        .join(""),
-    );
+    const menu = nav
+      .map(
+        ([key, label]) =>
+          `<button type="button" data-wb="route" data-route="${key}" class="${activePage === key && !(key === "bots" && /^[a-f0-9-]{36}$/.test(route.id)) ? "active" : ""}" ${activePage === key && !(key === "bots" && /^[a-f0-9-]{36}$/.test(route.id)) ? 'aria-current="page"' : ""}><span class="icon-slot">${codexIcon(iconNames[key])}</span><span>${messageHtml(label, undefined, t)}</span></button>${key === "bots" ? "<div data-bot-shortcuts></div>" : ""}`,
+      )
+      .join("");
+    if (navigation.dataset.botMenu !== menu) {
+      setMessageHtml(navigation, menu);
+      navigation.dataset.botMenu = menu;
+    }
+    botNavigation.mount(navigation.querySelector("[data-bot-shortcuts]"), location.pathname);
     setMessageHtml(
       bottom,
       nav

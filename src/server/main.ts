@@ -672,7 +672,7 @@ const server = createServer(
       const appRoute =
         req.method === "GET" &&
         (["/", "/invite", "/verify-email", "/reset-password", "/reset-password/new"].includes(url.pathname) ||
-          /^\/(?:settings(?:\/[^/]+)?|workspace|bots|tasks|projects|project|documents|deliverables|connections|create|creation\/[^/]+|skills(?:\/[^/]+)?|publish(?:\/[^/]+)?|new|task\/[^/]+)\/?$/.test(
+          /^\/(?:settings(?:\/[^/]+)?|workspace|bots(?:\/tasks|\/[a-f0-9-]{36}\/(?:chat|tasks|integrations))?|tasks|projects|project|documents|deliverables|connections|create|creation\/[^/]+|skills(?:\/[^/]+)?|publish(?:\/[^/]+)?|new|task\/[^/]+)\/?$/.test(
             url.pathname,
           ));
       const loginAssets = new Set([

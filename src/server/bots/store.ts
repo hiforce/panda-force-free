@@ -1,6 +1,7 @@
 import { SQLiteBotProfiles } from "./sqlite-profiles.js";
 import { SQLiteBotKeys } from "./sqlite-keys.js";
 import { SQLiteBotQueries } from "./sqlite-queries.js";
+import { SQLiteBotWorkspaceStorage } from "./workspace/sqlite.js";
 import { retryFailedSQLiteBots } from "./sqlite-recovery.js";
 
 import { changeBotTaskLifecycle } from "./task-lifecycle.js";
@@ -29,6 +30,7 @@ const digest = (value: string) => createHash("sha256").update(value).digest("hex
 export class BotStore {
   readonly db: Database;
   readonly avatars: BotAvatars;
+  readonly workspace: SQLiteBotWorkspaceStorage;
   private readonly sessions = new Set<string>();
   private readonly profiles: SQLiteBotProfiles;
   private readonly credentials: SQLiteBotKeys;
@@ -82,6 +84,7 @@ export class BotStore {
     this.profiles = new SQLiteBotProfiles(this.db, this.avatars, this.sessions);
     this.credentials = new SQLiteBotKeys(this.db, this.profiles);
     this.queries = new SQLiteBotQueries(this.db);
+    this.workspace = new SQLiteBotWorkspaceStorage(this.db);
     this.db.exec(
       `CREATE INDEX IF NOT EXISTS bot_tasks_owner_live_state_v2 ON bot_tasks(owner,(${taskStateExpression})) WHERE status!='deleted';`,
     );
@@ -147,6 +150,7 @@ export class BotStore {
       .immediate();
   }
   tasks = (...args: Parameters<SQLiteBotQueries["tasks"]>) => this.queries.tasks(...args);
+  botCounts = (...args: Parameters<SQLiteBotQueries["botCounts"]>) => this.queries.botCounts(...args);
   retryFailed(owner: string, value: unknown) {
     return retryFailedSQLiteBots(this.db, owner, value);
   }

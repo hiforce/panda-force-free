@@ -123,7 +123,7 @@ curl --fail-with-body --silent --show-error \
 
 更完整的“供应商素材 → 主题方案 → 商品详情 → 人工复核 → 上架回执”流程，可以看 **[完整接入案例](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-product-publishing.md)**。回调只执行业务系统声明的动作，并限制目标域名；模型给出判断不等于商品已经上架。
 
-Bot 卡片首页、每个 Bot 唯一的持续人机对话，以及 RSS、Slack、邮箱自动工作正在单独设计，不属于上面任务 API 已交付的能力。
+**助理是管理 Bot 的综合入口。** 紧凑列表用于创建、配置和查看任务；点击侧栏头像，即可进入这个 Bot 唯一的持续对话。聊天与后台任务保持独立。还可以配置 RSS/Atom 研究或 Gmail 草稿流程，把结果保留在私有频道（默认 30 天），并通过已验证的 Slack 连接投递。自动回复邮件需明确授权发件人策略和限额。[查看对话、排程、连接与恢复说明 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-workspace.md)
 
 ## 教熊猫学会更多功夫
 

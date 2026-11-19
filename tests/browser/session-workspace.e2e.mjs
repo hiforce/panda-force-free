@@ -63,6 +63,8 @@ try {
   const switchTo = async (id) => {
     await page.evaluate((id) => globalThis.__pandaForceDebug.openThread(id), id);
     await page.waitForFunction((id) => globalThis.__pandaForceDebug.state.active?.id === id, id);
+    assert.equal(await page.locator("#sessionInspector").isVisible(), false);
+    await openInspector();
   };
   const openInspector = async () => {
     if (!(await page.locator("#sessionInspector").isVisible())) await page.locator("#sessionInfoButton").click();
@@ -89,7 +91,8 @@ try {
   await page.locator("#prompt").fill("Check the new session inspector");
   await page.locator("#sendButton").click();
   await page.waitForURL("**/task/**");
-  await page.locator("#sessionInspector").waitFor({ state: "visible" });
+  assert.equal(await page.locator("#sessionInspector").isVisible(), false);
+  await openInspector();
   const createdId = await page.evaluate(() => globalThis.__pandaForceDebug.state.active.id);
   await page.evaluate(
     ({ id, usage }) => {
@@ -138,6 +141,8 @@ try {
   assert.equal(await page.locator(`.thread-item[data-id="${createdId}"] .thread-name`).textContent(), legacyTitle);
   checks.push("Native and legacy title events update the new session without reloading or renaming another session");
   await go("old-alpha");
+  assert.equal(await page.locator("#sessionInspector").isVisible(), false);
+  await openInspector();
   await page.waitForFunction(
     () =>
       !document
@@ -288,6 +293,8 @@ try {
   await page.locator("[data-session-check]").check();
   await page.reload();
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("#sessionInspector").isVisible(), false);
+  await openInspector();
   await page.locator("#sessionToolsTab").click();
   await page.locator('[data-session-tool="checklist"]').click();
   assert.equal(await page.locator("[data-session-check]").isChecked(), true);

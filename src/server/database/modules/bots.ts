@@ -1,5 +1,6 @@
 import ddl from "./bots-mysql-v1.json";
 import recovery from "./bots-mysql-v4.json";
+import workspace from "./bots-mysql-v5.json";
 import type { DatabaseModule, SchemaIssue } from "../registry.js";
 import { inspectTable } from "../schema-inspection.js";
 
@@ -45,12 +46,14 @@ export const mysqlBotModule: DatabaseModule = {
         ],
       },
       { version: 4, steps: [{ id: recovery.table, sql: recovery.sql, satisfied: (c) => c.table(recovery.table) }] },
+      { version: 5, steps: [{ id: workspace.table, sql: workspace.sql, satisfied: (c) => c.table(workspace.table) }] },
     ],
   },
   async inspect(connection) {
     const issues: SchemaIssue[] = [];
     for (const table of ddl) issues.push(...(await inspectTable(connection, "bots", table.definition)));
     issues.push(...(await inspectTable(connection, "bots", recovery.definition)));
+    issues.push(...(await inspectTable(connection, "bots", workspace.definition)));
     const tasks = await connection.describe("panda_force_bot_tasks");
     if (tasks)
       issues.push(

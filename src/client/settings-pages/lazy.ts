@@ -4,7 +4,7 @@ import { isModuleNetworkError } from "../documents/module-network-error.js";
 import { setMessageHtml } from "../i18n.js";
 import { escapeHtml } from "../../shared/html.js";
 import type { settingsPageFactories } from "./runtime.js";
-import type { SettingsModelCatalog } from "./contracts.js";
+import type { SettingsModelCatalog, SettingsPageMount } from "./contracts.js";
 
 const runtime = new DocumentRuntimeLoader<typeof import("./runtime.js")>({
   prime: async () => {},
@@ -19,11 +19,14 @@ export function createLazySettingsPage(
 ) {
   let epoch = 0,
     mountedHost: HTMLElement | null = null,
+    mountedKey = "",
+    mountOptions: SettingsPageMount | undefined,
     fatal = false,
-    view: { show(host: HTMLElement): void; hide(): void } | null = null;
+    view: { show(host: HTMLElement, options?: SettingsPageMount): void; hide(): void } | null = null;
   function hide() {
     epoch++;
     mountedHost = null;
+    mountedKey = "";
     view?.hide();
   }
   function failure(host: HTMLElement, retryable: boolean) {
@@ -33,7 +36,7 @@ export function createLazySettingsPage(
     );
     host.querySelector("button")!.onclick = () => {
       mountedHost = null;
-      return retryable ? show(host) : location.reload();
+      return retryable ? show(host, mountOptions) : location.reload();
     };
   }
   function mount(
@@ -42,16 +45,19 @@ export function createLazySettingsPage(
   ) {
     try {
       view ??= create!(t, models);
-      view.show(host);
+      view.show(host, mountOptions);
     } catch {
       fatal = true;
       failure(host, false);
     }
   }
-  function show(host: HTMLElement) {
-    if (mountedHost === host) return;
+  function show(host: HTMLElement, options?: SettingsPageMount) {
+    const key = JSON.stringify(options ?? {});
+    if (mountedHost === host && mountedKey === key) return;
     hide();
     mountedHost = host;
+    mountedKey = key;
+    mountOptions = options;
     if (fatal) return failure(host, false);
     const current = epoch;
     if (view) return mount(host);

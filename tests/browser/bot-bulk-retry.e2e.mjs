@@ -81,7 +81,7 @@ for (const [engine, width, locale] of [
       page.on("response", (response) => {
         if (response.status() >= 400) console.error("HTTP", response.status(), response.url());
       });
-      await page.goto(app.base + "/bots");
+      await page.goto(app.base + "/bots/tasks");
       try {
         await page.locator(".bot-task-row").first().waitFor();
       } catch (error) {

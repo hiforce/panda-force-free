@@ -1,5 +1,6 @@
 import { lookup } from "node:dns/promises";
 import { request } from "node:https";
+import { request as httpRequest } from "node:http";
 import { isIP, BlockList } from "node:net";
 import { botHttps, BotError } from "../../shared/bots/contracts.js";
 
@@ -43,50 +44,67 @@ export async function botRequest(
     headers?: Record<string, string>;
     maxBytes: number;
     signal: AbortSignal;
+    allowHttp?: boolean;
   },
 ) {
-  const url = botHttps(value),
-    addresses = await Promise.race([
-      lookup(url.hostname, { all: true }),
-      new Promise<never>((_resolve, reject) => {
-        if (options.signal.aborted) reject(new Error("Aborted"));
-        else options.signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
-      }),
-    ]);
+  const url = options.allowHttp ? new URL(value) : botHttps(value);
+  if (
+    options.allowHttp &&
+    (!["http:", "https:"].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      url.hash ||
+      (url.port && url.port !== (url.protocol === "https:" ? "443" : "80")))
+  )
+    throw new BotError("invalidUrl");
+  const addresses = await Promise.race([
+    lookup(url.hostname, { all: true }),
+    new Promise<never>((_resolve, reject) => {
+      if (options.signal.aborted) reject(new Error("Aborted"));
+      else options.signal.addEventListener("abort", () => reject(new Error("Aborted")), { once: true });
+    }),
+  ]);
   if (!addresses.length || addresses.some((a) => !publicBotAddress(a.address))) throw new BotError("targetDenied", 403);
   const target = addresses[0]!;
   options.signal.throwIfAborted();
-  return await new Promise<{ status: number; type: string; body: Buffer }>((resolve, reject) => {
-    const req = request(
-      url,
-      {
-        method: options.method,
-        agent: false,
-        family: target.family,
-        signal: options.signal,
-        headers: options.headers,
-        lookup: ((_hostname: unknown, _options: unknown, done: Function) =>
-          done(null, target.address, target.family)) as never,
-      },
-      (res) => {
-        const chunks: Buffer[] = [];
-        let size = 0;
-        res.on("data", (chunk: Buffer) => {
-          size += chunk.length;
-          if (size > options.maxBytes) res.destroy(new Error("Response too large"));
-          else chunks.push(chunk);
-        });
-        res.on("error", reject);
-        res.on("end", () =>
-          resolve({
-            status: res.statusCode ?? 0,
-            type: String(res.headers["content-type"] ?? ""),
-            body: Buffer.concat(chunks),
-          }),
-        );
-      },
-    );
-    req.on("error", reject);
-    req.end(options.body);
-  });
+  return await new Promise<{ status: number; type: string; body: Buffer; headers?: Record<string, string> }>(
+    (resolve, reject) => {
+      const req = (url.protocol === "http:" ? httpRequest : request)(
+        url,
+        {
+          method: options.method,
+          agent: false,
+          family: target.family,
+          signal: options.signal,
+          headers: options.headers,
+          lookup: ((_hostname: unknown, _options: unknown, done: Function) =>
+            done(null, target.address, target.family)) as never,
+        },
+        (res) => {
+          const chunks: Buffer[] = [];
+          let size = 0;
+          res.on("data", (chunk: Buffer) => {
+            size += chunk.length;
+            if (size > options.maxBytes) res.destroy(new Error("Response too large"));
+            else chunks.push(chunk);
+          });
+          res.on("error", reject);
+          res.on("end", () =>
+            resolve({
+              status: res.statusCode ?? 0,
+              type: String(res.headers["content-type"] ?? ""),
+              body: Buffer.concat(chunks),
+              headers: Object.fromEntries(
+                ["etag", "last-modified", "retry-after", "location"].flatMap((name) =>
+                  typeof res.headers[name] === "string" ? [[name, res.headers[name] as string]] : [],
+                ),
+              ),
+            }),
+          );
+        },
+      );
+      req.on("error", reject);
+      req.end(options.body);
+    },
+  );
 }

@@ -15,12 +15,12 @@ const groups: [string, MessageId][] = [
   ["progress", "cli.botPendingExecution"],
   ["completed", "cli.botCompleted"],
 ];
-export function createBotTaskList(context: BotContext) {
+export function createBotTaskList(context: BotContext, scope?: { botId: string }) {
   let host: HTMLElement | null = null,
     snapshot: BotQueueSnapshot,
     query = "",
     filter = "",
-    botId = "",
+    botId = scope?.botId ?? "",
     fingerprint = "",
     page = 1,
     anchor = 0,
@@ -113,10 +113,11 @@ export function createBotTaskList(context: BotContext) {
         }),
     );
     list.querySelector<HTMLButtonElement>("[data-reset-filters]")?.addEventListener("click", () => {
-      query = filter = botId = "";
+      query = filter = "";
+      botId = scope?.botId ?? "";
       host!.querySelector<HTMLInputElement>("[data-bot-search]")!.value = "";
       host!.querySelector<HTMLSelectElement>("[data-filter]")!.value = "";
-      host!.querySelector<HTMLSelectElement>("[data-bot-select]")!.value = "";
+      host!.querySelector<HTMLSelectElement>("[data-bot-select]")!.value = botId;
       changed();
     });
     if (focusedId) {
@@ -221,6 +222,7 @@ export function createBotTaskList(context: BotContext) {
         `${option("", "cli.botAllBots")}${value.bots.map((bot) => `<option value="${e(bot.id)}">${e(bot.name)}</option>`).join("")}`,
       );
       select.value = botId;
+      select.disabled = !!scope;
       rows();
     },
     hide() {

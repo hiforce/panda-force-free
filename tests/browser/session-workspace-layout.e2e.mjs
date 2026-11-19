@@ -82,6 +82,8 @@ try {
   await page.goto(fixture.base + "/task/old-alpha");
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
   await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.models.length > 0);
+  assert.equal(await page.locator("#sessionInspector").isVisible(), false);
+  await page.locator("#sessionInfoButton").click();
   await page.evaluate(() => globalThis.__pandaForceDebug.state.ws?.close());
   await page.waitForFunction(() => globalThis.__pandaForceDebug.state.transport === "sse");
   await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-alpha"));

@@ -5,3 +5,8 @@ export interface SettingsModelCatalog {
   read(): Pick<SessionControlView, "models">;
   load(): Promise<boolean>;
 }
+
+export interface SettingsPageMount {
+  route?: string;
+  identity?: string;
+}

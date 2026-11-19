@@ -38,6 +38,7 @@ export async function createAppFixture({
   sessionPresentation = /** @type {{titles: string[]; timestamp: number} | null} */ (null),
   models = null,
   applicationCreation = false,
+  applicationChat = false,
   applicationImage = "",
   applicationArtifact = /** @type {{kind: "slides" | "web" | "video"; arguments: object} | null} */ (null),
   applicationKnowledge = false,
@@ -204,13 +205,14 @@ import { createInterface } from 'node:readline';
 import { Database } from 'bun:sqlite';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { appendFileSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 let count=0;
 let account=${JSON.stringify(account)};
 const engineFiles=${JSON.stringify(engineFiles)};
 const threads=${JSON.stringify(initial)};
 const queues=new Map();
-const applicationThreads=new Set(), applicationCalls=new Map(), imageThreads=new Set();
+const applicationThreads=new Set(), applicationCalls=new Map(), imageThreads=new Set(), chatThreads=new Set();
 function applicationSave(pending){
  const callId='save-'+pending.run;applicationCalls.set(callId,{...pending,kind:'save'});
  send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_documents_create',arguments:{title:'Generated handbook',body:{schema:1,format:'richtext',document:{type:'doc',content:[{type:'heading',attrs:{level:2},content:[{type:'text',text:'A useful result'}]},{type:'paragraph',content:[{type:'text',text:pending.choice?.text||'An editable document from an answered task.'}]}]}},...(pending.choice?.projectId?{archiveTo:{projectId:pending.choice.projectId}}:{}),...(pending.choice?.fileDirectory?{fileDirectory:pending.choice.fileDirectory}:{})}}});
@@ -226,8 +228,8 @@ function goalResult(id){
   const row=goalDb?.query('SELECT * FROM thread_goals WHERE thread_id=?').get(id);
   return row ? {threadId:row.thread_id,objective:row.objective,status:row.status,tokenBudget:row.token_budget,tokensUsed:row.tokens_used,timeUsedSeconds:row.time_used_seconds,createdAt:row.created_at_ms,updatedAt:row.updated_at_ms} : null;
 }
-let sharedSocket;
-const send=value=>sharedSocket?sharedSocket.send(JSON.stringify(value)):process.stdout.write(JSON.stringify(value)+'\\n');
+let sharedSocket;const peerContext=new AsyncLocalStorage();
+const send=value=>{const socket=peerContext.getStore()||sharedSocket;if(socket)socket.send(JSON.stringify(value));else process.stdout.write(JSON.stringify(value)+'\\n')};
 setInterval(()=>{if(existsSync(${JSON.stringify(serverRequest)})){const request=JSON.parse(readFileSync(${JSON.stringify(serverRequest)},'utf8'));unlinkSync(${JSON.stringify(serverRequest)});send(request)}},50).unref();
 const handleLine=line=>{
   const m=JSON.parse(line),p=m.params||{};
@@ -313,6 +315,7 @@ const handleLine=line=>{
     const imageRenderer=${Boolean(applicationImage)}&&p.permissions==='panda_image_renderer';
     const thread={id:imageRenderer?crypto.randomUUID():'new-'+(++count),name:${unnamedSessions} ? null : 'New session '+count,preview:'',cwd:p.cwd,status:{type:'idle'},createdAt:Date.now()/1000,updatedAt:Date.now()/1000,turns:[],canAcceptDirectInput:true};
     if(${applicationCreation}&&p.dynamicTools?.some(tool=>tool.name==='panda_documents_create'))applicationThreads.add(thread.id);
+    if(${applicationChat}&&p.dynamicTools?.some(tool=>tool.name==='panda_bot_chat_reply'))chatThreads.add(thread.id);
     if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_draft'))knowledgeThreads.set(thread.id,'draft');
     if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_review_decision'))knowledgeThreads.set(thread.id,'review');
     if(imageRenderer)imageThreads.add(thread.id);
@@ -329,7 +332,11 @@ const handleLine=line=>{
   }else if(m.method==='turn/start'){
     const thread=threads.find(t=>t.id===p.threadId);
     if(${unnamedSessions}&&thread&&!thread.preview)thread.preview=(p.input||[]).filter(x=>x.type==='text').map(x=>x.text).join('\\n');
-    result={turn:{id:'turn-'+(++count),status:applicationThreads.has(p.threadId)||knowledgeThreads.has(p.threadId)?'inProgress':'completed',items:[]}};
+    result={turn:{id:'turn-'+(++count),status:applicationThreads.has(p.threadId)||knowledgeThreads.has(p.threadId)||chatThreads.has(p.threadId)?'inProgress':'completed',items:[]}};
+    if(chatThreads.has(p.threadId)){
+      const run=result.turn.id,id='chat-'+run;applicationCalls.set(id,{kind:'chat',thread:p.threadId,run});
+      setTimeout(()=>send({id,method:'item/tool/call',params:{threadId:p.threadId,turnId:run,callId:id,tool:'panda_bot_chat_reply',arguments:{text:'Hello! I am your curious Panda. **What shall we explore?**'}}}),100);
+    }
     if(imageThreads.has(p.threadId)){result={turn:{id:crypto.randomUUID(),status:'completed',items:[{id:crypto.randomUUID(),type:'imageGeneration',status:'completed',failure:null,result:${JSON.stringify(applicationImage)}}]}};thread.turns.push(result.turn);}
     if(${nativeInputHistory}&&thread){
       const item={id:'input-'+result.turn.id,type:'userMessage',content:p.input,clientId:p.clientUserMessageId};
@@ -363,7 +370,7 @@ const handleLine=line=>{
   else if(m.method==='host/thread/live')result={active:false,turn:null};
   send({id:m.id,result});
 };
-if(${sharedApprovals}){const server=createServer();const wss=new WebSocketServer({server});wss.on('connection',socket=>{sharedSocket=socket;socket.on('message',raw=>handleLine(String(raw)))});server.listen(${JSON.stringify(join(dir, "daemon.sock"))});}
+if(${sharedApprovals}){const server=createServer();const wss=new WebSocketServer({server});wss.on('connection',socket=>{sharedSocket=socket;socket.on('message',raw=>peerContext.run(socket,()=>handleLine(String(raw))))});server.listen(${JSON.stringify(join(dir, "daemon.sock"))});}
 else createInterface({input:process.stdin}).on('line',handleLine);
 `,
     { mode: 0o700 },

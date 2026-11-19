@@ -51,6 +51,7 @@ export function openBotEditor(host: HTMLElement, context: BotContext, models?: S
           instructions: data.get("pf-bot-instructions"),
           callbackHosts: String(data.get("pf-bot-hosts")).split(/\s+/).filter(Boolean),
         });
+        window.dispatchEvent(new Event("panda-bots-changed"));
         await context.reload();
         dialog.close();
         context.notice(context.t(bot ? "cli.botSaved" : "cli.botCreated"));

@@ -1,11 +1,20 @@
 import { SQL } from "bun";
-import { BotError, type BotTask, type BotTaskSummary } from "../../shared/bots/contracts.js";
+import { BotError, type BotTask, type BotTaskSummary, type BotTaskState } from "../../shared/bots/contracts.js";
 import { botTaskView } from "../../shared/bots/task-state.js";
 import { defaultQueueQuery, queueStates, taskSummary, type BotQueueQuery } from "./queue-query.js";
 import { MySQLBotContext } from "./mysql-context.js";
 const parseTask = (data: string) => botTaskView(JSON.parse(data) as BotTask);
 export class MySQLBotQueries {
   constructor(private readonly context: MySQLBotContext) {}
+  botCounts(owner: string) {
+    return this.context.operation(async () => {
+      const result: Record<string, Partial<Record<BotTaskState, number>>> = {};
+      for (const row of await this.context
+        .pool`SELECT botId,state,COUNT(*) n FROM panda_force_bot_tasks WHERE owner=${owner} AND status!='deleted' GROUP BY botId,state`)
+        (result[row.botId] ??= {})[row.state as BotTaskState] = Number(row.n);
+      return result;
+    });
+  }
   tasks(owner: string) {
     return this.context.operation(async () =>
       (

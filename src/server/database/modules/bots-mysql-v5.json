@@ -1,0 +1,100 @@
+{
+  "table": "panda_force_bot_workspace_records",
+  "sql": "CREATE TABLE IF NOT EXISTS panda_force_bot_workspace_records (owner VARCHAR(191) COLLATE utf8mb4_bin NOT NULL,kind VARCHAR(32) COLLATE utf8mb4_bin NOT NULL,id VARCHAR(191) COLLATE utf8mb4_bin NOT NULL,botId CHAR(36) COLLATE utf8mb4_bin NOT NULL,version BIGINT UNSIGNED NOT NULL,state VARCHAR(32) COLLATE utf8mb4_bin NOT NULL,dueAt BIGINT NULL,expiresAt BIGINT NULL,data MEDIUMTEXT COLLATE utf8mb4_bin NOT NULL,PRIMARY KEY(owner,kind,id),INDEX bot_workspace_bot(owner,kind,botId,id),INDEX bot_workspace_due(kind,state,dueAt),INDEX bot_workspace_expiry(kind,expiresAt)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+  "definition": {
+    "name": "panda_force_bot_workspace_records",
+    "columns": [
+      {
+        "name": "owner",
+        "type": "varchar(191)",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "kind",
+        "type": "varchar(32)",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "id",
+        "type": "varchar(191)",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "botId",
+        "type": "char(36)",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "version",
+        "type": "bigint unsigned",
+        "nullable": false,
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "state",
+        "type": "varchar(32)",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "dueAt",
+        "type": "bigint",
+        "nullable": true,
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "expiresAt",
+        "type": "bigint",
+        "nullable": true,
+        "autoIncrement": false,
+        "defaultValue": null
+      },
+      {
+        "name": "data",
+        "type": "mediumtext",
+        "nullable": false,
+        "collation": "utf8mb4_bin",
+        "autoIncrement": false,
+        "defaultValue": null
+      }
+    ],
+    "indexes": [
+      {
+        "name": "PRIMARY",
+        "unique": true,
+        "columns": ["owner", "kind", "id"]
+      },
+      {
+        "name": "bot_workspace_bot",
+        "unique": false,
+        "columns": ["owner", "kind", "botId", "id"]
+      },
+      {
+        "name": "bot_workspace_due",
+        "unique": false,
+        "columns": ["kind", "state", "dueAt"]
+      },
+      {
+        "name": "bot_workspace_expiry",
+        "unique": false,
+        "columns": ["kind", "expiresAt"]
+      }
+    ]
+  }
+}

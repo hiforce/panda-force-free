@@ -123,7 +123,7 @@ Your product system sends verified facts for `ITEM-001`. Catalog Panda drafts a 
 
 For a larger workflow—supplier assets, a theme brief, product details, human review and publication receipts—see the **[complete integration walkthrough](./panda-docs/docs/bot-product-publishing.md)**. Callbacks execute only actions declared by your application, with allowed destination hosts. A model decision alone is not proof of publication.
 
-The Bot-card home, a single persistent human conversation per Bot, and RSS/Slack/mail automations are being designed separately; they are not current capabilities of the task API shown here.
+**Assistant is your Bot hub.** Manage Bots in a compact list, then choose a sidebar avatar to open that Bot’s ongoing conversation. Human chat and background tasks use separate context. Add RSS/Atom research or Gmail draft workflows, keep results in a private channel (30 days by default), and optionally deliver through a verified Slack connection. Automatic email replies require an explicit sender policy and limit. [Conversations, schedules, connections and recovery →](./panda-docs/docs/bot-workspace.md)
 
 ## Teach your panda new moves
 

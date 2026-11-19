@@ -23,11 +23,10 @@ try {
     try {
       await app.signIn(context);
       const api = async (path, data, method = data ? "post" : "get") => {
-        const response = await context.request[method](app.base + path, { data });
+        const response = await context.request[method](app.base + path, { data, headers: { Origin: app.base } });
         assert.ok(response.ok(), path + ": " + (await response.text()));
         return response.json();
       };
-      await api("/api/system/database/selection", { driver: "sqlite" });
       const bot = (
         await api("/api/bots", {
           name: "Local task cleanup " + width,
@@ -84,7 +83,7 @@ try {
         errors = [];
       page.setDefaultTimeout(15000);
       page.on("pageerror", (e) => errors.push(e.message));
-      await page.goto(app.base + "/bots");
+      await page.goto(app.base + "/bots/tasks");
       await page.locator(`[data-detail="${plain.id}"]`).click();
       const dialog = page.locator("dialog.bot-detail[open]");
       const bounds = await dialog.boundingBox();
@@ -153,7 +152,7 @@ try {
         await page.locator(".bot-task-list").locator(`[data-delete-record="${running.id}"]`).isDisabled(),
         true,
       );
-      assert.equal((await context.request.delete(app.base + "/api/bots/tasks/" + running.id)).status(), 409);
+      assert.equal((await context.request.delete(app.base + "/api/bots/tasks/" + running.id, { headers: { Origin: app.base } })).status(), 409);
       const replay = await context.request.post(app.base + "/api/v1/bots/" + bot.code + "/tasks", {
         headers: { authorization: "Bearer " + keys.secret, "idempotency-key": "local-record-" + width },
         data: {

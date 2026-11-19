@@ -81,7 +81,7 @@ for (const [engine, width, locale] of [
       errors = [];
     page.setDefaultTimeout(12000);
     page.on("pageerror", (error) => errors.push(error.message));
-    await page.goto(app.base + "/bots");
+    await page.goto(app.base + "/bots/tasks");
     const row = (index) => page.locator(`[data-task-id="${tasks[index].id}"]`);
     await row(0).waitFor();
     assert.match(await row(0).locator(".bot-status").innerText(), locale === "en" ? /Finished/ : /已完成/);

@@ -149,6 +149,7 @@ export function assembleWorkbench({
 }) {
   let workbench;
   workbench = createWorkbench({
+    botModels: { read: () => modelsPort.sessionControlView(), load: () => modelsPort.loadModels() },
     creationBridge: {
       controls: () => modelsPort.sessionControlView(),
       openGoal: (draft) => goalsPort.openGoalDialog(undefined, draft),

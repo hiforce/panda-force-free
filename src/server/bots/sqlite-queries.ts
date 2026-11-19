@@ -1,11 +1,21 @@
 import { defaultQueueQuery, queueStates, taskStateExpression, taskSummary, type BotQueueQuery } from "./queue-query.js";
 import { botTaskView } from "../../shared/bots/task-state.js";
 import { Database } from "bun:sqlite";
-import { BotError, type BotTask, type BotTaskSummary } from "../../shared/bots/contracts.js";
+import { BotError, type BotTask, type BotTaskSummary, type BotTaskState } from "../../shared/bots/contracts.js";
 
 type Row = { data: string };
 export class SQLiteBotQueries {
   constructor(private readonly db: Database) {}
+  botCounts(owner: string) {
+    const result: Record<string, Partial<Record<BotTaskState, number>>> = {};
+    for (const row of this.db
+      .query<{ botId: string; state: BotTaskState; n: number }, [string]>(
+        `SELECT botId,${taskStateExpression} state,COUNT(*) n FROM bot_tasks WHERE owner=? AND status!='deleted' GROUP BY botId,state`,
+      )
+      .all(owner))
+      (result[row.botId] ??= {})[row.state] = row.n;
+    return result;
+  }
   tasks(owner: string): BotTask[] {
     return this.db
       .query<Row, [string]>(

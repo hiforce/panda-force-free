@@ -2,80 +2,82 @@
 import m0_0 from "./locales/en/accounts.json";
 import m0_1 from "./locales/en/approvals.json";
 import m0_2 from "./locales/en/auth.json";
-import m0_3 from "./locales/en/builds.json";
-import m0_4 from "./locales/en/builtinSkills.json";
-import m0_5 from "./locales/en/cli.json";
-import m0_6 from "./locales/en/codeBlocks.json";
-import m0_7 from "./locales/en/common.json";
-import m0_8 from "./locales/en/composer.json";
-import m0_9 from "./locales/en/connections.json";
-import m0_10 from "./locales/en/creation.json";
-import m0_11 from "./locales/en/creative.json";
-import m0_12 from "./locales/en/database.json";
-import m0_13 from "./locales/en/delivery.json";
-import m0_14 from "./locales/en/documents.json";
-import m0_15 from "./locales/en/editorial.json";
-import m0_16 from "./locales/en/errors.json";
-import m0_17 from "./locales/en/files.json";
-import m0_18 from "./locales/en/gadget.json";
-import m0_19 from "./locales/en/goals.json";
-import m0_20 from "./locales/en/knowledge.json";
-import m0_21 from "./locales/en/plugins.json";
-import m0_22 from "./locales/en/previews.json";
-import m0_23 from "./locales/en/projects.json";
-import m0_24 from "./locales/en/publishing.json";
-import m0_25 from "./locales/en/search.json";
-import m0_26 from "./locales/en/sessions.json";
-import m0_27 from "./locales/en/sessionview.json";
-import m0_28 from "./locales/en/settings.json";
-import m0_29 from "./locales/en/shell.json";
-import m0_30 from "./locales/en/skillWorkspace.json";
-import m0_31 from "./locales/en/skills.json";
-import m0_32 from "./locales/en/social.json";
-import m0_33 from "./locales/en/sources.json";
-import m0_34 from "./locales/en/storage.json";
-import m0_35 from "./locales/en/templates.json";
-import m0_36 from "./locales/en/usage.json";
-import m0_37 from "./locales/en/users.json";
-import m0_38 from "./locales/en/workbench.json";
+import m0_3 from "./locales/en/bots.json";
+import m0_4 from "./locales/en/builds.json";
+import m0_5 from "./locales/en/builtinSkills.json";
+import m0_6 from "./locales/en/cli.json";
+import m0_7 from "./locales/en/codeBlocks.json";
+import m0_8 from "./locales/en/common.json";
+import m0_9 from "./locales/en/composer.json";
+import m0_10 from "./locales/en/connections.json";
+import m0_11 from "./locales/en/creation.json";
+import m0_12 from "./locales/en/creative.json";
+import m0_13 from "./locales/en/database.json";
+import m0_14 from "./locales/en/delivery.json";
+import m0_15 from "./locales/en/documents.json";
+import m0_16 from "./locales/en/editorial.json";
+import m0_17 from "./locales/en/errors.json";
+import m0_18 from "./locales/en/files.json";
+import m0_19 from "./locales/en/gadget.json";
+import m0_20 from "./locales/en/goals.json";
+import m0_21 from "./locales/en/knowledge.json";
+import m0_22 from "./locales/en/plugins.json";
+import m0_23 from "./locales/en/previews.json";
+import m0_24 from "./locales/en/projects.json";
+import m0_25 from "./locales/en/publishing.json";
+import m0_26 from "./locales/en/search.json";
+import m0_27 from "./locales/en/sessions.json";
+import m0_28 from "./locales/en/sessionview.json";
+import m0_29 from "./locales/en/settings.json";
+import m0_30 from "./locales/en/shell.json";
+import m0_31 from "./locales/en/skillWorkspace.json";
+import m0_32 from "./locales/en/skills.json";
+import m0_33 from "./locales/en/social.json";
+import m0_34 from "./locales/en/sources.json";
+import m0_35 from "./locales/en/storage.json";
+import m0_36 from "./locales/en/templates.json";
+import m0_37 from "./locales/en/usage.json";
+import m0_38 from "./locales/en/users.json";
+import m0_39 from "./locales/en/workbench.json";
 export const englishMessages = {
   "accounts": m0_0,
   "approvals": m0_1,
   "auth": m0_2,
-  "builds": m0_3,
-  "builtinSkills": m0_4,
-  "cli": m0_5,
-  "codeBlocks": m0_6,
-  "common": m0_7,
-  "composer": m0_8,
-  "connections": m0_9,
-  "creation": m0_10,
-  "creative": m0_11,
-  "database": m0_12,
-  "delivery": m0_13,
-  "documents": m0_14,
-  "editorial": m0_15,
-  "errors": m0_16,
-  "files": m0_17,
-  "gadget": m0_18,
-  "goals": m0_19,
-  "knowledge": m0_20,
-  "plugins": m0_21,
-  "previews": m0_22,
-  "projects": m0_23,
-  "publishing": m0_24,
-  "search": m0_25,
-  "sessions": m0_26,
-  "sessionview": m0_27,
-  "settings": m0_28,
-  "shell": m0_29,
-  "skillWorkspace": m0_30,
-  "skills": m0_31,
-  "social": m0_32,
-  "sources": m0_33,
-  "storage": m0_34,
-  "templates": m0_35,
-  "usage": m0_36,
-  "users": m0_37,
-  "workbench": m0_38,
+  "bots": m0_3,
+  "builds": m0_4,
+  "builtinSkills": m0_5,
+  "cli": m0_6,
+  "codeBlocks": m0_7,
+  "common": m0_8,
+  "composer": m0_9,
+  "connections": m0_10,
+  "creation": m0_11,
+  "creative": m0_12,
+  "database": m0_13,
+  "delivery": m0_14,
+  "documents": m0_15,
+  "editorial": m0_16,
+  "errors": m0_17,
+  "files": m0_18,
+  "gadget": m0_19,
+  "goals": m0_20,
+  "knowledge": m0_21,
+  "plugins": m0_22,
+  "previews": m0_23,
+  "projects": m0_24,
+  "publishing": m0_25,
+  "search": m0_26,
+  "sessions": m0_27,
+  "sessionview": m0_28,
+  "settings": m0_29,
+  "shell": m0_30,
+  "skillWorkspace": m0_31,
+  "skills": m0_32,
+  "social": m0_33,
+  "sources": m0_34,
+  "storage": m0_35,
+  "templates": m0_36,
+  "usage": m0_37,
+  "users": m0_38,
+  "workbench": m0_39,
 };

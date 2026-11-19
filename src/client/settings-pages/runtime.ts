@@ -1,6 +1,7 @@
 import { createStorageSettings } from "../original-storage/composed.js";
 import { createDatabaseSettings } from "../database/settings.js";
-import { createBotSettings, createBotWorkspace } from "../bots/settings.js";
+import { createBotSettings } from "../bots/settings.js";
+import { createBotWorkspace } from "../bots/workspace.js";
 import { createCliSettings } from "../cli/settings.js";
 import { createSearchSettings } from "../search/settings.js";
 import { createUsersSettings } from "../users/settings.js";

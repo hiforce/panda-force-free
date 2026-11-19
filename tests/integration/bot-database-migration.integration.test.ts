@@ -107,7 +107,7 @@ test.skipIf(!path)(
           migrationId,
           module: "bots",
           tables: botMigrationTables,
-          converterVersion: 4,
+          converterVersion: 5,
         }),
       ).rejects.toThrow("migrationMappingChanged");
       expect((await sql`SELECT state FROM panda_force_data_migration_runs WHERE id=${migrationId}`)[0].state).toBe(
