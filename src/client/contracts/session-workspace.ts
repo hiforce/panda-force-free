@@ -105,6 +105,7 @@ export interface SessionWorkspaceOptions {
 
 export interface SessionControlView {
   settingsHint?: MessageId;
+  modelLoadStatus?: string;
   sessionId: string;
   model: string;
   effort: string;

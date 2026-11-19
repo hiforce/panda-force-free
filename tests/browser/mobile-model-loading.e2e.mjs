@@ -1,3 +1,4 @@
+import { openComposerSettings } from "../support/composer-settings.mjs";
 import { createBrowserFixture } from "../support/browser-runtime.mjs";
 import assert from "node:assert/strict";
 import { devices } from "playwright";
@@ -95,7 +96,8 @@ try {
   await page.evaluate(() => {
     window.fetch = window.__workingModelFetch;
   });
-  await page.locator("#modelButton").click();
+  await openComposerSettings(page, "model");
+  await page.locator("#retryModels").click();
   await page.waitForFunction(() => globalThis.__pandaForceDebug.state.modelLoadStatus === "ready");
   assert.equal(await page.locator("#modelButton").getAttribute("aria-busy"), "false");
   assert.equal(await page.evaluate(() => window.__modelsViaWs), 0);

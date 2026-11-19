@@ -57,6 +57,7 @@ try {
           globalThis.__pandaForceDebug?.state.active?.id === "old-alpha" &&
           globalThis.__pandaForceDebug.state.models.length > 0,
       );
+      await page.locator('[data-composer-control="add"]').click();
       await page.locator("[data-session-skills]").click();
       const picker = page.locator(".creation-skill-browser[open]");
       await picker.locator("[data-skill-id=software-prd]").click();
@@ -156,6 +157,7 @@ try {
       assert(followup);
       assert.deepEqual(sessionSkillsFromInput(followup.params.input), []);
       assert.equal(sent[0].selection.id, "software-prd", "An old request is immutable after picker edits");
+      await page.locator('[data-composer-control="add"]').click();
       await page.locator("[data-session-skills]").click();
       await picker.locator("[data-skill-id=software-prd]").click();
       await picker.locator("footer [data-skill-browser-close]").click();
@@ -228,6 +230,7 @@ try {
       );
       if (width === 430) {
         await page.evaluate((value) => window.__pandaForceI18n.setPreference(value), locale);
+        await page.locator('[data-composer-control="add"]').click();
         await page.locator("[data-session-skills]").click();
         for (const id of ["technical-proposal", "api-contract", "longform-editor", "meeting-notes", "release-notes"])
           await picker.locator(`[data-skill-id="${id}"]`).click();
@@ -266,6 +269,7 @@ try {
         assert((await page.locator("#composer").boundingBox()).height < 300);
         assert((await page.locator("#conversation").boundingBox()).height > 0);
         await page.screenshot({ path: `${out}/many-contexts-short-h5.png` });
+        await page.locator('[data-composer-control="add"]').click();
         await page.locator("[data-session-skills]").click();
         for (const id of ["api-contract", "longform-editor", "meeting-notes", "release-notes"])
           await picker.locator(`[data-skill-id="${id}"]`).click();

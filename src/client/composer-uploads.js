@@ -91,7 +91,7 @@ export function createComposerUploads({
     }
     onChange();
   }
-  async function uploadComposerFiles(files) {
+  function uploadComposerSource(name, load) {
     const creation = Boolean(creationSessionRoute());
     // Capture the destination before an upload can outlive navigation to another draft.
     /** @type {Record<string, string>} */
@@ -100,11 +100,44 @@ export function createComposerUploads({
       : state.newSessionProjectId
         ? { projectId: state.newSessionProjectId }
         : { cwd: $("#projectPath").textContent.replace(/^~/, state.config.home) || state.config.defaultCwd };
-    for (const file of Array.from(files || [])) {
-      if (state.composerAttachments.length >= ATTACHMENT_MAX_COUNT) {
-        addPersistentError(t("composer.youCanAttachUpTo10Files"));
-        break;
+    if (state.composerAttachments.length >= ATTACHMENT_MAX_COUNT) {
+      addPersistentError(t("composer.youCanAttachUpTo10Files"));
+      return;
+    }
+    const attachment = {
+      id: crypto.randomUUID(),
+      name,
+      kind: "file",
+      status: "uploading",
+    };
+    mutations.edit("composerAttachments", (draft) => draft.push(attachment));
+    renderComposerAttachments();
+    // Stable attachment identity updates its saved draft without changing another task.
+    void (async () => {
+      try {
+        const file = await load();
+        if (file.size > ATTACHMENT_MAX_BYTES) throw new Error("composer.eachAttachmentMustBe25MibOrSmaller");
+        if (!file.size) throw new Error("errors.cannotUploadAnEmptyFile");
+        const query = new URLSearchParams({ name: file.name, ...(creation ? {} : destination) });
+        const response = await fetch(`${creation ? "/api/creation-materials" : "/api/attachments"}?${query}`, {
+          method: "POST",
+          headers: { "content-type": "application/octet-stream" },
+          body: file,
+        });
+        const result = await response.json();
+        if (!response.ok)
+          throw new Error(creation ? errorText(result, t, "creation.unavailable") : result.error || "Upload failed");
+        completeAttachment(attachment.id, result.attachment);
+      } catch (error) {
+        completeAttachment(attachment.id, { status: "failed", error: errorMessage(error) });
+        if (state.composerAttachments.some((entry) => entry.id === attachment.id))
+          addPersistentError(t(errorMessage(error)));
       }
+      renderComposerAttachments();
+    })();
+  }
+  function uploadComposerFiles(files) {
+    for (const file of Array.from(files || [])) {
       if (file.size > ATTACHMENT_MAX_BYTES) {
         addPersistentError(t("composer.eachAttachmentMustBe25MibOrSmaller"));
         continue;
@@ -113,34 +146,11 @@ export function createComposerUploads({
         addPersistentError(t("errors.cannotUploadAnEmptyFile"));
         continue;
       }
-      const attachment = {
-        id: crypto.randomUUID(),
-        name: file.name,
-        kind: "file",
-        status: "uploading",
-      };
-      mutations.edit("composerAttachments", (draft) => draft.push(attachment));
-      renderComposerAttachments();
-      // Stable attachment identity updates its saved draft without changing another task.
-      void (async () => {
-        try {
-          const query = new URLSearchParams({ name: file.name, ...(creation ? {} : destination) });
-          const response = await fetch(`${creation ? "/api/creation-materials" : "/api/attachments"}?${query}`, {
-            method: "POST",
-            headers: { "content-type": "application/octet-stream" },
-            body: file,
-          });
-          const result = await response.json();
-          if (!response.ok)
-            throw new Error(creation ? errorText(result, t, "creation.unavailable") : result.error || "Upload failed");
-          completeAttachment(attachment.id, result.attachment);
-        } catch (error) {
-          completeAttachment(attachment.id, { status: "failed", error: errorMessage(error) });
-          if (state.composerAttachments.some((entry) => entry.id === attachment.id))
-            addPersistentError(t(errorMessage(error)));
-        }
-        renderComposerAttachments();
-      })();
+      if (state.composerAttachments.length >= ATTACHMENT_MAX_COUNT) {
+        addPersistentError(t("composer.youCanAttachUpTo10Files"));
+        break;
+      }
+      uploadComposerSource(file.name, () => Promise.resolve(file));
     }
   }
   $("#composer").addEventListener("dragover", (event) => {
@@ -166,5 +176,5 @@ export function createComposerUploads({
       uploadComposerFiles(files);
     }
   });
-  return { composerAttachmentsReady, renderComposerAttachments, uploadComposerFiles };
+  return { composerAttachmentsReady, renderComposerAttachments, uploadComposerFiles, uploadComposerSource };
 }

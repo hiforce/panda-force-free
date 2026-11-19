@@ -1,3 +1,4 @@
+import { openComposerSettings } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
@@ -155,7 +156,7 @@ for (const [engine, width, locale] of [
         .then((text) => text.includes("signal is aborted"))),
     );
     await page.screenshot({ path: `${out}/model-timeout-${width}-${locale}.png` });
-    await page.locator("#modelButton").click();
+    await openComposerSettings(page, "model");
     await page.waitForFunction(() => globalThis.__pandaForceDebug.state.modelLoadStatus === "ready");
     assert.equal(
       await page.locator(".persistent-error-body p").filter({ hasText: messages.modelLoadTimedOut }).count(),

@@ -65,6 +65,9 @@ export interface InterfaceElements {
   "#composerContextTray": HTMLElementTagNameMap["div"];
   "#composerProjectButton": HTMLElementTagNameMap["button"];
   "#composerProjectLabel": HTMLElementTagNameMap["span"];
+  "#composerSettingEffort": HTMLElementTagNameMap["span"];
+  "#composerSettingModel": HTMLElementTagNameMap["span"];
+  "#composerSettingsButton": HTMLElementTagNameMap["button"];
   "#composerSkillControl": HTMLElementTagNameMap["span"];
   "#composerSkills": HTMLElementTagNameMap["div"];
   "#confirmFullAccess": HTMLElementTagNameMap["button"];
@@ -149,6 +152,7 @@ export interface InterfaceElements {
   "#pauseGoalDialog": HTMLElementTagNameMap["button"];
   "#pendingApprovalNotice": HTMLElementTagNameMap["button"];
   "#permissionMenu": HTMLElementTagNameMap["div"];
+  "#permissionMenuBack": HTMLElementTagNameMap["button"];
   "#permissionOptions": HTMLElementTagNameMap["div"];
   "#permissionPicker": HTMLElementTagNameMap["div"];
   "#persistentErrors": HTMLElementTagNameMap["section"];
@@ -222,6 +226,7 @@ export interface InterfaceElements {
   "#sessionProjectName": HTMLElementTagNameMap["strong"];
   "#sessionProjectSelect": HTMLElementTagNameMap["select"];
   "#sessionReloadModels": HTMLElementTagNameMap["button"];
+  "#sessionSettingEfforts": HTMLElementTagNameMap["div"];
   "#sessionSettingsDialog": HTMLElementTagNameMap["dialog"];
   "#sessionSettingsDialogTitle": HTMLElementTagNameMap["h2"];
   "#sessionSettingsForm": HTMLElementTagNameMap["form"];

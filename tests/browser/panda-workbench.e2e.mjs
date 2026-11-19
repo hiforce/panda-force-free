@@ -1,3 +1,4 @@
+import { openComposerSettings, selectSessionModel } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -68,7 +69,7 @@ try {
   assert.equal(await page.locator(".wb-metrics button").count(), 3);
   assert.equal(await page.locator("#workbenchComposerSlot #composer").isVisible(), true);
   assert.equal((await context.request.get(fixture.base + "/workbench.css")).status(), 200);
-  assert.equal(await page.locator("#modeButton .control-label").isVisible(), true);
+  assert.equal(await page.locator("#composerSettingsButton").isVisible(), true);
   assert.equal(await page.locator("#modelLabel").isVisible(), true);
   assert.equal(await page.locator("#effortLabel").isVisible(), true);
   assert.equal(await page.locator(".composer-model-icon").isVisible(), false);
@@ -365,9 +366,10 @@ try {
           range.selectNodeContents(label);
           return { text: label.textContent, box: box(label), textBox: box(range), button: box(label.parentElement) };
         });
-        const controls = ["#modeButton", "#modelButton", ".add-control", "#queueButton", "#sendButton"].map(
-          (selector) => ({ selector, box: box(document.querySelector(selector)) }),
-        );
+        const controls = [".add-control", "#composerSettingsButton", "#sendButton"].map((selector) => ({
+          selector,
+          box: box(document.querySelector(selector)),
+        }));
         const text = ["#modeButton .control-label", "#modelLabel", "#effortLabel"].map((selector) => {
           const label = document.querySelector(selector);
           return {
@@ -384,7 +386,7 @@ try {
           navHidden: getComputedStyle(nav).display === "none",
           nav: box(nav),
           composer: box(document.querySelector("#composer")),
-          modelIcon: box(document.querySelector(".composer-model-icon")),
+          modelIcon: box(document.querySelector("#composerSettingsButton .icon-slot")),
         };
       });
       const detail = JSON.stringify({ locale, width, layout });
@@ -410,28 +412,34 @@ try {
     }
   }
   await mp.setViewportSize({ width: 390, height: 844 });
-  await mp.locator("#modeButton").click();
+  await openComposerSettings(mp, "permissions");
   await mp.locator("#sessionSettingsDialog").waitFor({ state: "visible" });
   await mp.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
   await mp.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
-  assert.equal(await mp.locator("#modeButton").evaluate((button) => button === document.activeElement), true);
-  await mp.locator("#modeButton").click();
+  assert.equal(
+    await mp.locator("#composerSettingsButton").evaluate((button) => button === document.activeElement),
+    true,
+  );
+  await openComposerSettings(mp, "permissions");
   await mp.locator('input[name="session-permission"][value="default"]').check();
   await mp.locator('#sessionSettingsForm button[type="submit"]').click();
   await mp.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
-  await mp.locator("#modeButton").click();
+  await openComposerSettings(mp, "permissions");
   await mp.keyboard.press("Escape");
   await mp.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
-  await mp.locator("#modelButton").click();
+  await openComposerSettings(mp, "model");
   await mp.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
   await mp.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
-  assert.equal(await mp.locator("#modelButton").evaluate((button) => button === document.activeElement), true);
-  await mp.locator("#modelButton").click();
+  assert.equal(
+    await mp.locator("#composerSettingsButton").evaluate((button) => button === document.activeElement),
+    true,
+  );
+  await openComposerSettings(mp, "model");
   await mp.locator('#sessionSettingEfforts input[type="range"]').press("End");
   await mp.locator('#sessionSettingsForm button[type="submit"]').click();
   assert.ok((await mp.locator("#modelButton").getAttribute("aria-label")).includes("最大"));
-  await mp.locator("#modelButton").click();
-  await mp.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
+  await openComposerSettings(mp, "model");
+  await selectSessionModel(mp, "gpt-5.6-luna");
   await mp.locator('#sessionSettingsForm button[type="submit"]').click();
   assert.ok((await mp.locator("#modelButton").getAttribute("aria-label")).includes("5.6 Luna"));
   await mp.screenshot({ path: join(artifacts, "composer-mobile-zh-light.png") });

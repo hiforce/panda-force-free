@@ -1,3 +1,4 @@
+import { openComposerSettings, selectSessionModel } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createBrowserFixture, launchOptions } from "../support/browser-runtime.mjs";
@@ -192,13 +193,13 @@ try {
       .evaluate((input) => document.activeElement === input && input.selectionStart === 5 && input.selectionEnd === 9),
     true,
   );
-  await page.locator("#modelButton").click();
-  await page.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
+  await openComposerSettings(page, "model");
+  await selectSessionModel(page, "gpt-5.6-luna");
   await page.locator('#sessionSettingEfforts input[type="range"]').press("End");
   await closeDialog("#sessionSettingsDialog");
   assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), "gpt-5.6-sol");
-  await page.locator("#modelButton").click();
-  await page.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
+  await openComposerSettings(page, "model");
+  await selectSessionModel(page, "gpt-5.6-luna");
   await page.locator('#sessionSettingEfforts input[type="range"]').press("End");
   await page.locator('#sessionSettingsForm [type="submit"]').click();
   await page.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
@@ -206,13 +207,13 @@ try {
   assert.equal(await page.locator("#effortSelect").inputValue(), "high");
   assert.equal(await page.locator("#prompt").inputValue(), "Keep this draft and caret");
   await page.evaluate(() => globalThis.__pandaForceDebug.setPermissionVisibility("fullAccess", true));
-  await page.locator("#modeButton").click();
+  await openComposerSettings(page, "permissions");
   await page.locator('input[name="session-permission"][value="full-access"]').check();
   await page.locator('#sessionSettingsForm [type="submit"]').click();
   await page.locator("#fullAccessDialog").waitFor({ state: "visible" });
   assert.notEqual(await page.evaluate(() => globalThis.__pandaForceDebug.state.permissionMode), "full-access");
   await page.locator("#fullAccessDialog").evaluate((dialog) => dialog.close());
-  await page.locator("#modeButton").click();
+  await openComposerSettings(page, "permissions");
   await page.locator('input[name="session-permission"][value="full-access"]').check();
   await page.locator('#sessionSettingsForm [type="submit"]').click();
   await page.locator("#confirmFullAccess").click();
@@ -223,7 +224,7 @@ try {
       { id: "managed-blocked", description: "Unavailable policy", allowed: false },
     ]),
   );
-  await page.locator("#modeButton").click();
+  await openComposerSettings(page, "permissions");
   assert.equal(
     await page.locator('input[name="session-permission"][value="profile:managed-blocked"]').isDisabled(),
     true,
@@ -240,7 +241,7 @@ try {
   );
   assert.equal(await page.locator('#sessionSettingsForm button[type="submit"]').isDisabled(), true);
   await closeDialog("#sessionSettingsDialog");
-  await page.locator("#modelButton").click();
+  await openComposerSettings(page, "model");
   await switchTo("old-beta");
   await page.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
   assert.match(await page.locator("#sessionUsageView").innerText(), /Not reported by the engine/);
@@ -370,8 +371,8 @@ try {
         overflow: document.documentElement.scrollWidth > innerWidth,
         composer: bounds("#composer"),
         send: bounds("#sendButton"),
-        permission: bounds("#modeButton"),
-        model: bounds("#modelButton"),
+        permission: bounds("#composerSettingsButton"),
+        model: bounds("#composerSettingsButton"),
         nav: getComputedStyle(document.querySelector(".workbench-mobile-nav")).display,
       };
     });
@@ -384,25 +385,27 @@ try {
       assert.equal(layout.nav, "none");
       assert.equal(layout.permission.height, layout.send.height);
       assert.ok(Math.abs(layout.permission.y - layout.model.y) < 1);
-      if (width > 400) assert.ok(Math.abs(layout.permission.y - layout.send.y) < 1);
-      else assert.ok(layout.permission.bottom <= layout.send.y + 1);
+      assert.ok(Math.abs(layout.permission.y - layout.send.y) < 1);
     }
   }
   checks.push(
-    "No overflow at seven desktop/tablet/mobile/landscape sizes; narrow toolbars wrap while model, permissions and send remain visible",
+    "No overflow at seven desktop/tablet/mobile/landscape sizes; the single settings entry and send stay aligned on narrow screens",
   );
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator("#modeButton").click();
+  await openComposerSettings(page, "permissions");
   assert.equal(await page.locator("#sessionSettingsDialog").evaluate((dialog) => dialog.matches(":modal")), true);
   await page.locator('input[name="session-permission"][value="default"]').check();
   await page.locator('#sessionSettingsForm [type="submit"]').click();
   assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.permissionMode), "default");
-  await page.locator("#modelButton").click();
+  await openComposerSettings(page, "model");
   await page.screenshot({ path: directory + "/mobile-settings-en.png" });
   await page.keyboard.press("Escape");
   await page.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
-  assert.equal(await page.locator("#modelButton").evaluate((button) => document.activeElement === button), true);
+  assert.equal(
+    await page.locator("#composerSettingsButton").evaluate((button) => document.activeElement === button),
+    true,
+  );
   await page.locator("#prompt").fill("Mobile draft stays");
   await reportUsage();
   fixture.requestApproval({
@@ -543,10 +546,10 @@ try {
       );
       const send = await touchPage.locator("#sendButton").boundingBox();
       assert.ok(send.y >= 18 && send.y + send.height <= 439);
-      await touchPage.locator("#modelButton").tap();
+      await openComposerSettings(touchPage, "model");
       const sheet = await touchPage.locator("#sessionSettingsDialog").boundingBox();
       assert.ok(sheet.y >= 18 && sheet.y + sheet.height <= 439, JSON.stringify(sheet));
-      await touchPage.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
+      await selectSessionModel(touchPage, "gpt-5.6-luna");
       await touchPage.locator('#sessionSettingEfforts input[type="range"]').press("End");
       await touchPage.locator('#sessionSettingsForm button[type="submit"]').tap();
       assert.equal(await touchPage.locator("#prompt").inputValue(), "Keep the mobile keyboard draft");

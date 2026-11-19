@@ -1,3 +1,4 @@
+import { openComposerSettings } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
@@ -71,7 +72,7 @@ try {
       await gallery.locator('[data-skill-id="software-prd"]').click();
       const skill = page.locator('#composerSkills [data-selected-skill="software-prd"]');
       assert(await skill.isVisible());
-      await page.locator("#modelButton").click();
+      await openComposerSettings(page, "model");
       const modelDialog = page.locator("#sessionSettingsDialog[open]");
       await modelDialog.locator('#sessionSettingEfforts input[type="range"]').press("End");
       await modelDialog.locator('button[type="submit"]').click();

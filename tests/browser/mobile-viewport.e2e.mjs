@@ -1,3 +1,4 @@
+import { openComposerSettings } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { chromium, devices } from "playwright";
 import { artifact, launchOptions } from "../support/browser-runtime.mjs";
@@ -63,7 +64,7 @@ try {
           title: box("#threadTitle"),
           actions: box(".top-actions"),
           send: box("#sendButton"),
-          model: box("#modelButton"),
+          model: box("#composerSettingsButton"),
           footer: box(".composer-footer"),
           fonts: [
             "#prompt",
@@ -137,11 +138,11 @@ try {
         "The mobile navigation must not intercept the send button",
       );
       if (width === 390) await page.screenshot({ path: artifact("mobile-keyboard-layout.png") });
-      for (const [trigger, menu] of [
-        ["#modelButton", "#modelMenu"],
-        ["#modeButton", "#permissionMenu"],
+      for (const [kind, menu] of [
+        ["model", "#modelMenu"],
+        ["permissions", "#permissionMenu"],
       ]) {
-        await page.locator(trigger).click();
+        await openComposerSettings(page, kind);
         await page.locator(menu).waitFor({ state: "visible" });
         const bounds = await page.locator(menu).boundingBox();
         assert.ok(bounds.width > 0 && bounds.height > 0);
@@ -152,7 +153,10 @@ try {
         );
         await page.locator(menu + " .session-menu-close").click();
         await page.locator(menu).waitFor({ state: "hidden" });
-        assert.equal(await page.locator(trigger).evaluate((button) => button === document.activeElement), true);
+        assert.equal(
+          await page.locator("#composerSettingsButton").evaluate((button) => button === document.activeElement),
+          true,
+        );
       }
       // Manual zoom remains native; the app must not override the user's scale.
       await page.evaluate(() => {

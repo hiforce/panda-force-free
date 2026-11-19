@@ -1,3 +1,4 @@
+import { syncComposerPanelViewport } from "../session-controls/menu.js";
 import { escapeHtml } from "../../shared/html.js";
 import { codexIcon } from "../codex-icons.js";
 import { closestElement, requireElement } from "../dom.js";
@@ -10,7 +11,7 @@ import { mountReasoningSlider } from "../session-controls/reasoning-slider.js";
 export function createSessionSettingsDialog({ t, read, applyModel, applyPermission, reloadModels, onError }) {
   const dialog = document.createElement("dialog");
   dialog.id = "sessionSettingsDialog";
-  dialog.className = "session-dialog session-settings-dialog";
+  dialog.className = "session-dialog session-settings-dialog composer-panel";
   dialog.setAttribute("aria-labelledby", "sessionSettingsDialogTitle");
   document.body.append(dialog);
   let sessionId = "",
@@ -19,6 +20,8 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
     effort = "",
     permission = "";
   let returnFocus = /** @type {HTMLElement | null} */ (null);
+  let navigation = /** @type {import('./composer-settings.js').ComposerSettingsNavigation | null} */ (null);
+  let draftFlow = -1;
   let catalogSignature = "";
   const label = (key) => messageHtml(key, undefined, t);
   function renderEfforts() {
@@ -49,7 +52,7 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
         : snapshot.permissions.some((item) => item.id === permission && item.allowed);
     const fields =
       kind === "model"
-        ? `${sessionModelFields(snapshot.models, { model, effort }, t)}
+        ? `${navigation ? `<div class="composer-settings-models" role="group" aria-label="${escapeHtml(t("common.selectModel"))}">${snapshot.models.map((item) => `<button type="button" class="composer-settings-row" data-settings-model="${escapeHtml(item.id)}" aria-pressed="${item.id === model}">${codexIcon("sparkles")}<span><strong>${escapeHtml(item.label)}</strong></span>${item.id === model ? codexIcon("check") : ""}</button>`).join("")}</div><div class="session-effort-fieldset" id="sessionSettingEfforts"></div>` : sessionModelFields(snapshot.models, { model, effort }, t)}
           ${snapshot.models.length ? "" : `<button type="button" class="session-button" id="sessionReloadModels">${label("sessions.retryLoadingModels")}</button>`}
           `
         : `<fieldset class="session-permission-fieldset">
@@ -58,9 +61,10 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
           </fieldset>`;
     setMessageHtml(
       dialog,
-      `<header class="session-dialog-heading">
+      `<header class="session-dialog-heading composer-panel-heading">
+        ${navigation ? `<button type="button" class="composer-panel-action" data-settings-back aria-label="${escapeHtml(t("common.back"))}">${codexIcon("chevronLeft")}</button>` : ""}
         <div><p class="session-eyebrow">PandaForce</p><h2 id="sessionSettingsDialogTitle" tabindex="-1">${label(kind === "model" ? "sessionview.modelReasoning" : "common.permissions")}</h2></div>
-        <button type="button" class="icon-button" data-settings-dismiss aria-label="${escapeHtml(t("common.close"))}">${codexIcon("x")}</button>
+        <button type="button" class="composer-panel-action" data-settings-dismiss aria-label="${escapeHtml(t("common.close"))}">${codexIcon("x")}</button>
       </header>
       <form id="sessionSettingsForm" class="session-dialog-form">
         <div class="session-dialog-body"><p class="session-caption">${label(snapshot.settingsHint || "sessionview.nextInstruction")}</p>${fields}</div>
@@ -75,17 +79,26 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
   function close() {
     if (dialog.open) dialog.close();
   }
-  function open(nextKind) {
+  /** @param {string} nextKind @param {import('./composer-settings.js').ComposerSettingsNavigation | null} [nextNavigation] */
+  function open(nextKind, nextNavigation = null) {
     const snapshot = read();
     if (!snapshot.sessionId) return;
-    returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    returnFocus =
+      nextNavigation?.trigger || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    const preserve = nextNavigation && nextNavigation.flow === draftFlow && sessionId === snapshot.sessionId;
+    navigation = nextNavigation;
+    draftFlow = nextNavigation?.flow ?? -1;
+    dialog.classList.toggle("composer-settings-detail", Boolean(navigation));
     sessionId = snapshot.sessionId;
     kind = nextKind;
-    model = snapshot.model;
-    effort = snapshot.effort;
-    permission = snapshot.permission;
+    if (!preserve) {
+      model = snapshot.model;
+      effort = snapshot.effort;
+      permission = snapshot.permission;
+    }
     render();
     if (!dialog.open) dialog.showModal();
+    syncComposerPanelViewport(dialog);
     returnFocus?.setAttribute("aria-expanded", "true");
     requireElement("#sessionSettingsDialogTitle").focus({ preventScroll: true });
   }
@@ -106,6 +119,19 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
     }
   }
   dialog.addEventListener("click", async (event) => {
+    if (closestElement("[data-settings-back]", event.target)) {
+      const back = navigation?.back;
+      close();
+      requestAnimationFrame(() => back?.());
+      return;
+    }
+    const selectedModel = closestElement("[data-settings-model]", event.target)?.dataset.settingsModel;
+    if (selectedModel && read().models.some((item) => item.id === selectedModel)) {
+      model = selectedModel;
+      render();
+      const choice = dialog.querySelector(`[data-settings-model="${CSS.escape(model)}"]`);
+      if (choice instanceof HTMLElement) choice.focus({ preventScroll: true });
+    }
     if (closestElement("[data-settings-dismiss]", event.target)) close();
     if (event.target === dialog) {
       const bounds = dialog.getBoundingClientRect();
@@ -157,5 +183,11 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
     returnFocus?.setAttribute("aria-expanded", "false");
     if (returnFocus?.isConnected && returnFocus.getClientRects().length) returnFocus.focus({ preventScroll: true });
   });
+  const viewport = () => {
+    if (dialog.open) syncComposerPanelViewport(dialog);
+  };
+  window.addEventListener("resize", viewport);
+  window.visualViewport?.addEventListener("resize", viewport);
+  window.visualViewport?.addEventListener("scroll", viewport);
   return { open, close, sync };
 }

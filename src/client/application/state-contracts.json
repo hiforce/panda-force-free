@@ -48,7 +48,7 @@
   },
   "features": {
     "sessionWorkspace": {
-      "read": ["active", "goals", "items", "tokenUsage", "turnTimings"],
+      "read": ["active", "goals", "items", "tokenUsage", "turnTimings", "newSessionProjectId"],
       "write": []
     },
     "bindings": {

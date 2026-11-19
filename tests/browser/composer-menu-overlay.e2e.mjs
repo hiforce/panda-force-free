@@ -1,3 +1,4 @@
+import { openComposerSettings } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
@@ -81,7 +82,7 @@ try {
         menus.push({ selector, state, geometry });
         await page.screenshot({ path: `${out}/${selector.slice(1)}-${state}-${locale}-${width}.png` });
       };
-      await page.locator("#modeButton").click();
+      await openComposerSettings(page, "permissions");
       await check("#permissionMenu", "normal");
       await page.locator('[data-permission-mode="full-access"]').click();
       await page.locator("#fullAccessDialog[open]").waitFor();
@@ -96,17 +97,17 @@ try {
         await page.locator("#approvalInboxDialog .approval-deny").first().click();
         await page.locator("#approvalInboxDialog").waitFor({ state: "hidden" });
       }
-      await page.locator("#modeButton").click();
+      await openComposerSettings(page, "permissions");
       await page.keyboard.press("Escape");
       assert.equal(await page.locator("#permissionMenu").isVisible(), false);
-      assert.equal(await page.locator("#modeButton").evaluate((e) => e === document.activeElement), true);
-      await page.locator("#modelButton").click();
+      assert.equal(await page.locator("#composerSettingsButton").evaluate((e) => e === document.activeElement), true);
+      await openComposerSettings(page, "model");
       await check("#modelMenu", "main");
       await page.locator("#modelSubmenuButton").click();
       await check("#modelMenu", "models");
       await page.locator("#modelMenuBack").click();
       await page.keyboard.press("Escape");
-      assert.equal(await page.locator("#modelButton").evaluate((e) => e === document.activeElement), true);
+      assert.equal(await page.locator("#composerSettingsButton").evaluate((e) => e === document.activeElement), true);
       await page.evaluate(() =>
         globalThis.__pandaForceDebug.setPermissionProfiles([
           ...Array.from({ length: 8 }, (_, i) => ({
@@ -117,12 +118,12 @@ try {
           { id: "blocked", description: "Unavailable policy", allowed: false },
         ]),
       );
-      await page.locator("#modeButton").click();
+      await openComposerSettings(page, "permissions");
       await check("#permissionMenu", "profiles");
       assert(await page.locator('[data-permission-mode="profile:blocked"]').isDisabled());
       await page.keyboard.press("Escape");
       await page.setViewportSize({ width, height: Math.min(height, 420) });
-      await page.locator("#modeButton").click();
+      await openComposerSettings(page, "permissions");
       await check("#permissionMenu", "short");
       const close = page.locator("#permissionMenu .session-menu-close");
       if (await close.isVisible()) await close.click();
@@ -131,7 +132,7 @@ try {
         await page.locator("#permissionMenu").evaluate((e) => e.closest("#permissionPicker") !== null),
         true,
       );
-      await page.locator("#modelButton").click();
+      await openComposerSettings(page, "model");
       await page.locator(".window-brand strong").click();
       assert.equal(await page.locator("#modelMenu").isVisible(), false);
       assert.deepEqual(errors, []);

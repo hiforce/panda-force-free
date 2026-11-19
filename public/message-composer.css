@@ -1,4 +1,228 @@
 /* Native sessions and creation entry points share input geometry and rhythm. */
+.composer-panel {
+  --composer-panel-title: var(--pf-text-title);
+  --composer-panel-label: var(--pf-text-body);
+  --composer-panel-caption: var(--pf-text-meta);
+  box-sizing: border-box;
+  padding: var(--pf-space-2) var(--pf-space-3) var(--pf-space-3);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius);
+  background: var(--pf-card);
+  color: var(--pf-ink);
+  font-size: var(--composer-panel-label);
+  line-height: 1.6;
+  box-shadow: var(--pf-shadow);
+}
+.composer-panel::backdrop {
+  background: color-mix(in srgb, var(--pf-backdrop) 65%, transparent);
+  backdrop-filter: blur(2px);
+}
+.composer-panel > .composer-panel-heading {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: var(--pf-space-2);
+  min-height: var(--pf-touch-target);
+  margin: 0;
+  padding: 0 0 0 var(--pf-space-2);
+  border: 0;
+  background: var(--pf-card);
+}
+.composer-panel-heading > :is(h2, div:not(.icon-slot), span:not(.icon-slot)) {
+  flex: 1;
+  min-width: 0;
+}
+.composer-panel .composer-panel-heading :is(h2, .model-menu-title, [data-pf-message="common.permissions"]) {
+  margin: 0;
+  color: var(--pf-ink);
+  font-size: var(--composer-panel-title);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+}
+.composer-panel-heading h2:focus {
+  outline: none;
+}
+.composer-panel .composer-panel-action {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 var(--pf-touch-target);
+  width: var(--pf-touch-target);
+  height: var(--pf-touch-target);
+  min-height: var(--pf-touch-target);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--pf-radius-sm);
+  background: transparent;
+  color: var(--pf-muted);
+  cursor: pointer;
+}
+.composer-panel .composer-panel-action[hidden] {
+  display: none;
+}
+.composer-panel-action :is(.icon-slot, svg),
+.composer-panel-action .icon-slot svg {
+  width: 20px;
+  height: 20px;
+}
+.composer-panel .composer-panel-action:hover {
+  color: var(--pf-ink);
+  background: var(--pf-soft);
+}
+.composer-panel .composer-panel-action:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: -2px;
+}
+.composer-panel .session-dialog-body {
+  padding: var(--pf-space-2) var(--pf-space-2) var(--pf-space-4);
+}
+.composer-panel .session-eyebrow {
+  display: none;
+}
+.composer-panel .session-dialog-actions {
+  padding: var(--pf-space-3) var(--pf-space-2) 0;
+}
+.composer-panel .session-dialog-form {
+  overflow: hidden;
+}
+.composer-add-menu {
+  width: min(400px, calc(100vw - var(--pf-space-5) * 2));
+  max-width: none;
+  max-height: calc(var(--app-viewport-height, 100dvh) - var(--pf-space-5) * 2);
+  overflow: hidden;
+}
+.composer-add-menu[open] {
+  display: flex;
+  flex-direction: column;
+}
+.composer-add-menu [data-add-home] {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.composer-add-uploads {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--pf-space-2);
+  padding: var(--pf-space-2) 0 var(--pf-space-3);
+}
+.composer-add-uploads > button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--pf-space-2);
+  min-height: 76px;
+  padding: var(--pf-space-3);
+  border: 0;
+  border-radius: var(--pf-radius-sm);
+  background: transparent;
+  color: var(--pf-ink);
+  font: inherit;
+  font-size: var(--composer-panel-label);
+  font-weight: 500;
+  cursor: pointer;
+}
+.composer-add-uploads :is(.icon-slot, svg) {
+  width: 24px;
+  height: 24px;
+}
+.composer-add-sources {
+  padding-block-start: var(--pf-space-2);
+  border-top: 1px solid var(--pf-line);
+}
+.composer-add-sources :is(.gadget-document-skill, [data-add-documents]),
+.composer-add-document-row {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-space-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--pf-space-2);
+  border: 0;
+  border-radius: var(--pf-radius-sm);
+  background: transparent;
+  color: var(--pf-ink);
+  text-align: start;
+  font: inherit;
+  font-size: var(--pf-text-body);
+  cursor: pointer;
+}
+.composer-add-sources :is(.gadget-document-skill, [data-add-documents]) > span:not(.icon-slot),
+.composer-add-document-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.composer-add-sources .icon-slot,
+.composer-add-document-row > .icon-slot {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+.composer-add-sources strong,
+.composer-add-document-row strong {
+  display: block;
+  font-weight: 500;
+}
+.composer-add-sources small,
+.composer-add-document-row small {
+  display: block;
+  font-size: var(--pf-text-meta);
+  color: var(--pf-muted);
+}
+.composer-add-document-row :is(strong, small) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.composer-add-menu button:hover {
+  background: var(--pf-soft);
+}
+.composer-add-menu button:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: -2px;
+}
+.composer-add-documents {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 560px;
+}
+.composer-add-documents[hidden],
+.composer-add-menu [hidden] {
+  display: none;
+}
+.composer-add-document-filters {
+  flex: 0 0 auto;
+  padding: var(--pf-space-2) var(--pf-space-2) var(--pf-space-3);
+}
+.composer-add-document-scroll {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--pf-space-2) var(--pf-space-2);
+}
+.composer-add-status {
+  color: var(--pf-muted);
+  font-size: var(--pf-text-body);
+}
+@media (max-width: 767px), (pointer: coarse) {
+  dialog.composer-panel {
+    width: min(480px, calc(100vw - var(--pf-space-2) * 2));
+    max-width: none;
+    height: var(--composer-panel-size, fit-content);
+    max-height: var(--composer-panel-height, calc(var(--app-viewport-height, 100dvh) - var(--pf-space-4)));
+    margin: 0 auto;
+    inset: auto var(--pf-space-2) var(--composer-panel-bottom, var(--pf-space-2));
+    border: 1px solid var(--pf-line);
+    border-radius: var(--pf-radius);
+  }
+  .composer-add-document-filters :is(input, select) {
+    font-size: var(--pf-touch-text);
+  }
+}
 .message-composer {
   position: relative;
   --composer-inset: var(--pf-space-5);
@@ -116,6 +340,167 @@
   padding: var(--pf-space-2) var(--composer-inset) var(--pf-space-4);
   border: 0;
   background: transparent;
+}
+.message-composer .composer-left {
+  flex: 0 0 auto;
+  gap: var(--pf-space-2);
+}
+.message-composer .composer-left > :is(.permission-picker, .composer-model-control) {
+  display: none;
+}
+.message-composer .queue-control[hidden] {
+  display: none;
+}
+.message-composer .composer-right {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  margin-inline-start: var(--pf-space-5);
+  gap: var(--pf-space-2);
+}
+.message-composer :is(.add-control, .composer-setting-button, .send-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--pf-touch-target);
+  height: var(--pf-touch-target);
+  min-height: var(--pf-touch-target);
+  padding: 0;
+  border: 0;
+  border-radius: var(--pf-radius);
+  flex: 0 0 auto;
+}
+.message-composer :is(.add-control, .composer-setting-button) {
+  background: transparent;
+  color: var(--pf-muted);
+}
+.message-composer :is(.add-control, .composer-setting-button):hover {
+  background: var(--pf-soft);
+  color: var(--pf-ink);
+}
+.message-composer :is(.add-control, .composer-setting-button, .send-button) .icon-slot,
+.message-composer :is(.add-control, .composer-setting-button, .send-button) svg {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  flex: 0 0 20px;
+  transform: none;
+}
+.message-composer .composer-setting-button {
+  min-width: 0;
+  flex: 0 1 auto;
+  margin-inline-start: auto;
+  padding-inline: var(--pf-space-3);
+  gap: var(--pf-space-2);
+  font: inherit;
+  font-size: var(--pf-text-body);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.composer-setting-summary {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  white-space: nowrap;
+  gap: var(--pf-space-2);
+}
+#composerSettingModel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#composerSettingEffort {
+  flex: none;
+  white-space: nowrap;
+}
+#composerSettingEffort:not(:empty)::before {
+  content: "·";
+  margin-inline-end: var(--pf-space-2);
+}
+.message-composer .composer-right > .context-usage {
+  flex: 0 0 auto;
+}
+.composer-setting-button:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 2px;
+}
+.composer-settings-menu,
+.model-menu,
+.permission-menu {
+  width: 344px;
+}
+.composer-settings-menu[hidden] {
+  display: none;
+}
+.composer-settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-space-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--pf-space-3) var(--pf-space-2);
+  border: 0;
+  border-radius: var(--pf-radius-sm);
+  background: transparent;
+  color: var(--pf-ink);
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+.composer-settings-row:hover {
+  background: var(--pf-soft);
+}
+.composer-settings-row:disabled {
+  color: var(--pf-muted);
+  cursor: default;
+}
+.composer-settings-row > .icon-slot,
+.composer-settings-row svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  color: var(--pf-muted);
+}
+.composer-settings-row > span:not(.icon-slot) {
+  flex: 1;
+  min-width: 0;
+}
+.composer-settings-row strong,
+.composer-settings-row small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.composer-settings-row strong {
+  font-size: var(--pf-text-body);
+  font-weight: 500;
+}
+.composer-settings-row small {
+  margin-block-start: var(--pf-space-1);
+  font-size: var(--pf-text-meta);
+  color: var(--pf-muted);
+}
+.composer-settings-row:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: -2px;
+}
+.composer-panel .session-permission-fieldset {
+  margin: 0;
+}
+.composer-panel .session-permission-choice {
+  margin-block-start: 0;
+  padding: var(--pf-space-3) var(--pf-space-2);
+  border: 0;
+  background: transparent;
+}
+.composer-panel .session-permission-choice strong {
+  font-size: var(--composer-panel-label);
+  font-weight: 500;
+}
+.composer-panel .session-permission-choice small {
+  font-size: var(--composer-panel-caption);
 }
 .message-composer :is(.composer-attachments, .composer-context-tray, .creative-selected-skills) {
   gap: var(--pf-space-2);
@@ -248,7 +633,7 @@
   width: var(--pf-touch-target);
   height: var(--pf-touch-target);
   flex: 0 0 var(--pf-touch-target);
-  border-radius: var(--pf-radius-sm);
+  border-radius: var(--pf-radius);
 }
 .message-composer .gadget-document-skill {
   font-size: var(--pf-text-body);
@@ -271,8 +656,7 @@
 }
 @media (max-width: 767px) {
   .message-composer-context-dialog {
-    width: 100%;
-    max-height: min(80dvh, calc(var(--app-viewport-height, 100dvh) - 18px));
+    max-height: var(--composer-panel-height, 80dvh);
   }
   .message-composer {
     --composer-inset: var(--pf-space-4);
@@ -283,6 +667,16 @@
   .message-composer .message-composer-footer {
     min-height: 60px;
     padding-block-end: var(--pf-space-3);
+  }
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .message-composer .composer-setting-button {
+    width: var(--pf-touch-target);
+    flex: 0 0 var(--pf-touch-target);
+    padding: 0;
+  }
+  .composer-setting-summary {
+    display: none;
   }
 }
 @media (max-height: 520px) {

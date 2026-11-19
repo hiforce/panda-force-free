@@ -1,3 +1,4 @@
+import { openComposerSettings } from "../support/composer-settings.mjs";
 import qualityAssert from "node:assert/strict";
 import { createBrowserFixture } from "../support/browser-runtime.mjs";
 
@@ -111,7 +112,7 @@ await page.waitForFunction(
   () => !document.querySelector("#settingsDialog").open && ["/workspace", "/"].includes(location.pathname),
 );
 
-await page.click("#modeButton");
+await openComposerSettings(page, "permissions");
 const permissionMenu = await page.evaluate(() => ({
   open: !document.querySelector("#permissionMenu").hidden,
   options: [...document.querySelectorAll("[data-permission-mode] strong")].map((node) => node.textContent.trim()),
@@ -126,7 +127,7 @@ const guardian = await page.evaluate(() => ({
   turn: globalThis.__pandaForceDebug.permissionTurnPolicy("/tmp/project"),
 }));
 
-await page.click("#modeButton");
+await openComposerSettings(page, "permissions");
 await page.click('[data-permission-mode="profile:team-safe"]');
 const profile = await page.evaluate(() => ({
   selected: globalThis.__pandaForceDebug.selectedPermission(),
@@ -134,7 +135,7 @@ const profile = await page.evaluate(() => ({
   turn: globalThis.__pandaForceDebug.permissionTurnPolicy("/tmp/project"),
 }));
 
-await page.click("#modeButton");
+await openComposerSettings(page, "permissions");
 await page.click('[data-permission-mode="full-access"]');
 await page.waitForFunction(() => document.querySelector("#fullAccessDialog").open);
 const fullAccessDialog = await page.evaluate(() => {

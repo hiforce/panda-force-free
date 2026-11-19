@@ -1,3 +1,4 @@
+import { openComposerSettings } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
@@ -77,7 +78,7 @@ try {
       );
       for (const attribute of ["title", "aria-label"])
         assert.equal(await page.locator("#modelButton").getAttribute(attribute), modelHint);
-      await page.locator("#modelButton").click();
+      await openComposerSettings(page, "model");
       assert.equal(
         await page.locator('#sessionSettingEfforts input[type="range"]').getAttribute("aria-valuetext"),
         await page.evaluate(

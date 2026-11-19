@@ -151,7 +151,9 @@ try {
       await page.screenshot({ path: `${out}/picker-${locale}-${width}.png` });
       await picker.locator(".creation-skill-browser-footer [data-skill-browser-close]").click();
       const selected = page.locator("[data-gd-selected]");
-      await selected.locator('.creative-skill-chip[data-selected-skill="software-prd"] .template-cover').waitFor();
+      await selected
+        .locator('.creative-skill-chip[data-selected-skill="software-prd"] .template-cover')
+        .waitFor({ state: "attached" });
       assert.equal(await selected.locator(".creative-skill-chip").count(), 2);
       assert.equal(await page.locator("#gadgetDocumentPrompt").inputValue(), prompt);
       assert.equal(await page.locator(".creation-dialog[open]").count(), 0);
@@ -169,8 +171,10 @@ try {
               : /軟體需求/,
       );
       assert.match(await preview.locator("small").innerText(), /v1\.0\.0/);
-      const artwork = await preview.locator(".template-cover svg").boundingBox();
-      assert.ok(artwork.width >= 50 && artwork.height >= 35);
+      if (await preview.isVisible()) {
+        const artwork = await preview.locator(".template-cover svg, .template-cover img").boundingBox();
+        assert.ok(artwork.width >= 50 && artwork.height >= 35);
+      } else assert(await page.locator('[data-manage-composer-context="skills"]:visible').isVisible());
       await page.screenshot({ path: `${out}/selected-${locale}-${width}.png` });
       if (locale === "zh-CN") {
         await page.locator("[data-gd-skills]").click();
@@ -196,11 +200,25 @@ try {
         );
       }
       if (locale === "zh-CN") await page.keyboard.press("Escape");
-      await preview.click();
-      await page.locator(".creation-skill-detail[open]").waitFor();
-      await page.keyboard.press("Escape");
-      assert.equal(await preview.evaluate((node) => node === document.activeElement), true);
-      await selected.locator('[data-selected-skill="meeting-notes"] [data-creative-remove-skill]').click();
+      if (await preview.isVisible()) {
+        await preview.click();
+        await page.locator(".creation-skill-detail[open]").waitFor();
+        await page.keyboard.press("Escape");
+        assert.equal(await preview.evaluate((node) => node === document.activeElement), true);
+        await selected.locator('[data-selected-skill="meeting-notes"] [data-creative-remove-skill]').click();
+      } else {
+        await page.locator('[data-manage-composer-context="skills"]:visible').click();
+        const details = picker
+          .locator('.creation-skill-option[data-selected="true"]')
+          .filter({ has: page.locator('[data-skill-id="software-prd"]') })
+          .locator('[data-skill-action="details"]');
+        await details.click();
+        await page.locator(".creation-skill-detail[open]").waitFor();
+        await page.keyboard.press("Escape");
+        assert(await details.evaluate((node) => node === document.activeElement));
+        await picker.locator('[data-skill-id="meeting-notes"]').click();
+        await page.keyboard.press("Escape");
+      }
       assert.equal(await selected.locator(".creative-skill-chip").count(), 1);
       await page.locator("[data-gd-skills]").click();
       assert.equal(await picker.locator('[data-skill-id="software-prd"]').getAttribute("aria-pressed"), "true");

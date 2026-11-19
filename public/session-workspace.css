@@ -1215,51 +1215,6 @@
     padding-block: 0 max(9px, env(safe-area-inset-bottom));
     z-index: 5;
   }
-  .session-layout .composer-footer {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: center;
-  }
-  .session-layout .composer-left,
-  .session-layout .composer-right {
-    flex-wrap: nowrap;
-    gap: 2px;
-  }
-  .session-layout .composer-footer :is(.permission-picker, .composer-model-control) {
-    flex: 0 0 44px;
-    max-width: 44px;
-  }
-  .session-layout .composer-footer :is(#modeButton, #modelButton, #queueButton, .add-control, #sendButton) {
-    height: 44px;
-    min-height: 44px;
-    min-width: 44px;
-    width: 44px;
-    padding: 0;
-  }
-  .session-layout .composer-footer :is(#modeButton, #modelButton) {
-    display: inline-grid;
-    place-items: center;
-    border: 0;
-  }
-  .session-layout
-    .composer-footer
-    :is(
-      #modeButton .control-label,
-      #modeButton .chevron,
-      #modelButton #modelLabel,
-      #modelButton #effortLabel,
-      #modelButton .chevron,
-      #queueButton > span:last-child
-    ) {
-    display: none;
-  }
-  .session-layout .composer-footer #modelButton .composer-model-icon {
-    display: inline-grid;
-  }
-  .session-layout #sendButton {
-    margin-inline-start: 4px;
-    border-radius: 11px;
-  }
   .session-mobile-summary {
     display: flex;
     align-items: center;
@@ -1368,7 +1323,7 @@
   .session-tool-row {
     min-height: 64px;
   }
-  .session-dialog {
+  .session-dialog:not(.composer-panel) {
     position: fixed;
     inset: auto 0 auto;
     top: calc(var(--app-viewport-top, 0px) + var(--app-viewport-height, 100dvh));

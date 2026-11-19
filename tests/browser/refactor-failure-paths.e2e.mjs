@@ -53,7 +53,7 @@ async function checkBackgroundFailure(method) {
     }, method);
     const text = `Recover rejected ${method}`;
     await page.locator("#prompt").fill(text);
-    if (method === "thread/queue/add") await page.locator("#queueButton").click();
+    if (method === "thread/queue/add") await page.locator("#prompt").press("Tab");
     else await page.locator("#composer").evaluate((form) => form.requestSubmit());
     await page.waitForFunction(() => window.rejectPendingSend);
     await page.evaluate(() => globalThis.__pandaForceDebug.openThread("old-beta"));
@@ -68,7 +68,7 @@ async function checkBackgroundFailure(method) {
     assert.equal(await page.locator("#prompt").inputValue(), text);
     // Retrying must reach the bridge: a lock stranded in finally would suppress it.
     if (method === "thread/queue/add") {
-      await page.locator("#queueButton").click();
+      await page.locator("#prompt").press("Tab");
       await page.locator('.message-queue-row[data-status="queued"]').waitFor();
     } else {
       await page.locator("#composer").evaluate((form) => form.requestSubmit());

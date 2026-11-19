@@ -127,7 +127,9 @@ export class CreationSkills {
         (this.presentation === "composer"
           ? this.host
               .closest("form")
-              ?.querySelector<HTMLElement>("[data-composer-skill-trigger], [data-creative-skill]")
+              ?.querySelector<HTMLElement>(
+                '[data-composer-control="add"], [data-composer-skill-trigger], [data-creative-skill]',
+              )
           : null)
       )?.focus({
         preventScroll: true,

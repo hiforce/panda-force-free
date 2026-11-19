@@ -101,7 +101,7 @@ try {
   assert.equal(await page.locator("[data-composer-control=dictation]").count(), 0);
   await page.evaluate(() => (window.__queueHold = true));
   await page.locator("#prompt").fill("Same text");
-  await page.locator("#queueButton").click();
+  await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => Boolean(window.__queueRelease));
   assert.equal(await page.locator(".message-queue-row[data-status=sending]").textContent(), "Same textQueueing…");
   assert.equal(await page.locator("#prompt").inputValue(), "");
@@ -170,7 +170,7 @@ try {
   // Rejections restore the draft; lost acks reconcile using the server snapshot, without retrying add.
   await page.evaluate(() => (window.__queueReject = true));
   await page.locator("#prompt").fill("Rejected draft");
-  await page.locator("#queueButton").click();
+  await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => document.querySelector(".message-queue-row[data-status=failed]"));
   assert.equal(await page.locator("#prompt").inputValue(), "Rejected draft");
   await page.locator(".message-queue-cancel").click();
@@ -179,7 +179,7 @@ try {
     window.__queueLost = true;
   });
   await page.locator("#prompt").fill("Lost ack");
-  await page.locator("#queueButton").click();
+  await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => document.querySelector(".message-queue-row[data-status=queued]"));
   assert.equal(
     await page.evaluate(
@@ -198,7 +198,7 @@ try {
     globalThis.__pandaForceDebug.startNewTask();
   });
   await page.locator("#prompt").fill("New session queue");
-  await page.locator("#queueButton").click();
+  await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => Boolean(window.__createRelease));
   assert.equal(await page.locator(".message-queue-text").textContent(), "New session queue");
   await page.evaluate(() => window.__createRelease());
@@ -210,15 +210,16 @@ try {
     false,
   );
   await page.setViewportSize({ width: 390, height: 844 });
-  assert.equal(await page.locator("#queueButton").isVisible(), true);
-  assert.ok(await page.locator("#queueButton").evaluate((node) => node.getBoundingClientRect().right <= innerWidth));
+  assert.equal(await page.locator("#queueButton").isVisible(), false);
+  assert.ok(
+    await page.locator("#composerSettingsButton").evaluate((node) => node.getBoundingClientRect().right <= innerWidth),
+  );
   await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("zh-CN"));
   await page.locator("#prompt").fill("Queue");
-  await page.locator("#queueButton").click();
+  await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => document.querySelectorAll(".message-queue-row[data-status=queued]").length === 2);
   assert.equal(await page.locator(".message-queue-text").last().textContent(), "Queue");
   assert.equal(await page.locator(".message-queue-status").last().textContent(), "已排队");
-  assert.ok((await page.locator("#queueButton").textContent()).includes("排队"));
   assert.deepEqual(errors, []);
   console.log("message queue e2e passed");
 } finally {

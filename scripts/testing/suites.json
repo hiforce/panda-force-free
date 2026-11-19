@@ -21,12 +21,15 @@
     "browser/chrome-layout.e2e.mjs",
     "browser/cli-access.e2e.mjs",
     "browser/code-viewer-i18n.e2e.mjs",
+    "browser/composer-add-menu.e2e.mjs",
     "browser/composer-attachments.e2e.mjs",
     "browser/composer-autocomplete.e2e.mjs",
     "browser/composer-click-refresh.e2e.mjs",
     "browser/composer-focus-paste.e2e.mjs",
     "browser/composer-history.e2e.mjs",
     "browser/composer-native.e2e.mjs",
+    "browser/composer-settings.e2e.mjs",
+    "browser/composer-settings-recovery.e2e.mjs",
     "browser/composer-submit-state.e2e.mjs",
     "browser/content-access.e2e.mjs",
     "browser/content-search-modes.e2e.mjs",
@@ -180,7 +183,8 @@
     "browser/engine-images.e2e.mjs",
     "browser/h5-creation-recovery.e2e.mjs",
     "browser/composer-menu-overlay.e2e.mjs",
-    "browser/reasoning-slider.e2e.mjs"
+    "browser/reasoning-slider.e2e.mjs",
+    "browser/workbench-return.e2e.mjs"
   ],
   "groups": {
     "runtime": [
@@ -191,13 +195,16 @@
       "browser/message-queue.e2e.mjs",
       "browser/composer-click-refresh.e2e.mjs"
     ],
-    "failure-paths": ["browser/refactor-failure-paths.e2e.mjs"],
+    "failure-paths": [
+      "browser/refactor-failure-paths.e2e.mjs"
+    ],
     "workbench": [
       "browser/panda-workbench.e2e.mjs",
       "browser/native-dialogs.e2e.mjs",
       "browser/workspace-footer.e2e.mjs",
       "browser/composer-menu-overlay.e2e.mjs",
-      "browser/reasoning-slider.e2e.mjs"
+      "browser/reasoning-slider.e2e.mjs",
+      "browser/workbench-return.e2e.mjs"
     ],
     "projects": [
       "browser/product-projects.e2e.mjs",

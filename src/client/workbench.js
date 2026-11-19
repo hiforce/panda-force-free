@@ -37,7 +37,7 @@ import { codexIcon } from "./codex-icons.js";
 import { createProjectDialogs } from "./project-dialogs.js";
 import { storage } from "./storage.js";
 import { createWorkbenchFrame } from "./workbench-chrome/frame.js";
-import { parseWorkbenchRoute, workbenchLinkPath } from "./workbench-route.js";
+import { parseWorkbenchRoute, workbenchLinkPath, workbenchRouteSurface } from "./workbench-route.js";
 export { parseWorkbenchRoute } from "./workbench-route.js";
 
 const INTRO_KEY = "panda-force-introduction-dismissed";
@@ -188,7 +188,8 @@ export function createWorkbench({
   progress.id = "workbenchPreparation";
   progress.hidden = true;
   requireElement(".sidebar-footer").prepend(progress);
-  let route = parseWorkbenchRoute(),
+  let routeUrl = new URL(location.href);
+  let route = parseWorkbenchRoute(routeUrl),
     routing = false,
     opening = "",
     unavailableId = "",
@@ -352,8 +353,7 @@ export function createWorkbench({
   function render() {
     const focus = captureRenderFocus(view);
     const conversation =
-      !(unavailableId && unavailableId === route.id) &&
-      (Boolean(creationSessionRoute()) || route.page === "new" || route.page === "task" || route.page === "settings");
+      !(unavailableId && unavailableId === route.id) && workbenchRouteSurface(routeUrl, route) !== "workspace";
     hideInactiveWorkspaces();
     document.body.dataset.workbenchPage = route.page;
     document.title = `PandaForce · ${t(labels[route.page] || "common.workspace")}`;
@@ -519,21 +519,27 @@ export function createWorkbench({
     const url = new URL(path.startsWith("/") ? path : "/" + path, location.origin);
     if (url.origin !== location.origin) return;
     const next = parseWorkbenchRoute(url);
-    const oldCreation = creationSessionRoute(),
+    const oldCreation = creationSessionRoute(routeUrl),
       nextCreation = creationSessionRoute(url);
     if (oldCreation?.key !== nextCreation?.key && (oldCreation || nextCreation)) {
-      creationBridge.saveDraft();
+      // History has already changed location. Persist only the departing input, using its prior identity.
+      if (oldCreation) creationBridge.saveDraft(oldCreation.key);
+      else if (workbenchRouteSurface(routeUrl, route) !== "workspace")
+        creationBridge.saveDraft(state.active?.id || "new:" + (state.newSessionProjectId || "personal"));
       parkMessageComposer({ blur: true });
       newTask({ saveCurrentDraft: false, keepRoute: true });
     }
     routing = true;
     unavailableId = "";
-    if (next.page === "workspace" && state.active) newTask();
+    if (workbenchRouteSurface(url) === "workspace") parkMessageComposer({ blur: true });
+    // Returning home invalidates pending session reads without invoking new-session focus or routing.
+    if (next.page === "workspace" && (state.active || route.page === "task")) newTask({ keepRoute: true });
     if (next.page !== "settings") {
       hideSettings();
       updateUrl(url.pathname + url.search + url.hash, replace);
     }
     route = next;
+    routeUrl = url;
     signature = "";
     closeSidebar();
     render();
@@ -580,6 +586,7 @@ export function createWorkbench({
     if (routing) return;
     route = { page: "new", id: "", cwd: "", projectId: "", documentId: "" };
     updateUrl("/new" + (state.newSessionProjectId ? "?project=" + encodeURIComponent(state.newSessionProjectId) : ""));
+    routeUrl = new URL(location.href);
     closeSidebar();
     render();
   }
@@ -775,22 +782,7 @@ export function createWorkbench({
     if (closestElement('[data-wb="retry"]', event.target)) preparation.retry();
   });
   window.addEventListener("popstate", () => {
-    const previousCreation = creationWorkspace.key,
-      nextCreation = creationSessionRoute();
-    if (previousCreation !== nextCreation?.key && (previousCreation || nextCreation)) {
-      creationBridge.saveDraft(previousCreation || state.active?.id);
-      parkMessageComposer({ blur: true });
-      newTask({ saveCurrentDraft: false, keepRoute: true });
-    }
-    route = parseWorkbenchRoute();
-    routing = true;
-    if (route.page === "workspace" && state.active) newTask();
-    routing = false;
-    unavailableId = "";
-    signature = "";
-    render();
-    if (previousCreation && !nextCreation) creationBridge.restoreDraft();
-    loadRouteTask();
+    navigate(location.pathname + location.search + location.hash, { replace: true });
   });
   i18n.subscribe(() => {
     // Bindings update owned copy in place, preserving search focus and selection.

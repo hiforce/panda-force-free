@@ -96,6 +96,7 @@ try {
   const prompt = page.locator("#prompt");
   const chooserPromise = page.waitForEvent("filechooser");
   await page.click('[data-composer-control="add"]');
+  await page.click('[data-add-upload="files"]');
   await (await chooserPromise).setFiles([image, notes]);
   await page.waitForFunction(
     () =>
@@ -229,8 +230,14 @@ try {
   const imageOnly = await page.evaluate(() =>
     window.__attachmentCalls.filter((call) => call.method === "turn/start").at(-1),
   );
-  assert.equal(imageOnly.params.input.length, 1);
+  assert.equal(imageOnly.params.input.filter((item) => item.type === "localImage").length, 1);
   assert.equal(imageOnly.params.input[0].type, "localImage");
+  assert(
+    imageOnly.params.input
+      .filter((item) => item.type === "text")
+      .every((item) => item.text.includes("<panda_session_skills>")),
+    "Image-only input contains only the explicit empty skill selection metadata",
+  );
   await page.evaluate(
     (call) =>
       globalThis.__pandaForceDebug.notify("item/completed", {

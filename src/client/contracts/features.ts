@@ -192,7 +192,8 @@ export interface ModelsPort {
   permissionThreadPolicy: () => PermissionPolicy;
   commitSessionModelSettings: (threadId: string) => void;
   syncPermissionControl: () => void;
-  openModelMenu: (view?: string) => void;
+  openModelMenu: (view?: string, back?: (() => void) | null) => void;
+  openPermissionMenu: (back?: (() => void) | null) => void;
   loadModels: (options?: { timeoutMs?: number; attempts?: number; retryDelayMs?: number }) => Promise<boolean>;
   loadModelsRaw: ({
     timeoutMs,

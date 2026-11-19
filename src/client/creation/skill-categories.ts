@@ -80,6 +80,9 @@ export class CreationSkillCategories {
   refresh() {
     void this.client.load();
   }
+  relocalize() {
+    this.render();
+  }
   private render() {
     const left = this.host.querySelector("nav")?.scrollLeft || 0;
     const focused = this.host.contains(document.activeElement)

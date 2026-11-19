@@ -157,7 +157,7 @@ export function createSessionWorkspace(options) {
     for (const button of inspector.querySelectorAll('[data-session-action="permissions"]'))
       if (button instanceof HTMLElement) button.hidden = creation;
     requireElement("#permissionPicker").hidden = creation;
-    requireElement("#queueButton").hidden = creation;
+    requireElement("#queueButton").hidden = true;
     requireElement("#sessionAssociateProject").disabled = creation;
     requireElement("#sessionHeadingProject").disabled = creation;
     for (const [id, controls] of [

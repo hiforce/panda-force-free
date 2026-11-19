@@ -1,6 +1,7 @@
 import { creationSessionRoute } from "../creation/session-route.js";
 import { createSessionWorkspace } from "../session-workspace/controller.js";
 import { createSessionSettingsDialog } from "../session-workspace/settings-dialog.js";
+import { createComposerSettingsMenu } from "../session-workspace/composer-settings.js";
 import { createSessionToolRegistry } from "../session-workspace/tool-registry.js";
 import { createSessionToolStorage } from "../session-workspace/tool-storage.js";
 import { sessionUsageView } from "../session-workspace/usage.js";
@@ -46,6 +47,21 @@ export function assembleSessionWorkspace({
     reloadModels: () => modelsPort.loadModels(),
     onError: (message) => noticesPort.addPersistentError(message),
   });
+  const composerSettings = createComposerSettingsMenu({
+    t,
+    read: () => creation()?.controls() || modelsPort.sessionControlView(),
+    context: () => creation()?.key || state.active?.id || `new:${state.newSessionProjectId || "personal"}`,
+    beforeOpen: () => {
+      modelsPort.closeModelMenu();
+      modelsPort.closePermissionMenu();
+    },
+    openDetail: (kind, navigation) => {
+      if (creation() || (isSessionPage() && state.active?.id)) settings.open(kind, navigation);
+      else if (kind === "model") modelsPort.openModelMenu("main", navigation.back);
+      else modelsPort.openPermissionMenu(navigation.back);
+    },
+  });
+  i18n.subscribe(() => composerSettings.sync());
   const registry = createSessionToolRegistry([
     {
       id: "files",
@@ -218,6 +234,7 @@ export function assembleSessionWorkspace({
       settings.sync();
       if (!isSessionPage()) settings.close();
       panel.refresh();
+      composerSettings.sync();
     },
   };
 }

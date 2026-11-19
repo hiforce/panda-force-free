@@ -1,4 +1,4 @@
-import { parseWorkbenchRoute } from "../workbench-route.js";
+import { parseWorkbenchRoute, workbenchRouteSurface } from "../workbench-route.js";
 
 /** Public creation identity is independent of an engine thread and its execution lease. */
 export function creationSessionRoute(url = new URL(location.href)) {
@@ -7,7 +7,7 @@ export function creationSessionRoute(url = new URL(location.href)) {
     const scope = url.searchParams.get("creationScope") === "personal" ? "personal" : "application";
     return { id: route.id, scope, key: `creation:${scope}:${route.id}` } as const;
   }
-  if (route.page === "create" && url.searchParams.get("view") !== "works" && !url.searchParams.has("asset"))
+  if (route.page === "create" && workbenchRouteSurface(url) === "conversation")
     return { id: "", scope: "personal", key: "creation:personal:new" } as const;
   return null;
 }

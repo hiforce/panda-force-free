@@ -1,3 +1,4 @@
+import { syncComposerPanelViewport } from "../session-controls/menu.js";
 import { CreationSkillCategories } from "./skill-categories.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import type { CreationSkillSelection } from "../../shared/creation/contracts.js";
@@ -25,14 +26,7 @@ export class CreationSkillBrowser {
   private position = 0;
   private snapshot: BrowserSnapshot | null = null;
   private readonly syncViewport = () => {
-    const viewport = window.visualViewport;
-    if (this.open && window.matchMedia("(max-width: 700px)").matches && viewport) {
-      this.dialog.style.setProperty("--skill-browser-height", `${viewport.height}px`);
-      this.dialog.style.setProperty("--skill-browser-top", `${viewport.offsetTop}px`);
-    } else {
-      this.dialog.style.removeProperty("--skill-browser-height");
-      this.dialog.style.removeProperty("--skill-browser-top");
-    }
+    if (this.open) syncComposerPanelViewport(this.dialog);
   };
   constructor(
     private readonly t: Translate,
@@ -40,7 +34,7 @@ export class CreationSkillBrowser {
     private readonly beforeClose: () => void,
   ) {
     const title = "creation-skill-browser-" + crypto.randomUUID();
-    this.dialog.className = "workbench-dialog creation-skill-browser";
+    this.dialog.className = "workbench-dialog creation-skill-browser composer-panel";
     this.dialog.setAttribute("aria-labelledby", title);
     setMessageHtml(this.dialog, creationSkillBrowserFrame(t, title));
     this.search = this.dialog.querySelector<HTMLInputElement>("[data-skill-search]")!;
@@ -93,14 +87,14 @@ export class CreationSkillBrowser {
     if (this.dialog.open) return;
     const touch = window.matchMedia("(pointer: coarse), (max-width: 767px)").matches;
     const close = this.dialog.querySelector<HTMLButtonElement>("[data-skill-browser-close]")!;
-    close.autofocus = touch;
+    close.autofocus = false;
     this.search.autofocus = !touch;
     // iOS keeps a textarea focused when a toolbar button is tapped. Do this in the opening gesture.
     if (touch && document.activeElement instanceof HTMLElement) document.activeElement.blur();
     this.dialog.showModal();
     this.syncViewport();
     this.render();
-    (touch ? close : this.search).focus({
+    (touch ? this.dialog.querySelector<HTMLElement>("h2")! : this.search).focus({
       preventScroll: true,
     });
     this.scroll.scrollTop = this.position;
@@ -116,7 +110,10 @@ export class CreationSkillBrowser {
   }
   update(snapshot: BrowserSnapshot) {
     this.snapshot = snapshot;
-    if (this.open) this.render();
+    if (this.open) {
+      this.categories.relocalize();
+      this.render();
+    }
   }
   private render() {
     if (!this.snapshot) return;

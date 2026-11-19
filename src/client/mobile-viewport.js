@@ -1,3 +1,5 @@
+import { workbenchRouteSurface } from "./workbench-route.js";
+
 export function trackMobileViewport() {
   const root = document.documentElement;
   const viewport = window.visualViewport;
@@ -6,10 +8,13 @@ export function trackMobileViewport() {
   let settling = [];
   function editing() {
     const input = document.activeElement;
-    if (input instanceof HTMLTextAreaElement) return !input.readOnly;
+    if (!(input instanceof HTMLElement) || input.closest("[hidden], [inert]") || !input.getClientRects().length)
+      return false;
+    if (input instanceof HTMLTextAreaElement) return !input.readOnly && !input.disabled;
     if (input instanceof HTMLInputElement)
       return (
         !input.readOnly &&
+        !input.disabled &&
         !["button", "checkbox", "radio", "submit", "reset", "file", "hidden", "color", "range"].includes(input.type)
       );
     return (
@@ -35,10 +40,7 @@ export function trackMobileViewport() {
     const mobile = root.classList.contains("mobile-device") || matchMedia("(max-width:767px)").matches;
     // Keep native pinch zoom: only adapt the keyboard/browser-chrome viewport at normal scale.
     const active = mobile && viewport && Math.abs(viewport.scale - 1) < 0.02 && viewport.height > 0;
-    const conversation =
-        ["new", "task", "creation"].includes(document.body.dataset.workbenchPage || "") ||
-        (document.body.classList.contains("session-layout") &&
-          !document.body.classList.contains("creation-entry-layout")),
+    const conversation = workbenchRouteSurface() === "conversation",
       pinned = active && (editing() || conversation);
     root.classList.toggle("soft-keyboard-open", Boolean(pinned && innerHeight - viewport.height > 110));
     root.classList.toggle("visual-viewport-active", Boolean(active));

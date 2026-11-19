@@ -1,3 +1,4 @@
+import { workbenchRouteSurface, parseWorkbenchRoute } from "../../src/client/workbench-route.js";
 import { test, expect } from "bun:test";
 import { gadgetApplicationNavigation, systemGadgetCapabilities } from "../../src/gadget/system/bindings.js";
 import type { ProjectionCapability } from "../../src/gadget/system/bindings.js";
@@ -42,4 +43,13 @@ test("recent and attention projections use the common opener so history authoriz
   expect(sessions.open?.("")).toBe(false);
   expect(sessions.open?.("x".repeat(201))).toBe(false);
   expect(opened).toEqual(["known-session", "not-in-the-projection"]);
+});
+
+test("route surfaces keep keyboard and page ownership independent of presentation classes", () => {
+  for (const path of ["/new", "/task/known", "/creation/known", "/create", "/workspace?creation=known"])
+    expect(workbenchRouteSurface(new URL(path, "https://app.example"))).toBe("conversation");
+  for (const path of ["/workspace", "/tasks", "/projects", "/create?view=works", "/create?asset=known"])
+    expect(workbenchRouteSurface(new URL(path, "https://app.example"))).toBe("workspace");
+  const base = new URL("/workspace", "https://app.example");
+  expect(workbenchRouteSurface(base, parseWorkbenchRoute(new URL("/settings/profile", base)))).toBe("settings");
 });

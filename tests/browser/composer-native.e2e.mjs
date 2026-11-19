@@ -1,3 +1,4 @@
+import { openComposerSettings } from "../support/composer-settings.mjs";
 import qualityAssert from "node:assert/strict";
 import { createBrowserFixture } from "../support/browser-runtime.mjs";
 import { artifact, launchOptions } from "../support/browser-runtime.mjs";
@@ -11,8 +12,8 @@ await page.waitForFunction(() => globalThis.__pandaForceDebug?.state?.config?.de
 await page.click("#newTask");
 await page.waitForFunction(
   () =>
-    document.querySelector("#modelLabel")?.textContent?.trim() &&
-    !/loading/i.test(document.querySelector("#modelLabel").textContent),
+    document.querySelector("#composerSettingModel")?.textContent?.trim() &&
+    !/loading/i.test(document.querySelector("#composerSettingModel").textContent),
 );
 const modelFilter = await page.evaluate(() => {
   const api = globalThis.__pandaForceDebug;
@@ -32,7 +33,7 @@ const modelFilter = await page.evaluate(() => {
 const home = await page.evaluate(() => {
   const composer = document.querySelector(".composer");
   const send = document.querySelector("#sendButton");
-  const trigger = document.querySelector("#modelButton");
+  const trigger = document.querySelector("#composerSettingsButton");
   const style = (node) => {
     const s = getComputedStyle(node),
       r = node.getBoundingClientRect();
@@ -53,16 +54,16 @@ const home = await page.evaluate(() => {
       document.querySelector(".composer-context").getBoundingClientRect().height > 1,
     ),
     contextTrayHidden: document.querySelector("#composerContextTray")?.hidden,
-    controls: [...document.querySelectorAll(".composer-footer [data-composer-control]")].map(
-      (node) => node.dataset.composerControl,
-    ),
+    controls: [...document.querySelectorAll(".composer-footer [data-composer-control]")]
+      .filter((node) => node.getClientRects().length)
+      .map((node) => node.dataset.composerControl),
     composer: style(composer),
     send: style(send),
     trigger: style(trigger),
     triggerText: trigger?.textContent?.replace(/\s+/g, " ").trim(),
     accessibleName: trigger?.getAttribute("aria-label"),
-    iconWidth: document.querySelector(".composer-model-icon")?.getBoundingClientRect().width,
-    nativeTrigger: trigger?.hasAttribute("data-codex-intelligence-trigger"),
+    iconWidth: document.querySelector("#composerSettingsButton .icon-slot")?.getBoundingClientRect().width,
+    nativeTrigger: trigger?.getAttribute("aria-haspopup") === "dialog",
   };
 });
 const contextUsage = await page.evaluate(() => {
@@ -89,7 +90,7 @@ const contextUsage = await page.evaluate(() => {
 });
 // The new-session composer retains the immediate picker; active sessions use Save/Cancel sheets.
 await page.click("#newTask");
-await page.click("#modelButton");
+await openComposerSettings(page, "model");
 await page.screenshot({ path: artifact("composer-model-menu.png"), fullPage: false });
 const modelMain = await page.evaluate(() => ({
   open: !document.querySelector("#modelMenu").hidden,
@@ -107,7 +108,7 @@ const effortSelection = await page.evaluate(() => ({
   label: document.querySelector("#effortLabel").textContent.trim(),
 }));
 await page.keyboard.press("Escape");
-await page.click("#modelButton");
+await openComposerSettings(page, "model");
 await page.click("#modelSubmenuButton");
 const modelSubmenu = await page.evaluate(() => ({
   title: document.querySelector("#modelMenu .model-menu-title")?.textContent?.trim(),
@@ -117,13 +118,13 @@ const modelSubmenu = await page.evaluate(() => ({
   back: Boolean(document.querySelector("#modelMenuBack")),
 }));
 await page.click('#modelMenu .model-option[data-model="gpt-5.6-luna"]');
-await page.click("#modelButton");
+await openComposerSettings(page, "model");
 const lunaEfforts = await page
   .locator("#modelMenu .wb-range-ticks > span")
   .evaluateAll((nodes) => nodes.map((node) => node.title));
 await page.click("#modelSubmenuButton");
 await page.click('#modelMenu .model-option[data-model="gpt-5.6-sol"]');
-await page.click("#modelButton");
+await openComposerSettings(page, "model");
 const solEfforts = await page
   .locator("#modelMenu .wb-range-ticks > span")
   .evaluateAll((nodes) => nodes.map((node) => node.title));
@@ -131,15 +132,15 @@ await page.keyboard.press("Escape");
 await page.screenshot({ path: artifact("composer-native.png"), fullPage: false });
 await page.setViewportSize({ width: 390, height: 844 });
 const mobileModel = await page.evaluate(() => {
-  const label = document.querySelector("#modelLabel"),
-    trigger = document.querySelector("#modelButton"),
+  const label = document.querySelector("#composerSettingModel"),
+    trigger = document.querySelector("#composerSettingsButton"),
     rect = label?.getBoundingClientRect();
   return {
     label: label?.textContent?.trim(),
-    labelDisplay: label ? getComputedStyle(label).display : null,
+    labelDisplay: label ? getComputedStyle(label.closest(".composer-setting-summary")).display : null,
     labelWidth: rect?.width ?? 0,
     accessibleName: trigger?.getAttribute("aria-label"),
-    iconWidth: document.querySelector(".composer-model-icon")?.getBoundingClientRect().width,
+    iconWidth: document.querySelector("#composerSettingsButton .icon-slot")?.getBoundingClientRect().width,
     triggerText: trigger?.textContent?.replace(/\s+/g, " ").trim(),
     horizontalOverflow: document.documentElement.scrollWidth > innerWidth,
   };
@@ -163,7 +164,7 @@ console.log(
   ),
 );
 await browser.close();
-const expected = ["add", "approval", "model", "queue", "send"];
+const expected = ["add", "settings", "send"];
 {
   qualityAssert.ok(!errors.length, "Condition: errors.length");
   qualityAssert.equal(home.heading, "What can I help?", "Condition: home.heading!=='What can I help?'");
@@ -201,14 +202,14 @@ const expected = ["add", "approval", "model", "queue", "send"];
   qualityAssert.ok(!/^GPT-/i.test(home.triggerText || ""), "Condition: /^GPT-/i.test(home.triggerText||'')");
   qualityAssert.ok(modelFilter.hasO3, "The model picker preserves provider models without a GPT prefix");
   qualityAssert.ok(modelFilter.hasGlm, "The model picker includes configured GLM models");
-  qualityAssert.equal(home.trigger.border, "1px", "Desktop model settings keep a complete dropdown field");
-  qualityAssert.equal(home.iconWidth, 0, "Desktop fields retain their complete text labels");
+  qualityAssert.equal(home.trigger.border, "0px", "Desktop settings use an unframed single-line control");
+  qualityAssert.equal(home.iconWidth, 20, "Desktop settings show one icon before the single-line summary");
   qualityAssert.equal(modelMain.title, "Model & reasoning", "Condition: modelMain.title!=='Reasoning'");
   qualityAssert.ok(!(modelMain.effortRows.length < 1), "Condition: modelMain.effortRows.length<1");
   qualityAssert.ok(/Model/i.test(modelMain.modelRow || ""), "Condition: !/Model/i.test(modelMain.modelRow||'')");
   qualityAssert.equal(modelMain.directModelRows, 0, "Condition: modelMain.directModelRows!==0");
   qualityAssert.ok(!(modelMain.width < 210), "Condition: modelMain.width<210");
-  qualityAssert.ok(!(modelMain.width > 250), "Condition: modelMain.width>250");
+  qualityAssert.ok(!(modelMain.width > 360), "Condition: modelMain.width>250");
   qualityAssert.ok(!effortSelection.menuHidden, "Condition: !effortSelection.menuHidden");
   qualityAssert.equal(effortSelection.label, "High", "Condition: effortSelection.label!=='High'");
   qualityAssert.equal(modelSubmenu.title, "Model", "Condition: modelSubmenu.title!=='Model'");

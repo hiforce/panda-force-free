@@ -2,6 +2,8 @@ import { createLazySettingsPage } from "../settings-pages/lazy.js";
 import { createAccountView } from "../account-view.js";
 import { createActivityRenderer } from "../activity-renderer.js";
 import { createComposerUploads } from "../composer-uploads.js";
+import { createComposerAddMenu } from "../composer-add-menu.js";
+import { creationSessionRoute } from "../creation/session-route.js";
 import { localizeText } from "../i18n.js";
 import { createReviewController } from "../review-controller.js";
 import { createSettingsPanel } from "../settings.js";
@@ -76,25 +78,50 @@ export function assembleActivity({
   }
   return { setApprovalWaiting, ensureActivity, activityRenderer, activityItemId, updateActivitySummary, addActivity };
 }
-/** @param {import("./ports.js").FeatureOptions<"drafts" | "viewUpdates" | "state" | "mutations" | "$" | "t", "images" | "notices", "uploads">} options */
-export function assembleUploads({ viewUpdates, $, t, imagesPort, noticesPort, state, mutations, drafts }) {
-  const { composerAttachmentsReady, renderComposerAttachments, uploadComposerFiles } = createComposerUploads({
-    $,
-    t,
-    openImageViewer: /** @param {Parameters<typeof imagesPort.openImageViewer>} args */ (...args) =>
-      imagesPort.openImageViewer(...args),
-    addPersistentError: /** @param {Parameters<typeof noticesPort.addPersistentError>} args */ (...args) =>
-      noticesPort.addPersistentError(...args),
-    onChange: () => {
-      viewUpdates.request("composerSubmit");
-      viewUpdates.request("composerDraft");
-    },
-    onAttachmentUpdated: (id, patch) => drafts.updateAttachment(id, patch),
-    state,
-    mutations,
-  });
+/** @param {import("./ports.js").FeatureOptions<"drafts" | "viewUpdates" | "state" | "mutations" | "$" | "t", "images" | "notices" | "projects" | "workbench", "uploads">} options */
+export function assembleUploads({
+  viewUpdates,
+  $,
+  t,
+  imagesPort,
+  noticesPort,
+  projectsPort,
+  workbenchPort,
+  state,
+  mutations,
+  drafts,
+}) {
+  const { composerAttachmentsReady, renderComposerAttachments, uploadComposerFiles, uploadComposerSource } =
+    createComposerUploads({
+      $,
+      t,
+      openImageViewer: /** @param {Parameters<typeof imagesPort.openImageViewer>} args */ (...args) =>
+        imagesPort.openImageViewer(...args),
+      addPersistentError: /** @param {Parameters<typeof noticesPort.addPersistentError>} args */ (...args) =>
+        noticesPort.addPersistentError(...args),
+      onChange: () => {
+        viewUpdates.request("composerSubmit");
+        viewUpdates.request("composerDraft");
+      },
+      onAttachmentUpdated: (id, patch) => drafts.updateAttachment(id, patch),
+      state,
+      mutations,
+    });
   function bind() {
-    requireElement('[data-composer-control="add"]').onclick = () => $("#attachmentInput").click();
+    createComposerAddMenu({
+      trigger: /** @type {HTMLButtonElement} */ (requireElement('[data-composer-control="add"]')),
+      skills: $("#composerSkillControl"),
+      input: $("#attachmentInput"),
+      t,
+      project: () =>
+        creationSessionRoute()
+          ? workbenchPort.workbench?.creationSession()?.read().project?.id ||
+            (creationSessionRoute()?.id ? "" : "personal")
+          : state.active
+            ? projectsPort.businessProjects.projectForSession(state.active.id)?.id || ""
+            : state.newSessionProjectId || "",
+      attach: uploadComposerSource,
+    });
     $("#attachmentInput").onchange = (event) => {
       uploadComposerFiles($("#attachmentInput").files);
       $("#attachmentInput").value = "";

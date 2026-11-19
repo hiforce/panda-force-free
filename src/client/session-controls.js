@@ -36,6 +36,8 @@ export function createSessionControls({
     toast,
   });
   const localModelCache = createSessionModelCache(storage);
+  let modelMenuBack = /** @type {(() => void) | null} */ (null);
+  let modelMenuTrigger = $("#modelButton");
   const readLocalSessionModelSettings = (threadId = state.active?.id) => localModelCache.read(threadId);
   const writeLocalSessionModelSettings = (threadId, settings) => localModelCache.write(threadId, settings);
   const clearLocalSessionModelSettings = (threadId = state.active?.id) => localModelCache.clear(threadId);
@@ -247,15 +249,16 @@ export function createSessionControls({
     );
   }
   function menuTitle(text, back = false) {
-    return `<div class="model-menu-title-row">${back ? `<button type="button" class="model-menu-back" id="modelMenuBack" aria-label="Back" data-pf-aria-label="common.back">${codexIcon("chevronLeft")}</button>` : ""}<div class="model-menu-title">${messageHtml(text, undefined, t)}</div><button type="button" class="session-menu-close" ${messageAttributes("aria-label", "common.close", undefined, t)}>${codexIcon("x")}</button></div>`;
+    return `<div class="model-menu-title-row composer-panel-heading">${back ? `<button type="button" class="model-menu-back composer-panel-action" id="modelMenuBack" aria-label="Back" data-pf-aria-label="common.back">${codexIcon("chevronLeft")}</button>` : ""}<div class="model-menu-title">${messageHtml(text, undefined, t)}</div><button type="button" class="session-menu-close composer-panel-action" ${messageAttributes("aria-label", "common.close", undefined, t)}>${codexIcon("x")}</button></div>`;
   }
   function renderModelMenuMain() {
     const menu = $("#modelMenu");
     if (!state.models.length) {
       setMessageHtml(
         menu,
-        `${menuTitle("common.selectModel")}<div class="model-menu-title-row" role="status">${messageHtml(state.modelLoadStatus === "error" ? "errors.couldNotLoadModels" : "common.loadingModels", undefined, t)}</div>${state.modelLoadStatus === "error" ? `<button class="model-option" type="button" id="retryModels">${messageHtml("sessions.retryLoadingModels", undefined, t)}</button>` : ""}`,
+        `${menuTitle("common.selectModel", Boolean(modelMenuBack))}<div class="model-menu-title-row" role="status">${messageHtml(state.modelLoadStatus === "error" ? "errors.couldNotLoadModels" : "common.loadingModels", undefined, t)}</div>${state.modelLoadStatus === "error" ? `<button class="model-option" type="button" id="retryModels">${messageHtml("sessions.retryLoadingModels", undefined, t)}</button>` : ""}`,
       );
+      bindModelMenuBack(menu);
       findElement("#retryModels", menu)?.addEventListener("click", () => loadModels());
       return;
     }
@@ -263,7 +266,7 @@ export function createSessionControls({
       effort = $("#effortSelect");
     setMessageHtml(
       menu,
-      `<div class="model-menu-view model-menu-view-main">${menuTitle("sessionview.modelReasoning")}<div class="model-reasoning-slider" data-model-menu-efforts></div><div class="model-menu-separator"></div><button type="button" class="model-submenu-button" id="modelSubmenuButton"><span><span data-pf-message="common.model">Model</span></span><span class="model-submenu-value">${escapeHtml(modelDisplay(model))}</span>${codexIcon("chevronRight")}</button></div>`,
+      `<div class="model-menu-view model-menu-view-main">${menuTitle("sessionview.modelReasoning", Boolean(modelMenuBack))}<div class="model-reasoning-slider" data-model-menu-efforts></div><div class="model-menu-separator"></div><button type="button" class="model-submenu-button" id="modelSubmenuButton"><span><span data-pf-message="common.model">Model</span></span><span class="model-submenu-value">${escapeHtml(modelDisplay(model))}</span>${codexIcon("chevronRight")}</button></div>`,
     );
     mountReasoningSlider(
       requireElement("[data-model-menu-efforts]", menu),
@@ -276,6 +279,13 @@ export function createSessionControls({
       renderModelSubmenu();
       focusMenuSelection(menu);
     };
+    bindModelMenuBack(menu);
+  }
+  function bindModelMenuBack(menu) {
+    findElement("#modelMenuBack", menu)?.addEventListener("click", () => {
+      closeModelMenu();
+      modelMenuBack?.();
+    });
   }
   function renderModelSubmenu() {
     const menu = $("#modelMenu");
@@ -324,13 +334,16 @@ export function createSessionControls({
       toast(t("common.reasoningLevel", { level: reasoningLabel(value) }));
     }
   }
-  function openModelMenu(view = "main") {
+  /** @param {string} [view] @param {(() => void) | null} [back] */
+  function openModelMenu(view = "main", back = null) {
     closePermissionMenu();
+    modelMenuBack = back;
+    modelMenuTrigger = $("#modelButton").getClientRects().length ? $("#modelButton") : $("#composerSettingsButton");
     if (view === "models") renderModelSubmenu();
     else renderModelMenuMain();
     $("#modelMenu").hidden = false;
-    mountSessionMenu($("#modelMenu"), $("#modelButton"), closeModelMenu);
-    $("#modelButton").setAttribute("aria-expanded", "true");
+    mountSessionMenu($("#modelMenu"), modelMenuTrigger, closeModelMenu);
+    modelMenuTrigger.setAttribute("aria-expanded", "true");
     focusMenuSelection($("#modelMenu"));
   }
   function toggleModelMenu() {
@@ -345,6 +358,7 @@ export function createSessionControls({
     menu.hidden = true;
     restoreSessionMenu(menu);
     $("#modelButton").setAttribute("aria-expanded", "false");
+    modelMenuTrigger.setAttribute("aria-expanded", "false");
   }
   const {
     closePermissionMenu,
@@ -360,6 +374,7 @@ export function createSessionControls({
     syncPermissionSettings,
     applyPermissionSelection,
     permissionsView,
+    openPermissionMenu,
   } = createSessionPermissionControls({
     $,
     t,
@@ -371,12 +386,13 @@ export function createSessionControls({
     closeModelMenu,
     syncTaskNotifySettings,
   });
-  bindMenuDismiss($("#modelMenu"), $("#modelButton"), closeModelMenu);
+  bindMenuDismiss($("#modelMenu"), () => modelMenuTrigger, closeModelMenu);
   $("#modelButton").addEventListener("click", toggleModelMenu);
   $("#settingsTaskNotifyToggle").onchange = (event) => setTaskNotifyEnabled(event.currentTarget.checked);
   function sessionControlView() {
     return {
       sessionId: state.active?.id || "",
+      modelLoadStatus: state.modelLoadStatus,
       model: state.selectedModel,
       effort: $("#effortSelect").value,
       permission: state.permissionMode,
@@ -415,6 +431,7 @@ export function createSessionControls({
     maybeNotifyTaskCompleted,
     modelDisplay,
     openModelMenu,
+    openPermissionMenu,
     permissionThreadPolicy,
     permissionTurnPolicy,
     reasoningLabel,

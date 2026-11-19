@@ -78,3 +78,14 @@ export function parseWorkbenchRoute(url = new URL(location.href)) {
     documentId: url.searchParams.get("document") || "",
   };
 }
+
+/** Route identity owns the surface; transient layout classes never decide navigation or keyboard policy. */
+export function workbenchRouteSurface(url = new URL(location.href), route = parseWorkbenchRoute(url)) {
+  if (route.page === "settings") return "settings";
+  if (
+    ["new", "task", "creation"].includes(route.page) ||
+    (route.page === "create" && url.searchParams.get("view") !== "works" && !url.searchParams.has("asset"))
+  )
+    return "conversation";
+  return "workspace";
+}

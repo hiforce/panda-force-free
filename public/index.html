@@ -844,18 +844,28 @@
                     ><span class="icon-slot chevron" data-icon="chevronDown"></span>
                   </button>
                   <div
-                    class="permission-menu"
+                    class="permission-menu composer-panel"
                     id="permissionMenu"
                     role="menu"
                     aria-label="How should agent actions be approved?"
                     hidden=""
                     data-pf-aria-label="common.howShouldAgentActionsBeApproved"
                   >
-                    <div class="session-menu-heading">
+                    <div class="session-menu-heading composer-panel-heading">
+                      <button
+                        type="button"
+                        class="model-menu-back composer-panel-action"
+                        id="permissionMenuBack"
+                        hidden=""
+                        data-pf-aria-label="common.back"
+                        aria-label="Back"
+                      >
+                        <span class="icon-slot" data-icon="chevronLeft"></span>
+                      </button>
                       <span data-pf-message="common.permissions">Permissions</span>
                       <button
                         type="button"
-                        class="session-menu-close"
+                        class="session-menu-close composer-panel-action"
                         aria-label="Close"
                         data-pf-aria-label="common.close"
                       >
@@ -882,7 +892,7 @@
                     ><span class="icon-slot chevron" data-icon="chevronDown"></span>
                   </button>
                   <div
-                    class="model-menu"
+                    class="model-menu composer-panel"
                     id="modelMenu"
                     role="dialog"
                     aria-label="Model &amp; reasoning"
@@ -900,6 +910,22 @@
                 </div>
               </div>
               <div class="composer-right">
+                <button
+                  type="button"
+                  class="composer-setting-button"
+                  id="composerSettingsButton"
+                  data-composer-control="settings"
+                  aria-haspopup="dialog"
+                  aria-expanded="false"
+                  aria-controls="composerSettingsMenu"
+                  data-pf-aria-label="composer.settings"
+                  data-pf-title="composer.settings"
+                >
+                  <span class="icon-slot" data-icon="slidersHorizontal" aria-hidden="true"></span>
+                  <span class="composer-setting-summary"
+                    ><span id="composerSettingModel"></span><span id="composerSettingEffort"></span
+                  ></span>
+                </button>
                 <span
                   class="context-usage"
                   id="contextUsage"
@@ -918,6 +944,7 @@
                   type="button"
                   class="composer-text-button queue-control"
                   id="queueButton"
+                  hidden=""
                   data-composer-control="queue"
                   title="Queue message (Tab)"
                   aria-label="Queue message (Tab)"

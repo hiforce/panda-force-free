@@ -538,6 +538,8 @@ export function startApplication() {
       t: environment.t,
       imagesPort: images,
       noticesPort: notices,
+      projectsPort: projects,
+      workbenchPort: workbench,
       state: environment.stateFor("uploads").state,
       mutations: environment.stateFor("uploads").mutations,
     }),

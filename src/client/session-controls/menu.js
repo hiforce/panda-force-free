@@ -3,6 +3,30 @@ import { findElement } from "../dom.js";
 /** @type {WeakMap<HTMLElement, () => void>} */
 const overlays = new WeakMap();
 
+/** Shared visible bounds keep composer panels above navigation and the on-screen keyboard. */
+export function composerPanelBounds() {
+  const viewport = window.visualViewport,
+    left = viewport?.offsetLeft || 0,
+    top = viewport?.offsetTop || 0,
+    width = viewport?.width || innerWidth,
+    height = viewport?.height || innerHeight;
+  let bottom = top + height - 8;
+  for (const selector of [".workspace-attribution", ".workbench-mobile-nav"]) {
+    const element = document.querySelector(selector);
+    if (!(element instanceof HTMLElement) || !element.getClientRects().length) continue;
+    const bounds = element.getBoundingClientRect();
+    if (bounds.height && bounds.top >= top && bounds.top < top + height) bottom = Math.min(bottom, bounds.top - 8);
+  }
+  return { left, top, width, height, bottom };
+}
+
+/** @param {HTMLElement} panel */
+export function syncComposerPanelViewport(panel) {
+  const { top, bottom } = composerPanelBounds();
+  panel.style.setProperty("--composer-panel-bottom", `${Math.max(0, innerHeight - bottom)}px`);
+  panel.style.setProperty("--composer-panel-height", `${Math.max(0, bottom - top - 8)}px`);
+}
+
 /** @param {HTMLElement} menu */
 export function restoreSessionMenu(menu) {
   overlays.get(menu)?.();
@@ -26,19 +50,8 @@ export function mountSessionMenu(menu, trigger, close) {
       close();
       return;
     }
-    const viewport = window.visualViewport,
-      left = viewport?.offsetLeft || 0,
-      top = viewport?.offsetTop || 0,
-      width = viewport?.width || innerWidth,
-      height = viewport?.height || innerHeight,
+    const { left, top, width, bottom } = composerPanelBounds(),
       mobile = matchMedia("(max-width: 767px)").matches;
-    let bottom = top + height - 8;
-    for (const selector of [".workspace-attribution", ".workbench-mobile-nav"]) {
-      const element = document.querySelector(selector);
-      if (!(element instanceof HTMLElement) || !element.getClientRects().length) continue;
-      const bounds = element.getBoundingClientRect();
-      if (bounds.height && bounds.top >= top && bounds.top < top + height) bottom = Math.min(bottom, bounds.top - 8);
-    }
     const menuWidth = Math.max(0, Math.min(mobile ? 480 : preferredWidth, width - 16));
     menu.style.width = `${menuWidth}px`;
     menu.style.maxHeight = `${Math.max(0, Math.min(420, bottom - top - 8))}px`;
@@ -96,11 +109,11 @@ export function focusMenuSelection(menu) {
     close;
   if (selected?.getClientRects().length) selected.focus({ preventScroll: true });
 }
-/** @param {HTMLElement} menu @param {HTMLButtonElement} trigger @param {() => void} close */
+/** @param {HTMLElement} menu @param {HTMLButtonElement | (() => HTMLButtonElement)} trigger @param {() => void} close */
 export function bindMenuDismiss(menu, trigger, close) {
   const dismiss = () => {
     close();
-    trigger.focus({ preventScroll: true });
+    (typeof trigger === "function" ? trigger() : trigger).focus({ preventScroll: true });
   };
   menu.addEventListener("click", (event) => {
     if (event.target instanceof Element && event.target.closest(".session-menu-close")) dismiss();

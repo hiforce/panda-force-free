@@ -1,3 +1,4 @@
+import { syncComposerPanelViewport } from "./session-controls/menu.js";
 import { codexIcon } from "./codex-icons.js";
 import { localizeAttribute, localizeText, setMessageHtml } from "./i18n.js";
 import type { Translate } from "../shared/i18n/messages.js";
@@ -12,12 +13,12 @@ export function createComposerContexts(form: HTMLFormElement, body: HTMLElement,
     title = document.createElement("h2"),
     close = document.createElement("button"),
     list = document.createElement("div");
-  dialog.className = "session-dialog message-composer-context-dialog";
+  dialog.className = "session-dialog message-composer-context-dialog composer-panel";
   title.id = "composer-files-" + crypto.randomUUID();
   dialog.setAttribute("aria-labelledby", title.id);
-  heading.className = "session-dialog-heading";
+  heading.className = "composer-panel-heading";
   close.type = "button";
-  close.className = "icon-button";
+  close.className = "composer-panel-action";
   setMessageHtml(close, codexIcon("x"));
   heading.append(title, close);
   list.className = "message-composer-context-list";
@@ -59,14 +60,18 @@ export function createComposerContexts(form: HTMLFormElement, body: HTMLElement,
     group.append(frame);
     sections.push({ host, frame, manage, kind });
     manage.onclick = () => {
-      if (kind === "skills") form.querySelector<HTMLButtonElement>("[data-composer-skill-trigger]")?.click();
-      else {
+      if (kind === "skills") {
+        const trigger = form.querySelector<HTMLButtonElement>("[data-composer-skill-trigger]");
+        if (trigger) trigger.click();
+        else form.dispatchEvent(new Event("composer:browse-skills"));
+      } else {
         if (!dialog.isConnected) document.body.append(dialog);
         anchor = document.createComment("Attachment controls return here");
         host.before(anchor);
         list.append(host);
         returnedTo = manage;
         dialog.showModal();
+        syncComposerPanelViewport(dialog);
         close.focus({ preventScroll: true });
       }
     };
@@ -76,6 +81,7 @@ export function createComposerContexts(form: HTMLFormElement, body: HTMLElement,
     return host?.querySelectorAll(kind === "files" ? ".composer-attachment" : "[data-selected-skill]").length || 0;
   };
   function refresh() {
+    if (dialog.open) syncComposerPanelViewport(dialog);
     const files = count("files"),
       skills = count("skills");
     const short = (window.visualViewport?.height || innerHeight) < 520;

@@ -1,3 +1,4 @@
+import { openComposerSettings } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
@@ -62,7 +63,7 @@ try {
           ]),
         ),
       );
-      await page.locator("#modelButton").click();
+      await openComposerSettings(page, "model");
       assert.equal(await page.locator("#modelButton").getAttribute("aria-haspopup"), "dialog");
       assert.equal(await page.locator("#modelMenu").getAttribute("role"), "dialog");
       const range = page.locator('#modelMenu input[type="range"]');
@@ -108,18 +109,18 @@ try {
       assert(geometry.height < 260, "Seven discrete levels keep the menu compact");
       await page.screenshot({ path: `${out}/menu-${locale}-${width}.png` });
       await page.keyboard.press("Escape");
-      assert.equal(await page.locator("#modelButton").evaluate((e) => e === document.activeElement), true);
-      await page.locator("#modelButton").click();
+      assert.equal(await page.locator("#composerSettingsButton").evaluate((e) => e === document.activeElement), true);
+      await openComposerSettings(page, "model");
       assert.equal(await range.getAttribute("aria-valuetext"), expected.max);
       await page.locator("#modelSubmenuButton").click();
       await page.locator('[data-model="gpt-fixed"]').click();
-      await page.locator("#modelButton").click();
+      await openComposerSettings(page, "model");
       assert.equal(await range.isDisabled(), true);
       assert.equal(await range.getAttribute("max"), "0");
       assert.equal(await range.getAttribute("aria-valuetext"), expected.high);
       await page.locator("#modelSubmenuButton").click();
       await page.locator('[data-model="gpt-slider"]').click();
-      await page.locator("#modelButton").click();
+      await openComposerSettings(page, "model");
       assert.equal(await range.getAttribute("aria-valuetext"), expected.max);
       await page.keyboard.press("Escape");
 
@@ -133,13 +134,13 @@ try {
       );
       if (width >= 1081) await native.locator("#sessionInfoButton").click();
       const before = await native.locator("#effortSelect").inputValue();
-      await native.locator("#modelButton").click();
+      await openComposerSettings(native, "model");
       const draft = native.locator('#sessionSettingEfforts input[type="range"]');
       await draft.press("Home");
       assert.equal(await draft.getAttribute("aria-valuetext"), expected.minimal);
       await native.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
       assert.equal(await native.locator("#effortSelect").inputValue(), before, "Cancel preserves the saved effort");
-      await native.locator("#modelButton").click();
+      await openComposerSettings(native, "model");
       await draft.press("Home");
       await draft.press("ArrowRight");
       assert.equal(await draft.getAttribute("aria-valuetext"), expected.low);
@@ -163,8 +164,8 @@ try {
       const creation = await context.newPage();
       creation.on("pageerror", (e) => errors.push(e.message));
       await creation.goto(app.base + "/create");
-      await creation.locator("#composerSkillControl button").waitFor();
-      await creation.locator("#modelButton").click();
+      await creation.locator("#composerSettingsButton").waitFor();
+      await openComposerSettings(creation, "model");
       const creationRange = creation.locator('#sessionSettingEfforts input[type="range"]');
       await creationRange.press("Home");
       await creationRange.press("ArrowRight");

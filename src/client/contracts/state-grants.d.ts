@@ -34,7 +34,7 @@ export interface StateGrants {
   repositories: { read: "config"; write: "config" };
   review: { read: "active" | "activeReview" | "activityItems" | "changes" | "turnDiffs"; write: "activeReview" | "turnDiffs" };
   sessionStore: { read: "active" | "threads" | "tokenUsage"; write: "active" | "threads" | "tokenUsage" };
-  sessionWorkspace: { read: "active" | "goals" | "items" | "tokenUsage" | "turnTimings"; write: never };
+  sessionWorkspace: { read: "active" | "goals" | "items" | "tokenUsage" | "turnTimings" | "newSessionProjectId"; write: never };
   settings: { read: "active" | "projectless"; write: never };
   sidebar: { read: "active" | "config" | "goals" | "newSessionProjectId" | "projectless" | "threads" | "workspaceContext"; write: "goals" };
   sidebarLayout: { read: never; write: never };

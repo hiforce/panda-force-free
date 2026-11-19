@@ -68,8 +68,9 @@ export function assembleComposer({
         "composer",
       );
     }
-    skills.browse(/** @type {HTMLElement} */ (skillControl.firstElementChild));
+    skills.browse(/** @type {HTMLElement} */ ($('[data-composer-control="add"]')));
   };
+  $("#composer").addEventListener("composer:browse-skills", () => skillControl.click());
   function renderComposerSkills() {
     if (!skills && state.composerSkills.length) {
       skills = new CreationSkills(

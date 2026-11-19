@@ -1,3 +1,4 @@
+import { openComposerSettings, selectSessionModel, selectedSessionModel } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createBrowserFixture, launchOptions } from "../support/browser-runtime.mjs";
@@ -77,20 +78,18 @@ try {
     await page.keyboard.press("Escape");
     await page.locator(id).waitFor({ state: "hidden" });
   };
-  if (!(await page.locator("#modelButton").isVisible())) await page.locator("#sessionInfoButton").click();
-  await page.locator("#modelButton").click();
+  await openComposerSettings(page, "model");
   await inspect("#sessionSettingsDialog", "desktop-model");
-  await page.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
+  await selectSessionModel(page, "gpt-5.6-luna");
   await page.keyboard.press("Tab");
   assert.equal(
     await page.locator("#sessionSettingsDialog").evaluate((node) => node.contains(document.activeElement)),
     true,
   );
   await dismiss("#sessionSettingsDialog");
-  assert.equal(await page.locator("#modelButton").evaluate((node) => document.activeElement === node), true);
+  assert.equal(await page.locator("#composerSettingsButton").evaluate((node) => document.activeElement === node), true);
   assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), "gpt-5.6-sol");
-  if (!(await page.locator("#modelButton").isVisible())) await page.locator("#sessionInfoButton").click();
-  await page.locator("#modelButton").click();
+  await openComposerSettings(page, "model");
   for (const [width, height] of [
     [1440, 960],
     [1050, 780],
@@ -102,7 +101,7 @@ try {
   ]) {
     await page.setViewportSize({ width, height });
     await inspect("#sessionSettingsDialog", `model-${width}-${height}`);
-    assert.equal(await page.locator("#sessionSettingModel").inputValue(), "gpt-5.6-sol");
+    assert.equal(await selectedSessionModel(page), "gpt-5.6-sol");
   }
   await page.evaluate(() => {
     const viewport = window.__dialogViewport;
@@ -112,7 +111,7 @@ try {
   });
   await page.waitForFunction(() => Math.abs(document.querySelector("#app").getBoundingClientRect().height - 410) < 1);
   await inspect("#sessionSettingsDialog", "mobile-keyboard-model");
-  await page.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
+  await selectSessionModel(page, "gpt-5.6-luna");
   await page.locator('#sessionSettingEfforts input[type="range"]').press("End");
   await page.locator('#sessionSettingsForm button[type="submit"]').click();
   await page.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
@@ -137,7 +136,7 @@ try {
       })),
     ),
   );
-  await page.locator("#modeButton").click();
+  await openComposerSettings(page, "permissions");
   await inspect("#sessionSettingsDialog", "desktop-permissions-long");
   const scroll = await page.locator("#sessionSettingsDialog .session-dialog-body").evaluate((element) => {
     const scrollable = element.scrollHeight > element.clientHeight;
@@ -154,7 +153,7 @@ try {
     await page.evaluate(() => globalThis.__pandaForceDebug.state.permissionMode),
     "profile:review-policy-17",
   );
-  await page.locator("#modeButton").click();
+  await openComposerSettings(page, "permissions");
   await page.mouse.click(8, 8);
   await page.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
   await page.locator('#sessionInspector [data-session-action="usage"]').click();
@@ -173,7 +172,7 @@ try {
     globalThis.__pandaForceDebug.setPermissionProfiles([]);
     globalThis.__pandaForceDebug.setPermissionVisibility("fullAccess", true);
   });
-  await page.locator("#modeButton").click();
+  await openComposerSettings(page, "permissions");
   await inspect("#sessionSettingsDialog", "desktop-permissions");
   await page.locator('input[name="session-permission"][value="full-access"]').check();
   await page.locator('#sessionSettingsForm button[type="submit"]').click();
@@ -181,7 +180,7 @@ try {
   await page.locator('#fullAccessDialog button[value="cancel"]').click();
   assert.notEqual(await page.evaluate(() => globalThis.__pandaForceDebug.state.permissionMode), "full-access");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator("#modeButton").click();
+  await openComposerSettings(page, "permissions");
   await inspect("#sessionSettingsDialog", "mobile-permissions");
   await dismiss("#sessionSettingsDialog");
   await page.locator('#sessionMobileSummary [data-session-action="usage"]').click();
@@ -196,8 +195,7 @@ try {
   await dismiss("#sessionToolsDialog");
   await page.locator('#sessionInspector [data-session-action="close"]').click();
   await page.setViewportSize({ width: 1861, height: 888 });
-  if (!(await page.locator("#modelButton").isVisible())) await page.locator("#sessionInfoButton").click();
-  await page.locator("#modelButton").click();
+  await openComposerSettings(page, "model");
   await page.evaluate(async () => {
     await globalThis.__pandaForceI18n.setPreference("zh-CN");
     const theme = document.querySelector("#themeSelect");

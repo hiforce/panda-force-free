@@ -19,6 +19,8 @@ export function createSessionPermissionControls({
   const permissionProfileRequestGate = createLatestRequestGate();
   let pendingFullAccessAction = "select",
     pendingFullAccessSession = "";
+  let permissionMenuBack = /** @type {(() => void) | null} */ (null);
+  let permissionMenuTrigger = $("#modeButton");
   const permissionModes = {
     default: {
       kind: "legacy",
@@ -241,12 +243,16 @@ export function createSessionPermissionControls({
     normalizePermissionMode();
     syncPermissionControl();
   }
-  function openPermissionMenu() {
+  /** @param {(() => void) | null} [back] */
+  function openPermissionMenu(back = null) {
     closeModelMenu();
+    permissionMenuBack = back;
+    permissionMenuTrigger = $("#modeButton").getClientRects().length ? $("#modeButton") : $("#composerSettingsButton");
+    $("#permissionMenuBack").hidden = !back;
     syncPermissionControl();
     $("#permissionMenu").hidden = false;
-    mountSessionMenu($("#permissionMenu"), $("#modeButton"), closePermissionMenu);
-    $("#modeButton").setAttribute("aria-expanded", "true");
+    mountSessionMenu($("#permissionMenu"), permissionMenuTrigger, closePermissionMenu);
+    permissionMenuTrigger.setAttribute("aria-expanded", "true");
     focusMenuSelection($("#permissionMenu"));
   }
   function closePermissionMenu() {
@@ -254,6 +260,7 @@ export function createSessionPermissionControls({
     menu.hidden = true;
     restoreSessionMenu(menu);
     $("#modeButton").setAttribute("aria-expanded", "false");
+    permissionMenuTrigger.setAttribute("aria-expanded", "false");
   }
   function togglePermissionMenu() {
     if ($("#permissionMenu").hidden) openPermissionMenu();
@@ -320,10 +327,15 @@ export function createSessionPermissionControls({
     choosePermissionMode(mode);
     if (mode === "full-access" && $("#fullAccessDialog").open) pendingFullAccessSession = sessionId;
   }
-  bindMenuDismiss($("#permissionMenu"), $("#modeButton"), closePermissionMenu);
+  $("#permissionMenuBack").onclick = () => {
+    closePermissionMenu();
+    permissionMenuBack?.();
+  };
+  bindMenuDismiss($("#permissionMenu"), () => permissionMenuTrigger, closePermissionMenu);
   $("#modeButton").onclick = togglePermissionMenu;
   return {
     closePermissionMenu,
+    openPermissionMenu,
     loadPermissionProfiles,
     permissionThreadPolicy,
     permissionTurnPolicy,
