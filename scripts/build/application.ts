@@ -1,4 +1,5 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { sourceIdentity } from "../verification/source.js";
 import { dependencyProfile } from "./dependencies.mjs";
 
@@ -6,6 +7,12 @@ import { dependencyProfile } from "./dependencies.mjs";
 const expected = JSON.parse(readFileSync("scripts/build/base-images.json", "utf8"));
 if (dependencyProfile(process.cwd()) !== expected.inputsSha256)
   throw new Error("Dependency profile changed; publish and select matching build/runtime bases before packaging.");
+if (
+  expected.mediaRecipeSha256 &&
+  createHash("sha256").update(readFileSync("scripts/build/Dockerfile.media-bases")).digest("hex") !==
+    expected.mediaRecipeSha256
+)
+  throw new Error("Media base recipe changed; publish and select matching bases before packaging.");
 const profile = process.env.PANDA_FORCE_VERIFICATION_PROFILE || "none";
 if (!["none", "full", "brand", "cdn"].includes(profile)) throw new Error("Unknown verification profile: " + profile);
 rmSync(".build-info", { recursive: true, force: true });

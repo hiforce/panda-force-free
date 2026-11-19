@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-ARG BUILD_BASE=hiforceai/panda-force-build-base:deps-7fc21178477adfc2@sha256:d1b3e34b9afe1405a52181f54b233e2ad1eedc7eb45babfd58548afbdaf6adf5
-ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base:deps-7fc21178477adfc2@sha256:7d5b745416b1321c73ebd6cf1b08535d3757de8ddb63c7bdf67a6312265c32c8
+ARG BUILD_BASE=hiforceai/panda-force-build-base:media-44d133985283bf79@sha256:5655382c2f98ab3ef0db16d03e88ef07df95c3923c98fd5062af71a877ebae1c
+ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base:media-44d133985283bf79@sha256:5077d3c86f32589861c7928746aae60d7b1ee837f491ee61cfa5cd223776c123
 FROM ${BUILD_BASE} AS build
 USER root
 WORKDIR /app
@@ -42,7 +42,8 @@ FROM ${RUNTIME_BASE} AS runtime
 USER root
 WORKDIR /app
 ARG INSTALL_VIDEO_TOOLS=1
-RUN if [ "$INSTALL_VIDEO_TOOLS" = "1" ]; then \
+RUN if [ "$INSTALL_VIDEO_TOOLS" = "1" ] && ! (command -v ffmpeg > /dev/null && command -v ffprobe > /dev/null \
+      && command -v fc-match > /dev/null && fc-match ':lang=zh-cn' --format '%{family}\n' | grep -qi 'Noto Sans CJK'); then \
       apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk \
       && rm -rf /var/lib/apt/lists/*; \
     fi

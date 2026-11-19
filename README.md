@@ -149,6 +149,8 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 docker compose logs panda-force
 ```
 
+The source build automatically pulls our public, digest-pinned **compiler and media runtime bases** from Docker Hub. They include the locked dependencies, Codex CLI, FFmpeg and CJK fonts; you do not need to build or import the bases yourself. The first build downloads these layers; later builds reuse them and compile the application. [Base images, caching and private-registry overrides →](./panda-docs/docs/building.md#container-base-images)
+
 Open **http://localhost:8899** and create your PandaForce administrator. Email is optional at initialization. Choose a password with at least six characters, including uppercase and lowercase letters and a number. If an installation code is requested, find it in the startup logs.
 
 Sign in to the model account separately:

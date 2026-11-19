@@ -149,6 +149,8 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 docker compose logs panda-force
 ```
 
+源码构建会自动从 Docker Hub 拉取我们公开的、固定摘要的**编译基础镜像和媒体运行基础镜像**，其中已包含锁定依赖、Codex CLI、FFmpeg 和中日韩字体，无需自行构建或导入基础层。首次构建需要下载这些层，后续构建复用它们并编译应用。[基础镜像、缓存与私有仓库配置 →](./panda-docs/docs/building.md#container-base-images)
+
 打开 **http://localhost:8899**，创建 PandaForce 管理员。初始化时邮箱可选，密码至少六位，包含大小写字母和数字。如果要求安装验证码，请在启动日志中查看。
 
 模型账号需要单独登录：

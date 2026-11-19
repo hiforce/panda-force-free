@@ -1,0 +1,17 @@
+# Stable media tooling is refreshed separately from the locked JavaScript dependency cores.
+ARG BUILD_BASE=hiforceai/panda-force-build-base:deps-7fc21178477adfc2@sha256:d1b3e34b9afe1405a52181f54b233e2ad1eedc7eb45babfd58548afbdaf6adf5
+ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base:deps-7fc21178477adfc2@sha256:7d5b745416b1321c73ebd6cf1b08535d3757de8ddb63c7bdf67a6312265c32c8
+FROM ${BUILD_BASE} AS build-base
+LABEL org.pandaforce.base.layer="compiler-core"
+
+FROM ${RUNTIME_BASE} AS runtime-base
+USER root
+WORKDIR /app
+ARG INSTALL_VIDEO_TOOLS=1
+RUN if [ "$INSTALL_VIDEO_TOOLS" = "1" ]; then \
+      apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
+RUN ffmpeg -version > /dev/null && ffprobe -version > /dev/null \
+    && fc-match ':lang=zh-cn' --format '%{family}\n' | grep -qi 'Noto Sans CJK'
+LABEL org.pandaforce.base.layer="media-runtime"

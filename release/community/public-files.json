@@ -251,6 +251,7 @@
   "scripts/build-client.mjs",
   "scripts/build-gadget-sdk.mjs",
   "scripts/build/Dockerfile.bases",
+  "scripts/build/Dockerfile.media-bases",
   "scripts/build/application.ts",
   "scripts/build/base-images.json",
   "scripts/build/cdn-image.ts",

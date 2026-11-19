@@ -21,7 +21,7 @@ A Unix socket is a local communication endpoint between processes, represented b
 
 ## Start the published container
 
-The current container release is **hiforceai/panda-force:0.0.16**, currently for Linux amd64. The image contains Bun, Node.js and the supported Codex CLI. You do not need to install those tools separately on the host.
+The current container release is **hiforceai/panda-force:0.0.21**, currently for Linux amd64. The image contains Bun, Node.js and the supported Codex CLI. You do not need to install those tools separately on the host.
 
 From a checkout of this repository:
 
@@ -71,7 +71,7 @@ docker run -d --name panda-force-host --restart unless-stopped \
   -e PANDA_FORCE_APP_SERVER_MODE=shared \
   -e PANDA_FORCE_APP_SERVER_SOCKET="/run/panda-force/codex-control/$(basename "$PANDA_FORCE_HOST_SOCKET")" \
   -e PANDA_FORCE_AUTH_MODE=password \
-  hiforceai/panda-force:0.0.16
+  hiforceai/panda-force:0.0.21
 
 docker logs panda-force-host
 ```
@@ -124,7 +124,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up --build -d
 docker compose logs panda-force
 ```
 
-The community Dockerfile uses public base images. This source build is optional; normal installation pulls the released image.
+The community Dockerfile automatically pulls our public, digest-pinned compiler and media runtime bases. Locked dependencies, Codex CLI, FFmpeg and CJK fonts are already installed; no manual base build or import is needed. The first download is cached for later application builds. See [container base images](./building.md#container-base-images) for the two images, verification scope and private-registry overrides. This source build is optional; normal installation pulls the released application image.
 
 ## Install on your phone
 

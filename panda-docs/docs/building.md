@@ -41,9 +41,30 @@ Use Node.js 22 or newer for the help build. Generated HTML is in `panda-docs/bui
 
 The documentation build currently inherits a low-severity [deepmerge advisory](https://github.com/advisories/GHSA-gcqx-w48m-w2h4) for which no upstream patched version is listed. Build this separate help toolchain from trusted, reviewed configuration and content. Application dependencies are audited separately; a successful HTML build is not a claim that the help toolchain has no advisories.
 
+## Container base images
+
+Source builds use two public Docker Hub images for **Linux amd64**:
+
+| Image | Purpose |
+| --- | --- |
+| `hiforceai/panda-force-build-base:media-44d133985283bf79` | Node.js, Bun, Codex CLI, compilers and locked development dependencies |
+| `hiforceai/panda-force-runtime-base:media-44d133985283bf79` | Node.js, Bun, Codex CLI, production dependencies, FFmpeg/FFprobe and Noto CJK fonts |
+
+The Dockerfile, Compose build overlay and `scripts/build/base-images.json` pin the same immutable image digests. Docker pulls them automatically; no registry account, manual image import or separate base build is required. These are dependency bases, not runnable PandaForce releases. Ordinary installations serve static assets from the application; CDN is optional and requires your own configuration.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
+
+The initial download can be large. Later builds reuse the downloaded layers and compile the checked-out application; they do not reinstall JavaScript dependencies, FFmpeg or fonts. Compilation and any explicitly enabled CDN upload still take time. Packaging records that regression tests run separately. Run `bun run check` and the affected tests during development, or select a verification profile explicitly.
+
+For a private registry, mirror **both** bases with your normal registry tools, log in using Docker's own credential configuration, and set `PANDA_FORCE_BUILD_BASE` and `PANDA_FORCE_RUNTIME_BASE` to the corresponding mirrored references before the same Compose command. For direct `docker build`, pass the independently overridable `BUILD_BASE` and `RUNTIME_BASE` arguments. Keep credentials out of Dockerfiles and build arguments; deployment registry credentials and pull policies remain administrator-managed. The original dependency tags remain available for existing pinned installations.
+
+The reusable recipes are `scripts/build/Dockerfile.bases` for locked dependency cores and `scripts/build/Dockerfile.media-bases` for the media overlay. Ordinary application changes do not require rebuilding either. A changed lockfile, dependency, patch or base recipe requires publishing and selecting a matching pair; compatibility checks stop a mismatched build rather than reinstalling dependencies silently. Selecting an older runtime without media tools may trigger the explicitly enabled installation fallback.
+
 ## Select release verification scope
 
-Container builds default to the complete verification plan. For an icon or brand-asset update, select the related checks explicitly:
+Container builds default to compilation and packaging (`VERIFICATION_PROFILE=none`), with regression tests run separately. For an icon or brand-asset update, select the related checks explicitly:
 
 ```bash
 docker build --build-arg VERIFICATION_PROFILE=brand -t panda-force:brand-review .
