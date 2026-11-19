@@ -2,7 +2,8 @@ import type { EngineQuestion } from "./questions.js";
 import type { TokenUsage } from "./types.js";
 
 export type ApplicationVisibleEvent =
-  { kind: "message"; id: string; text: string; complete: boolean } | { kind: "usage"; usage: TokenUsage };
+  | { kind: "message"; id: string; text: string; complete: boolean; phase?: "commentary" | "final_answer" }
+  | { kind: "usage"; usage: TokenUsage };
 
 export interface ApplicationToolDefinition {
   name: string;

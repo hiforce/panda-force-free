@@ -180,7 +180,7 @@ try {
       await page.evaluate((theme) => {
         document.documentElement.dataset.appearance = theme;
       }, theme);
-      for (const icon of ["panda", "bot", "sparkles", "compass", "shield", "pencil", "globe"]) {
+      for (const icon of ["panda", "cat", "dog", "fox", "owl", "rabbit", "bear", "tiger", "penguin"]) {
         await dialog.locator(`[data-avatar-icon="${icon}"]`).click();
         const geometry = await dialog.evaluate((root) => {
           const box = (el) => {
@@ -218,6 +218,31 @@ try {
           );
         }
       }
+      await dialog.locator('[data-avatar-icon="fox"]').click();
+      const animalPalette = [];
+      for (const appearance of ["silk", "aurora"]) {
+        await page.evaluate((appearance) => (document.documentElement.dataset.appearance = appearance), appearance);
+        for (const tone of ["accent", "success", "warning"]) {
+          await dialog.locator(`[data-avatar-tone-choice="${tone}"]`).click();
+          const paint = await dialog.evaluate((root) => {
+            const avatar = root.querySelector("[data-profile-preview] > .bot-avatar"),
+              svg = avatar.querySelector(".bot-animal-symbol");
+            return {
+              color: getComputedStyle(svg).color,
+              fur: getComputedStyle(svg.querySelector("path")).fill,
+              face: getComputedStyle(svg).getPropertyValue("--bot-animal-face").trim(),
+              icon: avatar.getAttribute("data-avatar-tone"),
+            };
+          });
+          assert.equal(paint.icon, tone);
+          assert.equal(paint.fur, paint.color, "Animal fur follows the selected semantic avatar color");
+          animalPalette.push({ appearance, tone, ...paint });
+          await page.screenshot({ path: join(out, `animal-palette-${width}-${appearance}-${tone}.png`) });
+        }
+      }
+      assert.notEqual(animalPalette[0].color, animalPalette[1].color);
+      assert.notEqual(animalPalette[0].face, animalPalette[3].face);
+      await page.evaluate((appearance) => (document.documentElement.dataset.appearance = appearance), theme);
       await name.fill(locale === "en" ? "Catalog editor" : "商品资料助理");
       await dialog.locator('[name="pf-bot-code"]').fill("created-workspace-" + width);
       await dialog

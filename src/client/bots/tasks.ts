@@ -7,6 +7,7 @@ import { setMessageHtml } from "../i18n.js";
 import { botUi, botDate, taskStateIds, type BotContext } from "./ui.js";
 import { botAvatarHtml } from "./avatar.js";
 import { openBotTask, deleteBotRecord } from "./task-detail.js";
+import { createBotTaskDeletion } from "./task-deletion.js";
 import { createBotTaskRecovery } from "./task-recovery.js";
 
 const groups: [string, MessageId][] = [
@@ -42,6 +43,8 @@ export function createBotTaskList(context: BotContext, scope?: { botId: string }
   };
   const changed = () => {
     recovery.clear();
+    deletion.clear();
+    fingerprint = "";
     page = 1;
     anchor = 0;
     reload();
@@ -57,17 +60,24 @@ export function createBotTaskList(context: BotContext, scope?: { botId: string }
     }).toString();
   }
   const recovery = createBotTaskRecovery(context, queryString);
+  const deletion = createBotTaskDeletion(context, queryString, rows);
   function rows() {
     if (!host) return;
     const list = host.querySelector<HTMLElement>("[data-bot-task-rows]")!,
       tasks = snapshot.tasks,
       focused = list.querySelector<HTMLButtonElement | HTMLInputElement>(":focus"),
-      focusedId = focused?.dataset.detail ?? focused?.dataset.deleteRecord ?? focused?.dataset.retrySelect,
-      focusedAction = focused?.hasAttribute("data-retry-select")
-        ? "retry-select"
-        : focused?.hasAttribute("data-delete-record")
-          ? "delete-record"
-          : "detail";
+      focusedId =
+        focused?.dataset.detail ??
+        focused?.dataset.deleteRecord ??
+        focused?.dataset.retrySelect ??
+        focused?.dataset.deleteSelect,
+      focusedAction = focused?.hasAttribute("data-delete-select")
+        ? "delete-select"
+        : focused?.hasAttribute("data-retry-select")
+          ? "retry-select"
+          : focused?.hasAttribute("data-delete-record")
+            ? "delete-record"
+            : "detail";
     host
       .querySelectorAll<HTMLButtonElement>("[data-queue-filter]")
       .forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.queueFilter === filter)));
@@ -77,7 +87,7 @@ export function createBotTaskList(context: BotContext, scope?: { botId: string }
         ? tasks
             .map(
               (task) =>
-                `<article class="bot-task-row" data-task-id="${e(task.id)}" data-decision="${botTaskDecision(task) || "pending"}"><div class="bot-task-copy ${task.status === "review" && task.failure === "execution" && !task.decision ? "bot-task-copy-selectable" : ""}">${recovery.checkbox(task)}<div><strong data-i18n-ignore title="${e(task.title || task.summary || task.externalTaskId)}">${e(task.title || task.summary || task.externalTaskId)}</strong><small data-i18n-ignore title="${e(task.externalTaskId)}"><code>${e(task.externalTaskId.length > 42 ? task.externalTaskId.slice(0, 22) + "…" + task.externalTaskId.slice(-12) : task.externalTaskId)}</code></small></div></div><span class="bot-task-agent">${botAvatarHtml(snapshot.bots.find((b) => b.id === task.botId))}<span data-i18n-ignore>${e(snapshot.bots.find((b) => b.id === task.botId)?.name ?? "—")}</span></span>${badge(task)}${outcome(task, true)}<time datetime="${new Date(task.updatedAt).toISOString()}">${e(botDate(task.updatedAt))}</time><div class="bot-record-actions"><button type="button" class="wb-button bot-row-open" data-detail="${e(task.id)}" ${attributes("aria-label", "cli.botDetails")} ${attributes("title", "cli.botDetails")}>${icon("arrowUpRight")}</button><button type="button" class="wb-button bot-row-delete" data-delete-record="${e(task.id)}" ${task.status === "running" ? "disabled" : ""} ${attributes("aria-label", "cli.botDeleteRecord")} ${attributes("title", "cli.botDeleteRecord")}>${icon("trash")}</button></div></article>`,
+                `<article class="bot-task-row" data-task-id="${e(task.id)}" data-decision="${botTaskDecision(task) || "pending"}"><div class="bot-task-copy ${deletion.active || (task.status === "review" && task.failure === "execution" && !task.decision) ? "bot-task-copy-selectable" : ""}">${deletion.active ? deletion.checkbox(task) : recovery.checkbox(task)}<div><strong data-i18n-ignore title="${e(task.title || task.summary || task.externalTaskId)}">${e(task.title || task.summary || task.externalTaskId)}</strong><small data-i18n-ignore title="${e(task.externalTaskId)}"><code>${e(task.externalTaskId.length > 42 ? task.externalTaskId.slice(0, 22) + "…" + task.externalTaskId.slice(-12) : task.externalTaskId)}</code></small></div></div><span class="bot-task-agent">${botAvatarHtml(snapshot.bots.find((b) => b.id === task.botId))}<span data-i18n-ignore>${e(snapshot.bots.find((b) => b.id === task.botId)?.name ?? "—")}</span></span>${badge(task)}${outcome(task, true)}<time datetime="${new Date(task.updatedAt).toISOString()}">${e(botDate(task.updatedAt))}</time><div class="bot-record-actions"><button type="button" class="wb-button bot-row-open" data-detail="${e(task.id)}" ${attributes("aria-label", "cli.botDetails")} ${attributes("title", "cli.botDetails")}>${icon("arrowUpRight")}</button><button type="button" class="wb-button bot-row-delete" data-delete-record="${e(task.id)}" ${task.status === "running" ? "disabled" : ""} ${attributes("aria-label", "cli.botDeleteRecord")} ${attributes("title", "cli.botDeleteRecord")}>${icon("trash")}</button></div></article>`,
             )
             .join("")
         : empty(
@@ -91,6 +101,8 @@ export function createBotTaskList(context: BotContext, scope?: { botId: string }
           ),
     );
     recovery.bind(host, snapshot);
+    if (deletion.active) host.querySelector<HTMLElement>("[data-bot-recovery]")!.hidden = true;
+    deletion.bind(host, snapshot);
     list.querySelectorAll<HTMLButtonElement>("[data-detail]").forEach(
       (b) =>
         (b.onclick = () =>
@@ -143,7 +155,7 @@ export function createBotTaskList(context: BotContext, scope?: { botId: string }
             .map(([key, label]) => option(key, label))
             .join(
               "",
-            )}</select></label></div><div class="bot-recovery-toolbar" data-bot-recovery></div><div class="bot-task-table"><div class="bot-task-columns" aria-hidden="true"><span>${h("cli.botTaskColumn")}</span><span>${h("cli.botSelect")}</span><span>${h("cli.botStatus")}</span><span>${h("cli.botResult")}</span><span>${h("cli.botUpdated")}</span><span></span></div><div class="bot-task-list" data-bot-task-rows></div></div><footer class="bot-pagination"><span data-page-summary aria-live="polite"></span><div><label class="bot-page-size"><span>${h("cli.botPageSize")}</span><select data-page-size aria-label="${e(context.t("cli.botPageSize"))}">${[25, 50, 100].map((n) => `<option value="${n}" ${n === limit ? "selected" : ""}>${n}</option>`).join("")}</select></label>${button("cli.botPreviousPage", "data-page-prev", false, "chevronLeft")}${button("cli.botNextPage", "data-page-next", false, "chevronRight")}</div></footer>`,
+            )}</select></label></div><div class="bot-recovery-toolbar" data-bot-deletion></div><div class="bot-recovery-toolbar" data-bot-recovery></div><div class="bot-task-table"><div class="bot-task-columns" aria-hidden="true"><span>${h("cli.botTaskColumn")}</span><span>${h("cli.botSelect")}</span><span>${h("cli.botStatus")}</span><span>${h("cli.botResult")}</span><span>${h("cli.botUpdated")}</span><span></span></div><div class="bot-task-list" data-bot-task-rows></div></div><footer class="bot-pagination"><span data-page-summary aria-live="polite"></span><div><label class="bot-page-size"><span>${h("cli.botPageSize")}</span><select data-page-size aria-label="${e(context.t("cli.botPageSize"))}">${[25, 50, 100].map((n) => `<option value="${n}" ${n === limit ? "selected" : ""}>${n}</option>`).join("")}</select></label>${button("cli.botPreviousPage", "data-page-prev", false, "chevronLeft")}${button("cli.botNextPage", "data-page-next", false, "chevronRight")}</div></footer>`,
         );
         host.querySelector<HTMLInputElement>("[data-bot-search]")!.value = query;
         host.querySelector<HTMLInputElement>("[data-bot-search]")!.oninput = (event) => {

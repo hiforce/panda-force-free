@@ -596,5 +596,7 @@
   "historyLoadFailed": "暂时无法加载会话历史，请重试。",
   "pageLoading": "正在加载…",
   "pageLoadFailed": "页面暂时无法加载，请重试。",
-  "pageReloadRequired": "请刷新页面后继续。"
+  "pageReloadRequired": "请刷新页面后继续。",
+  "openSourceAttribution": "开源团队署名",
+  "openSourceLicense": "MIT 开源许可"
 }

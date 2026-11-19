@@ -149,5 +149,14 @@
   "alreadyReplied": "这封邮件已有回复待发送或已发送，请先核对回执。",
   "sourceError": "无法读取来源，请检查地址或账号权限，再次预览。",
   "previewLimited": "仅显示数量受限的首批内容。来源较大时，请使用更聚焦的订阅或收件箱筛选。",
-  "edit": "编辑"
+  "edit": "编辑",
+  "messagePlaceholder": "输入消息…Enter 发送，Shift + Enter 换行",
+  "copyConversation": "复制全部对话",
+  "copyReply": "复制整条回复",
+  "copyContent": "复制内容",
+  "markdownContent": "Markdown 内容",
+  "markdownSource": "Markdown 源码",
+  "codeContent": "代码",
+  "contentActions": "内容操作",
+  "copyTooLarge": "对话过长，无法一次复制。请分别复制需要的回复。"
 }

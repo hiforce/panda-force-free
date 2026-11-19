@@ -34,7 +34,7 @@ try {
         return response.json();
       };
       const { bot } = await api("", {
-        name: "Curious Panda " + width,
+        name: "盼盼 <Curious & Kind> " + width,
         code: "human-" + width,
         persona: {
           role: "History companion",
@@ -71,6 +71,12 @@ try {
       await page.screenshot({ path: join(out, `sidebar-${locale}-${width}.png`) });
       await shortcut.click();
       await page.locator("[data-clear]:enabled").waitFor();
+      if (width === 320) {
+        bot.name = "盼盼 <Curious & Kind> " + "LongName".repeat(11);
+        await api("/" + bot.id, { name: bot.name }, "patch");
+        await page.reload();
+        await page.locator("[data-clear]:enabled").waitFor();
+      }
       const input = page.locator("[data-message]");
       await input.fill("Keep this draft while I look at my tasks.");
       await page.locator(`a[href="/bots/${bot.id}/tasks"]`).click();
@@ -99,6 +105,10 @@ try {
           throw error;
         });
       console.log("Chat reply visible", locale);
+      const assistantName = page.locator('.bot-chat-message[data-role="assistant"] > header > strong');
+      assert.equal(await assistantName.innerText(), bot.name);
+      assert.equal(await assistantName.locator("[data-i18n-ignore]").count(), 1);
+      assert.equal(await assistantName.locator("curious").count(), 0);
       await page.waitForFunction(() => document.querySelector("[data-message]").value === "");
       assert.equal(
         (await api("/" + bot.id + "/chat")).messages.length,
@@ -119,6 +129,10 @@ try {
           throw error;
         });
       console.log("Second tab ready", locale);
+      assert.equal(
+        await second.locator('.bot-chat-message[data-role="assistant"] > header > strong').innerText(),
+        bot.name,
+      );
       await second.locator("[data-clear]").click();
       await second.locator("[data-confirm-clear]").click();
       await second.locator("[data-chat-empty]").waitFor();
@@ -148,6 +162,7 @@ try {
         locale === "en" ? "zh-CN" : "en",
       );
       assert.equal(await page.locator(".bot-chat-text strong").innerText(), "What shall we explore?");
+      assert.equal(await assistantName.innerText(), bot.name);
       await page.evaluate((locale) => globalThis.__pandaForceI18n.setPreference(locale), locale);
       await input.fill("My next question…");
       await input.focus();

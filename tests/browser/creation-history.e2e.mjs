@@ -196,13 +196,17 @@ try {
       await page.goto(app.base + "/creation/" + latest + "?creationScope=personal");
       await page.locator(".creation-session-status .user-input-card").waitFor();
       await page.locator("#prompt").fill("Retain the draft while clearing sidebar history.");
-      if (width < 1081) await page.locator("#sessionInfoButton").click();
+      if (!(await page.locator("#sessionInspector").isVisible())) await page.locator("#sessionInfoButton").click();
       const inspector = page.locator("#sessionInspector");
       await inspector.locator(`[data-history-clear="${latest}"]`).waitFor();
-      const removeBox = await inspector.locator(`[data-history-clear="${latest}"]`).boundingBox(),
-        shellBox = await inspector
-          .locator(`.creation-record-shell:has([data-history-clear="${latest}"])`)
-          .boundingBox();
+      await inspector.locator(`[data-history-clear="${latest}"]`).scrollIntoViewIfNeeded();
+      const { removeBox, shellBox } = await inspector.locator(`[data-history-clear="${latest}"]`).evaluate((button) => {
+        const box = (element) => {
+          const { x, y, width, height } = element.getBoundingClientRect();
+          return { x, y, width, height };
+        };
+        return { removeBox: box(button), shellBox: box(button.closest(".creation-record-shell")) };
+      });
       assert(
         removeBox.width >= 44 &&
           removeBox.height >= 44 &&
@@ -210,14 +214,14 @@ try {
           removeBox.y >= shellBox.y &&
           removeBox.x + removeBox.width <= shellBox.x + shellBox.width + 1 &&
           removeBox.y + removeBox.height <= shellBox.y + shellBox.height + 1,
-        "Sidebar delete target must remain inside its own record",
+        `Sidebar delete target must remain inside its own record: ${JSON.stringify({ removeBox, shellBox })}`,
       );
       await page.screenshot({ path: `${out}/sidebar-${locale}-${width}.png` });
       await inspector.locator(`[data-history-clear="${latest}"]`).click();
       await dialog.waitFor();
       await dialog.locator("button").last().click();
       await waitFor(async () => (await inspector.locator(`[data-activity-task="${latest}"]`).count()) === 0);
-      if (width < 1081) await inspector.locator('[data-session-action="close"]').click();
+      await inspector.locator('[data-session-action="close"]').click();
       assert.match(await page.locator("#prompt").inputValue(), /Retain the draft/);
       assert.equal((await api(prefix + "/detail?" + new URLSearchParams({ id: latest }))).task.cancelRequested, false);
       assert(await page.locator(".creation-session-status .user-input-card").isVisible());
@@ -250,7 +254,11 @@ try {
                 visible: getComputedStyle(node).visibility,
               })),
             ),
-            status: await page.locator(".creation-session-recent").textContent(),
+            status: await page
+              .locator(".creation-session-recent, .creation-session-records")
+              .first()
+              .textContent()
+              .catch(() => null),
           }),
         );
       }

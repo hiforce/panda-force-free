@@ -24,7 +24,17 @@ export type BotTaskStatus =
   | "callback_unknown"
   | "suspended"
   | "canceled";
-export const BOT_AVATAR_ICONS = ["panda", "bot", "sparkles", "compass", "shield", "pencil", "globe"] as const;
+export const BOT_AVATAR_CHOICES = ["panda", "cat", "dog", "fox", "owl", "rabbit", "bear", "tiger", "penguin"] as const;
+// Existing saved icons remain valid when the picker presents the new animal collection.
+export const BOT_AVATAR_ICONS = [
+  ...BOT_AVATAR_CHOICES,
+  "bot",
+  "sparkles",
+  "compass",
+  "shield",
+  "pencil",
+  "globe",
+] as const;
 export const BOT_AVATAR_TONES = ["accent", "success", "warning"] as const;
 export type BotAvatar =
   | { type: "icon"; icon: (typeof BOT_AVATAR_ICONS)[number]; tone: (typeof BOT_AVATAR_TONES)[number] }
@@ -163,6 +173,13 @@ export interface BotTaskSummary {
 export interface BotBulkRetryRequest {
   id: string;
   taskIds: string[];
+}
+export interface BotBulkDeleteResult {
+  requested: number;
+  deleted: number;
+  alreadyDeleted: number;
+  blocked: { id: string; code: "notFound" | "callbackInFlight" }[];
+  interrupted: string[];
 }
 export interface BotBulkRetryResult {
   id: string;

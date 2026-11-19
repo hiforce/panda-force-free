@@ -59,6 +59,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   private goalRevision = 0;
   private pendingGoal?: import("../../shared/creation/contracts.js").CreationGoalCommand;
   private readonly sending = new Set<string>();
+  private readonly stopping = new Map<string, Promise<void>>();
   private pending?: { id: string; request: CreationRequest | Record<string, unknown> };
   private model = "";
   private effort = "";
@@ -1060,7 +1061,16 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   }
   async stop() {
     if (!this.route?.id || !this.running) return;
-    await this.api.cancel(this.task?.id || this.route.id);
-    await this.refresh();
+    const id = this.task?.id || this.route.id,
+      epoch = this.epoch,
+      api = this.api;
+    const active = this.stopping.get(id);
+    if (active) return active;
+    const pending = (async () => {
+      await api.cancel(id);
+      if (epoch === this.epoch) await this.refresh();
+    })().finally(() => this.stopping.delete(id));
+    this.stopping.set(id, pending);
+    return pending;
   }
 }

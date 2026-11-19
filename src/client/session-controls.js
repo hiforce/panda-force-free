@@ -1,5 +1,6 @@
 import { createSessionPermissionControls } from "./session-controls/permissions.js";
-import { focusMenuSelection, bindMenuDismiss } from "./session-controls/menu.js";
+import { mountReasoningSlider } from "./session-controls/reasoning-slider.js";
+import { focusMenuSelection, bindMenuDismiss, mountSessionMenu, restoreSessionMenu } from "./session-controls/menu.js";
 import { createSessionModelCache } from "./session-controls/model-cache.js";
 import { createModelCatalogLoader } from "./session-controls/model-loader.js";
 import { createTaskCompletionNotifications } from "./session-controls/notifications.js";
@@ -262,32 +263,30 @@ export function createSessionControls({
       effort = $("#effortSelect");
     setMessageHtml(
       menu,
-      `<div class="model-menu-view model-menu-view-main">${menuTitle("common.reasoning")}<div class="model-menu-list" data-model-menu-efforts></div><div class="model-menu-separator"></div><button type="button" class="model-submenu-button" id="modelSubmenuButton"><span><span data-pf-message="common.model">Model</span></span><span class="model-submenu-value">${escapeHtml(modelDisplay(model))}</span>${codexIcon("chevronRight")}</button></div>`,
+      `<div class="model-menu-view model-menu-view-main">${menuTitle("sessionview.modelReasoning")}<div class="model-reasoning-slider" data-model-menu-efforts></div><div class="model-menu-separator"></div><button type="button" class="model-submenu-button" id="modelSubmenuButton"><span><span data-pf-message="common.model">Model</span></span><span class="model-submenu-value">${escapeHtml(modelDisplay(model))}</span>${codexIcon("chevronRight")}</button></div>`,
     );
-    const list = requireElement("[data-model-menu-efforts]", menu);
-    for (const option of effort.options) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "model-effort-row";
-      button.role = "menuitemradio";
-      button.dataset.value = option.value;
-      button.setAttribute("aria-checked", String(option.selected));
-      setMessageHtml(
-        button,
-        `<span>${escapeHtml(reasoningLabel(option.value))}</span><span class="model-check">${option.selected ? codexIcon("check") : ""}</span>`,
-      );
-      button.onclick = () => chooseEffort(option.value);
-      list.append(button);
-    }
-    requireElement("#modelSubmenuButton", menu).onclick = renderModelSubmenu;
+    mountReasoningSlider(
+      requireElement("[data-model-menu-efforts]", menu),
+      [...effort.options].map((option) => ({ id: option.value, label: reasoningLabel(option.value) })),
+      effort.value,
+      t("common.reasoningEffort"),
+      (value) => chooseEffort(value, false),
+    );
+    requireElement("#modelSubmenuButton", menu).onclick = () => {
+      renderModelSubmenu();
+      focusMenuSelection(menu);
+    };
   }
   function renderModelSubmenu() {
     const menu = $("#modelMenu");
     setMessageHtml(
       menu,
-      `<div class="model-menu-view model-menu-view-models">${menuTitle("common.model", true)}<div class="model-menu-list model-list"></div></div>`,
+      `<div class="model-menu-view model-menu-view-models">${menuTitle("common.model", true)}<div class="model-menu-list model-list" role="menu" ${messageAttributes("aria-label", "common.selectModel", undefined, t)}></div></div>`,
     );
-    requireElement("#modelMenuBack", menu).onclick = renderModelMenuMain;
+    requireElement("#modelMenuBack", menu).onclick = () => {
+      renderModelMenuMain();
+      focusMenuSelection(menu);
+    };
     const list = requireElement(".model-list", menu);
     for (const model of state.models) {
       const button = document.createElement("button");
@@ -304,7 +303,7 @@ export function createSessionControls({
       list.append(button);
     }
   }
-  function chooseEffort(value) {
+  function chooseEffort(value, dismiss = true) {
     const effort = $("#effortSelect");
     if (![...effort.options].some((option) => option.value === value)) return;
     effort.value = value;
@@ -320,14 +319,17 @@ export function createSessionControls({
       });
       writeLocalSessionModelSettings(state.active.id, { model: state.selectedModel, effort: value });
     }
-    closeModelMenu();
-    toast(t("common.reasoningLevel", { level: reasoningLabel(value) }));
+    if (dismiss) {
+      closeModelMenu();
+      toast(t("common.reasoningLevel", { level: reasoningLabel(value) }));
+    }
   }
   function openModelMenu(view = "main") {
     closePermissionMenu();
     if (view === "models") renderModelSubmenu();
     else renderModelMenuMain();
     $("#modelMenu").hidden = false;
+    mountSessionMenu($("#modelMenu"), $("#modelButton"), closeModelMenu);
     $("#modelButton").setAttribute("aria-expanded", "true");
     focusMenuSelection($("#modelMenu"));
   }
@@ -341,6 +343,7 @@ export function createSessionControls({
   function closeModelMenu() {
     const menu = $("#modelMenu");
     menu.hidden = true;
+    restoreSessionMenu(menu);
     $("#modelButton").setAttribute("aria-expanded", "false");
   }
   const {

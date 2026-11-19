@@ -73,7 +73,7 @@ try {
       assert(await skill.isVisible());
       await page.locator("#modelButton").click();
       const modelDialog = page.locator("#sessionSettingsDialog[open]");
-      await modelDialog.locator('input[name="session-effort"][value="high"]').check();
+      await modelDialog.locator('#sessionSettingEfforts input[type="range"]').press("End");
       await modelDialog.locator('button[type="submit"]').click();
       await modelDialog.waitFor({ state: "hidden" });
       const prompt = "Write a requirements document for a multi-channel product platform. " + locale;
@@ -97,7 +97,7 @@ try {
         .filter({ hasText: "reviewing the requirements" })
         .first()
         .waitFor();
-      if (width < 1081) await page.locator("#sessionInfoButton").click();
+      if (!(await page.locator("#sessionInspector").isVisible())) await page.locator("#sessionInfoButton").click();
       await page.locator("#sessionInspector").waitFor({ state: "visible" });
       const inspectorWidth = await page
         .locator("#sessionInspector")

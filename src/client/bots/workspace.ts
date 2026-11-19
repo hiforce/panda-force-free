@@ -18,6 +18,11 @@ export function botRoute(label: string, route: string, primary = false) {
   return `<a class="wb-button${primary ? " primary" : ""}" href="${e(route)}" data-wb="route" data-route="${e(route)}">${label}</a>`;
 }
 
+function botIconRoute(t: Translate, id: MessageId, route: string, name: string, selected: boolean) {
+  const { h, icon, attributes } = botUi(t);
+  return `<a class="wb-button bot-icon-button${selected ? " primary" : ""}" href="${e(route)}" data-wb="route" data-route="${e(route)}" ${attributes("title", id)} ${attributes("aria-label", id)}${selected ? ' aria-current="page"' : ""}>${icon(name)}<span class="sr-only">${h(id)}</span></a>`;
+}
+
 /** Home cards, private human chat and task operations have independent lifecycles. */
 export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) {
   let host: HTMLElement | null = null,
@@ -32,7 +37,7 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
     loading: Promise<void> | null = null,
     searchTimer: ReturnType<typeof setTimeout> | undefined;
   const drafts = new Map<string, BotChatDraft>(),
-    { h, button } = botUi(t);
+    { h, button, iconButton } = botUi(t);
   let queue = createTaskWorkspace(t);
   let integrationView: ReturnType<typeof createBotIntegrations> | undefined;
   let tasks: ReturnType<typeof createBotTaskList> | undefined, chat: ReturnType<typeof createBotHumanChat> | undefined;
@@ -144,7 +149,7 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
         if (!chat) {
           const draft = drafts.get(match[1]!) ?? { text: "", generation: 0 };
           drafts.set(match[1]!, draft);
-          chat = createBotHumanChat(context, target, match[1]!, draft, identity);
+          chat = createBotHumanChat(context, target, match[1]!, currentBot.name, draft, identity);
         }
         await chat.reload();
       } else if (match[2] === "tasks") {
@@ -209,12 +214,12 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
         home = !match && route !== "/bots/tasks";
       container.innerHTML = "";
       host = document.createElement("section");
-      host.className = "bot-workspace bot-home";
+      host.className = "bot-workspace bot-home" + (match?.[2] === "chat" ? " bot-home-chat" : "");
       container.append(host);
       host.setAttribute("aria-busy", "true");
       setMessageHtml(
         host,
-        `<header class="bot-home-heading"><div>${home ? "" : botRoute(h("bots.homeTitle"), "/bots")}<div class="bot-title-row"><span data-bot-profile ${home ? "hidden" : ""}></span><h1 data-bot-title>${h(home ? "bots.homeTitle" : route === "/bots/tasks" || match?.[2] === "tasks" ? "bots.tasks" : match?.[2] === "chat" ? "bots.chat" : "bots.integrations")}</h1></div><p>${h(home ? "bots.homeHint" : match?.[2] === "chat" ? "bots.chatHint" : match?.[2] === "integrations" ? "bots.integrationHint" : "bots.retainedHint")}</p></div><div class="bot-record-actions">${button("cli.botRefresh", "data-refresh")}${home ? botRoute(h("cli.botAllTasks"), "/bots/tasks") + button("cli.botCreate", "data-new-bot", true) : match ? ["chat", "tasks", "integrations"].map((s) => botRoute(h(("bots." + s) as MessageId), `/bots/${match[1]}/${s}`, s === match[2])).join("") : ""}</div></header><p class="bot-notice" data-bot-notice role="status" hidden></p>${home ? `<dl class="bot-home-summary">${(["bots", "running", "attention", "integrations"] as const).map((key) => `<div><dt>${h(({ bots: "bots.summaryBots", running: "bots.summaryRunning", attention: "bots.summaryAttention", integrations: "bots.summaryIntegrations" } as const)[key])}</dt><dd data-summary="${key}">—</dd></div>`).join("")}</dl><div class="wb-form bot-home-search"><label class="wb-field"><span>${h("bots.searchLabel")}</span><input type="search" data-bot-search maxlength="160"></label></div>` : ""}<div data-bot-content><p role="status">${h("settings.pageLoading")}</p></div>`,
+        `<header class="bot-home-heading"><div>${home ? "" : botRoute(h("bots.homeTitle"), "/bots")}<div class="bot-title-row"><span data-bot-profile ${home ? "hidden" : ""}></span><h1 data-bot-title>${h(home ? "bots.homeTitle" : route === "/bots/tasks" || match?.[2] === "tasks" ? "bots.tasks" : match?.[2] === "chat" ? "bots.chat" : "bots.integrations")}</h1></div><p>${h(home ? "bots.homeHint" : match?.[2] === "chat" ? "bots.chatHint" : match?.[2] === "integrations" ? "bots.integrationHint" : "bots.retainedHint")}</p></div><div class="bot-record-actions">${home ? button("cli.botRefresh", "data-refresh") : iconButton("cli.botRefresh", "refreshCw", "data-refresh")}${home ? botRoute(h("cli.botAllTasks"), "/bots/tasks") + button("cli.botCreate", "data-new-bot", true) : match ? ["chat", "tasks", "integrations"].map((s) => botIconRoute(t, ("bots." + s) as MessageId, `/bots/${match[1]}/${s}`, ({ chat: "messageSquare", tasks: "list", integrations: "plug" } as Record<string, string>)[s]!, s === match[2])).join("") : ""}</div></header><p class="bot-notice" data-bot-notice role="status" hidden></p>${home ? `<dl class="bot-home-summary">${(["bots", "running", "attention", "integrations"] as const).map((key) => `<div><dt>${h(({ bots: "bots.summaryBots", running: "bots.summaryRunning", attention: "bots.summaryAttention", integrations: "bots.summaryIntegrations" } as const)[key])}</dt><dd data-summary="${key}">—</dd></div>`).join("")}</dl><div class="wb-form bot-home-search"><label class="wb-field"><span>${h("bots.searchLabel")}</span><input type="search" data-bot-search maxlength="160"></label></div>` : ""}<div data-bot-content><p role="status">${h("settings.pageLoading")}</p></div>`,
       );
       host
         .querySelector<HTMLButtonElement>("[data-new-bot]")

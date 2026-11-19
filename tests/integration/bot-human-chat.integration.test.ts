@@ -18,6 +18,59 @@ async function waitFor(check: () => Promise<boolean>, timeout = 8000) {
   throw new Error("Bot chat fixture timed out");
 }
 
+test("normal completed Bot messages need no tool call while commentary and unsuccessful runs remain errors", async () => {
+  const root = await mkdtemp(join(tmpdir(), "bot-normal-reply-"));
+  try {
+    for (const [status, phase, succeeds] of [
+      ["completed", "final_answer", true],
+      ["completed", undefined, true],
+      ["completed", "commentary", false],
+      ["failed", "final_answer", false],
+      ["interrupted", "final_answer", false],
+    ] as const) {
+      const store = new BotStore(":memory:"),
+        service = new BotChatService(store),
+        worker = new BotChatWorker(
+          store,
+          () => ({
+            id: "normal-reply",
+            async run(_input, callbacks) {
+              const scope = { sessionId: "plain-chat", runId: "plain-reply" };
+              await callbacks.started(scope);
+              await callbacks.event?.({ kind: "message", id: "reply", text: "Partial", complete: false });
+              await callbacks.event?.({
+                kind: "message",
+                id: "reply",
+                text: "A complete, reusable **Markdown reply**.",
+                complete: true,
+                ...(phase ? { phase } : {}),
+              });
+              return { ...scope, status };
+            },
+          }),
+          (botId) => join(root, botId),
+        );
+      try {
+        const bot = store.createBot("alice", { name: "Normal conversation", code: "plain-chat" });
+        await service.send("alice", bot.id, { requestId: randomUUID(), generation: 1, text: "Hello" });
+        await worker.tick();
+        await waitFor(async () => !(await service.snapshot("alice", bot.id)).busy);
+        const snapshot = await service.snapshot("alice", bot.id),
+          reply = snapshot.messages[1]!;
+        expect(reply.text).toBe("A complete, reusable **Markdown reply**.");
+        expect(reply.status).toBe(succeeds ? "complete" : "error");
+        expect(reply.failure).toBe(succeeds ? undefined : status === "interrupted" ? "interrupted" : "failed");
+        expect(snapshot.messages).toHaveLength(2);
+      } finally {
+        await worker.close();
+        store.close();
+      }
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("clearing a running human conversation interrupts and removes it while late output cannot restore it", async () => {
   const root = await mkdtemp(join(tmpdir(), "bot-human-chat-")),
     store = new BotStore(":memory:"),

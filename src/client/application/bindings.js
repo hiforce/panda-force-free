@@ -72,8 +72,9 @@ export function assembleBindings({
         !path.includes($("#workspaceNavigationToggle"))
       )
         sidebarLayoutPort.setSidebarOpen(false);
-      if (!path.includes($("#modelPicker"))) modelsPort.closeModelMenu();
-      if (!path.includes($("#permissionPicker"))) modelsPort.closePermissionMenu();
+      if (!path.includes($("#modelPicker")) && !path.includes($("#modelMenu"))) modelsPort.closeModelMenu();
+      if (!path.includes($("#permissionPicker")) && !path.includes($("#permissionMenu")))
+        modelsPort.closePermissionMenu();
       if (!path.includes($("#accountMenu")) && !path.includes($("#accountButton")))
         viewUpdates.request("accountMenu", false);
       if (!path.includes($("#sidebarSearchPanel")) && !path.includes($("#sidebarSearchButton")))

@@ -1,5 +1,6 @@
 import {
   BOT_AVATAR_ICONS,
+  BOT_AVATAR_CHOICES,
   BOT_AVATAR_TONES,
   DEFAULT_BOT_AVATAR,
   type BotAvatar,
@@ -11,12 +12,14 @@ import { botUi, type BotContext } from "./ui.js";
 
 const iconNames = [
   "cli.botAvatarPanda",
-  "cli.botAvatarBot",
-  "cli.botAvatarSparkles",
-  "cli.botAvatarCompass",
-  "cli.botAvatarShield",
-  "cli.botAvatarPencil",
-  "cli.botAvatarGlobe",
+  "cli.botAvatarCat",
+  "cli.botAvatarDog",
+  "cli.botAvatarFox",
+  "cli.botAvatarOwl",
+  "cli.botAvatarRabbit",
+  "cli.botAvatarBear",
+  "cli.botAvatarTiger",
+  "cli.botAvatarPenguin",
 ] as const;
 const presets = [
   { name: "cli.botGentle", traits: "cli.botGentleTraits", voice: "cli.botGentleVoice" },
@@ -32,7 +35,7 @@ export function createBotProfileEditor(context: BotContext, bot?: BotConfig) {
     preparing = false;
   const urls = new Set<string>();
   const html = () =>
-    `<section class="bot-profile-editor"><div class="bot-profile-preview" data-profile-preview></div><div class="bot-avatar-tools"><div class="bot-record-actions">${button("cli.botUploadAvatar", "data-avatar-upload")}${button("cli.botUseIcon", "data-avatar-reset")}<input type="file" accept="image/png,image/jpeg,image/webp" data-avatar-file hidden></div><small>${h("cli.botAvatarHint")}</small><fieldset class="bot-avatar-picker"><legend>${h("cli.botAvatar")}</legend>${BOT_AVATAR_ICONS.map((icon, i) => `<button type="button" data-avatar-icon="${icon}" ${attributes("aria-label", iconNames[i]!)} ${attributes("title", iconNames[i]!)}>${botAvatarHtml({ name: "", avatar: { type: "icon", icon, tone: "accent" } })}</button>`).join("")}</fieldset><fieldset class="bot-avatar-tones"><legend>${h("cli.botTone")}</legend>${BOT_AVATAR_TONES.map((tone, i) => `<button type="button" data-avatar-tone-choice="${tone}" class="bot-tone" data-avatar-tone="${tone}">${h((["cli.botToneAccent", "cli.botToneSuccess", "cli.botToneWarning"] as const)[i]!)}</button>`).join("")}</fieldset></div></section>`;
+    `<section class="bot-profile-editor"><div class="bot-profile-preview" data-profile-preview></div><div class="bot-avatar-tools"><div class="bot-record-actions">${button("cli.botUploadAvatar", "data-avatar-upload")}${button("cli.botUseIcon", "data-avatar-reset")}<input type="file" accept="image/png,image/jpeg,image/webp" data-avatar-file hidden></div><small>${h("cli.botAvatarHint")}</small><fieldset class="bot-avatar-picker"><legend>${h("cli.botAvatar")}</legend>${BOT_AVATAR_CHOICES.map((icon, i) => `<button type="button" data-avatar-icon="${icon}" ${attributes("aria-label", iconNames[i]!)} ${attributes("title", iconNames[i]!)}>${botAvatarHtml({ name: "", avatar: { type: "icon", icon, tone: "accent" } })}</button>`).join("")}</fieldset><fieldset class="bot-avatar-tones"><legend>${h("cli.botTone")}</legend>${BOT_AVATAR_TONES.map((tone, i) => `<button type="button" data-avatar-tone-choice="${tone}" class="bot-tone" data-avatar-tone="${tone}">${h((["cli.botToneAccent", "cli.botToneSuccess", "cli.botToneWarning"] as const)[i]!)}</button>`).join("")}</fieldset></div></section>`;
   const personality = () =>
     `<section class="bot-form-section">${field("cli.botRole", "role", 'maxlength="120"')}<details class="bot-personality" ${bot?.persona?.traits || bot?.persona?.voice ? "open" : ""}><summary>${h("cli.botProfileDetails")}</summary><p class="bot-hint">${h("cli.botPersonaHint")}</p><fieldset class="bot-persona-presets"><legend>${h("cli.botPreset")}</legend>${presets.map((preset, i) => button(preset.name, `data-persona-preset="${i}"`)).join("")}</fieldset><label class="wb-field"><span>${h("cli.botPersonality")}</span><textarea name="pf-bot-traits" rows="3" maxlength="2000"></textarea></label><label class="wb-field"><span>${h("cli.botVoice")}</span><textarea name="pf-bot-voice" rows="2" maxlength="1000"></textarea></label>${field("cli.botMotto", "motto", 'maxlength="160"')}</details></section>`;
   return {

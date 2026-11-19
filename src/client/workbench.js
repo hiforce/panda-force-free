@@ -177,7 +177,7 @@ export function createWorkbench({
   const bottom = document.createElement("nav");
   bottom.className = "workbench-mobile-nav";
   localizeAttribute(bottom, "aria-label", "workbench.workspaceNavigation", undefined, t);
-  requireElement("#app").append(bottom);
+  requireElement("#app").insertBefore(bottom, requireElement(".workspace-attribution"));
   const dialog = document.createElement("dialog");
   dialog.id = "workbenchDialog";
   dialog.className = "workbench-dialog";

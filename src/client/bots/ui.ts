@@ -86,6 +86,8 @@ export function botUi(t: Translate) {
   const icon = (name: string) => `<span class="bot-icon" aria-hidden="true">${codexIcon(name)}</span>`;
   const button = (id: MessageId, attributes = "", primary = false, name = "") =>
     `<button type="button" class="wb-button${primary ? " primary" : ""}" ${attributes}>${name ? icon(name) : ""}${h(id)}</button>`;
+  const iconButton = (id: MessageId, name: string, extra = "") =>
+    `<button type="button" class="wb-button bot-icon-button" ${attributes("title", id)} ${attributes("aria-label", id)} ${extra}>${icon(name)}<span class="sr-only">${h(id)}</span></button>`;
   const field = (id: MessageId, name: string, attributes = "", hint?: MessageId) =>
     `<label class="wb-field"><span>${h(id)}</span><input name="pf-bot-${name}" ${attributes}>${hint ? `<small>${h(hint)}</small>` : ""}</label>`;
   const badge = (task: Pick<BotTask, "status" | "failure"> | BotTask["status"]) => {
@@ -118,7 +120,7 @@ export function botUi(t: Translate) {
   };
   const empty = (title: MessageId, hint: MessageId, action = "") =>
     `<div class="bot-empty">${icon("bot")}<h2>${h(title)}</h2><p>${h(hint)}</p>${action}</div>`;
-  return { h, reasonHtml, attributes, option, optional, icon, button, field, badge, outcome, empty };
+  return { h, reasonHtml, attributes, option, optional, icon, button, iconButton, field, badge, outcome, empty };
 }
 export function botDate(value: number) {
   return new Intl.DateTimeFormat(document.documentElement.lang || undefined, {

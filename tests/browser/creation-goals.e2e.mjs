@@ -79,12 +79,15 @@ try {
         assert.equal(await page.locator("#modelButton").getAttribute(attribute), modelHint);
       await page.locator("#modelButton").click();
       assert.equal(
-        await page.locator('input[name="session-effort"]:checked').inputValue(),
-        locale === "zh-HK" ? "medium" : "xhigh",
+        await page.locator('#sessionSettingEfforts input[type="range"]').getAttribute("aria-valuetext"),
+        await page.evaluate(
+          (key) => globalThis.__pandaForceI18n.t(key),
+          locale === "zh-HK" ? "common.medium" : "common.extraHigh",
+        ),
       );
       await page.screenshot({ path: `${out}/effort-${locale}-${width}.png` });
       if (locale === "zh-TW") {
-        await page.locator('input[name="session-effort"][value="low"]').check();
+        await page.locator('#sessionSettingEfforts input[type="range"]').press("Home");
         await page.locator('#sessionSettingsForm [type="submit"]').click();
       } else await page.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
       await page.locator('.creation-discovery-card [data-skill-id="software-prd"]').click();

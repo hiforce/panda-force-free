@@ -34,6 +34,7 @@
   --workspace-template-width: var(--workspace-frame-width);
 }
 .panda-workspace {
+  --workspace-attribution-height: calc(var(--pf-touch-target) + 1px + env(safe-area-inset-bottom, 0px));
   --session-inspector-width: 300px;
   --session-content-width: var(--workspace-session-width);
   --session-content-gutter: var(--pf-page-padding-inline);
@@ -44,10 +45,54 @@
   --session-content-width: var(--workspace-creation-width);
 }
 .panda-workspace .app-shell {
+  position: fixed;
+  inset-block-start: var(--app-viewport-top, 0px);
+  inset-inline-start: var(--workspace-frame-inset);
+  height: var(--app-viewport-height, 100dvh);
   width: var(--workspace-frame-width);
-  margin-inline: auto;
+  margin-inline: 0;
   border-inline: 1px solid var(--pf-line);
   box-shadow: var(--pf-frame-shadow);
+}
+.workspace-attribution {
+  display: flex;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  min-block-size: var(--workspace-attribution-height);
+  padding-block-end: env(safe-area-inset-bottom, 0px);
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0 var(--pf-space-2);
+  margin-inline: var(--pf-page-padding-inline);
+  border-block-start: 1px solid var(--pf-line);
+  color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+  line-height: 1.5;
+  text-align: center;
+}
+.workspace-attribution a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--pf-touch-target);
+  color: var(--pf-muted);
+  text-decoration: none;
+}
+.workspace-attribution a:hover {
+  color: var(--pf-accent);
+  text-decoration: underline;
+}
+.workspace-attribution a:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .panda-workspace {
+    --workspace-attribution-height: 0px;
+  }
+  .workspace-attribution {
+    display: none;
+  }
 }
 .panda-workspace .settings-dialog {
   position: fixed;
@@ -60,7 +105,9 @@
   max-height: none;
   inset: calc(var(--app-viewport-top, 0px) + var(--workspace-header-height)) auto auto var(--workspace-frame-inset);
   width: var(--workspace-frame-width);
-  height: calc(var(--app-viewport-height, 100dvh) - var(--workspace-header-height));
+  height: calc(
+    var(--app-viewport-height, 100dvh) - var(--workspace-header-height) - var(--workspace-attribution-height)
+  );
   border-inline: 1px solid var(--pf-line);
 }
 .panda-workspace:is(.session-layout, [data-workbench-page="new"]) .conversation-shell {
@@ -299,7 +346,7 @@
       var(--workspace-sidebar-max-width)
     );
     grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--changes-w);
-    grid-template-rows: var(--workspace-header-height) minmax(0, 1fr);
+    grid-template-rows: var(--workspace-header-height) minmax(0, 1fr) auto;
   }
   .panda-workspace.sidebar-hidden .app-shell {
     --sidebar-w: 0px;
@@ -361,7 +408,9 @@
     top: calc(var(--app-viewport-top, 0px) + var(--workspace-header-height));
     right: var(--workspace-frame-inset);
     bottom: auto;
-    height: calc(var(--app-viewport-height, 100dvh) - var(--workspace-header-height));
+    height: calc(
+      var(--app-viewport-height, 100dvh) - var(--workspace-header-height) - var(--workspace-attribution-height)
+    );
     max-width: var(--workspace-frame-width);
   }
 }
@@ -370,7 +419,7 @@
     width: 320px;
     top: 76px;
     right: calc(var(--workspace-frame-inset) + 12px);
-    height: calc(var(--app-viewport-height, 100dvh) - 88px);
+    height: calc(var(--app-viewport-height, 100dvh) - 88px - var(--workspace-attribution-height));
   }
 }
 @media (max-width: 767px) {
@@ -398,17 +447,26 @@
   .panda-workspace .session-inspector {
     width: 100%;
   }
+  .panda-workspace {
+    --pf-mobile-nav-height: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+  .panda-workspace.session-layout:not(.creation-entry-layout) {
+    --pf-mobile-nav-height: 0px;
+  }
+  .panda-workspace .workbench-mobile-nav {
+    padding-block-end: calc(4px + env(safe-area-inset-bottom, 0px));
+  }
   .panda-workspace :is(.side-panel, .summary-panel, .changes-panel) {
     top: calc(var(--app-viewport-top, 0px) + var(--workspace-header-height));
-    height: calc(var(--app-viewport-height, 100dvh) - var(--workspace-header-height));
+    height: calc(
+      var(--app-viewport-height, 100dvh) - var(--workspace-header-height) - var(--workspace-attribution-height)
+    );
   }
-  .panda-workspace .app-shell {
+  .panda-workspace .app-shell,
+  .panda-workspace.session-layout .app-shell {
     --sidebar-w: 0px;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 56px minmax(0, 1fr) var(--pf-mobile-nav-height);
-  }
-  .panda-workspace.session-layout:not(.creation-entry-layout) .app-shell {
-    grid-template-rows: 56px minmax(0, 1fr);
   }
   .panda-workspace .topbar {
     height: 56px;
@@ -453,7 +511,7 @@
     visibility: hidden;
     pointer-events: none;
     top: calc(var(--app-viewport-top, 0px) + 56px);
-    height: calc(var(--app-viewport-height, 100dvh) - 56px);
+    height: calc(var(--app-viewport-height, 100dvh) - 56px - var(--workspace-attribution-height));
     bottom: auto;
   }
   .panda-workspace .sidebar.mobile-open {

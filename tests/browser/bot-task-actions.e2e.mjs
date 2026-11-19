@@ -152,7 +152,12 @@ try {
         await page.locator(".bot-task-list").locator(`[data-delete-record="${running.id}"]`).isDisabled(),
         true,
       );
-      assert.equal((await context.request.delete(app.base + "/api/bots/tasks/" + running.id, { headers: { Origin: app.base } })).status(), 409);
+      assert.equal(
+        (
+          await context.request.delete(app.base + "/api/bots/tasks/" + running.id, { headers: { Origin: app.base } })
+        ).status(),
+        409,
+      );
       const replay = await context.request.post(app.base + "/api/v1/bots/" + bot.code + "/tasks", {
         headers: { authorization: "Bearer " + keys.secret, "idempotency-key": "local-record-" + width },
         data: {

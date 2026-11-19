@@ -149,5 +149,14 @@
   "alreadyReplied": "A reply to this message is already reserved or sent. Verify its receipt before continuing.",
   "sourceError": "Could not read the source. Check its URL or account permissions and try a preview again.",
   "previewLimited": "Only the bounded first batch is shown. For very large sources, use a narrower feed or inbox filter.",
-  "edit": "Edit"
+  "edit": "Edit",
+  "messagePlaceholder": "Write a message… Enter to send, Shift + Enter for a new line",
+  "copyConversation": "Copy conversation",
+  "copyReply": "Copy entire reply",
+  "copyContent": "Copy content",
+  "markdownContent": "Markdown content",
+  "markdownSource": "Markdown source",
+  "codeContent": "Code",
+  "contentActions": "Content actions",
+  "copyTooLarge": "This conversation is too large to copy at once. Copy individual replies instead."
 }

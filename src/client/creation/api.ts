@@ -27,6 +27,32 @@ async function json<T>(path: string, body?: unknown, signal?: AbortSignal): Prom
   if (body !== undefined) window.dispatchEvent(new Event("panda-force:creation-changed"));
   return value as T;
 }
+async function cancel(prefix: string, id: string) {
+  try {
+    return await json<{ task: CreationTaskView }>(prefix + "/cancel", { id });
+  } catch (error) {
+    const uncertain =
+      error instanceof CreationApiError
+        ? [408, 409, 429].includes(error.status) || error.status >= 500
+        : error instanceof TypeError ||
+          error instanceof SyntaxError ||
+          (error instanceof DOMException && ["AbortError", "TimeoutError"].includes(error.name));
+    if (!uncertain) throw error;
+    // A lost command response must not turn an already-stopped task into a false conflict.
+    const latest = await json<{ task: CreationTaskView }>(
+      prefix + "/detail?" + new URLSearchParams({ id, view: "progress" }),
+    ).catch(() => {
+      throw error;
+    });
+    if (
+      latest.task.id !== id ||
+      (!latest.task.cancelRequested && !["cancelled", "succeeded", "failed"].includes(latest.task.state))
+    )
+      throw error;
+    window.dispatchEvent(new Event("panda-force:creation-changed"));
+    return latest;
+  }
+}
 export function creationApiFor(project = "") {
   const prefix = (project === "personal" ? "/api/personal" : "/api") + "/document-creations";
   return {
@@ -50,7 +76,7 @@ export function creationApiFor(project = "") {
     message: (taskId: string, body: Record<string, unknown>) =>
       json<{ task: CreationTaskView }>(prefix + "/message", { taskId, ...body }),
     submit: (body: CreationRequest) => json<{ task: CreationTaskView }>(prefix, body),
-    cancel: (id: string) => json<{ task: CreationTaskView }>(prefix + "/cancel", { id }),
+    cancel: (id: string) => cancel(prefix, id),
     goal: (taskId: string, command: import("../../shared/creation/contracts.js").CreationGoalCommand) =>
       json<{ task: CreationTaskView; goal: import("../../shared/creation/contracts.js").CreationGoal | null }>(
         prefix + "/goal",

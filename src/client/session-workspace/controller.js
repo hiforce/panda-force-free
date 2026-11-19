@@ -165,7 +165,7 @@ export function createSessionWorkspace(options) {
       ["#modeButton", "permissionMenu"],
     ]) {
       const button = requireElement(id);
-      button.setAttribute("aria-haspopup", active ? "dialog" : "menu");
+      button.setAttribute("aria-haspopup", active || controls === "modelMenu" ? "dialog" : "menu");
       button.setAttribute("aria-controls", active ? "sessionSettingsDialog" : controls);
     }
     placeControls(hasInspector);

@@ -39,6 +39,7 @@ export async function createAppFixture({
   models = null,
   applicationCreation = false,
   applicationChat = false,
+  applicationChatReply = "Hello! I am your curious Panda. **What shall we explore?**",
   applicationImage = "",
   applicationArtifact = /** @type {{kind: "slides" | "web" | "video"; arguments: object} | null} */ (null),
   applicationKnowledge = false,
@@ -335,7 +336,7 @@ const handleLine=line=>{
     result={turn:{id:'turn-'+(++count),status:applicationThreads.has(p.threadId)||knowledgeThreads.has(p.threadId)||chatThreads.has(p.threadId)?'inProgress':'completed',items:[]}};
     if(chatThreads.has(p.threadId)){
       const run=result.turn.id,id='chat-'+run;applicationCalls.set(id,{kind:'chat',thread:p.threadId,run});
-      setTimeout(()=>send({id,method:'item/tool/call',params:{threadId:p.threadId,turnId:run,callId:id,tool:'panda_bot_chat_reply',arguments:{text:'Hello! I am your curious Panda. **What shall we explore?**'}}}),100);
+      setTimeout(()=>send({id,method:'item/tool/call',params:{threadId:p.threadId,turnId:run,callId:id,tool:'panda_bot_chat_reply',arguments:{text:${JSON.stringify(applicationChatReply)}}}}),100);
     }
     if(imageThreads.has(p.threadId)){result={turn:{id:crypto.randomUUID(),status:'completed',items:[{id:crypto.randomUUID(),type:'imageGeneration',status:'completed',failure:null,result:${JSON.stringify(applicationImage)}}]}};thread.turns.push(result.turn);}
     if(${nativeInputHistory}&&thread){

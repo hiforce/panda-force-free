@@ -2,9 +2,9 @@ import type { BotChatMessage, BotChatSnapshot, BotChatSubmission, BotChatRead } 
 import { escapeHtml as e } from "../../shared/html.js";
 import type { MessageId } from "../../shared/i18n/messages.js";
 import { setMessageHtml } from "../i18n.js";
-import { documentPreview } from "../documents/preview.js";
 import { botDialog, dialogPending } from "./dialog.js";
 import { botUi, botDate, type BotContext } from "./ui.js";
+import { botReplyParts, botReplyHtml, bindBotReplyContent, bindBotCopy } from "./reply-content.js";
 
 export interface BotChatDraft {
   text: string;
@@ -17,10 +17,11 @@ export function createBotHumanChat(
   context: BotContext,
   host: HTMLElement,
   botId: string,
+  botName: string,
   draft: BotChatDraft,
   identity: string,
 ) {
-  const { h, button } = botUi(context.t),
+  const { h, button, iconButton, attributes } = botUi(context.t),
     base = "/" + botId + "/chat";
   let alive = true,
     generation = 0,
@@ -30,6 +31,7 @@ export function createBotHumanChat(
     hasMore = false,
     oldest = 0,
     paging = false,
+    composing = false,
     cleanup: BotChatSnapshot["cleanup"] = "ready",
     cursor = "",
     lastRead = 0,
@@ -39,20 +41,32 @@ export function createBotHumanChat(
     elements = new Map<string, HTMLElement>();
   setMessageHtml(
     host,
-    `<section class="bot-human-chat"><div class="bot-chat-tools">${button("bots.loadEarlier", "data-earlier disabled")}${button("bots.clearChat", "data-clear disabled", false, "trash")}</div><div class="bot-chat-cleanup" data-cleanup role="status" hidden></div><div class="bot-chat-history" role="log" aria-live="polite" aria-relevant="additions" data-history></div><form class="bot-chat-composer wb-form"><label class="wb-field"><span>${h("bots.messageLabel")}</span><textarea data-message rows="3" maxlength="32000" required></textarea></label><div><p data-reply-status role="status"></p>${button("bots.resolvePreviousSend", "data-send-recovery hidden")}<button class="wb-button primary" type="submit" disabled>${h("bots.send")}</button></div></form></section>`,
+    `<section class="bot-human-chat"><div class="bot-chat-tools">${iconButton("bots.loadEarlier", "chevronsUp", "data-earlier disabled")}<div>${iconButton("bots.copyConversation", "copy", "data-copy-conversation disabled")}${iconButton("bots.clearChat", "trash", "data-clear disabled")}</div></div><div class="bot-chat-cleanup" data-cleanup role="status" hidden></div><div class="bot-chat-history" role="log" aria-live="polite" aria-relevant="additions" data-history></div><form class="bot-chat-composer wb-form"><label class="wb-field"><span class="sr-only">${h("bots.messageLabel")}</span><textarea data-message rows="3" maxlength="32000" enterkeyhint="send" ${attributes("placeholder", "bots.messagePlaceholder")} required></textarea></label><div><p data-reply-status role="status"></p>${button("bots.resolvePreviousSend", "data-send-recovery hidden")}<button class="wb-button primary" type="submit" disabled>${h("bots.send")}</button></div></form></section>`,
   );
+  const copyFeedback = document.createElement("span");
+  copyFeedback.className = "sr-only";
+  copyFeedback.setAttribute("role", "status");
+  copyFeedback.setAttribute("aria-live", "polite");
+  host.append(copyFeedback);
+  const copyNotice = (text: string) => {
+    copyFeedback.textContent = text;
+    if (text !== context.t("common.copied")) context.notice(text);
+  };
   const input = host.querySelector<HTMLTextAreaElement>("[data-message]")!,
     submit = host.querySelector<HTMLButtonElement>("[type=submit]")!,
     clear = host.querySelector<HTMLButtonElement>("[data-clear]")!,
+    copyConversation = host.querySelector<HTMLButtonElement>("[data-copy-conversation]")!,
     earlier = host.querySelector<HTMLButtonElement>("[data-earlier]")!,
     history = host.querySelector<HTMLElement>("[data-history]")!,
     status = host.querySelector<HTMLElement>("[data-reply-status]")!,
-    cleanupElement = host.querySelector<HTMLElement>("[data-cleanup]")!;
+    cleanupElement = host.querySelector<HTMLElement>("[data-cleanup]")!,
+    form = host.querySelector<HTMLFormElement>("form")!;
   input.value = draft.text;
   const channel = typeof BroadcastChannel === "function" ? new BroadcastChannel("panda-bot-human-chat") : null;
   function controls() {
     submit.disabled = !generation || sending || busy || !input.value.trim();
     clear.disabled = !generation;
+    copyConversation.disabled = !generation || !messages.size || copyConversation.getAttribute("aria-busy") === "true";
     earlier.disabled = !hasMore || paging;
     host.querySelector<HTMLButtonElement>("[data-send-recovery]")!.hidden = !draft.uncertain || sending;
     status.textContent = sending ? context.t("bots.sending") : busy ? context.t("bots.replying") : "";
@@ -107,9 +121,17 @@ export function createBotHumanChat(
         unavailable: "bots.failureUnavailable",
         failed: "bots.failureFailed",
       };
+      const parts = message.role === "assistant" ? botReplyParts(message.text) : [];
       setMessageHtml(
         element,
-        `<header><strong>${h(message.role === "user" ? "bots.userRole" : "bots.assistantRole")}</strong><time datetime="${new Date(message.createdAt).toISOString()}">${e(botDate(message.createdAt))}</time></header><div class="bot-chat-text" data-i18n-ignore>${message.role === "user" ? e(message.text).replaceAll("\n", "<br>") : documentPreview(message.text)}</div>${message.status === "queued" || message.status === "running" ? `<p class="bot-hint">${h(message.status === "queued" ? "bots.waitingReply" : "bots.replying")}</p>` : message.status === "error" ? `<p class="bot-hint">${h(failure[message.failure ?? "failed"] ?? "bots.failureFailed")}</p>${button("bots.retryReply", "data-retry-reply")}` : ""}`,
+        `<header><strong>${message.role === "user" ? h("bots.userRole") : `<span data-i18n-ignore>${e(botName)}</span>`}</strong><time datetime="${new Date(message.createdAt).toISOString()}">${e(botDate(message.createdAt))}</time><span class="bot-chat-message-actions">${button("files.copy", `data-copy-message ${attributes("aria-label", message.role === "user" ? "common.copyMessage" : "bots.copyReply")} ${message.text ? "" : "disabled"}`, false, "copy")}</span></header><div class="bot-chat-text" data-i18n-ignore>${message.role === "user" ? e(message.text).replaceAll("\n", "<br>") : botReplyHtml(parts, context.t)}</div>${message.status === "queued" || message.status === "running" ? `<p class="bot-hint">${h(message.status === "queued" ? "bots.waitingReply" : "bots.replying")}</p>` : message.status === "error" ? `<p class="bot-hint">${h(failure[message.failure ?? "failed"] ?? "bots.failureFailed")}</p>${button("bots.retryReply", "data-retry-reply")}` : ""}`,
+      );
+      bindBotReplyContent(element, parts, context.t, copyNotice);
+      bindBotCopy(
+        element.querySelector<HTMLButtonElement>("[data-copy-message]")!,
+        () => message.text,
+        context.t,
+        copyNotice,
       );
       element.querySelector<HTMLButtonElement>("[data-retry-reply]")?.addEventListener("click", () => {
         const previous = ordered.find((m) => m.sequence === message.sequence - 1 && m.role === "user");
@@ -229,10 +251,56 @@ export function createBotHumanChat(
     draft.text = input.value;
     controls();
   };
-  host.querySelector<HTMLFormElement>("form")!.onsubmit = (event) => {
+  input.addEventListener("compositionstart", () => {
+    composing = true;
+  });
+  input.addEventListener("compositionend", () => {
+    composing = false;
+  });
+  input.onblur = () => {
+    composing = false;
+  };
+  input.onkeydown = (event) => {
+    if (event.key !== "Enter" || event.shiftKey || composing || event.isComposing || event.keyCode === 229) return;
+    event.preventDefault();
+    if (!event.repeat && !submit.disabled) form.requestSubmit();
+  };
+  form.onsubmit = (event) => {
     event.preventDefault();
     void context.execute(() => send());
   };
+  bindBotCopy(
+    copyConversation,
+    async () => {
+      const expected = generation,
+        current = version,
+        all = new Map<string, BotChatMessage>();
+      let before: number | undefined,
+        size = 0;
+      while (true) {
+        const snapshot = await context.api<BotChatSnapshot>(base + (before ? "?before=" + before : ""));
+        if (!alive || version !== current || snapshot.generation !== expected) throw new Error("staleConversation");
+        for (const message of snapshot.messages) {
+          if (!all.has(message.id)) size += message.text.length;
+          all.set(message.id, message);
+        }
+        if (size > 8 * 1024 * 1024) throw new Error("copyTooLarge");
+        if (!snapshot.hasMore) break;
+        const next = Math.min(...snapshot.messages.map((message) => message.sequence));
+        if (!Number.isSafeInteger(next) || next < 1 || (before !== undefined && next >= before))
+          throw new Error("unavailable");
+        before = next;
+      }
+      return [...all.values()]
+        .sort((a, b) => a.sequence - b.sequence)
+        .filter((message) => message.text)
+        .map((message) => `## ${message.role === "user" ? context.t("bots.userRole") : botName}\n\n${message.text}`)
+        .join("\n\n");
+    },
+    context.t,
+    copyNotice,
+    () => alive && !!generation && !!messages.size,
+  );
   earlier.onclick = () => {
     if (paging || !hasMore) return;
     paging = true;

@@ -2,7 +2,8 @@ import { escapeHtml } from "../../shared/html.js";
 import { codexIcon } from "../codex-icons.js";
 import { closestElement, requireElement } from "../dom.js";
 import { messageHtml, setMessageHtml } from "../i18n.js";
-import { sessionEffortOptions, sessionModelFields } from "./model-fields.js";
+import { sessionModelFields } from "./model-fields.js";
+import { mountReasoningSlider } from "../session-controls/reasoning-slider.js";
 
 /** An edit buffer lives only for the open dialog; Cancel never writes engine settings. */
 /** @param {import('../contracts/session-workspace.js').SessionSettingsDialogOptions} options */
@@ -25,7 +26,15 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
     const choices = selected?.efforts || [];
     if (!choices.some((item) => item.id === effort)) effort = selected?.defaultEffort || choices[0]?.id || "";
     if (!choices.some((item) => item.id === effort)) effort = choices[0]?.id || "";
-    setMessageHtml(requireElement("#sessionSettingEfforts"), sessionEffortOptions(choices, effort));
+    mountReasoningSlider(
+      requireElement("#sessionSettingEfforts"),
+      choices,
+      effort,
+      t("common.reasoningEffort"),
+      (value) => {
+        effort = value;
+      },
+    );
   }
   function render() {
     const snapshot = read();
@@ -121,7 +130,6 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
       model = target.value;
       renderEfforts();
     }
-    if (target instanceof HTMLInputElement && target.name === "session-effort") effort = target.value;
     if (target instanceof HTMLInputElement && target.name === "session-permission") {
       permission = target.value;
       requireElement('#sessionSettingsForm button[type="submit"]').disabled = !read().permissions.some(

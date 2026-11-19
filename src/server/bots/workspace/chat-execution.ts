@@ -30,6 +30,7 @@ export async function executeBotChat(
         .catch(() => controller.abort());
     }, 1000);
   let reply = "",
+    finalMessage = "",
     scope: { sessionId: string; runId: string } | null = null,
     flushedAt = 0;
   const fail = async (failure: BotChatFailure) => lease.finish("", failure);
@@ -64,7 +65,7 @@ export async function executeBotChat(
         persistent: true,
         ...(row.data.sessionId ? { sessionId: row.data.sessionId } : {}),
         prompt,
-        instructions: `You are ${bot.name}, speaking directly with your human user in your one continuing conversation. Reply naturally in the user's language. A supplied conversation array is ordered context: answer its last user message. You are separate from automated Bot tasks; never assume access to their data or to external connections. Ask clarifying questions conversationally when needed. Deliver exactly one complete final reply using panda_bot_chat_reply. The tool publishes your reply into this human conversation only. Do not claim to have sent emails, posted messages, changed external data or completed queued tasks. You have no task decision or external action tool in this conversation. Bot working rules:\n${bot.instructions}${botPersonaInstructions(bot)}`,
+        instructions: `You are ${bot.name}, speaking directly with your human user in your one continuing conversation. Reply naturally in the user's language. When delivering reusable Markdown content such as a plan, document, checklist or template, place the self-contained content in a fenced markdown block (use a longer outer fence if it contains code fences), with brief conversational framing outside that block. Ordinary short conversation does not need a content block. A supplied conversation array is ordered context: answer its last user message. You are separate from automated Bot tasks; never assume access to their data or to external connections. Ask clarifying questions conversationally when needed. Deliver exactly one complete final reply, either as your final assistant message or using panda_bot_chat_reply. The tool publishes your reply into this human conversation only. Do not claim to have sent emails, posted messages, changed external data or completed queued tasks. You have no task decision or external action tool in this conversation. Bot working rules:\n${bot.instructions}${botPersonaInstructions(bot)}`,
         tools: [
           {
             name: "panda_bot_chat_reply",
@@ -86,7 +87,9 @@ export async function executeBotChat(
           scope = value;
         },
         event: async (event) => {
-          if (event.kind !== "message" || Date.now() - flushedAt < 500) return;
+          if (event.kind !== "message") return;
+          if (event.complete && event.phase !== "commentary") finalMessage = event.text.trim();
+          if (!event.complete && Date.now() - flushedAt < 500) return;
           flushedAt = Date.now();
           await lease.message(event.text);
         },
@@ -111,7 +114,8 @@ export async function executeBotChat(
         },
       },
     );
-    if (result.status === "completed" && reply) await lease.finish(reply);
+    const completeReply = reply || (finalMessage.length <= 64000 ? finalMessage : "");
+    if (result.status === "completed" && completeReply) await lease.finish(completeReply);
     else await fail(result.status === "interrupted" ? "interrupted" : (result.failure ?? "failed"));
   } catch (error) {
     await fail(controller.signal.aborted ? "interrupted" : applicationRunFailure(error));

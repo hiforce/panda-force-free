@@ -209,6 +209,33 @@ for (const driver of ["files", "sqlite", "mysql"] as const)
         expect(new Uint8Array(await readFile(join(dirname(filename), relative!)))).toEqual(new Uint8Array(imageBytes));
         expect(JSON.stringify(current.revision.body)).toContain(image.id);
         expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(0);
+        if (!sql) {
+          const navigation = f.files.application().navigation,
+            tree = await navigation.tree("project-2"),
+            detail = await f.files.application().queries.detail("project-2", id);
+          await navigation.trash("operator:test-user", {
+            id: randomUUID(),
+            projectId: "project-2",
+            treeVersion: tree.version,
+            documentId: id,
+            revision: detail.document.revision,
+          });
+          expect((await f.task(updated.id)).documentStatus).toBe("unavailable");
+          const listed = await f.files.call("/api/document-creations?project=*");
+          expect(listed.status).toBe(200);
+          expect(listed.body.tasks.some((task: { id: string }) => task.id === updated.id)).toBe(true);
+          const trashedTree = await navigation.tree("project-2");
+          await navigation.restore("operator:test-user", {
+            id: randomUUID(),
+            projectId: "project-2",
+            treeVersion: trashedTree.version,
+            documentId: id,
+            toRoot: true,
+          });
+          expect((await f.task(updated.id)).documentStatus).toBe("available");
+          await f.restart();
+          expect((await f.task(updated.id)).documentStatus).toBe("available");
+        }
         if (sql) sql.grants.delete("project-2");
         else f.files.grants.delete("project-2");
         const inaccessible = await f.task(saved.id);

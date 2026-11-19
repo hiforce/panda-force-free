@@ -6,6 +6,25 @@ import { tmpdir } from "node:os";
 import { BotStore } from "../../src/server/bots/store.js";
 import { prepareBotProfile } from "../../src/server/bots/profile.js";
 import { BotWorker } from "../../src/server/bots/worker.js";
+import { BOT_AVATAR_CHOICES } from "../../src/shared/bots/contracts.js";
+
+test("animal avatars persist alongside default pandas and historical icons", () => {
+  const store = new BotStore(":memory:");
+  try {
+    for (const icon of [...BOT_AVATAR_CHOICES, "compass"] as const) {
+      const bot = store.createBot("alice", {
+        name: icon,
+        code: "avatar-" + icon,
+        avatar: { type: "icon", icon, tone: "accent" },
+      });
+      expect(store.bot("alice", bot.id).avatar).toEqual({ type: "icon", icon, tone: "accent" });
+    }
+    const panda = store.createBot("alice", { name: "Default", code: "default-avatar" });
+    expect(panda.avatar).toEqual({ type: "icon", icon: "panda", tone: "accent" });
+  } finally {
+    store.close();
+  }
+});
 
 const persona = {
   role: "Product reviewer",

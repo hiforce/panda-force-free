@@ -873,41 +873,6 @@
   font-weight: 550;
   margin-bottom: 11px;
 }
-.session-effort-segments {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 9px;
-  background: var(--pf-soft);
-}
-.session-effort-segments label {
-  display: flex;
-  flex: 1 1 70px;
-  position: relative;
-  align-items: center;
-  justify-content: center;
-  min-height: 35px;
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  color: var(--pf-muted);
-  cursor: pointer;
-}
-.session-effort-segments input {
-  position: absolute;
-  opacity: 0;
-  height: 1px;
-  width: 1px;
-}
-.session-effort-segments label:has(input:checked) {
-  color: var(--pf-ink);
-  background: var(--pf-card);
-  box-shadow: 0 1px 3px #0001;
-}
-.session-effort-segments label:focus-within {
-  outline: 2px solid var(--pf-accent);
-}
 .session-permission-choice {
   display: flex;
   align-items: flex-start;
@@ -1437,9 +1402,6 @@
   }
   .session-dialog-actions > .session-button {
     flex: 1;
-  }
-  .session-effort-segments label {
-    min-height: 40px;
   }
   .session-permission-choice {
     min-height: 64px;

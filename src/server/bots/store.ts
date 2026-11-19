@@ -6,6 +6,7 @@ import { retryFailedSQLiteBots } from "./sqlite-recovery.js";
 
 import { changeBotTaskLifecycle } from "./task-lifecycle.js";
 import { taskStateExpression } from "./queue-query.js";
+import { deleteSQLiteBots } from "./sqlite-deletion.js";
 import { botTaskData } from "./task-record.js";
 import { applyBotReview, botTaskActions, botTaskAction, botHasCallbackDecision } from "../../shared/bots/actions.js";
 import { botTaskView, botCallbackStatus } from "../../shared/bots/task-state.js";
@@ -172,6 +173,9 @@ export class BotStore {
         this.db.query("DELETE FROM bot_events WHERE taskId=?").run(id);
       })
       .immediate();
+  }
+  bulkDelete(owner: string, value: unknown, botId?: string) {
+    return deleteSQLiteBots(this.db, owner, value, botId);
   }
   events = (...args: Parameters<SQLiteBotQueries["events"]>) => this.queries.events(...args);
   claim(excludedBots: readonly string[] = []): { task: BotTask; bot: BotConfig; lease: string } | null {

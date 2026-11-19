@@ -49,7 +49,15 @@ export function applicationVisibleEvents(emit: (event: ApplicationVisibleEvent) 
     } else if (method === "item/completed" && item?.type === "agentMessage" && typeof item.text === "string") {
       const text = item.text.slice(0, 65536);
       messages.set(id, text);
-      emit({ kind: "message", id, text, complete: true });
+      emit({
+        kind: "message",
+        id,
+        text,
+        complete: true,
+        ...(["commentary", "final_answer"].includes(String(item.phase))
+          ? { phase: item.phase as "commentary" | "final_answer" }
+          : {}),
+      });
     }
   };
 }

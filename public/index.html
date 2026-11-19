@@ -873,7 +873,7 @@
                     data-codex-intelligence-trigger=""
                     aria-label="Select model"
                     data-pf-aria-label="common.selectModel"
-                    aria-haspopup="menu"
+                    aria-haspopup="dialog"
                     aria-expanded="false"
                   >
                     <span class="icon-slot composer-model-icon" data-icon="slidersHorizontal" aria-hidden="true"></span
@@ -881,7 +881,14 @@
                     ><span id="effortLabel" data-pf-message="common.medium">Medium</span
                     ><span class="icon-slot chevron" data-icon="chevronDown"></span>
                   </button>
-                  <div class="model-menu" id="modelMenu" role="menu" hidden=""></div>
+                  <div
+                    class="model-menu"
+                    id="modelMenu"
+                    role="dialog"
+                    aria-label="Model &amp; reasoning"
+                    data-pf-aria-label="sessionview.modelReasoning"
+                    hidden=""
+                  ></div>
                   <select
                     id="effortSelect"
                     class="sr-only"
@@ -1345,6 +1352,21 @@
           </section>
         </div>
       </aside>
+      <footer
+        class="workspace-attribution"
+        aria-label="Open-source attribution"
+        data-pf-aria-label="common.openSourceAttribution"
+      >
+        <span data-i18n-ignore>© 2026 HiFORCE Open Source Team</span>
+        <span aria-hidden="true">·</span>
+        <a
+          href="https://github.com/hiforce/panda-force-free/blob/develop/LICENSE"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-pf-message="common.openSourceLicense"
+          >MIT License</a
+        >
+      </footer>
     </div>
     <dialog class="files-dialog" id="filesDialog" aria-labelledby="filesPanelTitle">
       <div class="files-dialog-card">

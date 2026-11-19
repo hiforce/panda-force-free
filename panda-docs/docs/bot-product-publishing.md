@@ -171,3 +171,5 @@ The screenshot below is a simulated enterprise receipt for `LISTING-001`, genera
 Build the client, then run `bun scripts/release/capture-bot-usecase.mjs` from the repository root. It creates disposable accounts/state, issues a temporary scoped key, exercises real task submission, idempotent replay and human review, and renders fictional outcomes. An unexpired simulated execution blocks worker dispatch, so it never calls a supplier, enterprise endpoint or listing service. The temporary key is revoked and the fixture removed. Screenshots never include a generated secret.
 
 This example adds documentation and demo data; it does not ship a universal enterprise connector, image-production engine, publishing scheduler or model-gateway/billing system.
+
+For revocation, batch deletion and regenerating a task instance, see [Bot task deletion and idempotency](./bot-task-lifecycle.md).

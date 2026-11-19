@@ -427,7 +427,7 @@ try {
   await mp.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
   assert.equal(await mp.locator("#modelButton").evaluate((button) => button === document.activeElement), true);
   await mp.locator("#modelButton").click();
-  await mp.locator("#sessionSettingEfforts input").last().check();
+  await mp.locator('#sessionSettingEfforts input[type="range"]').press("End");
   await mp.locator('#sessionSettingsForm button[type="submit"]').click();
   assert.ok((await mp.locator("#modelButton").getAttribute("aria-label")).includes("最大"));
   await mp.locator("#modelButton").click();

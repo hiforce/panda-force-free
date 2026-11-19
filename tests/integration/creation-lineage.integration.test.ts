@@ -79,6 +79,24 @@ for (const backend of ["sqlite", "mysql"] as const)
           }
           return id;
         };
+        const legacyRoot = await create(10, undefined, "document", undefined, "legacy"),
+          legacyUpdate = await create(20, legacyRoot, "document", undefined, "legacy");
+        for (let repeat = 0; repeat < 5; repeat++) {
+          const legacyRows = await store.queue.list("legacy");
+          expect(legacyRows).toHaveLength(1);
+          expect(legacyRows[0]!.history).toEqual({ rootId: legacyRoot, createdAt: 10, rounds: 2 });
+          expect((await store.queue.rounds("legacy", legacyRoot)).rootId).toBe(legacyRoot);
+        }
+        await store.queue.clearHistory("legacy", { id: randomUUID(), taskId: legacyRoot, before: 11 }, 30);
+        expect((await store.queue.list("legacy"))[0]!.spec.id).toBe(legacyUpdate);
+        expect((await store.queue.list("legacy"))[0]!.history!.rootId).toBe(legacyRoot);
+        expect((await store.tasks.get("legacy", legacyRoot)).artifact).toBeTruthy();
+        await store.queue.clearHistory("legacy", { id: randomUUID(), before: 30 }, 40);
+        expect(await store.queue.list("legacy")).toEqual([]);
+        expect((await store.queue.rounds("legacy", legacyUpdate)).ids).toEqual([legacyUpdate, legacyRoot]);
+        const continued = await create(50, legacyUpdate, "document", undefined, "legacy");
+        expect((await store.queue.list("legacy"))[0]!.spec.id).toBe(continued);
+        expect((await store.queue.list("legacy"))[0]!.history!.rootId).toBe(legacyRoot);
         const root = await create(100),
           ids = [root],
           other = await create(50);

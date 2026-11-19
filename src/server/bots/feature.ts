@@ -169,6 +169,12 @@ export function createBotFeature(options: {
           return;
         }
         const task = /^\/api\/bots\/tasks\/([^/]+)(?:\/(review|retry|cancel|suspend|resume))?$/.exec(pathname);
+        if (pathname === "/api/bots/tasks/delete" && method === "POST") {
+          const result = await store.bulkDelete(owner, await json(context));
+          for (const id of result.interrupted) worker.interrupt(id);
+          respondJson(context.res, 200, result);
+          return;
+        }
         if (pathname === "/api/bots/tasks/retry-failed" && method === "POST") {
           const result = await store.retryFailed(owner, await json(context));
           worker.tick();
@@ -240,12 +246,18 @@ export function createBotFeature(options: {
       await guard(async (context) => {
         const authorization = context.req.headers.authorization ?? "",
           grant = await store.authenticate(authorization.startsWith("Bearer ") ? authorization.slice(7) : "");
-        const match = /^\/api\/v1\/bots\/([a-z][a-z0-9_-]{1,63})\/tasks(?:\/([a-f0-9-]+)(?:\/(cancel))?)?$/.exec(
+        const match = /^\/api\/v1\/bots\/([a-z][a-z0-9_-]{1,63})\/tasks(?:\/(delete|[a-f0-9-]+)(?:\/(cancel))?)?$/.exec(
           context.url.pathname,
         );
         if (!match) throw new BotError("notFound", 404);
         const bot = await store.bot(grant.owner, match[1]!);
         if (!grant.botIds.includes(bot.id)) throw new BotError("forbidden", 403);
+        if (context.req.method === "POST" && match[2] === "delete" && !match[3]) {
+          const result = await store.bulkDelete(grant.owner, await json(context), bot.id);
+          for (const id of result.interrupted) worker.interrupt(id);
+          respondJson(context.res, 200, result);
+          return;
+        }
         if (context.req.method === "POST" && !match[2]) {
           const idem = context.req.headers["idempotency-key"];
           if (typeof idem !== "string") throw new BotError("idempotencyKeyRequired");

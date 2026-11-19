@@ -22,6 +22,7 @@ import type { BotRepository } from "./repository.js";
 import { taskSummary } from "./queue-query.js";
 import { botTaskData } from "./task-record.js";
 import { transitionBotTask } from "./task-lifecycle.js";
+import { deleteMySQLBots } from "./mysql-deletion.js";
 import { applyBotReview, botTaskActions, botTaskAction, botHasCallbackDecision } from "../../shared/bots/actions.js";
 
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -167,6 +168,9 @@ export class MySQLBotStore implements BotRepository {
       if (task.status === "running") throw new BotError("taskRunning", 409);
       await this.tombstone(sql, id);
     });
+  }
+  bulkDelete(owner: string, value: unknown, botId?: string) {
+    return deleteMySQLBots(this.context, owner, value, botId);
   }
   claim(excludedBots: readonly string[] = []) {
     return this.context.transaction(async (sql) => {

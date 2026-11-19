@@ -77,6 +77,7 @@ try {
     await page.keyboard.press("Escape");
     await page.locator(id).waitFor({ state: "hidden" });
   };
+  if (!(await page.locator("#modelButton").isVisible())) await page.locator("#sessionInfoButton").click();
   await page.locator("#modelButton").click();
   await inspect("#sessionSettingsDialog", "desktop-model");
   await page.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
@@ -88,6 +89,7 @@ try {
   await dismiss("#sessionSettingsDialog");
   assert.equal(await page.locator("#modelButton").evaluate((node) => document.activeElement === node), true);
   assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), "gpt-5.6-sol");
+  if (!(await page.locator("#modelButton").isVisible())) await page.locator("#sessionInfoButton").click();
   await page.locator("#modelButton").click();
   for (const [width, height] of [
     [1440, 960],
@@ -111,7 +113,7 @@ try {
   await page.waitForFunction(() => Math.abs(document.querySelector("#app").getBoundingClientRect().height - 410) < 1);
   await inspect("#sessionSettingsDialog", "mobile-keyboard-model");
   await page.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
-  await page.locator('input[name="session-effort"][value="high"]').check();
+  await page.locator('#sessionSettingEfforts input[type="range"]').press("End");
   await page.locator('#sessionSettingsForm button[type="submit"]').click();
   await page.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
   assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), "gpt-5.6-luna");
@@ -194,6 +196,7 @@ try {
   await dismiss("#sessionToolsDialog");
   await page.locator('#sessionInspector [data-session-action="close"]').click();
   await page.setViewportSize({ width: 1861, height: 888 });
+  if (!(await page.locator("#modelButton").isVisible())) await page.locator("#sessionInfoButton").click();
   await page.locator("#modelButton").click();
   await page.evaluate(async () => {
     await globalThis.__pandaForceI18n.setPreference("zh-CN");

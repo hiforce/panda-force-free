@@ -28,12 +28,15 @@ export function creationLineageSql(mysql: boolean, project = false) {
   ), mapped AS (
     SELECT ${mysql ? "/*+ NO_MERGE(s) */ " : ""}s.*,COALESCE(s.storedKey,l.historyKey,${key("t:", "s.id")}) AS historyKey,CASE WHEN s.storedKey LIKE 't:%' THEN SUBSTR(s.storedKey,3) ELSE l.rootTaskId END AS rootTaskId
     FROM source s LEFT JOIN lineage l ON l.id=s.id AND l.projectId=s.projectId
+  ), roots AS (
+    SELECT projectId,historyKey,COALESCE(rootTaskId,id) AS creationRootId,
+      ROW_NUMBER() OVER(PARTITION BY projectId,historyKey ORDER BY (rootTaskId IS NULL),createdAt,id) AS rootRank
+    FROM mapped
   ), identified AS (
-    SELECT m.*,
-      COALESCE(FIRST_VALUE(rootTaskId) OVER(PARTITION BY projectId,historyKey ORDER BY (rootTaskId IS NULL),createdAt,id),FIRST_VALUE(id) OVER(PARTITION BY projectId,historyKey ORDER BY createdAt,id)) AS creationRootId,
-      MIN(createdAt) OVER(PARTITION BY projectId,historyKey) AS creationCreatedAt,
-      COUNT(*) OVER(PARTITION BY projectId,historyKey) AS creationRounds
-    FROM mapped m
+    SELECT m.*,r.creationRootId,
+      MIN(m.createdAt) OVER(PARTITION BY m.projectId,m.historyKey) AS creationCreatedAt,
+      COUNT(*) OVER(PARTITION BY m.projectId,m.historyKey) AS creationRounds
+    FROM mapped m JOIN roots r ON r.projectId=m.projectId AND r.historyKey=m.historyKey AND r.rootRank=1
   ) `;
 }
 export const creationHeadOrder =

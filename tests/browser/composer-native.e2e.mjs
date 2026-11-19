@@ -94,16 +94,19 @@ await page.screenshot({ path: artifact("composer-model-menu.png"), fullPage: fal
 const modelMain = await page.evaluate(() => ({
   open: !document.querySelector("#modelMenu").hidden,
   title: document.querySelector("#modelMenu .model-menu-title")?.textContent?.trim(),
-  effortRows: [...document.querySelectorAll("#modelMenu .model-effort-row")].map((node) => node.textContent.trim()),
+  effortRows: [...document.querySelectorAll("#modelMenu .wb-range-ticks > span")].map((node) => node.title),
   modelRow: document.querySelector("#modelSubmenuButton")?.textContent?.replace(/\s+/g, " ").trim(),
   directModelRows: document.querySelectorAll("#modelMenu>.model-option").length,
   width: document.querySelector("#modelMenu").getBoundingClientRect().width,
 }));
-await page.click('#modelMenu .model-effort-row[data-value="high"]');
+const slider = page.locator('#modelMenu input[type="range"]');
+await slider.press("Home");
+for (let step = 0; step < modelMain.effortRows.indexOf("High"); step++) await slider.press("ArrowRight");
 const effortSelection = await page.evaluate(() => ({
   menuHidden: document.querySelector("#modelMenu").hidden,
   label: document.querySelector("#effortLabel").textContent.trim(),
 }));
+await page.keyboard.press("Escape");
 await page.click("#modelButton");
 await page.click("#modelSubmenuButton");
 const modelSubmenu = await page.evaluate(() => ({
@@ -115,11 +118,15 @@ const modelSubmenu = await page.evaluate(() => ({
 }));
 await page.click('#modelMenu .model-option[data-model="gpt-5.6-luna"]');
 await page.click("#modelButton");
-const lunaEfforts = await page.locator("#modelMenu .model-effort-row").allTextContents();
+const lunaEfforts = await page
+  .locator("#modelMenu .wb-range-ticks > span")
+  .evaluateAll((nodes) => nodes.map((node) => node.title));
 await page.click("#modelSubmenuButton");
 await page.click('#modelMenu .model-option[data-model="gpt-5.6-sol"]');
 await page.click("#modelButton");
-const solEfforts = await page.locator("#modelMenu .model-effort-row").allTextContents();
+const solEfforts = await page
+  .locator("#modelMenu .wb-range-ticks > span")
+  .evaluateAll((nodes) => nodes.map((node) => node.title));
 await page.keyboard.press("Escape");
 await page.screenshot({ path: artifact("composer-native.png"), fullPage: false });
 await page.setViewportSize({ width: 390, height: 844 });
@@ -196,13 +203,13 @@ const expected = ["add", "approval", "model", "queue", "send"];
   qualityAssert.ok(modelFilter.hasGlm, "The model picker includes configured GLM models");
   qualityAssert.equal(home.trigger.border, "1px", "Desktop model settings keep a complete dropdown field");
   qualityAssert.equal(home.iconWidth, 0, "Desktop fields retain their complete text labels");
-  qualityAssert.equal(modelMain.title, "Reasoning", "Condition: modelMain.title!=='Reasoning'");
+  qualityAssert.equal(modelMain.title, "Model & reasoning", "Condition: modelMain.title!=='Reasoning'");
   qualityAssert.ok(!(modelMain.effortRows.length < 1), "Condition: modelMain.effortRows.length<1");
   qualityAssert.ok(/Model/i.test(modelMain.modelRow || ""), "Condition: !/Model/i.test(modelMain.modelRow||'')");
   qualityAssert.equal(modelMain.directModelRows, 0, "Condition: modelMain.directModelRows!==0");
   qualityAssert.ok(!(modelMain.width < 210), "Condition: modelMain.width<210");
   qualityAssert.ok(!(modelMain.width > 250), "Condition: modelMain.width>250");
-  qualityAssert.ok(effortSelection.menuHidden, "Condition: !effortSelection.menuHidden");
+  qualityAssert.ok(!effortSelection.menuHidden, "Condition: !effortSelection.menuHidden");
   qualityAssert.equal(effortSelection.label, "High", "Condition: effortSelection.label!=='High'");
   qualityAssert.equal(modelSubmenu.title, "Model", "Condition: modelSubmenu.title!=='Model'");
   qualityAssert.ok(!(modelSubmenu.rows.length < 1), "Condition: modelSubmenu.rows.length<1");

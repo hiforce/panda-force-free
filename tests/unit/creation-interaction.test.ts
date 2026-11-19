@@ -42,6 +42,16 @@ test("public events accumulate one message and expose numeric usage without tran
   expect(events[1]).toEqual({ kind: "message", id: "a", text: "Hello world", complete: false });
   expect(JSON.stringify(events)).not.toContain("private");
   expect(JSON.stringify(events)).not.toContain("reasoning");
+  receive("item/completed", {
+    item: { id: "a", type: "agentMessage", text: "Complete reply", phase: "final_answer", secret: "private" },
+  });
+  expect(events.at(-1)).toEqual({
+    kind: "message",
+    id: "a",
+    text: "Complete reply",
+    complete: true,
+    phase: "final_answer",
+  });
 });
 
 test("guidance-only snapshots require an explicit decoder mode while document workflows stay strict", async () => {

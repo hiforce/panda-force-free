@@ -1160,6 +1160,20 @@
 .workbench-mobile-nav {
   display: none;
 }
+.session-menu-overlay {
+  position: fixed;
+  z-index: 1200;
+  inset: auto;
+  margin: 0;
+  transform: none;
+  overflow: auto;
+}
+.session-menu-overlay :is(.model-menu-list, .permission-options) {
+  max-height: none;
+}
+.model-reasoning-slider {
+  padding: 10px 8px 14px;
+}
 .model-trigger > .composer-model-icon,
 .session-menu-heading,
 .session-menu-close {
@@ -1488,25 +1502,10 @@
   #queueButton > span:last-child {
     display: none;
   }
-  .model-menu,
-  .permission-menu {
-    position: fixed;
-    left: max(8px, env(safe-area-inset-left, 0px));
-    right: max(8px, env(safe-area-inset-right, 0px));
-    top: calc(var(--app-viewport-top, 0px) + var(--app-viewport-height, 100dvh) - var(--pf-mobile-nav-height) - 8px);
-    bottom: auto;
-    width: auto;
-    max-width: 480px;
-    max-height: min(420px, calc(var(--app-viewport-height, 100dvh) - var(--pf-mobile-nav-height) - 80px));
-    margin-inline: auto;
-    overflow: auto;
-    transform: translateY(-100%);
-  }
   .model-menu-list,
   .permission-options {
     max-height: none;
   }
-  .model-effort-row,
   .model-option,
   .model-submenu-button,
   .model-menu-back,
@@ -1828,7 +1827,10 @@
 .pending-approval-notice {
   position: fixed;
   inset-inline-end: 16px;
-  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  bottom: max(
+    calc(76px + env(safe-area-inset-bottom, 0px)),
+    calc(var(--pf-mobile-nav-height, 0px) + var(--workspace-attribution-height, 0px) + 16px)
+  );
   z-index: 1150;
   min-height: 44px;
   max-width: calc(100vw - 32px);

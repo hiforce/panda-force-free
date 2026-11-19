@@ -149,5 +149,14 @@
   "alreadyReplied": "這封郵件已有回覆待傳送或已傳送，請先核對回條。",
   "sourceError": "無法讀取來源，請檢查網址或帳戶權限，再次預覽。",
   "previewLimited": "僅顯示數量受限的首批內容。來源較大時，請使用更聚焦的訂閱或收件匣篩選。",
-  "edit": "編輯"
+  "edit": "編輯",
+  "messagePlaceholder": "輸入訊息…Enter 傳送，Shift + Enter 換行",
+  "copyConversation": "複製全部對話",
+  "copyReply": "複製整則回覆",
+  "copyContent": "複製內容",
+  "markdownContent": "Markdown 內容",
+  "markdownSource": "Markdown 原始碼",
+  "codeContent": "程式碼",
+  "contentActions": "內容操作",
+  "copyTooLarge": "對話過長，無法一次複製。請分別複製需要的回覆。"
 }

@@ -94,6 +94,7 @@
     "browser/navigation-performance.e2e.mjs",
     "browser/optimistic-send.e2e.mjs",
     "browser/panda-workbench.e2e.mjs",
+    "browser/workspace-footer.e2e.mjs",
     "browser/password-login.e2e.mjs",
     "browser/password-recovery.e2e.mjs",
     "browser/password-setup.e2e.mjs",
@@ -177,7 +178,9 @@
     "browser/creation-loading.e2e.mjs",
     "browser/creation-discovery-recovery.e2e.mjs",
     "browser/engine-images.e2e.mjs",
-    "browser/h5-creation-recovery.e2e.mjs"
+    "browser/h5-creation-recovery.e2e.mjs",
+    "browser/composer-menu-overlay.e2e.mjs",
+    "browser/reasoning-slider.e2e.mjs"
   ],
   "groups": {
     "runtime": [
@@ -189,7 +192,13 @@
       "browser/composer-click-refresh.e2e.mjs"
     ],
     "failure-paths": ["browser/refactor-failure-paths.e2e.mjs"],
-    "workbench": ["browser/panda-workbench.e2e.mjs", "browser/native-dialogs.e2e.mjs"],
+    "workbench": [
+      "browser/panda-workbench.e2e.mjs",
+      "browser/native-dialogs.e2e.mjs",
+      "browser/workspace-footer.e2e.mjs",
+      "browser/composer-menu-overlay.e2e.mjs",
+      "browser/reasoning-slider.e2e.mjs"
+    ],
     "projects": [
       "browser/product-projects.e2e.mjs",
       "browser/questionnaire.e2e.mjs",

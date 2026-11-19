@@ -194,12 +194,12 @@ try {
   );
   await page.locator("#modelButton").click();
   await page.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
-  await page.locator('input[name="session-effort"][value="high"]').check();
+  await page.locator('#sessionSettingEfforts input[type="range"]').press("End");
   await closeDialog("#sessionSettingsDialog");
   assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), "gpt-5.6-sol");
   await page.locator("#modelButton").click();
   await page.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
-  await page.locator('input[name="session-effort"][value="high"]').check();
+  await page.locator('#sessionSettingEfforts input[type="range"]').press("End");
   await page.locator('#sessionSettingsForm [type="submit"]').click();
   await page.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
   assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), "gpt-5.6-luna");
@@ -547,7 +547,7 @@ try {
       const sheet = await touchPage.locator("#sessionSettingsDialog").boundingBox();
       assert.ok(sheet.y >= 18 && sheet.y + sheet.height <= 439, JSON.stringify(sheet));
       await touchPage.locator("#sessionSettingModel").selectOption("gpt-5.6-luna");
-      await touchPage.locator('input[name="session-effort"][value="high"]').check();
+      await touchPage.locator('#sessionSettingEfforts input[type="range"]').press("End");
       await touchPage.locator('#sessionSettingsForm button[type="submit"]').tap();
       assert.equal(await touchPage.locator("#prompt").inputValue(), "Keep the mobile keyboard draft");
       assert.equal(await touchPage.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), "gpt-5.6-luna");

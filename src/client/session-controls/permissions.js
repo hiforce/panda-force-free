@@ -2,7 +2,7 @@ import { localizeAttribute, localizeText, messageHtml, setMessageHtml } from "..
 import { codexIcon } from "../codex-icons.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
 import { createLatestRequestGate } from "../ui-core.js";
-import { focusMenuSelection, bindMenuDismiss } from "./menu.js";
+import { focusMenuSelection, bindMenuDismiss, mountSessionMenu, restoreSessionMenu } from "./menu.js";
 
 /** Permission profiles, policy decisions and the full-access confirmation have one owner. */
 export function createSessionPermissionControls({
@@ -245,12 +245,14 @@ export function createSessionPermissionControls({
     closeModelMenu();
     syncPermissionControl();
     $("#permissionMenu").hidden = false;
+    mountSessionMenu($("#permissionMenu"), $("#modeButton"), closePermissionMenu);
     $("#modeButton").setAttribute("aria-expanded", "true");
     focusMenuSelection($("#permissionMenu"));
   }
   function closePermissionMenu() {
     const menu = $("#permissionMenu");
     menu.hidden = true;
+    restoreSessionMenu(menu);
     $("#modeButton").setAttribute("aria-expanded", "false");
   }
   function togglePermissionMenu() {

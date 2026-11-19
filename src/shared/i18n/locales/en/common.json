@@ -596,5 +596,7 @@
   "historyLoadFailed": "Could not load conversation history. Please retry.",
   "pageLoading": "Loading…",
   "pageLoadFailed": "This page couldn’t load. Try again.",
-  "pageReloadRequired": "Reload the page to continue."
+  "pageReloadRequired": "Reload the page to continue.",
+  "openSourceAttribution": "Open-source attribution",
+  "openSourceLicense": "MIT License"
 }
