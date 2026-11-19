@@ -15,11 +15,11 @@ export class CreationApiError extends Error {
     super("Document creation request failed");
   }
 }
-async function json<T>(path: string, body?: unknown): Promise<T> {
+async function json<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await request(path, {
       method: body === undefined ? "GET" : "POST",
       cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000),
       ...(body === undefined ? {} : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
     }),
     value: unknown = await response.json();
@@ -35,7 +35,14 @@ export function creationApiFor(project = "") {
     options: () => json<CreationAvailability>(prefix + "/options"),
     list: (project: string) =>
       json<{ tasks: CreationTaskView[]; before: number }>(prefix + "?" + new URLSearchParams({ project })),
-    detail: (id: string) => json<{ task: CreationTaskDetail }>(prefix + "/detail?" + new URLSearchParams({ id })),
+    rounds: (id: string, cursor?: string, signal?: AbortSignal) =>
+      json<import("../../shared/creation/contracts.js").CreationConversationPage>(
+        prefix + "/rounds?" + new URLSearchParams({ id, ...(cursor ? { cursor } : {}) }),
+        undefined,
+        signal,
+      ),
+    detail: (id: string, signal?: AbortSignal) =>
+      json<{ task: CreationTaskDetail }>(prefix + "/detail?" + new URLSearchParams({ id }), undefined, signal),
     progress: (id: string) =>
       json<{ task: CreationTaskDetail }>(prefix + "/detail?" + new URLSearchParams({ id, view: "progress" })),
     followUp: (taskId: string, id: string, prompt: string) =>

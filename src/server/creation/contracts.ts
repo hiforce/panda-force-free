@@ -23,6 +23,8 @@ export interface CreationTaskSpec {
   inputDigest: string;
   skillCaptureId: string | null;
   previousTaskId?: string;
+  /** Immutable application-owned lineage key; legacy rows are derived without rewriting their receipts. */
+  creationKey?: string;
 }
 export interface CreationTask {
   spec: CreationTaskSpec;

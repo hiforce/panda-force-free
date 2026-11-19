@@ -12,6 +12,15 @@ test("owner-wide creation history retains process and same-document revisions ac
     });
     const first = await f.create("Write the product requirements with the selected skill.");
     const completed = await f.until(first.request.id, (task) => task.state === "succeeded");
+    expect(
+      (
+        await f.files.call("/api/document-creations", "POST", {
+          ...first.request,
+          id: randomUUID(),
+          creationKey: "t:" + completed.id,
+        })
+      ).status,
+    ).toBe(400);
     const before = await f.files.call("/api/document-creations/detail?id=" + completed.id);
     expect(before.body.task.progress.map((event: any) => event.stage)).toContain("message");
     expect(before.body.task.progress.map((event: any) => event.stage)).toContain("saving");
@@ -51,6 +60,19 @@ test("owner-wide creation history retains process and same-document revisions ac
     expect((await f.files.call("/api/document-creations/detail?id=" + revised.id)).body.task.previousTaskId).toBe(
       completed.id,
     );
+    const grouped = await f.files.call("/api/document-creations?project=*");
+    expect(grouped.body.tasks).toHaveLength(1);
+    expect(grouped.body.tasks[0].creation).toMatchObject({ id: completed.id, prompt: first.request.prompt, rounds: 2 });
+    const rounds = await f.files.call("/api/document-creations/rounds?id=" + completed.id);
+    expect(rounds.body).toMatchObject({
+      latestTaskId: revised.id,
+      ids: [revised.id, completed.id],
+      creation: { id: completed.id, rounds: 2 },
+      nextCursor: null,
+    });
+    expect((await f.files.call("/api/document-creations/rounds?id=" + completed.id + "&cursor=invalid")).status).toBe(
+      400,
+    );
     expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(1);
     f.actor("operator:another");
     expect((await f.files.call("/api/document-creations?project=*")).body.tasks).toEqual([]);
@@ -58,6 +80,7 @@ test("owner-wide creation history retains process and same-document revisions ac
       (await f.files.call("/api/document-creations/follow-up", "POST", { ...request, id: randomUUID() })).status,
     ).toBe(404);
     expect((await f.files.call("/api/document-creations/detail?id=" + completed.id)).status).toBe(404);
+    expect((await f.files.call("/api/document-creations/rounds?id=" + completed.id)).status).toBe(404);
   } finally {
     await f.close();
   }

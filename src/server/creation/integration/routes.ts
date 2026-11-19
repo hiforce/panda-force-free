@@ -11,7 +11,7 @@ export function creationRoutes(
     CreationService,
     "options" | "list" | "detail" | "submit" | "cancel" | "retry" | "answer" | "followUp"
   > &
-    Partial<Pick<CreationService, "message" | "goal" | "clearHistory">>,
+    Partial<Pick<CreationService, "message" | "goal" | "clearHistory" | "rounds">>,
   owner: (context: RouteContext) => string,
 ): Route[] {
   const protect = creationProtection(owner),
@@ -21,6 +21,28 @@ export function creationRoutes(
       return creationText(url.searchParams.get(key));
     };
   return [
+    {
+      path: "/api/document-creations/rounds",
+      method: "GET",
+      handler: protect(async ({ url, res }, actor) => {
+        if (
+          !service.rounds ||
+          [...url.searchParams.keys()].some((key) => !["id", "cursor"].includes(key)) ||
+          url.searchParams.getAll("id").length !== 1 ||
+          url.searchParams.getAll("cursor").length > 1
+        )
+          throw new CreationError("invalidInput");
+        respondJson(
+          res,
+          200,
+          await service.rounds(
+            actor,
+            creationText(url.searchParams.get("id")),
+            url.searchParams.has("cursor") ? creationText(url.searchParams.get("cursor"), 128) : undefined,
+          ),
+        );
+      }),
+    },
     {
       path: "/api/document-creations/history/clear",
       method: "POST",

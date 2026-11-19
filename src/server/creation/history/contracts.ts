@@ -29,3 +29,15 @@ export function historyReceipt(value: string, id: string): CreationHistoryReceip
   if (row.id !== id) throw new CreationError("unavailable");
   return { id, hidden: creationInteger(row.hidden) };
 }
+
+export interface CreationHistoryTask extends CreationTask {
+  history?: { rootId: string; createdAt: number; rounds: number };
+}
+export interface CreationRoundPage {
+  ids: string[];
+  latestTaskId: string;
+  rootId: string;
+  createdAt: number;
+  rounds: number;
+  nextCursor: string | null;
+}

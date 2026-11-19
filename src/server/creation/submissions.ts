@@ -133,6 +133,7 @@ export class CreationSubmissions {
       return prior;
     }
     await this.authority.target(owner, request);
+    let creationKey = "t:" + request.id;
     let previous: import("./input.js").CreationInputSnapshot["previous"];
     let previousAsset: import("./input.js").CreationInputSnapshot["previousAsset"];
     let documentFileLineage: string | undefined;
@@ -146,6 +147,18 @@ export class CreationSubmissions {
       const recovery = recoveryFrom?.taskId === task.spec.id && recoveryFrom.inputDigest === task.spec.inputDigest;
       if (!recovery && (task.state !== "succeeded" || !task.artifact || !task.outputDigest))
         throw new CreationError("conflict");
+      let root = task;
+      const seen = new Set([root.spec.id]);
+      while (!root.spec.creationKey && root.spec.previousTaskId) {
+        const parent = await this.tasks.find(owner, root.spec.previousTaskId);
+        if (!parent || parent.spec.projectId !== request.projectId || seen.has(parent.spec.id))
+          throw new CreationError("notFound");
+        seen.add(parent.spec.id);
+        root = parent;
+      }
+      const rootDocument =
+        root.spec.target.document?.documentId || (root.artifact?.kind === "document" ? root.artifact.documentId : null);
+      creationKey = root.spec.creationKey ?? (rootDocument ? "d:" + rootDocument : "t:" + root.spec.id);
       const input = await this.inputs.read(task.spec);
       documentFileLineage = input.documentFileLineage;
       if (recovery) recoveredProfile = input.profile;
@@ -228,6 +241,7 @@ export class CreationSubmissions {
           inputDigest,
           skillCaptureId: skills.id,
           ...(request.previousTaskId ? { previousTaskId: request.previousTaskId } : {}),
+          creationKey,
         },
         this.now(),
       );

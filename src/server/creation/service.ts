@@ -17,6 +17,11 @@ export interface CreationManagement {
   cancel(owner: string, id: string, now: number): CreationResult<CreationTask>;
 }
 export interface CreationHistory {
+  rounds?(
+    owner: string,
+    id: string,
+    cursor?: string,
+  ): CreationResult<import("./history/contracts.js").CreationRoundPage>;
   list(owner: string, projectId?: string): CreationResult<CreationTask[]>;
   clearHistory?(
     owner: string,
@@ -68,8 +73,7 @@ export class CreationService {
   options() {
     return this.using(this.availability);
   }
-  private async view(owner: string, task: CreationTask): Promise<CreationTaskView> {
-    await this.authorize(owner, task.spec.projectId);
+  private async summary(owner: string, task: CreationTask) {
     const cacheKey = JSON.stringify([owner, task.spec.inputDigest]);
     let summary = this.summaries.get(cacheKey);
     if (!summary) {
@@ -86,7 +90,35 @@ export class CreationService {
       });
       while (this.summaries.size > 128) this.summaries.delete(this.summaries.keys().next().value!);
     }
-    const input = await summary,
+    return summary;
+  }
+  private async identity(
+    owner: string,
+    reference: NonNullable<import("./history/contracts.js").CreationHistoryTask["history"]>,
+  ) {
+    const root = await this.tasks.get(owner, reference.rootId);
+    await this.authorize(owner, root.spec.projectId);
+    const input = await this.summary(owner, root);
+    return { id: root.spec.id, prompt: input.prompt, createdAt: root.createdAt, rounds: reference.rounds };
+  }
+  rounds(owner: string, id: string, cursor?: string) {
+    return this.using(async (): Promise<import("../../shared/creation/contracts.js").CreationConversationPage> => {
+      const task = await this.tasks.get(owner, creationUuid(id));
+      await this.authorize(owner, task.spec.projectId);
+      if (!this.history.rounds) throw new CreationError("unavailable");
+      const page = await this.history.rounds(owner, id, cursor);
+      const creation = await this.identity(owner, {
+        rootId: page.rootId,
+        createdAt: page.createdAt,
+        rounds: page.rounds,
+      });
+      await this.authorize(owner, task.spec.projectId);
+      return { creation, latestTaskId: page.latestTaskId, ids: page.ids, nextCursor: page.nextCursor };
+    });
+  }
+  private async view(owner: string, task: CreationTask): Promise<CreationTaskView> {
+    await this.authorize(owner, task.spec.projectId);
+    const input = await this.summary(owner, task),
       question = ["running", "queued"].includes(task.state) ? await this.questions.pending(owner, task.spec.id) : null;
     await this.authorize(owner, task.spec.projectId);
     const goalEvent = (await this.goals?.read(owner, task.spec.id)) || null;
@@ -108,6 +140,14 @@ export class CreationService {
           )
         : undefined;
     return {
+      ...((task as import("./history/contracts.js").CreationHistoryTask).history
+        ? {
+            creation: await this.identity(
+              owner,
+              (task as import("./history/contracts.js").CreationHistoryTask).history!,
+            ),
+          }
+        : {}),
       goal: creationGoalView(goalEvent, current),
       id: current.spec.id,
       projectId: current.spec.projectId,

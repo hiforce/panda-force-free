@@ -1436,7 +1436,9 @@ export interface MessageParameters {
   "creation.invalidInput": {  };
   "creation.invalidOutput": {  };
   "creation.leaseLost": {  };
+  "creation.loadEarlier": {  };
   "creation.loading": {  };
+  "creation.loadingEarlier": {  };
   "creation.loadingSkill": {  };
   "creation.location": {  };
   "creation.manualWrite": {  };
@@ -1491,11 +1493,13 @@ export interface MessageParameters {
   "creation.replaceWorkflow": {  };
   "creation.retry": {  };
   "creation.retryClearHistory": {  };
+  "creation.retryEarlier": {  };
   "creation.retryLatest": {  };
   "creation.retrySubmission": {  };
   "creation.reviewRequired": {  };
   "creation.revisionHint": {  };
   "creation.rootLocation": {  };
+  "creation.roundCount": { "count": number };
   "creation.running": {  };
   "creation.savedFile": {  };
   "creation.savedRevision": { "version": string };

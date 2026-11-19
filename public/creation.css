@@ -1621,3 +1621,13 @@
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
+
+.creation-session-history:not([hidden]) {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding-block: var(--pf-space-2);
+}
+.creation-session-history .session-text-button {
+  min-height: var(--pf-touch-target, 44px);
+}

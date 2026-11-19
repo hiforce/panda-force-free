@@ -1,6 +1,13 @@
 import {
+  creationLineageSql,
+  creationHeadOrder,
+  creationHistoryTask,
+  creationRoundCursor,
+  creationRoundPage,
+  type CreationLineageRow,
+} from "./lineage.js";
+import {
   creationHistoryCommand,
-  historyDocument,
   historyReceipt,
   historySignature,
   type CreationHistoryCommand,
@@ -141,25 +148,18 @@ export class CreationQueue {
           if (prior.request !== signature) throw new CreationError("conflict");
           return historyReceipt(prior.result, command.id);
         }
-        const task = command.taskId ? this.tasks.get(owner, command.taskId) : null,
-          document = task ? historyDocument(task) : null;
+        const task = command.taskId ? this.tasks.get(owner, command.taskId) : null;
         const rows = this.db
           .query<{ id: string }, (string | number)[]>(
-            `SELECT id FROM creation_tasks WHERE owner=?` +
-              (task
-                ? ` AND projectId=? AND ` +
-                  (document
-                    ? `(json_extract(spec,'$.target.document.documentId')=? OR json_extract(artifact,'$.documentId')=?)`
-                    : `id=?`)
-                : "") +
-              (command.before === undefined ? "" : " AND createdAt<?"),
+            task
+              ? creationLineageSql(false, true) +
+                  `SELECT id FROM identified WHERE historyKey=(SELECT historyKey FROM identified WHERE id=?)` +
+                  (command.before === undefined ? "" : " AND createdAt<?")
+              : `SELECT id FROM creation_tasks WHERE owner=?` +
+                  (command.before === undefined ? "" : " AND createdAt<?"),
           )
           .all(
-            ...(task
-              ? document
-                ? [owner, task.spec.projectId, document, document]
-                : [owner, task.spec.projectId, task.spec.id]
-              : [owner]),
+            ...(task ? [owner, task.spec.projectId, task.spec.id] : [owner]),
             ...(command.before === undefined ? [] : [command.before]),
           );
         let hidden = 0;
@@ -176,20 +176,34 @@ export class CreationQueue {
   list(owner: string, projectId?: string) {
     if (projectId !== undefined) creationId(projectId);
     return this.db
-      .query<CreationTaskRow, string[]>(
-        `SELECT * FROM (
-      SELECT t.*,ROW_NUMBER() OVER(PARTITION BY projectId,COALESCE(json_extract(spec,'$.target.document.documentId'),json_extract(artifact,'$.documentId'),id) ORDER BY createdAt DESC,id DESC) AS historyRank
-      FROM creation_tasks t WHERE owner=? AND NOT EXISTS(SELECT 1 FROM creation_history_hidden h WHERE h.id=t.id AND h.owner=t.owner)` +
-          (projectId === undefined ? "" : " AND projectId=?") +
-          `) ranked WHERE historyRank=1 ORDER BY ` +
-          (projectId === undefined
-            ? `CASE WHEN state IN ('queued','running','committing') AND failure IS NULL THEN 0 ELSE 1 END,`
-            : "") +
-          `createdAt DESC,id DESC LIMIT ` +
-          (projectId === undefined ? "50" : "20"),
+      .query<CreationLineageRow, string[]>(
+        creationLineageSql(false, projectId !== undefined) +
+          `, ranked AS (
+      SELECT t.*,ROW_NUMBER() OVER(PARTITION BY projectId,historyKey ORDER BY ${creationHeadOrder}) AS historyRank
+      FROM identified t WHERE NOT EXISTS(SELECT 1 FROM creation_history_hidden h WHERE h.id=t.id AND h.owner=t.owner)
+    ) SELECT * FROM (
+      SELECT original.*,ranked.creationRootId,ranked.creationCreatedAt,ranked.creationRounds FROM ranked
+      JOIN creation_tasks original ON original.id=ranked.id AND original.owner=ranked.owner WHERE historyRank=1
+    ) heads ORDER BY ${projectId === undefined ? creationHeadOrder : "createdAt DESC,id DESC"} LIMIT ${projectId === undefined ? 50 : 20}`,
       )
       .all(...(projectId === undefined ? [owner] : [owner, projectId]))
-      .map(creationTask);
+      .map(creationHistoryTask);
+  }
+  rounds(owner: string, id: string, cursor?: string) {
+    const task = this.tasks.get(owner, id),
+      before = creationRoundCursor(cursor);
+    const rows = this.db
+      .query<CreationLineageRow, (string | number)[]>(
+        creationLineageSql(false, true) +
+          `, conversation AS (
+      SELECT t.*,FIRST_VALUE(id) OVER(ORDER BY ${creationHeadOrder}) AS latestTaskId FROM identified t
+      WHERE historyKey=(SELECT historyKey FROM identified WHERE id=?)
+    ) SELECT * FROM conversation` +
+          (before ? " WHERE (createdAt<? OR (createdAt=? AND id<?))" : "") +
+          " ORDER BY createdAt DESC,id DESC LIMIT 11",
+      )
+      .all(owner, task.spec.projectId, id, ...(before ? [before.at, before.at, before.id] : []));
+    return creationRoundPage(rows);
   }
   nextOutput(now: number) {
     creationInteger(now);

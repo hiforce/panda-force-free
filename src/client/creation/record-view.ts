@@ -7,7 +7,7 @@ import { codexIcon } from "../codex-icons.js";
 export function creationRecordTitle(task: CreationTaskView) {
   if (task.document?.title) return task.document.title;
   if (task.artifact?.title) return task.artifact.title;
-  const line = task.prompt
+  const line = (task.creation?.prompt || task.prompt)
     .trim()
     .split(/[\r\n。！？!?]/, 1)[0]!
     .replace(/\s+/g, " ");
@@ -25,5 +25,5 @@ export function creationRecordView(
   const title = creationRecordTitle(task),
     active = !task.failure && ["queued", "running", "committing"].includes(task.state);
   const action = t(task.artifact ? "creation.continueEditing" : "creation.viewProgress");
-  return `<a class="creation-record" href="${e(href)}" data-activity-task="${e(task.id)}" data-scope="${e(scope)}" data-state="${task.failure ? "failed" : task.state}" title="${e(destination + " · " + action)}"><span class="creation-record-icon">${codexIcon(task.artifact ? "file" : "pencil")}</span><span class="creation-record-copy"><strong title="${e(title)}">${e(title)}</strong><span class="creation-record-footer"><span class="creation-record-state"><i></i>${e(state)}</span><time datetime="${new Date(active ? task.createdAt : task.updatedAt).toISOString()}">${e(new Intl.DateTimeFormat(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(active ? task.createdAt : task.updatedAt))}</time></span></span>${codexIcon("chevronRight")}</a>`;
+  return `<a class="creation-record" href="${e(href)}" data-activity-task="${e(task.id)}" data-scope="${e(scope)}" data-state="${task.failure ? "failed" : task.state}" title="${e(destination + " · " + action)}"><span class="creation-record-icon">${codexIcon(task.artifact ? "file" : "pencil")}</span><span class="creation-record-copy"><strong title="${e(title)}">${e(title)}</strong><span class="creation-record-footer"><span class="creation-record-state"><i></i>${e(state)}${task.creation && task.creation.rounds > 1 ? " · " + e(t("creation.roundCount", { count: task.creation.rounds })) : ""}</span><time datetime="${new Date(active ? task.createdAt : task.updatedAt).toISOString()}">${e(new Intl.DateTimeFormat(locale, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(active ? task.createdAt : task.updatedAt))}</time></span></span>${codexIcon("chevronRight")}</a>`;
 }

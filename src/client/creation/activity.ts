@@ -13,7 +13,7 @@ import {
 import { codexIcon } from "../codex-icons.js";
 import { creationApiFor, CreationApiError } from "./api.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
-import type { ActivityTask } from "./activity-model.js";
+import { aggregateCreationActivity, type ActivityTask } from "./activity-model.js";
 import { CreationHistoryControl } from "./history-control.js";
 import { creationRecordTitle } from "./record-view.js";
 import { creationRecordView } from "./record-view.js";
@@ -58,7 +58,8 @@ export class CreationActivity {
     host.classList.add("creation-activity");
     this.cacheKey = STORAGE_KEYS.creationSnapshotFor(identity, "list");
     const cached = storage.getSessionJson(this.cacheKey, null);
-    if (cached && Date.now() - cached.at < 300000 && Array.isArray(cached.tasks)) this.tasks = cached.tasks;
+    if (cached && Date.now() - cached.at < 300000 && Array.isArray(cached.tasks))
+      this.tasks = aggregateCreationActivity(cached.tasks);
     if (cached && Number.isSafeInteger(cached.before)) this.historyBefore = cached.before;
     this.history = new CreationHistoryControl(
       identity,
@@ -130,6 +131,7 @@ export class CreationActivity {
       createdAt,
       updatedAt,
       previousTaskId,
+      creation,
       document,
       documentStatus,
     } = value;
@@ -149,6 +151,7 @@ export class CreationActivity {
       createdAt,
       updatedAt,
       previousTaskId,
+      creation,
       document,
       documentStatus,
     };
@@ -332,27 +335,12 @@ export class CreationActivity {
         )
         .map((row) => {
           const known = this.tasks.find((existing) => existing.scope === row.scope && existing.task.id === row.task.id);
-          return known && known.task.updatedAt > row.task.updatedAt ? known : row;
+          return known && known.task.updatedAt > row.task.updatedAt
+            ? { ...known, task: { ...known.task, creation: row.task.creation ?? known.task.creation } }
+            : row;
         })
         .sort((a, b) => b.task.createdAt - a.task.createdAt);
-      const seen = new Set<string>();
-      this.tasks = records
-        .filter(({ task, scope }) => {
-          const key = JSON.stringify([
-            scope,
-            task.projectId,
-            task.document?.documentId ||
-              (task.artifact?.kind === "document" ? task.artifact.documentId : task.artifact?.assetId) ||
-              task.id,
-          ]);
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        })
-        .sort(
-          (a, b) =>
-            Number(creationActive(b.task)) - Number(creationActive(a.task)) || b.task.createdAt - a.task.createdAt,
-        );
+      this.tasks = aggregateCreationActivity(records);
       const failed = results.some((result) => result.status === "rejected");
       localizeText(status, "creation.activityLoadFailed", {}, this.t);
       status.hidden = !failed;
@@ -442,7 +430,7 @@ export class CreationActivity {
       matches = this.tasks.filter(
         ({ task }) =>
           (!query ||
-            [task.prompt, task.document?.title, task.artifact?.title].some((value) =>
+            [task.prompt, task.creation?.prompt, task.document?.title, task.artifact?.title].some((value) =>
               value?.toLocaleLowerCase().includes(query),
             )) &&
           (this.filter === "all" ||
@@ -459,6 +447,7 @@ export class CreationActivity {
           task.id,
           scope,
           task.prompt,
+          task.creation,
           task.artifact,
           task.document,
           task.state,
@@ -506,7 +495,7 @@ export class CreationActivity {
                         this.locale || "en",
                         this.t,
                       )
-                    : `<a class="creation-activity-row" href="${e(this.path(task.id, scope))}" data-activity-task="${e(task.id)}" data-scope="${scope}" data-state="${task.state}"><span class="creation-activity-icon">${codexIcon("file")}</span><span class="creation-activity-copy"><strong title="${e(task.prompt)}">${e(task.prompt)}</strong><span class="creation-activity-meta"><small>${e(scope === "personal" ? this.t("creation.personalDestination") : this.projects().find((project) => project.id === task.projectId)?.name || this.t("creation.projectDestination"))}</small><time>${e(new Intl.DateTimeFormat(this.locale || "en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(task.createdAt))}</time></span><span class="creation-activity-state"><i></i>${e(this.t(task.goal?.status === "paused" ? "common.goalPaused" : task.question ? "creation.waiting" : task.failure ? (task.failure === "targetChanged" ? "creation.reviewRequired" : "creation.failed") : creationStateMessage(task)))}</span></span>${codexIcon("chevronRight")}</a>`
+                    : `<a class="creation-activity-row" href="${e(this.path(task.id, scope))}" data-activity-task="${e(task.id)}" data-scope="${scope}" data-state="${task.state}"><span class="creation-activity-icon">${codexIcon("file")}</span><span class="creation-activity-copy"><strong title="${e(task.creation?.prompt || task.prompt)}">${e(task.creation?.prompt || task.prompt)}</strong><span class="creation-activity-meta"><small>${e(scope === "personal" ? this.t("creation.personalDestination") : this.projects().find((project) => project.id === task.projectId)?.name || this.t("creation.projectDestination"))}</small><time>${e(new Intl.DateTimeFormat(this.locale || "en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(task.createdAt))}</time></span><span class="creation-activity-state"><i></i>${e(this.t(task.goal?.status === "paused" ? "common.goalPaused" : task.question ? "creation.waiting" : task.failure ? (task.failure === "targetChanged" ? "creation.reviewRequired" : "creation.failed") : creationStateMessage(task)))}${task.creation && task.creation.rounds > 1 ? " · " + e(this.t("creation.roundCount", { count: task.creation.rounds })) : ""}</span></span>${codexIcon("chevronRight")}</a>`
                 }<button type="button" class="creation-history-remove" data-history-clear="${e(task.id)}" data-scope="${scope}" ${messageAttributes("title", "creation.clearRecord", {}, this.t)} aria-label="${e(this.t("creation.clearRecord") + ": " + creationRecordTitle(task))}" ${this.history.blocked ? "disabled" : ""}>${codexIcon("trash")}</button></div>`,
             )
             .join("")

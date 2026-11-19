@@ -1,9 +1,16 @@
 import {
+  creationLineageSql,
+  creationHeadOrder,
+  creationHistoryTask,
+  creationRoundCursor,
+  creationRoundPage,
+} from "./lineage.js";
+import {
   creationHistoryCommand,
-  historyDocument,
   historyReceipt,
   historySignature,
   type CreationHistoryCommand,
+  type CreationHistoryTask,
 } from "../history/contracts.js";
 import type { SQL } from "bun";
 import type { CreationMessageStore, CreationMessageRecord } from "../messages/contracts.js";
@@ -17,7 +24,6 @@ import {
   type CreationArtifact,
   type CreationExecution,
   type CreationFailure,
-  type CreationTask,
   type CreationLease,
 } from "../contracts.js";
 import type { CreationQuestionRecord } from "../questions/contracts.js";
@@ -532,49 +538,72 @@ export class MySQLCreationLedger {
         if (prior[0].request !== signature) throw new CreationError("conflict");
         return historyReceipt(prior[0].result, command.id);
       }
-      const task = command.taskId ? await this.get(owner, command.taskId) : null,
-        document = task ? historyDocument(task) : null;
-      const changed = await this.sql.unsafe(
-        `INSERT IGNORE INTO panda_force_creation_history_hidden(namespace,id,owner) SELECT namespace,id,owner FROM panda_force_creation_tasks WHERE namespace=? AND owner=?` +
-          (task
-            ? ` AND projectId=? AND ` +
-              (document
-                ? `(JSON_UNQUOTE(JSON_EXTRACT(spec,'$.target.document.documentId'))=? OR JSON_UNQUOTE(JSON_EXTRACT(artifact,'$.documentId'))=?)`
-                : `id=?`)
-            : "") +
-          (command.before === undefined ? "" : " AND createdAt<?"),
-        [
-          ...(task
-            ? document
-              ? [this.namespace, owner, task.spec.projectId, document, document]
-              : [this.namespace, owner, task.spec.projectId, task.spec.id]
-            : [this.namespace, owner]),
-          ...(command.before === undefined ? [] : [command.before]),
-        ],
-      );
-      const hidden = mysqlInteger(changed.affectedRows);
+      const task = command.taskId ? await this.get(owner, command.taskId) : null;
+      let hidden = 0;
+      if (task) {
+        const rows = await this.sql.unsafe(
+          creationLineageSql(true, true) +
+            `SELECT id FROM identified WHERE historyKey=(SELECT historyKey FROM identified WHERE id=?)` +
+            (command.before === undefined ? "" : " AND createdAt<?"),
+          [
+            this.namespace,
+            owner,
+            task.spec.projectId,
+            task.spec.id,
+            ...(command.before === undefined ? [] : [command.before]),
+          ],
+        );
+        for (let offset = 0; offset < rows.length; offset += 250) {
+          const batch = rows.slice(offset, offset + 250);
+          const changed = await this.sql.unsafe(
+            `INSERT IGNORE INTO panda_force_creation_history_hidden(namespace,id,owner) VALUES ${batch.map(() => "(?,?,?)").join(",")}`,
+            batch.flatMap((row: any) => [this.namespace, row.id, owner]),
+          );
+          hidden += mysqlInteger(changed.affectedRows);
+        }
+      } else {
+        const changed = await this.sql.unsafe(
+          `INSERT IGNORE INTO panda_force_creation_history_hidden(namespace,id,owner) SELECT namespace,id,owner FROM panda_force_creation_tasks WHERE namespace=? AND owner=?` +
+            (command.before === undefined ? "" : " AND createdAt<?"),
+          [this.namespace, owner, ...(command.before === undefined ? [] : [command.before])],
+        );
+        hidden = mysqlInteger(changed.affectedRows);
+      }
       const result = { id: command.id, hidden };
       await this
         .sql`INSERT INTO panda_force_creation_history_actions(namespace,id,owner,request,result,createdAt) VALUES(${this.namespace},${command.id},${owner},${signature},${stableJson(result)},${now})`;
       return result;
     });
   }
-  async list(owner: string, projectId?: string): Promise<CreationTask[]> {
+  async list(owner: string, projectId?: string): Promise<CreationHistoryTask[]> {
     if (projectId !== undefined) creationId(projectId);
     const rows = await this.sql.unsafe(
-      `SELECT * FROM (
-      SELECT t.*,ROW_NUMBER() OVER(PARTITION BY projectId,COALESCE(JSON_UNQUOTE(JSON_EXTRACT(spec,'$.target.document.documentId')),JSON_UNQUOTE(JSON_EXTRACT(artifact,'$.documentId')),id) ORDER BY createdAt DESC,id DESC) AS historyRank
-      FROM panda_force_creation_tasks t WHERE namespace=? AND owner=? AND NOT EXISTS(SELECT 1 FROM panda_force_creation_history_hidden h WHERE h.namespace=t.namespace AND h.id=t.id AND h.owner=t.owner)` +
-        (projectId === undefined ? "" : " AND projectId=?") +
-        `) ranked WHERE historyRank=1 ORDER BY ` +
-        (projectId === undefined
-          ? `CASE WHEN state IN ('queued','running','committing') AND failure IS NULL THEN 0 ELSE 1 END,`
-          : "") +
-        `createdAt DESC,id DESC LIMIT ` +
-        (projectId === undefined ? "50" : "20"),
+      creationLineageSql(true, projectId !== undefined) +
+        `, ranked AS (
+      SELECT t.*,ROW_NUMBER() OVER(PARTITION BY projectId,historyKey ORDER BY ${creationHeadOrder}) AS historyRank
+      FROM identified t WHERE NOT EXISTS(SELECT 1 FROM panda_force_creation_history_hidden h WHERE h.namespace=t.namespace AND h.id=t.id AND h.owner=t.owner)
+    ) SELECT * FROM (
+      SELECT original.*,ranked.creationRootId,ranked.creationCreatedAt,ranked.creationRounds FROM ranked
+      JOIN panda_force_creation_tasks original ON original.namespace=ranked.namespace AND original.id=ranked.id AND original.owner=ranked.owner WHERE historyRank=1
+    ) heads ORDER BY ${projectId === undefined ? creationHeadOrder : "createdAt DESC,id DESC"} LIMIT ${projectId === undefined ? 50 : 20}`,
       projectId === undefined ? [this.namespace, owner] : [this.namespace, owner, projectId],
     );
-    return rows.map((r: any) => creationTask(numbers(r as CreationTaskRow)));
+    return rows.map((row: any) => creationHistoryTask(numbers(row)));
+  }
+  async rounds(owner: string, id: string, cursor?: string) {
+    const task = await this.get(owner, id),
+      before = creationRoundCursor(cursor);
+    const rows = await this.sql.unsafe(
+      creationLineageSql(true, true) +
+        `, conversation AS (
+      SELECT t.*,FIRST_VALUE(id) OVER(ORDER BY ${creationHeadOrder}) AS latestTaskId FROM identified t
+      WHERE historyKey=(SELECT historyKey FROM identified WHERE id=?)
+    ) SELECT * FROM conversation` +
+        (before ? " WHERE (createdAt<? OR (createdAt=? AND id<?))" : "") +
+        " ORDER BY createdAt DESC,id DESC LIMIT 11",
+      [this.namespace, owner, task.spec.projectId, id, ...(before ? [before.at, before.at, before.id] : [])],
+    );
+    return creationRoundPage(rows.map((row: any) => numbers(row)));
   }
   async nextOutput(now: number) {
     creationInteger(now);
@@ -673,6 +702,7 @@ export class MySQLCreationLedger {
       retry: this.retry.bind(this),
       clearHistory: this.clearHistory.bind(this),
       list: this.list.bind(this),
+      rounds: this.rounds.bind(this),
     };
   }
   get questions() {

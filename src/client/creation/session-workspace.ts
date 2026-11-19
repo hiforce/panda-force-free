@@ -16,11 +16,11 @@ import { creationSessionRoute } from "./session-route.js";
 import { creationApiFor, CreationApiError } from "./api.js";
 import { CreationActivity, creationActive } from "./activity.js";
 import { CreationCards } from "./cards.js";
-import { previousCreationRounds } from "./activity-conversation.js";
+import { CreationConversationHistory } from "./activity-conversation.js";
 import { documentTreeApi } from "../documents/authoring/tree-api.js";
 import { CreationDrafts } from "./drafts.js";
 import { sessionUsageView } from "../session-workspace/usage.js";
-import { messageHtml, errorText, setMessageHtml, localizeAttribute, localizeText } from "../i18n.js";
+import { messageHtml, errorText, setMessageHtml, localizeAttribute, localizeText, setOpaqueText } from "../i18n.js";
 import { codexIcon } from "../codex-icons.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
@@ -62,6 +62,13 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   private pending?: { id: string; request: CreationRequest | Record<string, unknown> };
   private model = "";
   private effort = "";
+  private readonly conversation = new CreationConversationHistory();
+  private historyController = new AbortController();
+  private historyLoading = false;
+  private historyCheckedAt = 0;
+  private historyFailed = false;
+  private readonly historyHost = document.createElement("div");
+  private readonly historyButton = document.createElement("button");
   private readonly previous = new Map<string, { task: CreationTaskDetail; at: number }>();
   private readonly rendered = new Map<string, string>();
   private readonly sections = document.createElement("div");
@@ -95,6 +102,20 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     });
     this.sections.className = "creation-session-sections";
     this.actions.className = "creation-session-actions";
+    this.historyHost.className = "creation-session-history";
+    this.historyButton.type = "button";
+    this.historyButton.className = "session-text-button";
+    this.historyButton.dataset.creationEarlier = "";
+    this.historyButton.onclick = () => void this.loadEarlier();
+    this.historyHost.append(this.historyButton);
+    this.historyHost.hidden = true;
+    this.versions.onclick = (event) => {
+      const link = (event.target as Element).closest<HTMLAnchorElement>("[data-creation-round]");
+      if (!link) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void this.openRound(link.dataset.creationRound!);
+    };
     this.notice.className = "creation-session-notice";
     this.notice.setAttribute("role", "status");
     this.status.className = "creation-session-status";
@@ -130,8 +151,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.pendingGoal = storage.getJson(this.preferenceKey() + ":goal", null) || undefined;
     this.bridge.clear();
     this.bridge.reset(!route.id);
-    root.replaceChildren(this.notice);
-    this.notice.textContent = "";
+    root.replaceChildren(this.historyHost, this.notice);
+    setOpaqueText(this.notice, "");
     this.bridge.restoreDraft();
     if (!route.id) {
       const legacy = new CreationDrafts(this.identity, "personal").load();
@@ -173,6 +194,13 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   hide() {
     if (this.route) this.bridge.reset();
     this.epoch++;
+    this.historyController.abort();
+    this.historyController = new AbortController();
+    this.conversation.reset();
+    this.historyCheckedAt = 0;
+    this.historyLoading = false;
+    this.historyFailed = false;
+    this.historyHost.hidden = true;
     clearTimeout(this.timer);
     this.activity?.hide();
     this.discovery.hide();
@@ -229,7 +257,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       id: this.key,
       contextKind: "creation",
       inspectorAvailable: Boolean(this.route?.id),
-      title: task?.prompt.replace(/\s+/g, " ").slice(0, 90) || this.t("creative.create"),
+      title: (task?.creation?.prompt || task?.prompt)?.replace(/\s+/g, " ").slice(0, 90) || this.t("creative.create"),
       cwd: task?.workspaceDirectory || "",
       project: project
         ? { id: project.id, name: project.name, code: project.code || "" }
@@ -345,19 +373,19 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
           this.selectedDocument,
           `<div class="session-section-heading"><h3>${messageHtml("creation.selectedDocument", {}, this.t)}</h3></div><p>${e(selected.title)}</p><p class="session-caption">${messageHtml(this.task?.artifact ? "creation.savedRevision" : "creation.basedOnRevision", { version: selected.revision }, this.t)}</p>${projectLabel ? `<p class="session-caption" data-creation-document-project>${messageHtml("creation.documentProject", { project: projectLabel }, this.t)}</p>` : ""}${this.task?.documentStatus === "unavailable" ? `<p class="session-caption" role="status">${messageHtml("creation.documentUnavailable", {}, this.t)}</p>` : ""}${file ? `<details class="creation-file-location"${locationOpen ? " open" : ""}><summary>${codexIcon("file")}<span class="creation-file-copy"><span>${messageHtml("creation.savedFile", {}, this.t)}</span><strong title="${e(file.path.split("/").at(-1) || "")}">${e(file.path.split("/").at(-1) || "")}</strong></span>${codexIcon("chevronDown")}</summary><p class="session-caption">${e(file.path)}</p></details>` : ""}`,
         );
-        setMessageHtml(
-          this.versions,
-          `<div class="session-section-heading"><h3>${messageHtml("creation.outputVersions", {}, this.t)}</h3></div>${[
-            ...this.previous.values(),
-          ]
-            .filter(({ task }) => task.artifact)
-            .map(
-              ({ task }) =>
-                `<a class="creation-output-version" href="/creation/${encodeURIComponent(task.id)}?creationScope=${this.route?.scope}">${codexIcon("file")}<span><strong>${task.artifact?.kind === "document" ? messageHtml("creation.savedRevision", { version: task.artifact.revision || 1 }, this.t) : messageHtml("creative.saved", {}, this.t)}</strong><time>${e(new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</time></span></a>`,
-            )
-            .join("")}`,
-        );
       }
+      setMessageHtml(
+        this.versions,
+        `<div class="session-section-heading"><h3>${messageHtml("creation.outputVersions", {}, this.t)}</h3></div>${[
+          ...this.previous.values(),
+        ]
+          .filter(({ task }) => task.artifact)
+          .map(
+            ({ task }) =>
+              `<a class="creation-output-version" data-creation-round="${e(task.id)}" href="/creation/${encodeURIComponent(task.id)}?creationScope=${this.route?.scope}">${codexIcon("file")}<span><strong>${task.artifact?.kind === "document" ? messageHtml("creation.savedRevision", { version: task.artifact.revision || 1 }, this.t) : messageHtml("creative.saved", {}, this.t)}</strong><time>${e(new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</time></span></a>`,
+          )
+          .join("")}`,
+      );
     }
   }
   private ensureRecords(presentation: "cards" | "sidebar") {
@@ -422,6 +450,29 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       .querySelector<HTMLButtonElement>("[data-creation-open]")
       ?.addEventListener("click", () => this.openDocument());
   }
+  private async openRound(id: string) {
+    const round = this.previous.get(id)?.task,
+      artifact = round?.artifact;
+    if (!round || !artifact) return;
+    if (artifact.kind !== "document") {
+      this.assetViewer ??= new LazyCreativeAssetsPanel(this.t, "creationArtifactViewer", this.identity);
+      const epoch = this.epoch;
+      try {
+        await this.assetViewer.follow(artifact.projectId, artifact.assetId, async () => {}, artifact.version);
+      } catch {
+        if (epoch === this.epoch) localizeText(this.notice, "documents.unavailable", {}, this.t);
+      }
+      return;
+    }
+    const node = document.querySelector<HTMLElement>(
+      `#conversation [data-item-id="${CSS.escape("creation-" + id + "-request")}"]`,
+    );
+    if (node) {
+      node.tabIndex = -1;
+      node.focus({ preventScroll: true });
+      node.scrollIntoView({ block: "start" });
+    }
+  }
   private savedDocument() {
     return (
       [...this.previous.values()]
@@ -459,7 +510,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       );
   }
   async refresh() {
-    if (!this.route?.id || this.reading) return;
+    if (!this.route?.id || this.reading || this.historyLoading) return;
     const epoch = this.epoch,
       id = this.route.id,
       api = this.api,
@@ -467,12 +518,35 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.reading = true;
     clearTimeout(this.timer);
     try {
-      const { task } = await api.detail(id);
+      const signal = this.historyController.signal;
+      const page =
+        !this.conversation.page || Date.now() - this.historyCheckedAt >= 10000
+          ? await api.rounds(id, undefined, signal)
+          : null;
+      if (page) this.historyCheckedAt = Date.now();
+      const { task } = await api.detail(page?.latestTaskId || this.task?.id || id, signal);
+      task.creation = page?.creation || this.task?.creation || this.conversation.page?.creation;
+      if (this.task && this.task.state !== task.state) this.historyCheckedAt = 0;
       if (epoch !== this.epoch || goalRevision !== this.goalRevision) return;
-      const rounds = await previousCreationRounds(task, api.detail, this.previous);
+      this.present(
+        task,
+        [...this.previous.values()]
+          .map((value) => value.task)
+          .filter((value) => value.id !== task.id)
+          .concat(task)
+          .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id)),
+      );
+      const rounds = page
+        ? await this.conversation.load(page, api.detail, this.previous, task, signal)
+        : [...this.previous.values()]
+            .map((value) => value.task)
+            .filter((value) => value.id !== task.id)
+            .concat(task)
+            .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
       if (epoch !== this.epoch || goalRevision !== this.goalRevision) return;
       this.present(task, rounds);
       this.cache(task, rounds);
+      this.paintEarlier();
     } catch (error) {
       if (epoch !== this.epoch) return;
       this.notice.dataset.phase = "error";
@@ -491,17 +565,65 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
         this.task = undefined;
         this.rendered.clear();
         this.previous.clear();
+        this.conversation.reset();
+        this.historyCheckedAt = 0;
+        this.historyController.abort();
+        this.historyController = new AbortController();
         storage.removeSession(this.cacheKey());
         storage.removeSession(STORAGE_KEYS.creationSnapshotFor(this.identity, "list"));
         this.renderActions();
         this.bridge.clear();
-        document.querySelector("#conversation")!.replaceChildren(this.notice);
+        this.historyHost.hidden = true;
+        document.querySelector("#conversation")!.replaceChildren(this.historyHost, this.notice);
         this.bridge.changed();
       }
     } finally {
       if (epoch === this.epoch) {
         this.reading = false;
+        this.paintEarlier();
         this.timer = setTimeout(() => void this.refresh(), document.hidden ? 10000 : this.running ? 1500 : 10000);
+      }
+    }
+  }
+  private paintEarlier() {
+    this.historyHost.hidden = !this.conversation.nextCursor;
+    this.historyButton.disabled = this.historyLoading || this.reading;
+    localizeText(
+      this.historyButton,
+      this.historyLoading
+        ? "creation.loadingEarlier"
+        : this.historyFailed
+          ? "creation.retryEarlier"
+          : "creation.loadEarlier",
+      {},
+      this.t,
+    );
+  }
+  private async loadEarlier() {
+    const cursor = this.conversation.nextCursor,
+      route = this.route,
+      current = this.task,
+      epoch = this.epoch;
+    if (!cursor || !route?.id || !current || this.historyLoading || this.reading) return;
+    this.historyLoading = true;
+    this.historyFailed = false;
+    this.paintEarlier();
+    try {
+      const signal = this.historyController.signal,
+        page = await this.api.rounds(route.id, cursor, signal);
+      if (page.latestTaskId !== this.task!.id) this.historyCheckedAt = 0;
+      this.task!.creation = page.creation;
+      const rounds = await this.conversation.load(page, this.api.detail, this.previous, this.task!, signal, true);
+      if (epoch !== this.epoch) return;
+      this.present(this.task!, rounds);
+      this.cache(this.task!, rounds);
+    } catch {
+      if (epoch === this.epoch) this.historyFailed = true;
+    } finally {
+      if (epoch === this.epoch) {
+        this.historyLoading = false;
+        this.paintEarlier();
+        void this.refresh();
       }
     }
   }
@@ -520,7 +642,13 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
         ),
       })),
     });
-    const snapshot = { at: Date.now(), task: redact(task), rounds: rounds.map(redact) };
+    const snapshot = {
+      at: Date.now(),
+      task: redact(task),
+      rounds: rounds.map(redact),
+      conversation: this.conversation.snapshot(),
+      routeId: this.route?.id,
+    };
     if (JSON.stringify(snapshot).length > 512000) return;
     const key = this.cacheKey(),
       indexKey = STORAGE_KEYS.creationSnapshotFor(this.identity, "conversation-index");
@@ -535,9 +663,16 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     try {
       const saved = storage.getSessionJson(this.cacheKey(), null);
       const list = storage.getSessionJson(STORAGE_KEYS.creationSnapshotFor(this.identity, "list"), null);
-      if (saved && Date.now() - saved.at < 300000 && saved.task?.id === this.route?.id && Array.isArray(saved.rounds))
+      if (
+        saved &&
+        Date.now() - saved.at < 300000 &&
+        (saved.routeId === this.route?.id || saved.task?.id === this.route?.id) &&
+        Array.isArray(saved.rounds)
+      ) {
+        this.conversation.restore(saved.conversation);
         this.present(saved.task, saved.rounds);
-      else if (list && Date.now() - list.at < 300000 && Array.isArray(list.tasks)) {
+        this.paintEarlier();
+      } else if (list && Date.now() - list.at < 300000 && Array.isArray(list.tasks)) {
         const found = list.tasks.find(
           (row: { task: CreationTaskDetail; scope: string }) =>
             row.task?.id === this.route?.id && row.scope === this.route?.scope,
@@ -557,7 +692,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       this.rendered.clear();
       this.previous.clear();
       this.bridge.clear();
-      document.querySelector("#conversation")!.replaceChildren(this.notice, this.status);
+      document.querySelector("#conversation")!.replaceChildren(this.historyHost, this.notice, this.status);
     }
   }
   private present(task: CreationTaskDetail, rounds: CreationTaskDetail[]) {
@@ -703,7 +838,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.bridge.render(item, turn);
   }
   private renderPending() {
-    this.notice.replaceChildren();
+    setOpaqueText(this.notice, "");
     this.notice.dataset.phase = this.pending ? "pending" : "idle";
     if (this.pendingGoal) {
       localizeText(this.notice, "creation.goalPending", {}, this.t);
@@ -820,7 +955,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.renderPending();
     try {
       const result = route.id
-        ? await api.message(route.id, { ...pending.request, id: pending.id })
+        ? await api.message(this.task?.id || route.id, { ...pending.request, id: pending.id })
         : await api.submit(pending.request as CreationRequest);
       clearPending();
       if (epoch === this.epoch && this.pending?.id === pending.id) this.pending = undefined;
@@ -892,7 +1027,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       if (epoch === this.epoch) this.pendingGoal = undefined;
     };
     try {
-      const result = await this.api.goal(route.id, request);
+      const result = await this.api.goal(this.task?.id || route.id, request);
       clear();
       if (epoch !== this.epoch) return null;
       this.goalRevision++;
@@ -925,7 +1060,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   }
   async stop() {
     if (!this.route?.id || !this.running) return;
-    await this.api.cancel(this.route.id);
+    await this.api.cancel(this.task?.id || this.route.id);
     await this.refresh();
   }
 }

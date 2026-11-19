@@ -105,8 +105,21 @@ export type CreationArtifact = CreationDocumentArtifact | CreationAssetArtifact;
 export function creationDocumentArtifact(value: CreationArtifact | null | undefined): CreationDocumentArtifact | null {
   return value?.kind === "document" ? value : null;
 }
+export interface CreationIdentity {
+  id: string;
+  prompt: string;
+  createdAt: number;
+  rounds: number;
+}
+export interface CreationConversationPage {
+  creation: CreationIdentity;
+  latestTaskId: string;
+  ids: string[];
+  nextCursor: string | null;
+}
 /** Browser state contains no execution lease, engine request IDs, source digests or selected skill instructions. */
 export interface CreationTaskView {
+  creation?: CreationIdentity;
   id: string;
   projectId: string;
   state: CreationTaskState;

@@ -51,6 +51,12 @@ export function creationUuidFromDigest(value: string): string {
     hex.slice(20, 32)
   );
 }
+function creationLineageKey(value: unknown) {
+  const key = creationText(value, 256);
+  if (!/^[dt]:/.test(key)) throw new CreationError("invalidInput");
+  creationId(key.slice(2));
+  return key;
+}
 export function creationTaskSpec(value: unknown): CreationTaskSpec {
   const v = creationRecord(value, [
       "schema",
@@ -63,6 +69,7 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
       "inputDigest",
       "skillCaptureId",
       "previousTaskId",
+      "creationKey",
     ]),
     target = creationRecord(v.target, ["parentId", "treeVersion", "locale", "document", "documentProjectId"]),
     locale = creationText(target.locale, 35);
@@ -85,6 +92,7 @@ export function creationTaskSpec(value: unknown): CreationTaskSpec {
     inputDigest: creationDigest(v.inputDigest),
     skillCaptureId: v.skillCaptureId === null ? null : creationUuid(v.skillCaptureId),
     ...(v.previousTaskId === undefined ? {} : { previousTaskId: creationUuid(v.previousTaskId) }),
+    ...(v.creationKey === undefined ? {} : { creationKey: creationLineageKey(v.creationKey) }),
   };
 }
 export function creationArtifact(value: unknown, task: CreationTaskSpec): CreationArtifact {
