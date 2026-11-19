@@ -148,5 +148,11 @@
   "assetPurging": "Deleting permanently",
   "assetCoverLoading": "Loading thumbnail…",
   "assetCoverFailed": "Thumbnail unavailable. Open the file or retry.",
-  "assetRetryCover": "Retry thumbnail"
+  "assetRetryCover": "Retry thumbnail",
+  "assetGetImageLink": "Get image link",
+  "assetGetFileLink": "Get file link",
+  "assetLinkLabel": "Direct link",
+  "assetLinkCopy": "Copy link",
+  "assetLinkLifetime": "Links are valid for 24 hours from issue. This link expires on {expires, date, medium} at {expires, time, short}. Anyone with the link can access the file until then.",
+  "assetLinkManualCopy": "Select and copy the link above."
 }

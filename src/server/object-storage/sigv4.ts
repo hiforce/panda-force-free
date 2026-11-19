@@ -16,7 +16,7 @@ export function s3Query(entries: Iterable<readonly [string, string]>) {
 }
 const hmac = (key: string | Uint8Array, value: string) => createHmac("sha256", key).update(value).digest();
 
-/** S3 signs the encoded path without normalization and uses headers, never bearer URLs for browser delivery. */
+/** S3 signs the encoded path without normalization for server-owned transfers. */
 export function signS3Headers(input: {
   method: string;
   url: URL;
@@ -60,4 +60,44 @@ export function signS3Headers(input: {
     );
   headers.authorization = `AWS4-HMAC-SHA256 Credential=${input.credentials.accessKeyId}/${scope},SignedHeaders=${signed},Signature=${signature}`;
   return headers;
+}
+
+/** A read-only capability binds one immutable object and its response metadata. */
+export function signS3Download(input: {
+  url: URL;
+  region: string;
+  credentials: S3Credentials;
+  expiresSeconds: number;
+  date?: Date;
+}) {
+  if (!Number.isInteger(input.expiresSeconds) || input.expiresSeconds < 1 || input.expiresSeconds > 86400)
+    throw new RangeError("Invalid download lifetime");
+  const url = new URL(input.url),
+    timestamp = (input.date ?? new Date()).toISOString().replace(/[-:]|\.\d{3}/g, ""),
+    day = timestamp.slice(0, 8),
+    scope = day + "/" + input.region + "/s3/aws4_request";
+  url.searchParams.set("X-Amz-Algorithm", "AWS4-HMAC-SHA256");
+  url.searchParams.set("X-Amz-Credential", input.credentials.accessKeyId + "/" + scope);
+  url.searchParams.set("X-Amz-Date", timestamp);
+  url.searchParams.set("X-Amz-Expires", String(input.expiresSeconds));
+  url.searchParams.set("X-Amz-SignedHeaders", "host");
+  if (input.credentials.sessionToken) url.searchParams.set("X-Amz-Security-Token", input.credentials.sessionToken);
+  const canonical = [
+      "GET",
+      url.pathname,
+      s3Query(url.searchParams),
+      "host:" + url.host + "\n",
+      "host",
+      "UNSIGNED-PAYLOAD",
+    ].join("\n"),
+    signing = hmac(
+      hmac(hmac(hmac("AWS4" + input.credentials.secretAccessKey, day), input.region), "s3"),
+      "aws4_request",
+    ),
+    signature = hmac(signing, ["AWS4-HMAC-SHA256", timestamp, scope, storageSha256(canonical)].join("\n")).toString(
+      "hex",
+    );
+  url.searchParams.set("X-Amz-Signature", signature);
+  url.search = s3Query(url.searchParams);
+  return url.href;
 }

@@ -6,7 +6,11 @@ import type { OwnedProjectDirectory } from "../../project-content/owned-director
 import type { ProjectContentView } from "../../project-content/read-view.js";
 import { projectCreationFile, projectCreationHtml } from "../../project-content/paths.js";
 import { ProjectContentError } from "../../project-content/errors.js";
-import { CREATIVE_ASSET_LIMITS as limits, type CreativeAsset } from "../../../shared/creative/assets.js";
+import {
+  CREATIVE_ASSET_LIMITS as limits,
+  type CreativeAsset,
+  type CreativeResource,
+} from "../../../shared/creative/assets.js";
 import { creativeAssetId, creativeDigest, decodeCreativeAsset } from "./codec.js";
 
 export async function creativeMetadata(view: ProjectContentView, project: string, id: string, trashed = false) {
@@ -89,6 +93,21 @@ export class CreativeAssetFiles {
     }
     const bytes = name === undefined ? snapshot.bytes : snapshot.resources.find((row) => row.name === name)!.bytes;
     return range ? bytes.subarray(range.start, range.end + 1) : bytes;
+  }
+  delivery(
+    owner: OwnedProjectDirectory,
+    asset: CreativeAsset,
+    resource: CreativeResource,
+    attachment: boolean,
+    mime: string,
+  ) {
+    this.authorize(asset);
+    if (!this.objects || asset.originalStore !== "object") throw new ProjectContentError("unavailable");
+    return this.objects.downloadLink(creativeOriginalScope(owner, asset.id), resource, {
+      attachment,
+      mime,
+      name: resource.name,
+    });
   }
   async original(view: ProjectContentView, owner: OwnedProjectDirectory, asset: CreativeAsset) {
     if (asset.originalStore === "object") throw new ProjectContentError("unavailable");

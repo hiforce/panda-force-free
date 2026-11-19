@@ -9,6 +9,7 @@ import { importCreativeAsset } from "./assets-import.js";
 import { copyCreativeAsset } from "./assets-copy.js";
 import { creativeAssetDetail } from "./assets-detail.js";
 import { KnowledgePanel } from "../knowledge/lazy.js";
+import { bindAssetLink } from "./assets-link.js";
 type AssetReadTarget = CreativeAsset | (Pick<CreativeAsset, "id" | "project" | "title"> & { state: "saved" });
 
 /** Optional asset UI has one modal/request lifetime; editors and application-owned originals remain separate. */
@@ -94,6 +95,7 @@ export class CreativeAssetsPanel {
         return;
       }
       setMessageHtml(body, creativeAssetDetail(t, value, access.contribute));
+      bindAssetLink(body, value.asset, t, scope.signal);
       this.bindRetry(body, asset, changed, expectedVersion);
       for (const element of body.querySelectorAll("[data-asset-native]"))
         element.addEventListener("error", () => {

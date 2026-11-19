@@ -1,6 +1,6 @@
 import type { S3Connection, S3Credentials, S3ObjectReceipt } from "./contracts.js";
 import { ObjectStorageError } from "./contracts.js";
-import { s3Query, s3UriEncode, signS3Headers, storageSha256 } from "./sigv4.js";
+import { s3Query, s3UriEncode, signS3Headers, signS3Download, storageSha256 } from "./sigv4.js";
 
 const maximum = 32 * 1024 * 1024;
 export type S3Transport = (url: URL, options: RequestInit) => Promise<Response>;
@@ -190,6 +190,30 @@ export class PrivateS3Client {
       );
     }
     return { response, signal };
+  }
+  downloadUrl(
+    key: string,
+    expected: S3ObjectReceipt,
+    input: { mime: string; name: string; attachment: boolean },
+    date = new Date(),
+    expiresSeconds = 86400,
+  ) {
+    checkedText(input.mime, 128);
+    checkedText(input.name, 512);
+    const url = this.url(key, expected.versionId);
+    url.searchParams.set("response-content-type", input.mime);
+    url.searchParams.set("response-cache-control", "private, no-store");
+    url.searchParams.set(
+      "response-content-disposition",
+      (input.attachment ? "attachment" : "inline") + "; filename*=UTF-8''" + s3UriEncode(input.name),
+    );
+    return signS3Download({
+      url,
+      region: this.connection.region,
+      credentials: this.#credentials,
+      date,
+      expiresSeconds,
+    });
   }
   async head(key: string, versionId?: string, signal?: AbortSignal): Promise<S3ObjectReceipt | null> {
     const result = await this.request("HEAD", key, { versionId, signal });

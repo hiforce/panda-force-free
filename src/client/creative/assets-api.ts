@@ -35,6 +35,14 @@ export const creativeAssetsApi = {
     "/api/creative-assets/content?" + new URLSearchParams({ project, id, version }),
   view: (project: string, id: string, version: string) =>
     "/api/creative-assets/view?" + new URLSearchParams({ project, id, version }),
+  link: (asset: CreativeAsset, signal?: AbortSignal) =>
+    documentJson<{ url: string; expiresAt: number }>(
+      "/api/creative-assets/link?" +
+        new URLSearchParams({ project: asset.project, id: asset.id, version: asset.version }),
+      "GET",
+      undefined,
+      signal,
+    ),
   bundle: (project: string, id: string, version: string) =>
     "/api/creative-assets/export-bundle?" + new URLSearchParams({ project, id, version }),
   async inspectBundle(project: string, file: File, signal?: AbortSignal) {

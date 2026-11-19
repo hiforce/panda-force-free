@@ -328,7 +328,12 @@ export class OriginalStorageConfiguration {
     if (!reference || (expectedDigest !== undefined && reference.digest !== expectedDigest)) return integrity();
     const profile = await this.profile(reference),
       credentials = await this.secret(reference);
-    return { profile, digest: reference.digest, client: new PrivateS3Client(profile, credentials) };
+    return {
+      profile,
+      digest: reference.digest,
+      credentialRevision: reference.credentialRevision,
+      client: new PrivateS3Client(profile, credentials),
+    };
   }
   async writeTarget(kind: CreativeAssetKind) {
     const current = await this.current();

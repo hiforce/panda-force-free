@@ -78,6 +78,20 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
   return [
     ...creativeWebBundleRoutes(options, protect),
     {
+      path: "/api/creative-assets/link",
+      method: "GET",
+      handler: protect(async (ctx, signal) => {
+        const project = projectContentId(ctx.url.searchParams.get("project")),
+          service = await options.read(options.owner(ctx), project),
+          link = await service.delivery(project, creativeAssetId(ctx.url.searchParams.get("id")), {
+            version: fileDigest(ctx.url.searchParams.get("version")),
+            signal,
+          });
+        if (!link) throw new DocumentError("invalidInput");
+        respondJson(ctx.res, 200, link, { "cache-control": "private, no-store" });
+      }),
+    },
+    {
       path: "/api/creative-assets/capabilities",
       method: "GET",
       handler: protect(async (ctx) => {
@@ -156,12 +170,21 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
         const project = projectContentId(ctx.url.searchParams.get("project")),
           service = await options.read(options.owner(ctx), project),
           name = ctx.url.searchParams.get("resource") ?? undefined,
-          value = await service.resource(project, creativeAssetId(ctx.url.searchParams.get("id")), {
-            name,
-            signal,
-            version: ctx.url.searchParams.has("version") ? fileDigest(ctx.url.searchParams.get("version")) : undefined,
-            select: () => ({ head: ctx.req.method === "HEAD" }),
-          });
+          id = creativeAssetId(ctx.url.searchParams.get("id")),
+          version = ctx.url.searchParams.has("version") ? fileDigest(ctx.url.searchParams.get("version")) : undefined;
+        if (ctx.req.method === "GET" && version) {
+          const link = await service.delivery(project, id, { name, version, signal, attachment: true });
+          if (link) {
+            redirectOriginal(ctx, link.url);
+            return;
+          }
+        }
+        const value = await service.resource(project, id, {
+          name,
+          signal,
+          version: ctx.url.searchParams.has("version") ? fileDigest(ctx.url.searchParams.get("version")) : undefined,
+          select: () => ({ head: ctx.req.method === "HEAD" }),
+        });
         ctx.res.writeHead(200, {
           "content-type": "application/octet-stream",
           "content-length": String(value.resource.size),
@@ -193,6 +216,21 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
           return;
         }
         let selection: CreativeByteSelection | undefined;
+        if (ctx.req.method === "GET") {
+          const link = await service.delivery(project, id, {
+            version,
+            signal,
+            attachment: false,
+            select: (_asset, resource) => {
+              selection = creativeByteSelection(ctx, resource.size, resource.digest);
+              return { head: selection.head };
+            },
+          });
+          if (link) {
+            redirectOriginal(ctx, link.url);
+            return;
+          }
+        }
         const value = await service.resource(project, id, {
           signal,
           version,
@@ -310,4 +348,16 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
       }),
     },
   ];
+}
+
+/** The application grants access; object bytes travel from the private provider to the browser. */
+function redirectOriginal(ctx: RouteContext, url: string) {
+  ctx.res.writeHead(307, {
+    location: url,
+    "cache-control": "private, no-store",
+    "referrer-policy": "no-referrer",
+    "content-length": "0",
+    "x-content-type-options": "nosniff",
+  });
+  ctx.res.end();
 }

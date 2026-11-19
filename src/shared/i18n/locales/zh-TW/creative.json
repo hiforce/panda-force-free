@@ -148,5 +148,11 @@
   "assetPurging": "正在永久刪除",
   "assetCoverLoading": "正在載入縮圖…",
   "assetCoverFailed": "縮圖暫時無法顯示，可開啟檔案或重試。",
-  "assetRetryCover": "重試縮圖"
+  "assetRetryCover": "重試縮圖",
+  "assetGetImageLink": "取得圖片連結",
+  "assetGetFileLink": "取得檔案連結",
+  "assetLinkLabel": "直接連結",
+  "assetLinkCopy": "複製連結",
+  "assetLinkLifetime": "連結自產生起24小時內有效，此連結將於{expires, date, medium} {expires, time, short}到期。有效期間，取得連結的人可以存取檔案。",
+  "assetLinkManualCopy": "請選取並複製上方連結。"
 }

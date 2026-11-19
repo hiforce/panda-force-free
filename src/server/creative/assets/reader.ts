@@ -90,6 +90,43 @@ export class FileCreativeAssetReader {
     });
   }
   /** Select exact remote ranges before IO and fence the metadata again after transfer. */
+  async delivery(
+    project: string,
+    id: string,
+    options: {
+      name?: string;
+      version: string;
+      signal?: AbortSignal;
+      attachment?: boolean;
+      select?: (asset: CreativeAsset, resource: CreativeAsset["source"]) => { head?: boolean };
+    },
+  ) {
+    return documentFileOperation(async () => {
+      this.check(options.signal);
+      const value = await this.metadata(project, id),
+        asset = value.asset,
+        resource = options.name === undefined ? asset.source : asset.resources.find((row) => row.name === options.name);
+      if (options.version !== asset.version) throw new DocumentError("conflict", 409);
+      if (!resource) throw new DocumentError("notFound", 404);
+      const preview = creativeFilePreview(resource.name),
+        attachment = options.attachment ?? (["web", "slides"].includes(asset.kind) || preview.kind === "download");
+      if (!attachment && (["web", "slides"].includes(asset.kind) || preview.kind === "download"))
+        throw new DocumentError("invalidInput");
+      const selected = options.select?.(asset, resource);
+      if (selected?.head || asset.originalStore !== "object") return null;
+      const link = await this.files.delivery(
+        value.owner.owned,
+        asset,
+        resource,
+        attachment,
+        attachment ? "application/octet-stream" : preview.mime,
+      );
+      await this.verify(project, id, value.blob, options.signal);
+      return link;
+    });
+  }
+
+  /** Select exact remote ranges before IO and fence the metadata again after transfer. */
   resource(
     project: string,
     id: string,

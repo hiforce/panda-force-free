@@ -1565,12 +1565,18 @@ export interface MessageParameters {
   "creative.assetEmptySaved": {  };
   "creative.assetFile": {  };
   "creative.assetFileTrash": {  };
+  "creative.assetGetFileLink": {  };
+  "creative.assetGetImageLink": {  };
   "creative.assetImport": {  };
   "creative.assetImportHint": {  };
   "creative.assetImporting": {  };
   "creative.assetInvalidFile": {  };
   "creative.assetLanguage": {  };
   "creative.assetLibrary": {  };
+  "creative.assetLinkCopy": {  };
+  "creative.assetLinkLabel": {  };
+  "creative.assetLinkLifetime": { "expires": Date | number };
+  "creative.assetLinkManualCopy": {  };
   "creative.assetLoadFailed": {  };
   "creative.assetLoading": {  };
   "creative.assetLoadMore": {  };

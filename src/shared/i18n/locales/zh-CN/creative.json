@@ -148,5 +148,11 @@
   "assetPurging": "正在彻底删除",
   "assetCoverLoading": "正在加载缩略图…",
   "assetCoverFailed": "缩略图暂不可用，可打开文件或重试。",
-  "assetRetryCover": "重试缩略图"
+  "assetRetryCover": "重试缩略图",
+  "assetGetImageLink": "获取图片链接",
+  "assetGetFileLink": "获取文件链接",
+  "assetLinkLabel": "直接链接",
+  "assetLinkCopy": "复制链接",
+  "assetLinkLifetime": "链接自生成起24小时内有效，本链接将于{expires, date, medium} {expires, time, short}过期。有效期内，获得链接的人可以访问文件。",
+  "assetLinkManualCopy": "请选中并复制上方链接。"
 }

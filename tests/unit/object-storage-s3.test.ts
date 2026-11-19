@@ -78,6 +78,35 @@ test("private transport signs conditional originals with explicit credentials an
   expect(JSON.stringify(client)).not.toContain(credentials.secretAccessKey);
 });
 
+test("download capabilities bind exact version, Unicode filename, session identity and a bounded GET lifetime without IO", () => {
+  let transfers = 0;
+  const client = new PrivateS3Client(connection, { ...credentials, sessionToken: "temporary+/identity=" }, async () => {
+      transfers++;
+      throw new Error("Signing must not transfer object bytes");
+    }),
+    receipt = original(Buffer.from("owned original")),
+    date = new Date("2026-11-19T00:00:00Z"),
+    input = { name: "中文 +.png", mime: "image/png", attachment: false },
+    signed = client.downloadUrl("owned/中文 +.png", receipt, input, date),
+    url = new URL(signed);
+  expect(transfers).toBe(0);
+  expect(url.pathname).toBe("/test-originals/owned/%E4%B8%AD%E6%96%87%20%2B.png");
+  expect(url.searchParams.get("versionId")).toBe(receipt.versionId);
+  expect(url.searchParams.get("X-Amz-Date")).toBe("20261119T000000Z");
+  expect(url.searchParams.get("X-Amz-Expires")).toBe("86400");
+  expect(url.searchParams.get("X-Amz-SignedHeaders")).toBe("host");
+  expect(url.searchParams.get("X-Amz-Security-Token")).toBe("temporary+/identity=");
+  expect(url.searchParams.get("response-content-disposition")).toBe(
+    "inline; filename*=UTF-8''%E4%B8%AD%E6%96%87%20%2B.png",
+  );
+  expect(signed).not.toContain(credentials.secretAccessKey);
+  expect(client.downloadUrl("owned/中文 +.png", receipt, input, date)).toBe(signed);
+  expect(client.downloadUrl("owned/中文 +.png", receipt, { ...input, attachment: true }, date)).not.toBe(signed);
+  for (const seconds of [0, -1, 86401, 1.5])
+    expect(() => client.downloadUrl("owned/key", receipt, input, date, seconds)).toThrow();
+  expect(() => client.downloadUrl("owned/key", receipt, { ...input, name: "bad\r\nname" }, date)).toThrow();
+});
+
 test("range delivery binds exact owned version, metadata and byte count without fetching the entire original", async () => {
   const bytes = Buffer.from("A complete original"),
     expected = original(bytes);

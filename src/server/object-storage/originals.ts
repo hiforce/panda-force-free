@@ -38,9 +38,11 @@ const same = (a: unknown, b: unknown) => stableJson(a) === stableJson(b);
 /** Reserve under the project's lease, then transfer outside it. Every external write has a durable, single-dispatch identity. */
 export class OriginalObjectStorage {
   readonly files;
+  private readonly links = new Map<string, { url: string; expiresAt: number }>();
   constructor(
     readonly configuration: OriginalStorageConfiguration,
     private readonly authenticated: () => boolean,
+    private readonly clock: () => number = Date.now,
   ) {
     this.files = configuration.files;
   }
@@ -272,6 +274,31 @@ export class OriginalObjectStorage {
     const chosen = await this.chosen(scope, originalDescriptor(resource));
     if (!chosen) originalIntegrity();
     return (await this.client(chosen.intent)).get(chosen.intent.key, chosen.receipt, signal, range);
+  }
+  async downloadLink(
+    input: OriginalScope,
+    resource: CreativeResource,
+    options: { mime: string; name: string; attachment: boolean },
+  ) {
+    this.assertAuthenticated();
+    const scope = await this.identity(input, false);
+    if (!scope || (await this.files.read([...base(scope.scope), "purge.json"])) !== null) originalIntegrity();
+    const chosen = await this.chosen(scope, originalDescriptor(resource));
+    if (!chosen) originalIntegrity();
+    const target = await this.configuration.client(chosen.intent.profileId, chosen.intent.profileDigest),
+      key = stableJson([scope.scope, chosen.intent.id, chosen.receipt, target.credentialRevision, options]),
+      now = this.clock(),
+      cached = this.links.get(key);
+    if (cached && cached.expiresAt > now + 60000) return cached;
+    const date = new Date(Math.floor(now / 1000) * 1000),
+      link = {
+        url: target.client.downloadUrl(chosen.intent.key, chosen.receipt, options, date),
+        expiresAt: date.getTime() + 86400000,
+      };
+    for (const [id, value] of this.links) if (value.expiresAt <= now) this.links.delete(id);
+    while (this.links.size >= 1024) this.links.delete(this.links.keys().next().value!);
+    this.links.set(key, link);
+    return link;
   }
   /** A caller must validate trash/version and commit this operation in the owning Git transaction before cleanup. */
   async beginPurge(input: OriginalScope, operationId: string) {

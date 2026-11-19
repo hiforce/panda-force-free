@@ -24,7 +24,8 @@ run(
     const s3 = await objectStorageFixture();
     if (!s3) throw new Error("No owned S3 fixture");
     const directory = await mkdtemp(join(tmpdir(), "panda-application-originals-"));
-    let puts = 0,
+    let clock = Date.now(),
+      puts = 0,
       gets = 0,
       deletes = 0,
       denyDelete = false;
@@ -52,7 +53,11 @@ run(
       }
     }
     const configuration = new Configuration(new PrivateStorageFiles(join(directory, "private"))),
-      objects = new OriginalObjectStorage(configuration, () => true),
+      objects = new OriginalObjectStorage(
+        configuration,
+        () => true,
+        () => clock,
+      ),
       routes: Route[] = [];
     let purges!: CreativeAssetPurges;
     const ports = { objects, purges: null as unknown as CreativeAssetPurges };
@@ -126,6 +131,26 @@ run(
         beforeDetail = gets;
       expect((await f.call("/api/creative-assets/item?" + q)).status).toBe(200);
       expect(gets).toBe(beforeDetail);
+      const firstLink = await f.call("/api/creative-assets/link?" + q);
+      expect(firstLink.status).toBe(200);
+      expect(new URL(firstLink.body.url).origin).toBe(s3.endpoint);
+      expect(new URL(firstLink.body.url).searchParams.get("X-Amz-Expires")).toBe("86400");
+      expect(firstLink.body.expiresAt - Date.now()).toBeGreaterThan(86300000);
+      const repeatedLinks = await Promise.all(
+        Array.from({ length: 6 }, () => f.call("/api/creative-assets/link?" + q)),
+      );
+      for (const link of repeatedLinks) expect(link.body).toEqual(firstLink.body);
+      clock += 3600000;
+      expect((await f.call("/api/creative-assets/link?" + q)).body).toEqual(firstLink.body);
+      clock = Date.now();
+      expect(gets).toBe(beforeDetail);
+      const direct = await fetch(firstLink.body.url);
+      expect(direct.status).toBe(200);
+      expect(Buffer.from(await direct.arrayBuffer())).toEqual(png);
+      expect(gets).toBe(beforeDetail);
+      f.grants.delete("project-1");
+      expect((await f.call("/api/creative-assets/link?" + q)).status).toBe(404);
+      f.grants.add("project-1");
       const parallelDetails = await Promise.all(
         Array.from({ length: 6 }, () => f.call("/api/creative-assets/item?" + q)),
       );
@@ -134,7 +159,8 @@ run(
       const range = await f.raw("/api/creative-assets/view?" + q, "GET", undefined, { range: "bytes=2-7" });
       expect(range.status).toBe(206);
       expect(Buffer.from(await range.arrayBuffer())).toEqual(png.subarray(2, 8));
-      expect(ranges.at(-1)).toBe("bytes=2-7");
+      expect(range.headers.get("content-range")).toBe(`bytes 2-7/${png.length}`);
+      expect(gets).toBe(beforeDetail);
       const beforeHead = gets,
         head = await f.raw("/api/creative-assets/view?" + q, "HEAD");
       expect(head.status).toBe(200);
@@ -166,11 +192,22 @@ run(
           "c-" + randomUUID(),
           randomUUID(),
         );
+      const copyQ = new URLSearchParams({ project: "project-1", id: copy.asset.id, version: copy.asset.version }),
+        copyLink = await f.call("/api/creative-assets/link?" + copyQ);
+      clock += 86400000;
+      const renewedLink = await f.call("/api/creative-assets/link?" + copyQ);
+      expect(renewedLink.body.url).not.toBe(copyLink.body.url);
+      expect(renewedLink.body.expiresAt).toBeGreaterThan(copyLink.body.expiresAt);
+      clock = Date.now();
       const trashed = await f
         .application()
         .creations.setState("alice", "project-1", saved.asset.id, saved.asset.version, "trashed", randomUUID());
       expect(deletes).toBe(0);
       expect((await f.call("/api/creative-assets/item?" + q)).status).toBe(404);
+      expect((await f.call("/api/creative-assets/link?" + q)).status).toBe(404);
+      const retainedLink = await fetch(firstLink.body.url);
+      expect(retainedLink.status).toBe(200);
+      await retainedLink.body?.cancel();
       expect((await f.raw("/api/creative-assets/view?" + q + "&variant=cover")).status).toBe(404);
       const restored = await f
         .application()
@@ -213,7 +250,7 @@ run(
         }),
         resource = await f.raw("/api/creative-assets/content?" + webQ);
       expect(Buffer.from(await resource.arrayBuffer())).toEqual(png);
-      expect(gets - beforeResource).toBe(1);
+      expect(gets - beforeResource).toBe(0);
       const video = await readFile(new URL("../support/media/preview.mp4", import.meta.url)),
         movie = await f.application().creations.save("alice", "project-1", {
           id: "c-" + randomUUID(),
@@ -228,7 +265,9 @@ run(
       const movieQ = new URLSearchParams({ project: "project-1", id: movie.asset.id, version: movie.asset.version }),
         movieRange = await f.raw("/api/creative-assets/view?" + movieQ, "GET", undefined, { range: "bytes=-16" });
       expect(Buffer.from(await movieRange.arrayBuffer())).toEqual(video.subarray(-16));
-      expect(ranges.at(-1)).toBe(`bytes=${video.length - 16}-${video.length - 1}`);
+      expect(movieRange.headers.get("content-range")).toBe(
+        `bytes ${video.length - 16}-${video.length - 1}/${video.length}`,
+      );
 
       const trash = await f
           .application()
@@ -276,6 +315,9 @@ run(
       const finished = await f.application().creations.purgeStatus("project-1", trash.asset.id);
       expect(finished.asset.state).toBe("purged");
       expect(finished.status.state).toBe("complete");
+      const removedLink = await fetch(firstLink.body.url);
+      expect(removedLink.status).toBe(404);
+      await removedLink.body?.cancel();
       expect((await f.application().creations.original("project-1", copy.asset.id)).bytes).toEqual(png);
       await expect(f.application().creations.save("alice", "project-1", imageInput)).rejects.toMatchObject({
         code: "storageConflict",
