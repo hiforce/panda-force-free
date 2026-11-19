@@ -1,35 +1,29 @@
 <p align="center">
-  <img src="./panda-docs/static/img/panda-mark.svg" width="112" alt="PandaForce 功夫小熊猫" />
+  <img src="./panda-docs/static/img/readme-hero-zh-CN.svg" width="1200" alt="PandaForce — 小熊猫，大功夫。用技能创作，让 Bot 干活。" />
 </p>
-<h1 align="center">PandaForce</h1>
-<p align="center"><strong>一只可爱的小熊猫，一身不断增长的 AI 功夫。</strong></p>
-<p align="center">用技能创作，让 Bot 干活，教你的熊猫学会新招式。</p>
 <p align="center"><a href="./README.md">English</a> · <a href="#先来做点好玩的">体验创作</a> · <a href="#认识你的-bot">配置 Bot</a> · <a href="#从当前分支构建运行">开始使用</a> · <a href="./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md">完整功能</a></p>
 
-PandaForce 是可以自行部署的 AI 工作台，也是一只会不断学功夫的可爱熊猫。给它一个主题，选一项技能，把想法做成插画、幻灯片、网页或文档；把重复工作通过 API 交给 Bot，再用技能和插件扩展它的拿手本领。
+PandaForce 是可以自行部署的 AI 创作工作台。选一项技能，把想法变成插画、幻灯片、网页或文档；把重复工作交给 Bot，再通过技能和插件，教这只可爱的小熊猫学会更多功夫。
 
-每项新技能都是一个新招式：讲历史的方法、整理研究的步骤，或者团队自己的创作流程。你选择技能、模型和工具，熊猫帮你把工作与上下文连起来。当前执行引擎为 **Codex app-server**。
-
-> 本页介绍 **develop 分支源码**。体验这些功能请从该分支构建；已发布的 `hiforceai/panda-force:0.0.21` 镜像有独立的功能基线。
+> 本页展示 **develop 分支源码**。[从当前分支构建体验 →](#从当前分支构建运行)
 
 ## 先来做点好玩的
 
 ### “请介绍一下希腊历史，漫画形式。”
 
-1. 打开 **创作**，选择 **知识插图策划** 技能（`science-illustration`）。
-2. 告诉熊猫你要一张**图片**，再给它一个主题：
+打开 **创作**，选择 **知识插图策划** 技能（`science-illustration`），告诉熊猫你要一张**图片**：
 
-   > 请介绍一下希腊历史，漫画形式。做成八格中文漫画，每格有年代、标题和一句说明。
-
-3. 生成后直接预览、打开原图或下载。还想再改？继续在这次创作里说：
-
-   > 对话更有趣一些，保留时间线，文字再大一点。
+> 请介绍一下希腊历史，漫画形式。做成八格中文漫画，每格有年代、标题和一句说明。
 
 <p align="center">
-  <a href="./panda-docs/static/img/greek-history-comic.png"><img src="./panda-docs/static/img/greek-history-comic.png" width="600" alt="PandaForce 实际生成的八格中文希腊历史漫画，从爱琴文明到现代共和国" /></a>
+  <a href="./panda-docs/static/img/greek-history-comic-zh-CN.png"><img src="./panda-docs/static/img/greek-history-comic-zh-CN.png" width="600" alt="为 PandaForce 中文 README 重新绘制的八格希腊历史漫画，从爱琴文明到现代共和国" /></a>
 </p>
 
-_这是 PandaForce 中实际创作的图片示例，点击可看原始 PNG。知识类生成内容在使用前仍需审阅。_
+_这是为本 README 全新生成的中文插画示例，点击可看原始 PNG。知识类生成内容在使用前仍需审阅。_
+
+生成后可以预览、打开原图或下载。还想再改？继续在同一次创作里说：
+
+> 对话更有趣一些，保留时间线，文字再大一点。
 
 技能负责帮助组织故事和画面，已配置的模型与绘图工具负责完成图片。你要的是插画，就应该得到实际图片；想看方案时，再明确要求策划文档。
 
@@ -46,13 +40,21 @@ _这是 PandaForce 中实际创作的图片示例，点击可看原始 PNG。知
 具体产出取决于已配置的模型与工具。视频当前支持**无声动态排版**，并非通用文生电影服务。项目文档能在线预览支持的格式，其他文件也有原件下载入口。
 
 <details>
-<summary>看看技能库和文档工作区</summary>
+<summary><strong>看看技能库、文档编辑器和手机界面</strong></summary>
 
-![PandaForce 技能库，使用虚构演示数据渲染](./panda-docs/static/img/skills-zh-CN.webp)
+以下截图从当前源码重新截取，使用虚构演示数据；技能库展示已更新的插画封面。
 
-![PandaForce 项目文档编辑器，使用虚构演示数据渲染](./panda-docs/static/img/documents-zh-CN.webp)
+**每个创意，都有适合的一招**
 
-<img src="./panda-docs/static/img/mobile-zh-CN.webp" width="320" alt="手机上的 PandaForce 文档阅读界面" />
+![PandaForce 技能库，使用虚构演示数据渲染](./panda-docs/static/img/skills-zh-CN.webp?v=readme-20261119)
+
+**把注意力留给内容**
+
+![PandaForce 项目文档编辑器，使用虚构演示数据渲染](./panda-docs/static/img/documents-zh-CN.webp?v=readme-20261119)
+
+**换到手机，也能继续**
+
+<img src="./panda-docs/static/img/mobile-zh-CN.webp?v=readme-20261119" width="320" alt="手机上的 PandaForce 文档阅读界面" />
 
 </details>
 
@@ -135,6 +137,8 @@ Bot 卡片首页、每个 Bot 唯一的持续人机对话，以及 RSS、Slack�
 工作台还包含流式对话与编程、管理员终端、富文本编辑、发布适配器、基于来源的知识流程和搜索。桌面与手机支持英文、简体中文、香港繁体和台湾繁体。**[查看完整功能和服务前提 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md)**
 
 ## 从当前分支构建运行
+
+当前执行引擎为 **Codex app-server**。`hiforceai/panda-force:0.0.21` 等已发布镜像有独立功能基线，不会自动包含 develop 的更新。
 
 需要 Git、Docker 和 Compose。文档镜像平台为 Linux amd64。构建和运行镜像已包含 Codex CLI，无需提前在宿主机安装 Codex，也无需挂载宿主机认证文件。
 

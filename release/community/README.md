@@ -1,37 +1,29 @@
 <p align="center">
-  <img src="./panda-docs/static/img/panda-mark.svg" width="112" alt="PandaForce's little kung-fu panda" />
+  <img src="./panda-docs/static/img/readme-hero-en.svg" width="1200" alt="PandaForce — Small panda. Big ideas. Create with skills. Put Bots to work." />
 </p>
-<h1 align="center">PandaForce</h1>
-<p align="center"><strong>A little panda. A growing bag of AI tricks.</strong></p>
-<p align="center">Create with skills. Put Bots to work. Teach your panda a new move.</p>
 <p align="center"><a href="./README-zh.md">简体中文</a> · <a href="#create-something-fun">Try a creation</a> · <a href="#meet-your-bot">Build a Bot</a> · <a href="#run-this-branch-from-source">Get started</a> · <a href="./panda-docs/docs/features.md">All features</a></p>
 
-PandaForce is a self-hosted AI workspace with a friendly kung-fu panda at its heart. Give it a topic, choose a skill, and turn an idea into an illustration, presentation, web page or document. Bring repeatable work in through a Bot API, and extend what your panda can do with more skills and plugins.
+PandaForce is a self-hosted AI workspace with a friendly kung-fu panda at its heart. Create illustrations, slides, web pages and documents with skills. Put repeatable work behind a Bot API, and teach your panda new moves through skills and plugins.
 
-Every new skill is another move in its repertoire: a method for explaining history, a way to structure research, or your team's own creative workflow. You choose the skills, models and tools; Panda keeps the work and its context together. The execution engine today is **Codex app-server**.
-
-> This page describes **develop source**. Build this branch to try these features; the published `hiforceai/panda-force:0.0.21` image has its own feature baseline.
+> This page showcases the **develop source**. [Build this branch to try it →](#run-this-branch-from-source)
 
 ## Create something fun
 
 ### “Introduce Greek history—as a comic.”
 
-1. Open **Create** and choose **Knowledge Illustration Brief** (`science-illustration`).
-2. Ask for an **image** and give it a subject:
+Choose **Knowledge Illustration Brief** (`science-illustration`) in **Create**, ask for an image, and give it a subject:
 
-   > 请介绍一下希腊历史，漫画形式。做成八格中文漫画，每格有年代、标题和一句说明。
-   >
-   > Introduce Greek history as an eight-panel comic, with a date, heading and one-line explanation in each panel. Use Chinese labels.
-
-3. Open the saved image to see the original. Want another version? Continue in the same creation:
-
-   > Make the dialogue more playful. Keep the timeline and use larger text.
+> Introduce Greek history as an eight-panel comic, with a date, heading and one-line explanation in each panel. Use English labels and dialogue.
 
 <p align="center">
-  <a href="./panda-docs/static/img/greek-history-comic.png"><img src="./panda-docs/static/img/greek-history-comic.png" width="600" alt="An AI-created eight-panel Chinese comic about Greek history, from the Aegean civilizations to the modern republic" /></a>
+  <a href="./panda-docs/static/img/greek-history-comic-en.png"><img src="./panda-docs/static/img/greek-history-comic-en.png" width="600" alt="An AI-created eight-panel English comic about Greek history, from the Aegean civilizations to the modern republic" /></a>
 </p>
 
-_An actual AI-created example from PandaForce. Click for the original PNG. Generated educational content should be reviewed before reuse._
+_An original AI-generated illustration created for this README. Click for the original PNG. Generated educational content should be reviewed before reuse._
+
+Open the saved image to see the original, or keep refining the same creation:
+
+> Make the dialogue more playful. Keep the timeline and use larger text.
 
 The skill helps organize the story and visual brief. The configured model and rendering tools produce the image. Ask for the finished artifact: you should receive the actual image, rather than just a document describing what to draw.
 
@@ -48,13 +40,21 @@ You can use the same flow for “explain computer history as an illustrated time
 Available output depends on configured model/tool capabilities. Video currently means **silent motion graphics**, not a general text-to-film service. Project documents can preview supported file types and offer original downloads for others.
 
 <details>
-<summary>See the skills library and document workspace</summary>
+<summary><strong>Explore the skills library, document editor and mobile view</strong></summary>
 
-![PandaForce skills library, rendered with fictional demo data](./panda-docs/static/img/skills-en.webp)
+Screenshots below are freshly captured from the current source with fictional demo data. The skill library shows the current illustrated covers.
 
-![PandaForce project document editor, rendered with fictional demo data](./panda-docs/static/img/documents-en.webp)
+**A skill for your next creative move**
 
-<img src="./panda-docs/static/img/mobile-en.webp" width="320" alt="PandaForce document reading on mobile" />
+![PandaForce skills library, rendered with fictional demo data](./panda-docs/static/img/skills-en.webp?v=readme-20261119)
+
+**A focused space for your words**
+
+![PandaForce project document editor, rendered with fictional demo data](./panda-docs/static/img/documents-en.webp?v=readme-20261119)
+
+**Keep creating on your phone**
+
+<img src="./panda-docs/static/img/mobile-en.webp?v=readme-20261119" width="320" alt="PandaForce document reading on mobile" />
 
 </details>
 
@@ -137,6 +137,8 @@ The Bot-card home, a single persistent human conversation per Bot, and RSS/Slack
 PandaForce also includes streaming AI conversations and coding, a terminal for administrators, rich-text documents, publishing adapters, source-based knowledge workflows and search. Desktop and mobile layouts support English, Simplified Chinese, Hong Kong Traditional Chinese and Taiwan Traditional Chinese. **[Explore all features and prerequisites →](./panda-docs/docs/features.md)**
 
 ## Run this branch from source
+
+The execution engine today is **Codex app-server**. Published images such as `hiforceai/panda-force:0.0.21` have their own feature baseline and do not automatically include develop changes.
 
 Requires Git and Docker with Compose. The documented image platform is Linux amd64. Codex CLI is included in the build/runtime images; no host Codex installation or host authentication-file mount is required.
 

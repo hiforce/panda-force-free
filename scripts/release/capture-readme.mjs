@@ -59,17 +59,42 @@ for (const locale of ["en", "zh-CN"]) {
       await target.locator("#workspacePreparation").waitFor({ state: "hidden" });
       await target.evaluate(async () => {
         await document.fonts.ready;
-        await Promise.all([...document.images].map((image) => image.decode().catch(() => {})));
+        await Promise.all(
+          [...document.images]
+            .filter((image) => {
+              const rect = image.getBoundingClientRect();
+              return rect.width && rect.height && rect.bottom > 0 && rect.top < innerHeight;
+            })
+            .map((image) => image.decode().catch(() => {})),
+        );
       });
     };
     const capture = async (target, name) => {
       await ready(target);
       assert.equal(await target.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+      const coverArtwork =
+        name === "skills"
+          ? await target.locator(".template-cover-image").evaluateAll((images) =>
+              images
+                .filter((image) => {
+                  const rect = image.getBoundingClientRect();
+                  return rect.width && rect.height && rect.bottom > 0 && rect.top < innerHeight;
+                })
+                .map((image) => ({
+                  path: new URL(image.currentSrc).pathname,
+                  loaded: image.complete && image.naturalWidth > 0,
+                })),
+            )
+          : [];
+      if (name === "skills") {
+        assert.ok(coverArtwork.length >= 3, "Show at least three current skill covers");
+        assert.ok(coverArtwork.every((image) => image.loaded && image.path.startsWith("/assets/skill-cover-")));
+      }
       const file = `${name}-${locale}.webp`;
       await sharp(await target.screenshot())
         .webp({ quality: 84 })
         .toFile(resolve(output, file));
-      records.push({ file, viewport: target.viewportSize(), locale, theme, demoContent: true });
+      records.push({ file, viewport: target.viewportSize(), locale, theme, demoContent: true, coverArtwork });
     };
     await page.goto(app.base + "/workspace");
     await page.locator("#gadgetDocumentPrompt").waitFor();
@@ -157,7 +182,7 @@ for (const locale of ["en", "zh-CN"]) {
     await page.locator("#documentTitle").focus();
     await capture(page, "documents");
     const documentUrl = page.url();
-    await page.goto(app.base + "/skills/writing");
+    await page.goto(app.base + "/skills");
     await page.locator('[data-template-action="detail"]').first().waitFor();
     await capture(page, "skills");
     mobileBrowser = await webkit.launch({ headless: true });
