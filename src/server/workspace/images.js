@@ -1,7 +1,6 @@
-import { closeSync, lstatSync, openSync, readSync, realpathSync, statSync } from "node:fs";
-import { basename, extname, isAbsolute, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { canonicalRoots, inside } from "../path-utils.js";
+import { closeSync, openSync, readSync, statSync } from "node:fs";
+import { extname } from "node:path";
+import { resolveLocalFile } from "./files.js";
 import { attachmentImageType } from "./attachments.js";
 
 export const LOCAL_IMAGE_MAX_BYTES = 25 * 1024 * 1024;
@@ -16,15 +15,6 @@ const IMAGE_TYPES = new Map([
   [".webp", "image/webp"],
 ]);
 
-function expandImagePath(value, home) {
-  const input = String(value || "").trim();
-  if (!input || input.length > 8192 || input.includes("\0")) throw new Error("Invalid image path");
-  if (/^file:/i.test(input)) return fileURLToPath(input);
-  if (input === "~") return home;
-  if (input.startsWith("~/") || input.startsWith("~\\")) return resolve(home, input.slice(2));
-  return input;
-}
-
 export function resolveLocalImage(
   input,
   {
@@ -34,15 +24,7 @@ export function resolveLocalImage(
     maxBytes = LOCAL_IMAGE_MAX_BYTES,
   } = {},
 ) {
-  const expanded = expandImagePath(input, home);
-  const candidate = resolve(isAbsolute(expanded) ? expanded : resolve(cwd, expanded));
-  const roots = canonicalRoots(allowedRoots);
-  if (!roots.length) throw new Error("No image roots are available");
-
-  const metadata = lstatSync(candidate);
-  if (metadata.isSymbolicLink() || !metadata.isFile()) throw new Error("Image not found");
-  const path = realpathSync(candidate);
-  if (!roots.some((root) => inside(path, root))) throw new Error("Image is outside allowed roots");
+  const { path, filename } = resolveLocalFile(input, { cwd, home, allowedRoots, maxBytes });
 
   const { size, mtimeMs, ctimeMs } = statSync(path);
   if (size > maxBytes) throw new Error("Image is too large");
@@ -59,5 +41,5 @@ export function resolveLocalImage(
   }
   if (!contentType) throw new Error("Unsupported image type");
 
-  return { path, contentType, size, mtimeMs, ctimeMs, filename: basename(path) };
+  return { path, contentType, size, mtimeMs, ctimeMs, filename };
 }

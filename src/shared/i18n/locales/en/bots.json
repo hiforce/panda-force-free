@@ -158,5 +158,8 @@
   "markdownSource": "Markdown source",
   "codeContent": "Code",
   "contentActions": "Content actions",
-  "copyTooLarge": "This conversation is too large to copy at once. Copy individual replies instead."
+  "copyTooLarge": "This conversation is too large to copy at once. Copy individual replies instead.",
+  "chatContextUnavailable": "An attachment or skill is no longer available for this conversation. Check your selection and try again.",
+  "downloadContent": "Download",
+  "chatDeliveryHint": "Generated documents are not archived to projects."
 }

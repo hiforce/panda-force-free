@@ -5,6 +5,8 @@ export function assembleImages({ $ }) {
   let imageViewerReturnFocus = null;
   function releaseImageViewer() {
     $("#imageViewerImage").removeAttribute("src");
+    $("#imageViewerDownload").removeAttribute("href");
+    $("#imageViewerDownload").hidden = true;
     if (imageViewerReturnFocus?.isConnected) imageViewerReturnFocus.focus();
     imageViewerReturnFocus = null;
   }
@@ -23,6 +25,14 @@ export function assembleImages({ $ }) {
     image.alt = title || "";
     image.src = source;
     $("#imageViewerOriginal").href = source;
+    const download = $("#imageViewerDownload"),
+      url = new URL(source, location.href);
+    download.hidden = url.origin !== location.origin || url.pathname !== "/api/images/local";
+    if (!download.hidden) {
+      url.searchParams.delete("thumbnail");
+      url.searchParams.set("download", "1");
+      download.href = url.pathname + url.search;
+    } else download.removeAttribute("href");
     if (!dialog.open) dialog.showModal();
     requestAnimationFrame(() => $("#closeImageViewer").focus());
   }

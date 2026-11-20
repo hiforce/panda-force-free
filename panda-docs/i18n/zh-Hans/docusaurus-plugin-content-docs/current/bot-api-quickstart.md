@@ -48,6 +48,8 @@ jq -n --arg id "$BOT_ID" \
 
 创建返回 `201` 和 `{bot}`。Bot 编号在所属账号内唯一且保持稳定：2–64 个小写字母、数字、下划线或连字符，以字母开头。重复编号会冲突。修改使用 `PATCH /api/bots/:id`；例如 `{"active":false}` 暂停队列执行，`{"active":true}` 恢复。模型可以省略，沿用引擎配置。头像和人格字段 `persona` 包含 `role`、`traits`、`voice`、`motto`。
 
+`POST /api/bots` 创建 Bot，`GET /api/bots/catalog` 查询配置列表且不加载任务历史。创建与查询由 HTTP 方法区分，`create` 是功能说明，不是 URL 的一部分。`GET /api/bots` 仍可使用，返回 Bot、任务及密钥元数据。
+
 | 管理操作                  | 请求                                             |
 | ------------------------- | ------------------------------------------------ |
 | 读取 Bot 配置与密钥元数据 | `GET /api/bots/catalog`                          |

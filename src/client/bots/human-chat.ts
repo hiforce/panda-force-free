@@ -5,8 +5,11 @@ import { setMessageHtml } from "../i18n.js";
 import { botDialog, dialogPending } from "./dialog.js";
 import { botUi, botDate, type BotContext } from "./ui.js";
 import { botReplyParts, botReplyHtml, bindBotReplyContent, bindBotCopy } from "./reply-content.js";
+import { createBotComposerContext, type BotComposerDraft } from "./chat-composer-context.js";
+import { codexIcon } from "../codex-icons.js";
+import { localizedText } from "../../shared/presentation/localized.js";
 
-export interface BotChatDraft {
+export interface BotChatDraft extends BotComposerDraft {
   text: string;
   generation: number;
   uncertain?: BotChatSubmission;
@@ -41,7 +44,7 @@ export function createBotHumanChat(
     elements = new Map<string, HTMLElement>();
   setMessageHtml(
     host,
-    `<section class="bot-human-chat"><div class="bot-chat-tools">${iconButton("bots.loadEarlier", "chevronsUp", "data-earlier disabled")}<div>${iconButton("bots.copyConversation", "copy", "data-copy-conversation disabled")}${iconButton("bots.clearChat", "trash", "data-clear disabled")}</div></div><div class="bot-chat-cleanup" data-cleanup role="status" hidden></div><div class="bot-chat-history" role="log" aria-live="polite" aria-relevant="additions" data-history></div><form class="bot-chat-composer wb-form"><label class="wb-field"><span class="sr-only">${h("bots.messageLabel")}</span><textarea data-message rows="3" maxlength="32000" enterkeyhint="send" ${attributes("placeholder", "bots.messagePlaceholder")} required></textarea></label><div><p data-reply-status role="status"></p>${button("bots.resolvePreviousSend", "data-send-recovery hidden")}<button class="wb-button primary" type="submit" disabled>${h("bots.send")}</button></div></form></section>`,
+    `<section class="bot-human-chat"><div class="bot-chat-tools">${iconButton("bots.loadEarlier", "chevronsUp", "data-earlier disabled")}<div>${iconButton("bots.copyConversation", "copy", "data-copy-conversation disabled")}${iconButton("bots.clearChat", "trash", "data-clear disabled")}</div></div><div class="bot-chat-cleanup" data-cleanup role="status" hidden></div><div class="bot-chat-history" role="log" aria-live="polite" aria-relevant="additions" data-history></div><form class="bot-chat-composer message-composer"><div class="message-composer-body"><div class="composer-attachments" hidden></div><div class="creative-selected-skills"></div><label><span class="sr-only">${h("bots.messageLabel")}</span><textarea class="message-composer-input" data-message rows="3" maxlength="32000" enterkeyhint="send" ${attributes("placeholder", "bots.messagePlaceholder")} required></textarea></label><input type="file" data-chat-files hidden multiple><div class="message-composer-footer"><button type="button" class="add-control" data-composer-control="add">${codexIcon("plus")}</button><div class="composer-right"><p data-reply-status role="status"></p>${button("bots.resolvePreviousSend", "data-send-recovery hidden")}<button class="send-button" type="submit" ${attributes("aria-label", "bots.send")} disabled>${codexIcon("arrowUp")}</button></div></div></div></form></section>`,
   );
   const copyFeedback = document.createElement("span");
   copyFeedback.className = "sr-only";
@@ -63,8 +66,11 @@ export function createBotHumanChat(
     form = host.querySelector<HTMLFormElement>("form")!;
   input.value = draft.text;
   const channel = typeof BroadcastChannel === "function" ? new BroadcastChannel("panda-bot-human-chat") : null;
+  let composerContext: ReturnType<typeof createBotComposerContext> | undefined;
+  composerContext = createBotComposerContext(form, draft, context, controls);
   function controls() {
-    submit.disabled = !generation || sending || busy || !input.value.trim();
+    submit.disabled = !generation || sending || busy || !input.value.trim() || composerContext?.ready() === false;
+    composerContext?.lock(sending || Boolean(draft.uncertain));
     clear.disabled = !generation;
     copyConversation.disabled = !generation || !messages.size || copyConversation.getAttribute("aria-busy") === "true";
     earlier.disabled = !hasMore || paging;
@@ -75,6 +81,7 @@ export function createBotHumanChat(
     draft.text = "";
     draft.uncertain = undefined;
     input.value = "";
+    composerContext?.clear();
   }
   function reset(next: number) {
     version++;
@@ -113,7 +120,6 @@ export function createBotHumanChat(
       }
       const fingerprint = JSON.stringify(message);
       if (fingerprints.get(message.id) === fingerprint) continue;
-      fingerprints.set(message.id, fingerprint);
       const failure: Record<string, MessageId> = {
         interrupted: "bots.failureInterrupted",
         rateLimited: "bots.failureRateLimited",
@@ -124,7 +130,7 @@ export function createBotHumanChat(
       const parts = message.role === "assistant" ? botReplyParts(message.text) : [];
       setMessageHtml(
         element,
-        `<header><strong>${message.role === "user" ? h("bots.userRole") : `<span data-i18n-ignore>${e(botName)}</span>`}</strong><time datetime="${new Date(message.createdAt).toISOString()}">${e(botDate(message.createdAt))}</time><span class="bot-chat-message-actions">${button("files.copy", `data-copy-message ${attributes("aria-label", message.role === "user" ? "common.copyMessage" : "bots.copyReply")} ${message.text ? "" : "disabled"}`, false, "copy")}</span></header><div class="bot-chat-text" data-i18n-ignore>${message.role === "user" ? e(message.text).replaceAll("\n", "<br>") : botReplyHtml(parts, context.t)}</div>${message.status === "queued" || message.status === "running" ? `<p class="bot-hint">${h(message.status === "queued" ? "bots.waitingReply" : "bots.replying")}</p>` : message.status === "error" ? `<p class="bot-hint">${h(failure[message.failure ?? "failed"] ?? "bots.failureFailed")}</p>${button("bots.retryReply", "data-retry-reply")}` : ""}`,
+        `<header><strong>${message.role === "user" ? h("bots.userRole") : `<span data-i18n-ignore>${e(botName)}</span>`}</strong><time datetime="${new Date(message.createdAt).toISOString()}">${e(botDate(message.createdAt))}</time><span class="bot-chat-message-actions">${button("files.copy", `data-copy-message ${attributes("aria-label", message.role === "user" ? "common.copyMessage" : "bots.copyReply")} ${message.text ? "" : "disabled"}`, false, "copy")}</span></header><div class="bot-chat-text" data-i18n-ignore>${message.role === "user" ? e(message.text).replaceAll("\n", "<br>") + botMessageContext(message) : botReplyHtml(parts, context.t)}</div>${message.status === "queued" || message.status === "running" ? `<p class="bot-hint">${h(message.status === "queued" ? "bots.waitingReply" : "bots.replying")}</p>` : message.status === "error" ? `<p class="bot-hint">${h(failure[message.failure ?? "failed"] ?? "bots.failureFailed")}</p>${button("bots.retryReply", "data-retry-reply")}` : ""}`,
       );
       bindBotReplyContent(element, parts, context.t, copyNotice);
       bindBotCopy(
@@ -135,8 +141,15 @@ export function createBotHumanChat(
       );
       element.querySelector<HTMLButtonElement>("[data-retry-reply]")?.addEventListener("click", () => {
         const previous = ordered.find((m) => m.sequence === message.sequence - 1 && m.role === "user");
-        if (previous) void context.execute(() => send(previous.text, true));
+        if (previous)
+          void context.execute(() =>
+            send(previous.text, true, {
+              attachments: (previous.materials ?? []).map((material) => ({ materialId: material.id })),
+              selections: (previous.skills ?? []).map((skill) => skill.selection),
+            }),
+          );
       });
+      fingerprints.set(message.id, fingerprint);
     }
     if (atEnd && ordered.length) history.lastElementChild?.scrollIntoView({ block: "nearest", behavior: "instant" });
     for (const retry of history.querySelectorAll<HTMLButtonElement>("[data-retry-reply]"))
@@ -163,7 +176,9 @@ export function createBotHumanChat(
     oldest = messages.size ? Math.min(...[...messages.values()].map((m) => m.sequence)) : 0;
     if (draft.uncertain && snapshot.messages.some((m) => m.requestId === draft.uncertain!.requestId)) {
       const text = draft.uncertain.text;
+      composerContext?.accepted(draft.uncertain);
       draft.uncertain = undefined;
+      context.notice("");
       if (input.value.trim() === text) {
         input.value = "";
         draft.text = "";
@@ -200,16 +215,25 @@ export function createBotHumanChat(
     loading = { version: current, promise: work };
     return work;
   }
-  async function send(override?: string, retry = false) {
+  async function send(
+    override?: string,
+    retry = false,
+    priorContext?: Pick<BotChatSubmission, "attachments" | "selections">,
+  ) {
     if (!alive || !generation || sending || busy) return;
     const text = (override ?? input.value).trim();
-    if (!text) return;
+    if (!text || (!retry && composerContext?.ready() === false)) return;
     if (draft.uncertain && (draft.uncertain.text !== text || draft.uncertain.generation !== generation)) {
       context.notice(context.t("bots.resolveSend"));
       await context.execute(reload);
       return;
     }
-    const body = draft.uncertain ?? { requestId: crypto.randomUUID(), generation, text };
+    const body = draft.uncertain ?? {
+      requestId: crypto.randomUUID(),
+      generation,
+      text,
+      ...(priorContext ?? composerContext?.read()),
+    };
     draft.uncertain = body;
     sending = true;
     controls();
@@ -222,6 +246,7 @@ export function createBotHumanChat(
         input.value = "";
         draft.text = "";
       }
+      composerContext?.accepted(body);
       busy = true;
       context.notice("");
       await reload();
@@ -229,12 +254,22 @@ export function createBotHumanChat(
       if (alive && version === current) {
         const code = error instanceof Error ? error.message : "";
         if (
-          ["invalidInput", "chatBusy", "staleConversation", "idempotencyConflict", "forbidden", "notFound"].includes(
-            code,
-          )
+          [
+            "invalidInput",
+            "chatContextUnavailable",
+            "chatBusy",
+            "staleConversation",
+            "idempotencyConflict",
+            "forbidden",
+            "notFound",
+          ].includes(code)
         )
           draft.uncertain = undefined;
         await context.execute(reload);
+        if (messages.size && [...messages.values()].some((message) => message.requestId === body.requestId)) {
+          context.notice("");
+          return;
+        }
         throw error;
       }
     } finally {
@@ -381,6 +416,22 @@ export function createBotHumanChat(
       version++;
       draft.text = input.value;
       channel?.close();
+      composerContext?.dispose();
     },
   };
+}
+
+/** History uses owner-protected immutable originals; generated documents remain conversation content. */
+function botMessageContext(message: BotChatMessage) {
+  const materials = (message.materials ?? []).map(
+    (material) =>
+      `<a class="bot-chat-material" href="/api/chat-materials/original?id=${encodeURIComponent(material.id)}" target="_blank" rel="noopener noreferrer" download="${e(material.name)}">${codexIcon(material.kind === "image" ? "image" : "file")}<span data-i18n-ignore>${e(material.name)}</span></a>`,
+  );
+  const skills = (message.skills ?? []).map(
+    (skill) =>
+      `<span class="bot-chat-material">${codexIcon("sparkles")}<span data-i18n-ignore>${e(localizedText(skill.name, document.documentElement.lang))}</span></span>`,
+  );
+  return materials.length || skills.length
+    ? `<div class="bot-chat-materials">${materials.join("")}${skills.join("")}</div>`
+    : "";
 }

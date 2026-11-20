@@ -1,4 +1,6 @@
 import type { BotConfig, BotTaskState } from "./contracts.js";
+import type { CreationMaterial, CreationSkillSelection } from "../creation/contracts.js";
+import type { SessionSkillSummary } from "../session-skills.js";
 
 export type BotNavigationItem = Pick<BotConfig, "id" | "name" | "avatar">;
 
@@ -22,6 +24,8 @@ export interface BotChatMessage {
   status: "queued" | "running" | "complete" | "error" | "canceled";
   failure?: BotChatFailure;
   requestId?: string;
+  materials?: CreationMaterial[];
+  skills?: SessionSkillSummary[];
 }
 export interface BotChatSnapshot {
   generation: number;
@@ -37,6 +41,8 @@ export interface BotChatSubmission {
   requestId: string;
   generation: number;
   text: string;
+  attachments?: { materialId: string }[];
+  selections?: CreationSkillSelection[];
 }
 export interface BotChatClear {
   requestId: string;

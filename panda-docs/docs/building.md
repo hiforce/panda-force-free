@@ -64,6 +64,8 @@ The reusable recipes are `scripts/build/Dockerfile.bases` for locked dependency 
 
 Both dependency stages defer installation scripts and then explicitly rebuild `node-pty` with npm's native toolchain. Development dependencies stay out of the runtime image. This build-lifecycle correction preserves the locked dependency inventory and compatibility with the pinned published bases.
 
+The 0.1.1 application release reuses the same digest-pinned bases as 0.1.0; its dependency inputs and base recipes are unchanged. Use the matching release checkout when rebuilding either base yourself.
+
 ## Build your own base images
 
 Run these commands from a **clean checkout of the same release**, using Docker with Linux amd64 support. The first core builds install locked JavaScript/native dependencies, the pinned Codex CLI, compilers and browser tools; they take longer than an application build. They use public upstream images and the checked-in `bun.lock` and `patches/`.

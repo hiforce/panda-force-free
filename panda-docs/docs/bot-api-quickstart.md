@@ -48,6 +48,8 @@ The final response contains `{key, secret}`. Copy `secret` into your backend's s
 
 Creation returns `{bot}` and `201`. Bot codes are stable and unique per owner: lowercase letters, digits, `_` and `-`, beginning with a letter, 2–64 characters. Reusing a code conflicts. Edit using `PATCH /api/bots/:id`; for example `{"active":false}` pauses queue execution and `{"active":true}` resumes it. The model field is optional and defaults to the engine configuration. A Bot may be created with an avatar and `persona` (`role`, `traits`, `voice`, `motto`).
 
+`POST /api/bots` creates a Bot; `GET /api/bots/catalog` lists configurations without loading the task history. The HTTP method distinguishes creation from reads; `create` is a description, not part of the URL. `GET /api/bots` remains available and returns Bots, tasks and key metadata.
+
 | Management operation                     | Request                                           |
 | ---------------------------------------- | ------------------------------------------------- |
 | List Bot configurations and key metadata | `GET /api/bots/catalog`                           |

@@ -75,6 +75,7 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
         const code = error instanceof Error ? error.message : "";
         const errors: Record<string, MessageId> = {
           chatBusy: "bots.chatBusy",
+          chatContextUnavailable: "bots.chatContextUnavailable",
           staleConversation: "bots.staleConversation",
           idempotencyConflict: "bots.idempotencyConflict",
           invalidInput: "bots.invalidInput",

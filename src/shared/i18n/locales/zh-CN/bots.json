@@ -158,5 +158,8 @@
   "markdownSource": "Markdown 源码",
   "codeContent": "代码",
   "contentActions": "内容操作",
-  "copyTooLarge": "对话过长，无法一次复制。请分别复制需要的回复。"
+  "copyTooLarge": "对话过长，无法一次复制。请分别复制需要的回复。",
+  "chatContextUnavailable": "附件或技能已不可用于此对话，请检查所选内容后重试。",
+  "downloadContent": "下载",
+  "chatDeliveryHint": "生成的文档不会归档到项目中。"
 }

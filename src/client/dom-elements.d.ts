@@ -114,6 +114,7 @@ export interface InterfaceElements {
   "#goalDialogTitle": HTMLElementTagNameMap["strong"];
   "#goalStatus": HTMLElementTagNameMap["div"];
   "#imageViewer": HTMLElementTagNameMap["dialog"];
+  "#imageViewerDownload": HTMLElementTagNameMap["a"];
   "#imageViewerError": HTMLElementTagNameMap["div"];
   "#imageViewerImage": HTMLElementTagNameMap["img"];
   "#imageViewerOriginal": HTMLElementTagNameMap["a"];

@@ -108,6 +108,8 @@ curl --fail-with-body --silent --show-error \
 
 | API                                                  | 认证方式                    |
 | ---------------------------------------------------- | --------------------------- |
+| `GET /api/bots`：查询 Bot、任务和密钥元数据          | 应用登录会话                |
+| `GET /api/bots/navigation`：查询 Bot ID、名称及头像  | 应用登录会话                |
 | `POST /api/bots`：创建 Bot                           | 应用登录会话 + Origin       |
 | `PATCH /api/bots/:id`：修改配置                      | 应用登录会话 + Origin       |
 | `POST /api/bots/keys`：签发受限密钥                  | 应用登录会话 + Origin       |
@@ -136,12 +138,12 @@ curl --fail-with-body --silent --show-error \
 
 工作台还包含流式对话与编程、管理员终端、富文本编辑、发布适配器、基于来源的知识流程和搜索。桌面与手机支持英文、简体中文、香港繁体和台湾繁体。**[查看完整功能和服务前提 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md)**
 
-## 安装 0.1.0
+## 安装 0.1.1
 
-PandaForce 0.1.0 使用 **Codex app-server**，公开镜像为 **`hiforceai/panda-force:0.1.0`**，平台为 Linux amd64。准备 Git、Docker 和 Compose 即可；镜像内包含 Bun、Node.js 和支持的 Codex CLI。其他 CPU 架构需要 Linux amd64 模拟，或自行构建兼容镜像。
+PandaForce 0.1.1 使用 **Codex app-server**，公开镜像为 **`hiforceai/panda-force:0.1.1`**，平台为 Linux amd64。准备 Git、Docker 和 Compose 即可；镜像内包含 Bun、Node.js 和支持的 Codex CLI。其他 CPU 架构需要 Linux amd64 模拟，或自行构建兼容镜像。
 
 ```bash
-git clone --branch v0.1.0 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch v0.1.1 --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
@@ -174,7 +176,7 @@ docker compose logs panda-force
 
 [自行构建两种基础镜像、使用本地标签及配置镜像源 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md#自行构建基础镜像)
 
-镜像打包默认执行编译与打包（`VERIFICATION_PROFILE=none`），开发时独立执行源码和受影响行为检查；打包成功不等于重新完成全产品回归。`develop` 会继续更新，需要此版本的准确源码时使用 `v0.1.0`。
+镜像打包默认执行编译与打包（`VERIFICATION_PROFILE=none`），开发时独立执行源码和受影响行为检查；打包成功不等于重新完成全产品回归。`develop` 会继续更新，需要此版本的准确源码时使用 `v0.1.1`。
 
 ## 可选服务与配置
 

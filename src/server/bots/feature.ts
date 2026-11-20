@@ -17,6 +17,7 @@ import { BotWorker } from "./worker.js";
 import { prepareBotProfile } from "./profile.js";
 import { createBotIntegrationFeature } from "./integrations/feature.js";
 import { createBotWorkspaceFeature } from "./workspace/feature.js";
+import type { BotChatContextPort } from "./workspace/chat-context.js";
 
 export function createBotFeature(options: {
   stateRoot: string;
@@ -26,6 +27,7 @@ export function createBotFeature(options: {
   engine?: (bot: BotConfig) => ApplicationToolEngine;
   chatEngine?: (bot: BotConfig) => ApplicationToolEngine;
   store?: BotRepository;
+  chatContext?: BotChatContextPort;
 }) {
   const store = options.store ?? new BotStore(join(options.stateRoot, "data", "bot-tasks.sqlite")),
     scratchRoot = join(options.stateRoot, "bots");

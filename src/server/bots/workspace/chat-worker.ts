@@ -14,6 +14,7 @@ import {
   type BotChatState,
 } from "./chat-records.js";
 import type { BotWorkspaceRecord } from "./storage.js";
+import type { BotChatContextPort } from "./chat-context.js";
 
 /** Durable chat claims and cleanup records survive process restarts; local aborts are an additional fast path. */
 export class BotChatWorker {
@@ -26,6 +27,7 @@ export class BotChatWorker {
     private store: BotRepository,
     private engine: (bot: BotConfig) => ApplicationToolEngine,
     private directory: (botId: string) => string,
+    private context?: BotChatContextPort,
   ) {}
   start() {
     if (this.timer) return;
@@ -90,6 +92,7 @@ export class BotChatWorker {
           controller,
           this.engine,
           this.directory,
+          this.context,
         )
           .catch(() => {})
           .finally(() => {

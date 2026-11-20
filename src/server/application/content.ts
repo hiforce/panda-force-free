@@ -22,6 +22,7 @@ import { FileCreationMaterials } from "../creation/integration/material-files.js
 import { join } from "node:path";
 import { applicationCreationFileDirectories } from "./creation-file-directories.js";
 import { applicationDocumentOwnership } from "./document-ownership.js";
+import { botChatContext } from "../bots/workspace/chat-context.js";
 /** Wire authorized content, generation and indexing ports without owning the host engine lifetime. */
 export async function createApplicationContent(
   config: ApplicationConfig,
@@ -260,6 +261,7 @@ export async function createApplicationContent(
   });
 
   creationFeature.routes.push(...creationMaterials.routes(resolveOwner));
+  creationFeature.routes.push(...creationMaterials.routes(resolveOwner, "/api/chat-materials"));
   return {
     creationFeature,
     personalContent,
@@ -267,5 +269,6 @@ export async function createApplicationContent(
     knowledgeFeature,
     searchFeature,
     closeMaterialText: () => creationMaterials.close(),
+    chatContext: botChatContext(creationMaterials, skillFeature.catalog),
   };
 }

@@ -223,11 +223,12 @@ export function workspaceRoutes({
             home: homeDir,
             allowedRoots: imageRoots,
           });
-          const thumbnail = url.searchParams.get("thumbnail") === "1";
+          const download = url.searchParams.get("download") === "1";
+          const thumbnail = !download && url.searchParams.get("thumbnail") === "1";
           const headers = {
             "content-type": thumbnail ? "image/webp" : image.contentType,
-            "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(thumbnail ? `${image.filename}.webp` : image.filename)}`,
-            "cache-control": thumbnail ? "private, no-cache" : "private, max-age=60",
+            "content-disposition": `${download ? "attachment" : "inline"}; filename*=UTF-8''${encodeContentDispositionFilename(thumbnail ? `${image.filename}.webp` : image.filename)}`,
+            "cache-control": download ? "private, no-store" : thumbnail ? "private, no-cache" : "private, max-age=60",
             "cross-origin-resource-policy": "same-origin",
             "x-content-type-options": "nosniff",
           };

@@ -58,18 +58,45 @@ export class BotChatLease {
     }
     return false;
   }
-  async bind(sessionId: string, model: string, runId?: string) {
+  async bind(sessionId: string, model: string, runId?: string, toolset?: BotChatState["toolset"]) {
     for (let retry = 0; retry < 8; retry++) {
       const current = await this.current();
       if (!current) {
         await queueChatEngineCleanup(this.store, this.owner, this.botId, sessionId, model);
         throw new Error("Bot conversation generation changed");
       }
-      const state = { ...current.data, sessionId, pending: { ...current.data.pending!, ...(runId ? { runId } : {}) } };
+      const cleanupKey =
+          current.data.sessionId && current.data.sessionId !== sessionId
+            ? { kind: "cleanup" as const, id: this.botId + ":engine:" + current.data.sessionId }
+            : null,
+        priorCleanup = cleanupKey ? await this.store.get(this.owner, cleanupKey) : null,
+        state = {
+          ...current.data,
+          sessionId,
+          ...(toolset ? { toolset } : {}),
+          pending: { ...current.data.pending!, ...(runId ? { runId } : {}) },
+        };
       if (
         await this.store.batch(this.owner, {
-          checks: [{ kind: "chat", id: this.botId, version: current.version }],
-          puts: [unchangedWrite(current, state)],
+          checks: [
+            { kind: "chat", id: this.botId, version: current.version },
+            ...(cleanupKey ? [{ ...cleanupKey, version: priorCleanup?.version ?? null }] : []),
+          ],
+          puts: [
+            unchangedWrite(current, state),
+            ...(cleanupKey && !priorCleanup
+              ? [
+                  {
+                    ...cleanupKey,
+                    botId: this.botId,
+                    state: "pending",
+                    dueAt: Date.now(),
+                    expiresAt: null,
+                    data: { type: "engine", sessionId: current.data.sessionId, model },
+                  },
+                ]
+              : []),
+          ],
         })
       )
         return;

@@ -126,6 +126,8 @@ export interface MessageParameters {
   "bots.chat": {  };
   "bots.chatBusy": {  };
   "bots.chatCleared": {  };
+  "bots.chatContextUnavailable": {  };
+  "bots.chatDeliveryHint": {  };
   "bots.chatEmpty": {  };
   "bots.chatHint": {  };
   "bots.checkSent": {  };
@@ -167,6 +169,7 @@ export interface MessageParameters {
   "bots.deliverySent": {  };
   "bots.deliveryUnknown": {  };
   "bots.disableConnection": {  };
+  "bots.downloadContent": {  };
   "bots.draftMode": {  };
   "bots.draftReview": {  };
   "bots.edit": {  };

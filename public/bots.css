@@ -1521,25 +1521,41 @@
 .bot-chat-cleanup > button {
   margin-inline-start: var(--pf-space-3);
 }
-.bot-chat-composer {
-  gap: var(--pf-space-2);
-  padding: var(--pf-space-3);
-  border: 1px solid var(--pf-line);
-  border-radius: var(--pf-radius);
-  background: var(--pf-card);
+.bot-chat-composer > .message-composer-body > label {
+  display: contents;
 }
-.bot-chat-composer textarea {
-  min-block-size: 80px;
-  resize: vertical;
-}
-.bot-chat-composer > div {
+.bot-chat-composer .message-composer-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--pf-space-3);
 }
-.bot-chat-composer p {
+.bot-chat-composer [data-reply-status] {
   color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+}
+.bot-chat-materials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pf-space-2);
+  margin-block-start: var(--pf-space-3);
+}
+.bot-chat-material {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pf-space-2);
+  max-inline-size: 100%;
+  color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+}
+.bot-chat-material > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bot-chat-material svg {
+  inline-size: 18px;
+  block-size: 18px;
+  flex: 0 0 18px;
 }
 @media (max-width: 1000px) {
   .bot-manager-row {

@@ -44,13 +44,13 @@ export function botReplyParts(text: string): BotReplyPart[] {
 }
 
 export function botReplyHtml(parts: BotReplyPart[], t: Translate): string {
-  const { h, button, attributes } = botUi(t);
+  const { h, button, iconButton, attributes } = botUi(t);
   return parts
     .map((part, index) => {
       if (part.kind === "prose")
         return `<div class="bot-chat-markdown" data-i18n-ignore>${documentPreview(part.text)}</div>`;
       const markdown = part.kind === "markdown";
-      return `<section class="bot-chat-content-card" data-content-block="${index}"><header><strong>${markdown ? h("bots.markdownContent") : part.language ? `<span data-i18n-ignore>${e(part.language)}</span>` : h("bots.codeContent")}</strong><div role="group" ${attributes("aria-label", "bots.contentActions")}>${markdown ? `${button("documents.preview", `data-content-view="preview" aria-pressed="true"`)}${button("bots.markdownSource", `data-content-view="source" aria-pressed="false"`)}` : ""}${button("bots.copyContent", "data-copy-content", false, "copy")}</div></header>${markdown ? `<div class="bot-chat-markdown bot-chat-content-preview" data-content-preview data-i18n-ignore>${documentPreview(part.text)}</div><textarea class="bot-chat-content-source" data-content-source data-i18n-ignore readonly rows="8" hidden ${attributes("aria-label", "bots.markdownSource")}>${e(part.text)}</textarea>` : `<pre data-i18n-ignore><code>${e(part.text)}</code></pre>`}</section>`;
+      return `<section class="bot-chat-content-card" data-content-block="${index}"><header><strong>${markdown ? h("bots.markdownContent") : part.language ? `<span data-i18n-ignore>${e(part.language)}</span>` : h("bots.codeContent")}</strong><div role="group" ${attributes("aria-label", "bots.contentActions")}>${markdown ? `${button("documents.preview", `data-content-view="preview" aria-pressed="true"`)}${button("bots.markdownSource", `data-content-view="source" aria-pressed="false"`)}` : ""}${iconButton("bots.copyContent", "copy", "data-copy-content")}${iconButton("bots.downloadContent", "download", "data-download-content")}</div></header>${markdown ? `<div class="bot-chat-markdown bot-chat-content-preview" data-content-preview data-i18n-ignore>${documentPreview(part.text)}</div><textarea class="bot-chat-content-source" data-content-source data-i18n-ignore readonly rows="8" hidden ${attributes("aria-label", "bots.markdownSource")}>${e(part.text)}</textarea>` : `<pre data-i18n-ignore><code>${e(part.text)}</code></pre>`}</section>`;
     })
     .join("");
 }
@@ -73,6 +73,16 @@ export function bindBotReplyContent(
           toggle.setAttribute("aria-pressed", String(toggle === button));
       };
     bindBotCopy(card.querySelector<HTMLButtonElement>("[data-copy-content]")!, () => part.text, t, notice);
+    card.querySelector<HTMLButtonElement>("[data-download-content]")!.onclick = () => {
+      const url = URL.createObjectURL(new Blob([part.text], { type: "text/plain;charset=utf-8" })),
+        link = document.createElement("a");
+      link.href = url;
+      link.download = part.kind === "markdown" ? "document.md" : "content.txt";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    };
   }
 }
 

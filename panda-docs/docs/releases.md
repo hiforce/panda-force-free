@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.0` for Linux amd64. Application builds reuse the digest-pinned build and media runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.1` for Linux amd64. Application builds reuse the digest-pinned build and media runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -22,6 +22,14 @@ docker compose logs panda-force
 ```
 
 Review source, dependency licenses, English comments and the explicit public inventory before exporting. Verify the final clean tree, then review staged files. No internal Git history, old help, design records or agent directories belong in the public snapshot. Release changes go to the private repository for review first.
+
+## 0.1.1
+
+- Add the shared camera, photo, file, installed-skill and project-document picker to Bot conversations. Project documents attach a copy of the selected saved version under the existing read permissions.
+- Keep generated documents in the Bot conversation with preview, Markdown source, copy and download controls; they are not automatically archived to projects. Place the short delivery caption beneath the skill title using the shared row style.
+- Preserve Bot input drafts across navigation and uncertain send receipts. Bind selected materials and skill guidance to the owner, conversation generation and execution lease; older text-only conversations receive the material toolset safely.
+- Decode URI-encoded Chinese image paths through the existing local-file authorization checks. Local image previews offer an explicit original-image download that preserves the filename and bytes.
+- Retain the existing digest-pinned dependency bases and complete self-build instructions. Docker/Compose and Kubernetes installation examples now select 0.1.1. Unchanged installation, database and base-build behavior reuses the completed 0.1.0 verification baseline.
 
 ## 0.1.0
 

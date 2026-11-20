@@ -34,6 +34,14 @@ describe("local agent image boundary", () => {
       expect(resolveLocalImage(join(root, "原照片.jpg"), { home: root, allowedRoots: [root] }).contentType).toBe(
         "image/png",
       );
+      const encoded = join(root, "PandaForce-头条合集封面-1068x832.png");
+      writeFileSync(encoded, Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+      expect(resolveLocalImage(encodeURI(encoded), { home: root, allowedRoots: [root] }).path).toBe(
+        realpathSync(encoded),
+      );
+      expect(resolveLocalImage("sandbox:" + encodeURI(encoded), { home: root, allowedRoots: [root] }).path).toBe(
+        realpathSync(encoded),
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -50,6 +58,9 @@ describe("local agent image boundary", () => {
       symlinkSync(outsideImage, join(root, "linked.png"));
 
       expect(() => resolveLocalImage(outsideImage, { cwd: root, home: root, allowedRoots: [root] })).toThrow();
+      expect(() =>
+        resolveLocalImage(encodeURIComponent(outsideImage), { cwd: root, home: root, allowedRoots: [root] }),
+      ).toThrow();
       expect(() =>
         resolveLocalImage(join(root, "linked.png"), { cwd: root, home: root, allowedRoots: [root] }),
       ).toThrow();

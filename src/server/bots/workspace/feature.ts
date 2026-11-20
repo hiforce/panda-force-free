@@ -13,6 +13,8 @@ import type { BotRepository } from "../repository.js";
 import { BotChatService } from "./chat-service.js";
 import { BotChatWorker } from "./chat-worker.js";
 import { botWorkspaceOverview } from "./overview.js";
+import type { BotChatContextPort } from "./chat-context.js";
+import { requestLocale } from "../../i18n/request-locale.js";
 
 export function createBotWorkspaceFeature(options: {
   stateRoot: string;
@@ -21,10 +23,11 @@ export function createBotWorkspaceFeature(options: {
   store: BotRepository;
   owner(context: RouteContext): string;
   engine?: (bot: BotConfig) => ApplicationToolEngine;
+  chatContext?: BotChatContextPort;
 }) {
   const root = join(options.stateRoot, "bots", "human"),
     directory = (id: string) => join(root, id),
-    service = new BotChatService(options.store),
+    service = new BotChatService(options.store, options.chatContext),
     worker = new BotChatWorker(
       options.store,
       options.engine ??
@@ -38,6 +41,7 @@ export function createBotWorkspaceFeature(options: {
             timeoutMs: 180000,
           })),
       directory,
+      options.chatContext,
     );
   registerApplicationRoot(root);
   let closed = false;
@@ -94,7 +98,9 @@ export function createBotWorkspaceFeature(options: {
             return;
           }
           const result =
-            match[2] === "clear" ? await service.clear(owner, botId, value) : await service.send(owner, botId, value);
+            match[2] === "clear"
+              ? await service.clear(owner, botId, value)
+              : await service.send(owner, botId, value, requestLocale(context.req));
           if (match[2] === "clear") worker.interrupt(owner, botId);
           void worker.tick();
           respondJson(context.res, result.duplicate ? 200 : 202, result);

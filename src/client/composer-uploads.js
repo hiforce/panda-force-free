@@ -1,9 +1,8 @@
 import { errorText } from "./i18n.js";
 import { errorMessage } from "./../shared/errors.js";
 import { request as fetch } from "./http-client.js";
-import { localizeAttribute, localizeText, setMessageHtml, setOpaqueAttribute, setOpaqueText } from "./i18n.js";
+import { renderComposerAttachmentTray } from "./composer-attachment-view.js";
 import { attachmentDisplayUrl } from "../shared/attachment-urls.js";
-import { codexIcon } from "./codex-icons.js";
 import { ATTACHMENT_MAX_BYTES, ATTACHMENT_MAX_COUNT, filesFromClipboard } from "./composer-attachments.js";
 import { localImageUrl } from "./rendering.js";
 import { creationSessionRoute } from "./creation/session-route.js";
@@ -31,64 +30,22 @@ export function createComposerUploads({
     return state.composerAttachments.every((attachment) => attachment.status === "ready");
   }
   function renderComposerAttachments() {
-    const tray = $("#composerAttachments");
-    tray.replaceChildren();
-    tray.hidden = !state.composerAttachments.length;
-    for (const attachment of state.composerAttachments) {
-      const chip = document.createElement("div");
-      chip.className = "composer-attachment";
-      chip.dataset.status = attachment.status;
-      chip.dataset.attachmentId = attachment.id;
-      if (attachment.kind === "image" && (attachment.path || attachment.url)) {
-        const source = attachment.url ? attachmentDisplayUrl(attachment.url) : localImageUrl(attachment.path);
-        const preview = document.createElement("button");
-        preview.type = "button";
-        preview.className = "composer-attachment-preview";
-        preview.setAttribute("aria-label", attachment.name);
-        preview.onclick = () => openImageViewer(source, attachment.name, attachment.url || attachment.path);
-        const image = document.createElement("img");
-        image.src = source;
-        image.alt = attachment.name;
-        preview.append(image);
-        chip.append(preview);
-      } else {
-        const icon = document.createElement("span");
-        setMessageHtml(icon, codexIcon("file"));
-        chip.append(icon);
-      }
-      const label = document.createElement("span");
-      label.className = "composer-attachment-name";
-      label.dataset.i18nIgnore = "";
-      setOpaqueText(label, attachment.name);
-      setOpaqueAttribute(label, "title", attachment.error ? t(attachment.error) : attachment.name);
-      chip.append(label);
-      if (attachment.status !== "ready") {
-        const status = document.createElement("span");
-        status.className = "composer-attachment-status";
-        localizeText(
-          status,
-          attachment.status === "uploading" ? "common.uploading" : "common.uploadFailed",
-          undefined,
-          t,
-        );
-        chip.append(status);
-      }
-      const remove = document.createElement("button");
-      remove.type = "button";
-      remove.className = "composer-attachment-remove";
-      localizeAttribute(remove, "aria-label", "composer.removeAttachmentName", { name: attachment.name }, t);
-      setMessageHtml(remove, codexIcon("x"));
-      remove.onclick = () => {
+    renderComposerAttachmentTray({
+      host: $("#composerAttachments"),
+      attachments: state.composerAttachments,
+      t,
+      source: (attachment) =>
+        attachment.url ? attachmentDisplayUrl(attachment.url) : attachment.path ? localImageUrl(attachment.path) : "",
+      preview: (source, attachment) => openImageViewer(source, attachment.name, attachment.url || attachment.path),
+      remove: (id) => {
         mutations.set(
           "composerAttachments",
-          state.composerAttachments.filter((value) => value.id !== attachment.id),
+          state.composerAttachments.filter((value) => value.id !== id),
         );
         renderComposerAttachments();
         $("#prompt").focus();
-      };
-      chip.append(remove);
-      tray.append(chip);
-    }
+      },
+    });
     onChange();
   }
   function uploadComposerSource(name, load) {

@@ -654,6 +654,7 @@ body.sidebar-hidden .sidebar{box-shadow:none!important}
 .image-viewer-heading strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:550}
 .image-viewer-heading span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:rgba(255,255,255,.5);font:12px var(--mono)}
 .image-viewer-original{height:30px;display:inline-flex;align-items:center;padding:0 9px;border-radius:7px;color:rgba(255,255,255,.72);font-size:13px;text-decoration:none}
+.image-viewer-original[hidden]{display:none}
 .image-viewer-original:hover{background:rgba(255,255,255,.08);color:#fff}
 .image-viewer-toolbar .icon-button{color:rgba(255,255,255,.72)}
 .image-viewer-toolbar .icon-button:hover{background:rgba(255,255,255,.08);color:#fff}

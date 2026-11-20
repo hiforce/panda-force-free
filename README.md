@@ -106,14 +106,16 @@ curl --fail-with-body --silent --show-error \
 
 New submissions return `202`; the same idempotency key and payload return the existing task. Save `task.id` and poll the query endpoint. Cancellation is idempotent for a canceled task; finished tasks and callbacks with uncertain/in-flight external effects return `409`. Canceling a task cannot undo an external action that already happened.
 
-| API                                                 | Authentication                         |
-| --------------------------------------------------- | -------------------------------------- |
-| `POST /api/bots` — create a Bot                     | Signed-in application session + Origin |
-| `PATCH /api/bots/:id` — configure it                | Signed-in application session + Origin |
-| `POST /api/bots/keys` — issue a scoped key          | Signed-in application session + Origin |
-| `POST /api/v1/bots/:code/tasks` — submit            | Bot key + `Idempotency-Key`            |
-| `GET /api/v1/bots/:code/tasks/:id` — query          | Bot key                                |
-| `POST /api/v1/bots/:code/tasks/:id/cancel` — cancel | Bot key, empty JSON object             |
+| API                                                     | Authentication                         |
+| ------------------------------------------------------- | -------------------------------------- |
+| `GET /api/bots` — list Bots, tasks and key metadata     | Signed-in application session          |
+| `GET /api/bots/navigation` — Bot IDs, names and avatars | Signed-in application session          |
+| `POST /api/bots` — create a Bot                         | Signed-in application session + Origin |
+| `PATCH /api/bots/:id` — configure it                    | Signed-in application session + Origin |
+| `POST /api/bots/keys` — issue a scoped key              | Signed-in application session + Origin |
+| `POST /api/v1/bots/:code/tasks` — submit                | Bot key + `Idempotency-Key`            |
+| `GET /api/v1/bots/:code/tasks/:id` — query              | Bot key                                |
+| `POST /api/v1/bots/:code/tasks/:id/cancel` — cancel     | Bot key, empty JSON object             |
 
 **[Management API bootstrap, runnable payloads, states and integration details →](./panda-docs/docs/bot-api-quickstart.md)**
 
@@ -136,12 +138,12 @@ For a larger workflow—supplier assets, a theme brief, product details, human r
 
 PandaForce also includes streaming AI conversations and coding, a terminal for administrators, rich-text documents, publishing adapters, source-based knowledge workflows and search. Desktop and mobile layouts support English, Simplified Chinese, Hong Kong Traditional Chinese and Taiwan Traditional Chinese. **[Explore all features and prerequisites →](./panda-docs/docs/features.md)**
 
-## Install 0.1.0
+## Install 0.1.1
 
-PandaForce 0.1.0 uses **Codex app-server** and is published as **`hiforceai/panda-force:0.1.0`** for Linux amd64. Install Git and Docker with Compose; Bun, Node.js and the supported Codex CLI are included in the image. Other CPU architectures require Linux amd64 emulation or a separately built compatible image.
+PandaForce 0.1.1 uses **Codex app-server** and is published as **`hiforceai/panda-force:0.1.1`** for Linux amd64. Install Git and Docker with Compose; Bun, Node.js and the supported Codex CLI are included in the image. Other CPU architectures require Linux amd64 emulation or a separately built compatible image.
 
 ```bash
-git clone --branch v0.1.0 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch v0.1.1 --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
@@ -174,7 +176,7 @@ The default local tag is `panda-force:local`. The Dockerfile automatically pulls
 
 [Build both base images yourself, use local tags, and configure mirrors →](./panda-docs/docs/building.md#build-your-own-base-images)
 
-Packaging defaults to compilation and packaging (`VERIFICATION_PROFILE=none`). Run source and affected behavior checks independently; image packaging does not claim a fresh full-product regression. The `develop` branch continues after the tagged release; use `v0.1.0` for its exact source.
+Packaging defaults to compilation and packaging (`VERIFICATION_PROFILE=none`). Run source and affected behavior checks independently; image packaging does not claim a fresh full-product regression. The `develop` branch continues after the tagged release; use `v0.1.1` for its exact source.
 
 ## Optional services and configuration
 

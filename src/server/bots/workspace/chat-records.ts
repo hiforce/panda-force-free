@@ -1,11 +1,13 @@
 import type { BotChatMessage } from "../../../shared/bots/workspace.js";
 import type { BotConfig } from "../../../shared/bots/contracts.js";
 import type { BotWorkspaceRecord, BotWorkspaceWrite } from "./storage.js";
+import type { BotChatContext } from "./chat-context.js";
 
 export interface BotChatState {
   generation: number;
   sequence: number;
   sessionId: string | null;
+  toolset?: "materials-v1";
   updatedAt: number;
   pending: null | {
     requestId: string;
@@ -14,6 +16,8 @@ export interface BotChatState {
     bot: Pick<BotConfig, "name" | "model" | "instructions" | "persona">;
     lease: string | null;
     runId?: string;
+    context?: BotChatContext;
+    locale?: string;
   };
 }
 export interface BotChatReceipt {

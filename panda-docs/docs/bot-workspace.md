@@ -8,6 +8,10 @@ Open **Assistant** to create or manage Bots and see retained task counts. Each c
 
 Each Bot has one human conversation. Background tasks use separate context; their inputs and results do not become chat messages. **Clear conversation** removes all human messages and resets that context, including a reply in progress. Generation checks reject late replies. The Bot’s personality, tasks, channels and saved creations remain. If engine-history removal needs another attempt, the conversation displays its cleanup state and retry action. The old engine history cannot be reused for new replies.
 
+Use the **+** button in a Bot conversation to add a camera photo, images, files, installed skills or a project document. Project documents are attached as a copy of the selected saved version after checking your read access. The original document is preserved. Uploads are private to the signed-in owner; failed uploads can be retried from the attachment card or the compact attachment manager. Wait for uploads to finish before sending.
+
+Skills use the same picker and immutable installed versions as ordinary conversations. They guide the current message without granting project-write or external-action tools. A document produced in Bot chat stays in that conversation: preview it, view its Markdown source, copy it or download it as a `.md` file. It is not automatically archived into a project. Draft inputs and selections survive navigation between that Bot’s chat and tasks within the workspace.
+
 The general conversation information panel starts closed. Use its top toolbar button to open it.
 
 ## Recurring research example
@@ -49,6 +53,7 @@ These endpoints use the signed-in application session, owner authorization and s
 
 | Action                                     | Endpoint                                                                                                         |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Bot configurations / navigation summary    | `GET /api/bots/catalog`, `GET /api/bots/navigation`                                                              |
 | Compact overview / sidebar names           | `GET /api/bots/workspace`, `GET /api/bots/navigation`                                                            |
 | Create / inspect / edit Bot                | `POST /api/bots`, `GET /api/bots/:botId`, `PATCH /api/bots/:botId`                                               |
 | Read human conversation                    | `GET /api/bots/:botId/chat?before=sequence&since=cursor`                                                         |
@@ -63,6 +68,8 @@ These endpoints use the signed-in application session, owner authorization and s
 | Read receipts / recover delivery           | `GET …/:id/deliveries`, `POST …/:id/deliveries/:deliveryId/retry`, `POST …/:id/deliveries/:deliveryId/reconcile` |
 
 Encode run/message/delivery IDs as URL path components. List responses include a `next` cursor, accepted as `before`. Human chat polling returns an opaque `cursor`; send it as `since` to avoid retransmitting unchanged history. An unchanged response is `{ "unchanged": true, "cursor": "…" }`; a changed generation requires replacing the local message set.
+
+Upload a chat material with `POST /api/chat-materials?name=filename`, using the file bytes as `application/octet-stream`. The response includes `attachment.materialId` and an owner-protected original URL. To send it, use `{requestId, generation, text, attachments: [{materialId}], selections: []}` with `POST /api/bots/:botId/chat`. Optional `selections` contain installed `{packageId, version, digest, id, parameters}` references. The server resolves both materials and skills; client-supplied file paths, URLs, instructions or capabilities are not accepted. An identical request ID and body returns the original acceptance; changed materials or selections under that ID are rejected.
 
 Sending human messages and clearing uses a UUID `requestId` and the current `generation`. Starting a run uses `{ "requestId": "<UUID>", "revision": 1, "preview": true }` with the current integration revision. An approved reply uses `{ "requestId": "<UUID>", "text": "Reviewed reply", "confirm": true }`. Reuse the original request ID after an uncertain HTTP response. A changed payload under the same ID is rejected. Configurations/connections use `revision: 0` for creation and the returned revision for updates; stale writes preserve the current server record.
 

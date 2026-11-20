@@ -21,9 +21,9 @@ A Unix socket is a local communication endpoint between processes, represented b
 
 ## Start the published container
 
-The current container release is **hiforceai/panda-force:0.1.0**, currently for Linux amd64. The image contains Bun, Node.js and the supported Codex CLI. You do not need to install those tools separately on the host.
+The current container release is **hiforceai/panda-force:0.1.1**, currently for Linux amd64. The image contains Bun, Node.js and the supported Codex CLI. You do not need to install those tools separately on the host.
 
-From a checkout of the release tag (`git clone --branch v0.1.0 --depth 1 https://github.com/hiforce/panda-force-free.git`):
+From a checkout of the release tag (`git clone --branch v0.1.1 --depth 1 https://github.com/hiforce/panda-force-free.git`):
 
 ```bash
 docker compose pull panda-force
@@ -81,7 +81,7 @@ docker run -d --name panda-force-host --restart unless-stopped \
   -e PANDA_FORCE_APP_SERVER_MODE=shared \
   -e PANDA_FORCE_APP_SERVER_SOCKET="/run/panda-force/codex-control/$(basename "$PANDA_FORCE_HOST_SOCKET")" \
   -e PANDA_FORCE_AUTH_MODE=password \
-  hiforceai/panda-force:0.1.0
+  hiforceai/panda-force:0.1.1
 
 docker logs panda-force-host
 ```

@@ -2,7 +2,7 @@
 title: 编译源码与基础镜像
 ---
 
-普通安装直接使用 `hiforceai/panda-force:0.1.0`。需要自己编译时，在 `v0.1.0` 源码目录运行：
+普通安装直接使用 `hiforceai/panda-force:0.1.1`。需要自己编译时，在 `v0.1.1` 源码目录运行：
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
@@ -18,6 +18,8 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 首次会下载基础层，之后复用 Docker 缓存，只编译应用更新。打包默认 `VERIFICATION_PROFILE=none`；源码和受影响行为应独立验证。两种基础镜像均允许通过 `PANDA_FORCE_BUILD_BASE` 和 `PANDA_FORCE_RUNTIME_BASE` 覆盖，使用自有仓库时通过 Docker 的独立凭据配置登录。
 
 两套依赖阶段均先安装锁定的依赖，再使用 npm 的原生构建工具显式编译 `node-pty`，运行镜像不包含开发依赖。这项构建顺序修正保留原有锁定依赖清单，与已固定摘要的公开基础镜像兼容。
+
+0.1.1 应用继续复用 0.1.0 使用的固定摘要基础镜像，依赖输入和基础配方未变。自行重建时使用对应版本的干净源码。
 
 ## 自行构建基础镜像
 

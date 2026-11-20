@@ -1,6 +1,6 @@
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import sharp from "sharp";
 import { createBrowserFixture, launchOptions } from "../support/browser-runtime.mjs";
 const directory = mkdtempSync(join(tmpdir(), "panda-force-agent-images-"));
@@ -63,7 +63,7 @@ try {
   });
   if (crossSite.status !== 401) throw new Error("Thumbnails must retain request authentication");
   browser = await runtime.launchBrowser(launchOptions());
-  page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  page = await browser.newPage({ acceptDownloads: true, viewport: { width: 1280, height: 800 } });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
@@ -377,6 +377,36 @@ try {
   )
     throw new Error(`Image viewer overflows the mobile viewport: ${JSON.stringify(mobile)}`);
   await page.screenshot({ path: "/tmp/panda-force-image-viewer-mobile.png", fullPage: false });
+  await page.locator("#closeImageViewer").click();
+  stage = "encoded image reference and original download";
+  await page.evaluate((image) => {
+    globalThis.__pandaForceDebug.notify("item/completed", {
+      turnId: "encoded-download-turn",
+      item: {
+        id: "encoded-download-message",
+        type: "agentMessage",
+        phase: "final_answer",
+        text: `[Download PNG](${encodeURI(image)})`,
+      },
+    });
+  }, imageB);
+  await page.locator(".image-citation").filter({ hasText: "Download PNG" }).click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector("#imageViewerImage").naturalWidth > 0 &&
+      document.querySelector("#imageViewerError").hidden,
+  );
+  const downloadLink = page.locator("#imageViewerDownload");
+  if (!(await downloadLink.isVisible()) || !(await downloadLink.getAttribute("href")).includes("download=1"))
+    throw new Error("Original download action unavailable");
+  const savedImage = page.waitForEvent("download");
+  await downloadLink.click();
+  const downloaded = await savedImage;
+  if (downloaded.suggestedFilename() !== basename(imageB) || !readFileSync(await downloaded.path()).equals(png))
+    throw new Error("Encoded image download changed its filename or original bytes");
+  if (!readFileSync(imageB).equals(png)) throw new Error("Downloading changed the original image");
+  await page.locator("#closeImageViewer").click();
+  await page.waitForFunction(() => document.querySelector("#imageViewerDownload").hidden && !document.querySelector("#imageViewerDownload").hasAttribute("href"));
   if (errors.length) throw new Error(`Browser errors: ${errors.join("; ")}`);
   console.log(
     JSON.stringify(

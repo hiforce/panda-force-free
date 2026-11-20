@@ -10,15 +10,28 @@ import type { DocumentPage, DocumentRecord, DocumentSpace } from "../shared/docu
 
 interface AddMenuOptions {
   trigger: HTMLButtonElement;
-  skills: HTMLElement;
+  skills?: HTMLElement;
   input: HTMLInputElement;
   t: Translate;
-  project: () => string;
+  project?: () => string;
   attach: (name: string, load: () => Promise<File>) => void;
+  projects?: {
+    load(signal: AbortSignal): Promise<{ id: string; name: string }[]>;
+    select(id: string): void;
+  };
 }
 
 /** One material entry owns the top layer; asynchronous attachments keep their original draft identity. */
-export function createComposerAddMenu({ trigger, skills, input, t, project, attach }: AddMenuOptions) {
+export function createComposerAddMenu({
+  trigger,
+  skills,
+  input,
+  t,
+  project: projectSource,
+  attach,
+  projects,
+}: AddMenuOptions) {
+  const project = projectSource ?? (() => "");
   const dialog = document.createElement("dialog");
   dialog.className = "workbench-dialog composer-add-menu composer-panel";
   const titleId = "composer-add-" + crypto.randomUUID();
@@ -27,7 +40,10 @@ export function createComposerAddMenu({ trigger, skills, input, t, project, atta
     dialog,
     `<header class="composer-panel-heading"><button type="button" class="composer-panel-action" data-add-back hidden data-pf-aria-label="common.back" aria-label="${e(t("common.back"))}">${codexIcon("arrowLeft")}</button><h2 tabindex="-1" id="${titleId}" data-pf-message="composer.addToMessage">${e(t("composer.addToMessage"))}</h2><button type="button" class="composer-panel-action" data-add-close data-pf-aria-label="common.close" aria-label="${e(t("common.close"))}">${codexIcon("x")}</button></header><div data-add-home><div class="composer-add-uploads">${(["camera", "photos", "files"] as const).map((kind) => `<button type="button" data-add-upload="${kind}">${codexIcon(kind === "camera" ? "camera" : kind === "photos" ? "image" : "file")}<span data-pf-message="composer.${kind}">${e(t(`composer.${kind}`))}</span></button>`).join("")}</div><div class="composer-add-sources"><div data-add-skills></div><button type="button" data-add-documents>${codexIcon("folderOpen")}<span><strong data-pf-message="composer.projectDocuments">${e(t("composer.projectDocuments"))}</strong><small data-pf-message="composer.documentSnapshotHint">${e(t("composer.documentSnapshotHint"))}</small></span>${codexIcon("chevronRight")}</button></div></div><section class="composer-add-documents" data-add-document-view hidden><div class="composer-add-document-filters wb-form"><label class="wb-field"><span data-pf-message="composer.documentSpace">${e(t("composer.documentSpace"))}</span><select data-add-space></select></label><label class="wb-field"><span class="sr-only" data-pf-message="composer.searchDocuments">${e(t("composer.searchDocuments"))}</span><input type="search" maxlength="200" data-add-search data-pf-placeholder="composer.searchDocuments" placeholder="${e(t("composer.searchDocuments"))}" autocomplete="off"></label></div><div class="composer-add-document-scroll" tabindex="0"><div data-add-document-list></div><p class="composer-add-status" role="status" data-add-status></p><button type="button" class="wb-button" data-add-more data-pf-message="composer.moreDocuments" hidden>${e(t("composer.moreDocuments"))}</button><button type="button" class="wb-button" data-add-retry data-pf-message="common.retry" hidden>${e(t("common.retry"))}</button></div></section>`,
   );
-  dialog.querySelector("[data-add-skills]")!.append(skills);
+  if (skills) dialog.querySelector("[data-add-skills]")!.append(skills);
+  else dialog.querySelector<HTMLElement>("[data-add-skills]")!.hidden = true;
+  if (!projectSource) dialog.querySelector<HTMLElement>("[data-add-documents]")!.hidden = true;
+  if (!skills && !projectSource) dialog.querySelector<HTMLElement>(".composer-add-sources")!.hidden = true;
   const home = dialog.querySelector<HTMLElement>("[data-add-home]")!,
     view = dialog.querySelector<HTMLElement>("[data-add-document-view]")!,
     back = dialog.querySelector<HTMLButtonElement>("[data-add-back]")!,
@@ -38,6 +54,21 @@ export function createComposerAddMenu({ trigger, skills, input, t, project, atta
     status = dialog.querySelector<HTMLElement>("[data-add-status]")!,
     more = dialog.querySelector<HTMLButtonElement>("[data-add-more]")!,
     retry = dialog.querySelector<HTMLButtonElement>("[data-add-retry]")!;
+  const projectSelect = projects ? document.createElement("select") : null;
+  if (projectSelect) {
+    const field = document.createElement("label"),
+      caption = document.createElement("span");
+    field.className = "wb-field";
+    localizeText(caption, "common.project", undefined, t);
+    projectSelect.dataset.addProject = "";
+    field.append(caption, projectSelect);
+    dialog.querySelector(".composer-add-document-filters")!.prepend(field);
+    projectSelect.onchange = () => {
+      projects!.select(projectSelect.value);
+      sourceReady = false;
+      void showDocuments(false);
+    };
+  }
   let generation = 0,
     projectId = "",
     spaces: DocumentSpace[] = [],
@@ -144,11 +175,36 @@ export function createComposerAddMenu({ trigger, skills, input, t, project, atta
       if (current === generation) list.setAttribute("aria-busy", "false");
     }
   }
-  async function showDocuments() {
+  async function showDocuments(refreshProjects = true) {
     home.hidden = true;
     view.hidden = false;
     back.hidden = false;
     localizeText(heading, "composer.projectDocuments", undefined, t);
+    if (projects && projectSelect && refreshProjects) {
+      const current = ++generation,
+        signal = beginRead();
+      loading();
+      list.replaceChildren();
+      projectSelect.disabled = true;
+      try {
+        const entries = await projects.load(signal);
+        if (current !== generation || !dialog.open) return;
+        setMessageHtml(
+          projectSelect,
+          entries.map((entry) => `<option value="${e(entry.id)}" data-i18n-ignore>${e(entry.name)}</option>`).join(""),
+        );
+        if (!entries.some((entry) => entry.id === project())) projects.select(entries[0]?.id ?? "");
+        projectSelect.value = project();
+        projectSelect.disabled = !entries.length;
+      } catch {
+        if (current === generation && dialog.open) {
+          sourceReady = false;
+          localizeText(status, "composer.documentsFailed", undefined, t);
+          retry.hidden = false;
+        }
+        return;
+      }
+    }
     if (project() && project() === projectId && sourceReady) {
       const scroll = dialog.querySelector<HTMLElement>(".composer-add-document-scroll")!,
         position = scroll.scrollTop;
@@ -320,5 +376,13 @@ export function createComposerAddMenu({ trigger, skills, input, t, project, atta
     window.visualViewport?.addEventListener("resize", viewport);
     window.visualViewport?.addEventListener("scroll", viewport);
     window.addEventListener("resize", viewport);
+  };
+  return {
+    close,
+    dispose() {
+      close(false);
+      trigger.onclick = null;
+      dialog.remove();
+    },
   };
 }

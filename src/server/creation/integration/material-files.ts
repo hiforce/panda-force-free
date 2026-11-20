@@ -133,11 +133,11 @@ export class FileCreationMaterials implements CreationMaterialPort {
   async readOriginal(owner: string, material: CreationMaterial): Promise<Uint8Array> {
     return new Uint8Array(await this.original(owner, material));
   }
-  routes(owner: (context: RouteContext) => string): Route[] {
+  routes(owner: (context: RouteContext) => string, prefix = "/api/creation-materials"): Route[] {
     const protect = creationProtection(owner);
     return [
       {
-        path: "/api/creation-materials",
+        path: prefix,
         method: "POST",
         handler: protect(async ({ req, url, res }, actor) => {
           if ([...url.searchParams.keys()].some((key) => key !== "name")) throw new CreationError("invalidInput");
@@ -162,13 +162,13 @@ export class FileCreationMaterials implements CreationMaterialPort {
               name: material.name,
               kind: material.kind,
               status: "ready",
-              url: "/api/creation-materials/original?id=" + material.id,
+              url: prefix + "/original?id=" + material.id,
             },
           });
         }),
       },
       {
-        path: "/api/creation-materials/original",
+        path: prefix + "/original",
         method: ["GET", "HEAD"],
         handler: protect(async ({ req, url, res }, actor) => {
           if (url.searchParams.getAll("id").length !== 1 || [...url.searchParams.keys()].some((key) => key !== "id"))

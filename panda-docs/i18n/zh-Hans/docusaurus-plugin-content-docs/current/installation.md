@@ -8,10 +8,10 @@ PandaForce 提供界面和应用服务，Codex 执行任务。默认在容器内
 
 ## 安装公开镜像
 
-版本 `0.1.0` 发布为 `hiforceai/panda-force:0.1.0`，平台为 Linux amd64。镜像包含 Bun、Node.js 和 Codex CLI，宿主机只需 Docker、Compose 和 Git。其他架构需要 amd64 模拟或自行构建兼容镜像。
+版本 `0.1.1` 发布为 `hiforceai/panda-force:0.1.1`，平台为 Linux amd64。镜像包含 Bun、Node.js 和 Codex CLI，宿主机只需 Docker、Compose 和 Git。其他架构需要 amd64 模拟或自行构建兼容镜像。
 
 ```bash
-git clone --branch v0.1.0 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch v0.1.1 --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
@@ -48,7 +48,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 
 ## 使用宿主机已有 Codex {#use-codex-already-installed-on-the-host}
 
-共享模式需要挂载实际 Unix socket 目录，并让工作区在宿主机和容器中使用相同绝对路径。它共享服务连接，模型凭据继续由宿主机管理。详细 Linux 命令和 UID/GID、socket 重建及额外工作区要求见[完整共享模式说明](https://github.com/hiforce/panda-force-free/blob/v0.1.0/panda-docs/docs/installation.md#use-codex-already-installed-on-the-host)。Docker 默认安装使用独立的容器内引擎，无需宿主机已有 Codex。
+共享模式需要挂载实际 Unix socket 目录，并让工作区在宿主机和容器中使用相同绝对路径。它共享服务连接，模型凭据继续由宿主机管理。详细 Linux 命令和 UID/GID、socket 重建及额外工作区要求见[完整共享模式说明](https://github.com/hiforce/panda-force-free/blob/v0.1.1/panda-docs/docs/installation.md#use-codex-already-installed-on-the-host)。Docker 默认安装使用独立的容器内引擎，无需宿主机已有 Codex。
 
 ## 手机访问
 

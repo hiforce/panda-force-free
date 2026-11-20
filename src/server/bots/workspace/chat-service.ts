@@ -13,6 +13,9 @@ import {
   type BotChatReceipt,
 } from "./chat-records.js";
 import type { BotWorkspaceRecord, BotWorkspaceWrite } from "./storage.js";
+import type { BotChatSubmission } from "../../../shared/bots/workspace.js";
+import { stableJson } from "../../../shared/stable-json.js";
+import type { BotChatContext, BotChatContextPort } from "./chat-context.js";
 
 const fingerprint = (text: string) => createHash("sha256").update(text).digest("hex");
 const requestId = (value: unknown) => {
@@ -27,7 +30,10 @@ const check = (row: BotWorkspaceRecord) => ({ kind: row.kind, id: row.id, versio
 
 /** One conversation per owner/Bot. User chat never resumes a Bot task's engine session. */
 export class BotChatService {
-  constructor(readonly store: BotRepository) {}
+  constructor(
+    readonly store: BotRepository,
+    private readonly context?: BotChatContextPort,
+  ) {}
   async state(owner: string, botId: string) {
     if ((await this.store.bot(owner, botId)).id !== botId) throw new BotError("notFound", 404);
     for (let retry = 0; retry < 8; retry++) {
@@ -117,26 +123,51 @@ export class BotChatService {
       cursor,
     };
   }
-  async send(owner: string, botId: string, value: unknown) {
-    if (!isRecord(value) || Object.keys(value).some((k) => !["requestId", "generation", "text"].includes(k)))
+  async send(owner: string, botId: string, value: unknown, locale = "en") {
+    if (
+      !isRecord(value) ||
+      Object.keys(value).some((k) => !["requestId", "generation", "text", "attachments", "selections"].includes(k))
+    )
       throw new BotError("invalidInput");
     const id = requestId(value.requestId),
       expectedGeneration = generation(value.generation);
     if (typeof value.text !== "string" || !value.text.trim() || value.text.length > 32000)
       throw new BotError("invalidInput");
     const text = value.text.trim(),
+      attachments = value.attachments ?? [],
+      selections = value.selections ?? [];
+    if (!Array.isArray(attachments) || attachments.length > 10 || !Array.isArray(selections) || selections.length > 64)
+      throw new BotError("invalidInput");
+    const signature = fingerprint(
+        attachments.length || selections.length ? stableJson({ text, attachments, selections }) : text,
+      ),
       bot = await this.store.bot(owner, botId),
       receiptKey = { kind: "chat-receipt" as const, id: chatReceiptPrefix(botId, expectedGeneration) + id };
+    let prepared: BotChatContext | undefined;
     for (let retry = 0; retry < 8; retry++) {
       const current = await this.state(owner, botId),
         prior = await this.store.workspace.get<BotChatReceipt>(owner, receiptKey);
       if (current.data.generation !== expectedGeneration) throw new BotError("staleConversation", 409);
       if (prior) {
-        if (prior.data.generation !== expectedGeneration || prior.data.fingerprint !== fingerprint(text))
+        if (prior.data.generation !== expectedGeneration || prior.data.fingerprint !== signature)
           throw new BotError("idempotencyConflict", 409);
         return { generation: expectedGeneration, duplicate: true };
       }
       if (current.data.pending) throw new BotError("chatBusy", 409);
+      if (!prepared && (attachments.length || selections.length)) {
+        try {
+          if (!this.context) throw new Error("Bot context unavailable");
+          prepared = await this.context.prepare(owner, botId, {
+            requestId: id,
+            generation: expectedGeneration,
+            text,
+            attachments,
+            selections,
+          } as BotChatSubmission);
+        } catch {
+          throw new BotError("chatContextUnavailable", 409);
+        }
+      }
       const now = Date.now(),
         userId = chatMessageId(botId, expectedGeneration, current.data.sequence + 1),
         assistantId = chatMessageId(botId, expectedGeneration, current.data.sequence + 2),
@@ -150,6 +181,8 @@ export class BotChatService {
             assistantId,
             lease: null,
             bot: { name: bot.name, model: bot.model, instructions: bot.instructions, persona: bot.persona },
+            ...(prepared ? { context: prepared } : {}),
+            locale,
           },
         },
         messages: BotChatMessage[] = [
@@ -162,6 +195,8 @@ export class BotChatService {
             createdAt: now,
             status: "complete",
             requestId: id,
+            ...(prepared?.materials.length ? { materials: prepared.materials } : {}),
+            ...(prepared?.summaries.length ? { skills: prepared.summaries } : {}),
           },
           {
             id: assistantId,
@@ -192,7 +227,7 @@ export class BotChatService {
               data: {
                 action: "send",
                 generation: expectedGeneration,
-                fingerprint: fingerprint(text),
+                fingerprint: signature,
                 userId,
               } satisfies BotChatReceipt,
             },

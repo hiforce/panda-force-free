@@ -244,22 +244,29 @@ const {
   recovery: autoContinueRecovery,
   recoverQueue: recoverMessageQueue,
 } = installedEngine;
-const { creationFeature, personalContent, readOriginalSources, knowledgeFeature, searchFeature, closeMaterialText } =
-  await createApplicationContent(
-    config,
-    runtimeStores,
-    documents,
-    projects,
-    extensions,
-    resolveOwner,
-    appServerConnection,
-    () => installedEngine.request("model/list", {}),
-    (context, allowlist) =>
-      sharedWorkspaceAllowed(context.req) &&
-      (!!authState.administrator || allowlist.includes(publicationOwner(authState, context))),
-    (project, owner) => searchChanged(project, owner),
-    () => (authState.administrator ? publicationOwner(authState, {}) : null),
-  );
+const {
+  creationFeature,
+  personalContent,
+  readOriginalSources,
+  knowledgeFeature,
+  searchFeature,
+  closeMaterialText,
+  chatContext,
+} = await createApplicationContent(
+  config,
+  runtimeStores,
+  documents,
+  projects,
+  extensions,
+  resolveOwner,
+  appServerConnection,
+  () => installedEngine.request("model/list", {}),
+  (context, allowlist) =>
+    sharedWorkspaceAllowed(context.req) &&
+    (!!authState.administrator || allowlist.includes(publicationOwner(authState, context))),
+  (project, owner) => searchChanged(project, owner),
+  () => (authState.administrator ? publicationOwner(authState, {}) : null),
+);
 const authorizeCliProject = async (owner: string, project: string) => {
   if (owner !== publicationOwner(authState, {})) throw new DocumentError("notFound", 404);
   await contentAccess.require(owner, project, "read");
@@ -269,6 +276,7 @@ const botOptions = {
   version: config.version,
   connection: appServerConnection,
   owner: resolveOwner,
+  chatContext,
 };
 const botFeature = runtimeStores
   ? {
