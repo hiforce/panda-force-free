@@ -3,13 +3,15 @@ title: PandaForce
 slug: /
 ---
 
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
 PandaForce is a browser workspace for natural-language work: organize projects, run conversations, review requests and inspect results.
 
 The current engine is Codex app-server. Other CLI engines are not integrated yet. A PandaForce administrator account is independent of the model-provider account.
 
 Browse the [complete feature catalog](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/features.md) for the current develop source, optional services and current limits.
 
-Start with [installation](./installation.md), then learn the [workspace](./workspace.md). This documentation is newly authored for PandaForce. No legacy upstream help is included.
+Start with <a href={useBaseUrl('/installation/')}>installation</a>, then learn the [workspace](./workspace.md). This documentation is newly authored for PandaForce. No legacy upstream help is included.
 
 This free edition uses the MIT license. Personal, student, research and commercial use, modifications and forks are free under that license. Hosting, models and storage can have separate costs. Maintenance is best effort without an SLA or a guaranteed response/fix deadline.
 

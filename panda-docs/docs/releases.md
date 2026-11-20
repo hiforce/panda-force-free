@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.0.21`. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.0` for Linux amd64. Application builds reuse the digest-pinned build and media runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -22,6 +22,15 @@ docker compose logs panda-force
 ```
 
 Review source, dependency licenses, English comments and the explicit public inventory before exporting. Verify the final clean tree, then review staged files. No internal Git history, old help, design records or agent directories belong in the public snapshot. Release changes go to the private repository for review first.
+
+## 0.1.0
+
+- Bring the document workspace, projects, creation tasks, skills, Bot workspaces and shared UI from the reviewed develop source into the stable release.
+- Unify material, skill and project-document selection, model/permission settings, panel typography and mobile viewport boundaries.
+- Preserve draft ownership and workbench layout through menu navigation and browser history; ignore hidden input focus and superseded session reads.
+- Offer SQLite or MySQL after first administrator creation. MySQL activation includes account identity, password hashes and application settings, with verified migration and restart recovery.
+- Reuse the existing public dependency bases by default, and document complete local base-build and private-registry override commands.
+- Package with compilation/startup checks while recording separately completed source and affected behavior verification; no fresh full-product regression is implied.
 
 ## 0.0.21
 

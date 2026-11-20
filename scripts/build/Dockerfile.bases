@@ -17,7 +17,7 @@ FROM toolchain AS build-base
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 COPY package.json bun.lock ./
 COPY patches ./patches
-RUN bun install --registry="${NPM_REGISTRY}" --frozen-lockfile
+RUN bun install --registry="${NPM_REGISTRY}" --frozen-lockfile --ignore-scripts
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
 RUN apt-get update \
     && apt-get install -y --no-install-recommends postgresql vim \
@@ -31,7 +31,8 @@ FROM toolchain AS production-dependencies
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 COPY package.json bun.lock ./
 COPY patches ./patches
-RUN bun install --registry="${NPM_REGISTRY}" --frozen-lockfile --production --omit=peer \
+# npm supplies node-gyp for the explicit native rebuild after the locked production install.
+RUN bun install --registry="${NPM_REGISTRY}" --frozen-lockfile --production --omit=peer --ignore-scripts \
     && npm rebuild node-pty --build-from-source \
     && node -e "require('node-pty'); for (const name of ['jsdom', 'typescript', 'eslint', 'prettier', 'playwright']) { let found = false; try { require.resolve(name); found = true; } catch {} if (found) throw new Error('Development dependency in runtime: ' + name); }"
 

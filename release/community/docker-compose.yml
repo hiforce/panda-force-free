@@ -1,6 +1,7 @@
 services:
   panda-force:
-    image: ${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.0.21}
+    image: ${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.1.0}
+    platform: ${PANDA_FORCE_PLATFORM:-linux/amd64}
     pull_policy: ${PANDA_FORCE_PULL_POLICY:-missing}
     restart: unless-stopped
     user: "${PUID:-1000}:${PGID:-1000}"

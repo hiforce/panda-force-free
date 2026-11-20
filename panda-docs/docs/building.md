@@ -20,7 +20,7 @@ Use `bun run format` to apply the shared formatting policy. After changing messa
 
 Tests are organized under `tests/unit`, `tests/integration`, `tests/browser` and `tests/support`. Native service diagnostics under `tests/live` and watcher diagnostics under `tests/tooling` are explicitly gated; their requirements are recorded in `scripts/testing/suites.json`. They are not silently included in the self-contained suite. The authenticated native-turn diagnostics run only with `PANDA_FORCE_LIVE_TESTS=1 bun scripts/testing/run.mjs live app-server.live.test.ts`; they are excluded from image builds and require the deliberately configured disposable model account described in the manifest.
 
-Every browser suite and named group is checked for duplicate, missing or unclassified entries. Internal administrator-reset tests live under `tests/ops` and run with `bun run test:ops` when the deployment tools are available.
+Every browser suite and named group is checked for duplicate, missing or unclassified entries.
 
 Shared modules cannot import client or server implementations. Protocol codecs use shared contracts; persistence does not import HTTP handlers or native processes. Browser features receive named, immutable ports from the composition root, and reading a peer before installation fails explicitly. The dependency check distinguishes executable imports from type-only references.
 
@@ -45,9 +45,9 @@ The documentation build currently inherits a low-severity [deepmerge advisory](h
 
 Source builds use two public Docker Hub images for **Linux amd64**:
 
-| Image | Purpose |
-| --- | --- |
-| `hiforceai/panda-force-build-base:media-44d133985283bf79` | Node.js, Bun, Codex CLI, compilers and locked development dependencies |
+| Image                                                       | Purpose                                                                             |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `hiforceai/panda-force-build-base:media-44d133985283bf79`   | Node.js, Bun, Codex CLI, compilers and locked development dependencies              |
 | `hiforceai/panda-force-runtime-base:media-44d133985283bf79` | Node.js, Bun, Codex CLI, production dependencies, FFmpeg/FFprobe and Noto CJK fonts |
 
 The Dockerfile, Compose build overlay and `scripts/build/base-images.json` pin the same immutable image digests. Docker pulls them automatically; no registry account, manual image import or separate base build is required. These are dependency bases, not runnable PandaForce releases. Ordinary installations serve static assets from the application; CDN is optional and requires your own configuration.
@@ -61,6 +61,43 @@ The initial download can be large. Later builds reuse the downloaded layers and 
 For a private registry, mirror **both** bases with your normal registry tools, log in using Docker's own credential configuration, and set `PANDA_FORCE_BUILD_BASE` and `PANDA_FORCE_RUNTIME_BASE` to the corresponding mirrored references before the same Compose command. For direct `docker build`, pass the independently overridable `BUILD_BASE` and `RUNTIME_BASE` arguments. Keep credentials out of Dockerfiles and build arguments; deployment registry credentials and pull policies remain administrator-managed. The original dependency tags remain available for existing pinned installations.
 
 The reusable recipes are `scripts/build/Dockerfile.bases` for locked dependency cores and `scripts/build/Dockerfile.media-bases` for the media overlay. Ordinary application changes do not require rebuilding either. A changed lockfile, dependency, patch or base recipe requires publishing and selecting a matching pair; compatibility checks stop a mismatched build rather than reinstalling dependencies silently. Selecting an older runtime without media tools may trigger the explicitly enabled installation fallback.
+
+Both dependency stages defer installation scripts and then explicitly rebuild `node-pty` with npm's native toolchain. Development dependencies stay out of the runtime image. This build-lifecycle correction preserves the locked dependency inventory and compatibility with the pinned published bases.
+
+## Build your own base images
+
+Run these commands from a **clean checkout of the same release**, using Docker with Linux amd64 support. The first core builds install locked JavaScript/native dependencies, the pinned Codex CLI, compilers and browser tools; they take longer than an application build. They use public upstream images and the checked-in `bun.lock` and `patches/`.
+
+```bash
+# 1. Build the two dependency cores.
+docker build --platform linux/amd64 -f scripts/build/Dockerfile.bases --target build-base \
+  --build-arg APT_MIRROR=http://deb.debian.org \
+  --build-arg NPM_REGISTRY=https://registry.npmjs.org \
+  -t panda-force-build-base:local-core .
+docker build --platform linux/amd64 -f scripts/build/Dockerfile.bases --target runtime-base \
+  --build-arg APT_MIRROR=http://deb.debian.org \
+  --build-arg NPM_REGISTRY=https://registry.npmjs.org \
+  -t panda-force-runtime-base:local-core .
+
+# 2. Add the compiler label and runtime media tools.
+docker build --platform linux/amd64 -f scripts/build/Dockerfile.media-bases --target build-base \
+  --build-arg BUILD_BASE=panda-force-build-base:local-core \
+  --build-arg RUNTIME_BASE=panda-force-runtime-base:local-core \
+  -t panda-force-build-base:local .
+docker build --platform linux/amd64 -f scripts/build/Dockerfile.media-bases --target runtime-base \
+  --build-arg BUILD_BASE=panda-force-build-base:local-core \
+  --build-arg RUNTIME_BASE=panda-force-runtime-base:local-core \
+  -t panda-force-runtime-base:local .
+
+# 3. Build and run the application with that pair.
+export PANDA_FORCE_BUILD_BASE=panda-force-build-base:local
+export PANDA_FORCE_RUNTIME_BASE=panda-force-runtime-base:local
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
+
+For a direct application build, pass `--build-arg BUILD_BASE=panda-force-build-base:local` and `--build-arg RUNTIME_BASE=panda-force-runtime-base:local` to `docker build -t panda-force:local .`. These tags are local examples: choose your own registry and publish both bases with your normal tools when builds run on another machine. Docker credentials stay in its separately managed credential store. Use your trusted APT/npm mirror overrides where appropriate; the recipe also accepts `BUN_IMAGE` and `NODE_IMAGE` overrides for administrator-managed upstream images.
+
+The application still validates the selected bases against the dependency inputs. A normal release-version change can reuse existing bases when the root package has no installation hooks. Dependency, lockfile, patch, installation-hook or base-recipe changes require a compatible newly built pair and an updated `scripts/build/base-images.json` compatibility fingerprint. Record that fingerprint with `node scripts/build/dependencies.mjs profile .`; keep image references and the media-recipe digest consistent with the pair you built. Regenerate and review the metadata only after checking the new bases, rather than disabling compatibility checks.
 
 ## Select release verification scope
 

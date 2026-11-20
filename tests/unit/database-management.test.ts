@@ -22,10 +22,32 @@ import {
 } from "../../src/server/database/management/state.js";
 import { databaseManagementRoutes } from "../../src/server/database/management/routes.js";
 import { createRouter } from "../../src/server/http/router.js";
+import { bootstrapApplicationDatabase } from "../../src/server/database/bootstrap.js";
+import { ProjectCatalog } from "../../src/server/projects/catalog.js";
 
 const disposals: (() => Promise<void>)[] = [];
 afterEach(async () => {
   for (const dispose of disposals.splice(0).reverse()) await dispose();
+});
+test("database choice survives a restart before the first browser and preserves an explicit selection", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pf-first-database-choice-"));
+  disposals.push(() => rm(root, { recursive: true, force: true }));
+  const env = { PANDA_FORCE_HOME: root, CODEX_HOME: join(root, "model"), HOME: join(root, "home") };
+  const first = await bootstrapApplicationDatabase(root, { env, initialChoiceRequired: true });
+  await first.close();
+  const state = new DatabaseManagementState(root);
+  const initial = await state.installation(false);
+  expect(initial.initialChoiceRequired).toBe(true);
+  const catalog = new ProjectCatalog(join(root, "data", "projects.sqlite"));
+  catalog.close();
+  const restarted = await bootstrapApplicationDatabase(root, { env, initialChoiceRequired: false });
+  await restarted.close();
+  expect(await state.installation(false)).toEqual(initial);
+  await state.write("", "installation", { ...initial, initialChoiceRequired: false });
+  const selected = await bootstrapApplicationDatabase(root, { env, initialChoiceRequired: true });
+  await selected.close();
+  expect((await state.installation(true)).initialChoiceRequired).toBe(false);
+  expect((await state.installation(true)).id).toBe(initial.id);
 });
 const input: DatabaseConnectionInput = {
   hostname: "isolated.mysql.invalid",

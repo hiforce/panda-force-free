@@ -39,6 +39,16 @@ export function exportFree({ source = process.cwd(), ref = "HEAD", destination, 
   if (!allowDirty && git(source, ["diff", "HEAD", "--name-only"], { encoding: "utf8" }).trim())
     throw new Error("Commit tracked changes before exporting a release");
   const commit = git(source, ["rev-parse", "--verify", ref + "^{commit}"], { encoding: "utf8" }).trim();
+  const editionPath = "release/community/edition.json";
+  const hasEdition = git(source, ["ls-tree", commit, "--", editionPath], { encoding: "utf8" }).trim();
+  const edition = hasEdition
+    ? JSON.parse(git(source, ["show", commit + ":" + editionPath], { encoding: "utf8" }))
+    : null;
+  if (
+    hasEdition &&
+    (!edition || edition.schema !== 1 || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(edition.version || ""))
+  )
+    throw new Error("Invalid community release version");
   const entries = git(source, ["ls-tree", "-r", "-z", commit], { encoding: "utf8" }).split("\0").filter(Boolean);
   const mapping = new Map();
   for (const entry of entries) {
@@ -73,6 +83,7 @@ export function exportFree({ source = process.cwd(), ref = "HEAD", destination, 
       const pkg = JSON.parse(bytes);
       if (pkg.scripts) delete pkg.scripts["test:ops"];
       pkg.name = "panda-force-free";
+      if (edition) pkg.version = edition.version;
       pkg.private = true;
       pkg.license = "MIT";
       pkg.repository = "github:hiforce/panda-force-free";

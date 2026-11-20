@@ -5,8 +5,12 @@ import { assertApplicationDatabaseActivation } from "./migration/activation.js";
 import { recoverPendingApplicationMigration, type DatabaseRecoveryOptions } from "./migration/recovery.js";
 
 /** Resolve the administrator-owned backend before constructing any business storage. */
-export async function bootstrapApplicationDatabase(stateRoot: string, options?: DatabaseRecoveryOptions) {
+export async function bootstrapApplicationDatabase(
+  stateRoot: string,
+  options?: DatabaseRecoveryOptions & { initialChoiceRequired?: boolean },
+) {
   const state = new DatabaseManagementState(stateRoot);
+  if (options?.initialChoiceRequired !== undefined) await state.installation(options.initialChoiceRequired);
   await recoverPendingApplicationMigration(state, options);
   const config = await readApplicationDatabaseConfig(stateRoot, options?.env);
   const receipt = await state.read("", "activation"),

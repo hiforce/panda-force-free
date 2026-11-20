@@ -1,6 +1,6 @@
 services:
   panda-force:
-    image: ${PANDA_FORCE_IMAGE:-panda-force:develop}
+    image: ${PANDA_FORCE_IMAGE:-panda-force:local}
     pull_policy: build
     build:
       context: .

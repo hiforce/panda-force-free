@@ -4,17 +4,17 @@ title: Deploy on Kubernetes
 
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
-PandaForce can run in Kubernetes using either of the [two Codex arrangements](./installation.md#understand-what-runs-where). These downloadable templates are independently written public examples. They contain no private deployment settings, credentials, domains, node identities or account data.
+PandaForce can run in Kubernetes using either of the <a href={useBaseUrl('/installation/#understand-what-runs-where')}>two Codex arrangements</a>. These downloadable templates are independently written public examples. They contain no private deployment settings, credentials, domains, node identities or account data.
 
 For a verified release containing the optional gateway architecture, see [Optional gateway cluster](./cluster.md). The single-instance templates below continue to use the currently published release.
 
 ## Download a template
 
-Choose **one** template. Both define the same application and storage names; do not apply both to the same namespace or switch an existing installation without a data migration plan.
+Choose **one** installation: isolated, shared, or the optional gateway cluster. Their namespace/service names overlap; keep alternatives in separate namespaces and plan data migration before changing an existing installation.
 
-| Template | Where tasks execute | Model login |
-| --- | --- | --- |
-| Container Codex (`isolated`) | A Codex service started inside the PandaForce container | Sign in inside the Pod |
+| Template                          | Where tasks execute                                           | Model login                     |
+| --------------------------------- | ------------------------------------------------------------- | ------------------------------- |
+| Container Codex (`isolated`)      | A Codex service started inside the PandaForce container       | Sign in inside the Pod          |
 | Existing machine Codex (`shared`) | A Codex service already running on a specific Kubernetes node | Reuse that service's host login |
 
 - <a href={useBaseUrl('/downloads/kubernetes/panda-force-isolated.yaml')} download>Download container Codex template (.yaml)</a>
@@ -22,13 +22,21 @@ Choose **one** template. Both define the same application and storage names; do 
 
 In a source checkout, these files are under `panda-docs/static/downloads/kubernetes/`. Download links in the built HTML help serve the actual YAML files, not a screenshot or a code preview. Save and edit your own copy before applying it.
 
+The optional <a href={useBaseUrl('/downloads/kubernetes/panda-force-cluster.yaml')} download>gateway cluster template</a> uses one engine owner, scalable gateways, a separate PostgreSQL coordination database and a CSI volume supporting `ReadWriteOncePod`. Follow [the cluster guide](./cluster.md); it is an alternative to the two single-instance templates.
+
 ## Before deploying
 
-Use a Linux amd64 cluster, `kubectl`, and a working persistent-volume provisioner. The templates use the public `hiforceai/panda-force:0.0.16` image and a 10 GiB `ReadWriteOnce` PVC. If your cluster has no default StorageClass, add `storageClassName: YOUR_STORAGE_CLASS` under the PVC's `spec`. Confirm the class supports your node placement; a class using `WaitForFirstConsumer` can defer volume binding until scheduling.
+Use a Linux amd64 cluster, `kubectl`, and a working persistent-volume provisioner. The templates use the public `hiforceai/panda-force:0.1.0` image and a 10 GiB `ReadWriteOnce` PVC. If your cluster has no default StorageClass, add `storageClassName: YOUR_STORAGE_CLASS` under the PVC's `spec`. Confirm the class supports your node placement; a class using `WaitForFirstConsumer` can defer volume binding until scheduling.
 
-Both templates include a Namespace, PVC, Deployment and ClusterIP Service. They use one replica and `Recreate` updates for this single-instance application and its SQLite data. CPU/memory values are starting points; adjust them for your workload. Persistent-volume ownership must allow the configured Unix user to write; the example uses UID/GID 1000 and `fsGroup: 1000`. The init container creates only application directories on the PVC, and does not change node directories.
+The two single-instance templates include a Namespace, PVC, Deployment and ClusterIP Service. They use one replica and `Recreate` updates for this single-instance application and its SQLite data. CPU/memory values are starting points; adjust them for your workload. Persistent-volume ownership must allow the configured Unix user to write; the example uses UID/GID 1000 and `fsGroup: 1000`. The init container creates only application directories on the PVC, and does not change node directories.
 
 The example does not create a domain, Ingress, TLS certificate or model account. Start with port forwarding; configure your own HTTPS ingress separately if needed.
+
+### First-run application database
+
+After administrator creation, choose SQLite or configure MySQL in the browser. MySQL is an operator-managed service; use an address reachable from the Pod and supply its credentials through the administrator setup flow. Mount any CA file used for TLS verification. The MySQL migration includes administrator identity and password hashes, while model authentication, attachments and filesystem workspaces retain their own storage. Preserve and back up the PVC even when application tables move to MySQL.
+
+For a private image registry, update every application and init-container image reference, choose your pull policy, and add your independently managed `imagePullSecrets` under the Pod specification. Do not place registry passwords in these files.
 
 ## Option A: use Codex inside the container
 
@@ -67,6 +75,7 @@ The container still runs PandaForce. Task execution happens in the node's existi
    ```
 
    The tested CLI is 0.166.0. Preserve a custom `CODEX_HOME` when running these commands. This step starts a service; it does not start PandaForce directly on the node.
+
 3. Split the resolved socket path into its directory and filename. Set the `host-control` volume's `hostPath.path` to that directory. Replace `REPLACE_WITH_SOCKET_FILENAME` in `PANDA_FORCE_APP_SERVER_SOCKET` with the actual filename. The directory is mounted at `/run/panda-force/codex-control` inside the container. Mounting only the original symlink's directory can leave its target inaccessible.
 4. Replace **every** `/srv/panda-force/workspace` occurrence with your chosen, existing workspace's absolute path, including `HOME`, `PANDA_FORCE_CWD`, `PANDA_FORCE_REVIEW_ROOT`, `PANDA_FORCE_ATTACHMENT_ROOT`, `volumeMounts` and `hostPath`. Keep the workspace at the **same absolute path** inside and outside the container. The Codex account must be able to write it and the attachment subdirectory.
 5. Set `runAsUser`, `runAsGroup` and `fsGroup` to the host account's actual UID/GID, and confirm the PVC supports those ownership settings. The socket directory's permissions must allow that account access. Cluster admission policies must permit these specific hostPath mounts.
@@ -90,12 +99,12 @@ Stopping PandaForce leaves the node service running. Existing tasks continue to 
 
 ## Storage, logs and checks
 
-| Data | Container Codex template | Existing machine Codex template |
-| --- | --- | --- |
-| PandaForce settings, administrator, project data and rotating logs | PVC at `/var/lib/panda-force` | PVC at `/var/lib/panda-force` |
-| Model login and model sessions | PVC `model-state` directory | Managed by the node's existing Codex service |
-| Workspace | PVC `workspace` directory | Explicit node workspace bind mount |
-| Attachments | PVC `attachments` directory | `.panda-force-attachments` under the mounted node workspace |
+| Data                                                               | Container Codex template      | Existing machine Codex template                             |
+| ------------------------------------------------------------------ | ----------------------------- | ----------------------------------------------------------- |
+| PandaForce settings, administrator, project data and rotating logs | PVC at `/var/lib/panda-force` | PVC at `/var/lib/panda-force`                               |
+| Model login and model sessions                                     | PVC `model-state` directory   | Managed by the node's existing Codex service                |
+| Workspace                                                          | PVC `workspace` directory     | Explicit node workspace bind mount                          |
+| Attachments                                                        | PVC `attachments` directory   | `.panda-force-attachments` under the mounted node workspace |
 
 The shared template also keeps PandaForce's own engine metadata in the PVC's `model-state` directory; this is not a copy of the host account. Model and app storage should both be backed up. See [storage and backups](./storage.md). Removing or deleting the PVC can delete application data depending on the StorageClass reclaim policy; these instructions do not delete it.
 

@@ -1,5 +1,5 @@
-# Optional cluster example; requires a release containing cluster support.
-# Replace image and public origin; create the panda-cluster Secret separately.
+# Optional cluster example; uses the 0.1.0 release and requires separate PostgreSQL coordination.
+# Set your public origin; create the panda-cluster Secret separately.
 # One exclusive owner; gateways may scale. Never increase owner replicas.
 # Requires a CSI StorageClass supporting ReadWriteOncePod.
 apiVersion: v1
@@ -36,7 +36,11 @@ spec:
     metadata:
       labels: *id001
     spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
       securityContext:
+        runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
@@ -44,7 +48,8 @@ spec:
       terminationGracePeriodSeconds: 45
       initContainers:
       - name: prepare-state
-        image: REPLACE_WITH_VERIFIED_IMAGE
+        image: hiforceai/panda-force:0.1.0
+        imagePullPolicy: IfNotPresent
         command:
         - bun
         - -e
@@ -55,7 +60,8 @@ spec:
           mountPath: /var/lib/panda-force
       containers:
       - name: panda-force
-        image: REPLACE_WITH_VERIFIED_IMAGE
+        image: hiforceai/panda-force:0.1.0
+        imagePullPolicy: IfNotPresent
         ports:
         - name: http
           containerPort: 8899
@@ -100,6 +106,10 @@ spec:
           value: /var/lib/panda-force/model-state
         - name: PANDA_FORCE_CWD
           value: /var/lib/panda-force/workspace
+        - name: PANDA_FORCE_PROJECTS_ROOT
+          value: /var/lib/panda-force/workspace/projects
+        - name: PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES
+          value: 'true'
         - name: PANDA_FORCE_REVIEW_ROOT
           value: /var/lib/panda-force/workspace
         - name: PANDA_FORCE_ATTACHMENT_ROOT
@@ -159,7 +169,11 @@ spec:
     metadata:
       labels: *id001
     spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
       securityContext:
+        runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
@@ -167,7 +181,8 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: panda-force
-        image: REPLACE_WITH_VERIFIED_IMAGE
+        image: hiforceai/panda-force:0.1.0
+        imagePullPolicy: IfNotPresent
         ports:
         - name: http
           containerPort: 8899

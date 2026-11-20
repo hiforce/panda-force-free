@@ -59,7 +59,11 @@ export function dependencyInputs(root) {
   const manifest = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
   for (const key of descriptiveFields) delete manifest[key];
   // Hooks may invoke other scripts, so retain the entire script map when hooks exist.
-  if (!installScripts.some((key) => Object.hasOwn(manifest.scripts || {}, key))) manifest.scripts = {};
+  if (!installScripts.some((key) => Object.hasOwn(manifest.scripts || {}, key))) {
+    manifest.scripts = {};
+    // A release number cannot change installed dependencies without a root installation hook.
+    delete manifest.version;
+  }
   const files = Object.fromEntries(
     ["bun.lock", ...patchFiles(root)].map((path) => [path, hash(readFileSync(resolve(root, path)))]),
   );

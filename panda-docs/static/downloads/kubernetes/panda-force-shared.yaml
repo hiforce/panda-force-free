@@ -1,4 +1,4 @@
-# PandaForce shared mode. Choose one template; do not apply both.
+# PandaForce shared mode. Choose one template; do not combine installation templates.
 # Public example only; no production configuration or credentials.
 # Set spec.storageClassName on the PVC if the cluster has no default StorageClass.
 # Replace every REPLACE_WITH value and the workspace path before applying.
@@ -42,6 +42,7 @@ spec:
         kubernetes.io/arch: amd64
         kubernetes.io/hostname: REPLACE_WITH_NODE_NAME
       securityContext:
+        runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
         fsGroup: 1000
@@ -49,7 +50,8 @@ spec:
       terminationGracePeriodSeconds: 30
       initContainers:
       - name: prepare-state
-        image: hiforceai/panda-force:0.0.16
+        image: hiforceai/panda-force:0.1.0
+        imagePullPolicy: IfNotPresent
         command:
         - bun
         - -e
@@ -61,7 +63,7 @@ spec:
           mountPath: /var/lib/panda-force
       containers:
       - name: panda-force
-        image: hiforceai/panda-force:0.0.16
+        image: hiforceai/panda-force:0.1.0
         imagePullPolicy: IfNotPresent
         ports:
         - name: http
@@ -118,6 +120,7 @@ spec:
             path: /health/startup
             port: http
           periodSeconds: 5
+          timeoutSeconds: 3
           failureThreshold: 60
         readinessProbe:
           httpGet:

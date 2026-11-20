@@ -100,6 +100,7 @@ const initialDatabaseChoice =
   !existsSync(join(config.stateRoot, "data", "documents.sqlite")) &&
   !existsSync(join(config.stateRoot, "data", "bot-tasks.sqlite"));
 const applicationDatabase = await bootstrapApplicationDatabase(config.stateRoot, {
+  initialChoiceRequired: initialDatabaseChoice,
   host: config.host,
   port: config.port,
   publicDir: config.publicDir,

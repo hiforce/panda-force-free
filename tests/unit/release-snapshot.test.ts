@@ -37,6 +37,7 @@ test("filtered exports exclude private state and internal history; three-way upd
     mkdirSync(join(source, "src"), { recursive: true });
     mkdirSync(join(source, "release/community"), { recursive: true });
     writeFileSync(join(source, "package.json"), '{"name":"panda-force"}');
+    writeFileSync(join(source, "release/community/edition.json"), '{"schema":1,"version":"0.1.0"}');
     writeFileSync(join(source, "bun.lock"), '{"name":"panda-force"}');
     for (const name of templates) writeFileSync(join(source, "release/community", name), "Fixture document\n");
     writeFileSync(join(source, "src/example.js"), "export const a = 1;\n\n\n\nexport const b = 1;\n");
@@ -53,6 +54,7 @@ test("filtered exports exclude private state and internal history; three-way upd
       "bun.lock",
       "src/example.js",
       "release/community/public-files.json",
+      "release/community/edition.json",
       ...templates.map((name) => "release/community/" + name),
       ...templates,
     ];
@@ -65,6 +67,7 @@ test("filtered exports exclude private state and internal history; three-way upd
     for (const name of stylesheets) expect(readFileSync(join(before, "public", name), "utf8")).toContain("#222");
     expect(first.files.some((f) => /\.codex|\.claude|docs\/design|proprietary/.test(f.path))).toBe(false);
     expect(readFileSync(join(before, "package.json"), "utf8")).toContain("panda-force-free");
+    expect(JSON.parse(readFileSync(join(before, "package.json"), "utf8")).version).toBe("0.1.0");
     repository(publicRepo);
     cpSync(before, publicRepo, { recursive: true });
     commit(publicRepo);

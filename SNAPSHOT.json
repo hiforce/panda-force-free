@@ -11,8 +11,8 @@
     },
     {
       "path": ".env.example",
-      "bytes": 1320,
-      "sha256": "7c41336931d09a7833bbde2e365216a93909a4af6cfc9ebcfca167ab77e256df",
+      "bytes": 1355,
+      "sha256": "f9c4071e9cbdb7a9fec29b80cdf1d5a4428f38df7025b9b2301b862a011297f5",
       "mode": "100644"
     },
     {
@@ -137,14 +137,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 15948,
-      "sha256": "1bddbeb5becd5eeb4c842179282e5310580a33f0aba09b8bbbd97ad9a279b421",
+      "bytes": 16114,
+      "sha256": "1fc19c26f419a1cc6cad5e7be4125b9a0264239459ba5ccdd3c03e2eb3062b75",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 16980,
-      "sha256": "fdd29b0cadb989527be82d477fc6b840718812acdd195494fed162c2ee3d0c4e",
+      "bytes": 16931,
+      "sha256": "969800d62fe6a9addea4e9286d9e47e4b1e34442b2eaf512dea40e1c0e3f7400",
       "mode": "100644"
     },
     {
@@ -215,8 +215,8 @@
     },
     {
       "path": "docker-compose.build.yml",
-      "bytes": 598,
-      "sha256": "f5d2f503c190d88f55178d223b96579f0c5212009832c81d99e74aa89ceb8882",
+      "bytes": 596,
+      "sha256": "a1c02f1289b8ac600cc6b0d65caddf38d502a07abf309f7cb793297f4b6dad7b",
       "mode": "100644"
     },
     {
@@ -245,8 +245,8 @@
     },
     {
       "path": "docker-compose.yml",
-      "bytes": 2078,
-      "sha256": "086318e6bed56eddc3fbd34dab59f91407672b7008d4ef9ae6be5ca4a19578da",
+      "bytes": 2128,
+      "sha256": "fac5dfa60933c7b2eccaed7e2d4e835653227d2e95bef0192952e05d3512a623",
       "mode": "100644"
     },
     {
@@ -323,8 +323,8 @@
     },
     {
       "path": "package.json",
-      "bytes": 6703,
-      "sha256": "de25a655b2ec8a3e3a2fdf29b1a13849ac9ca92a8845b33665c25e37219be229",
+      "bytes": 6702,
+      "sha256": "05f2a12a0d799c8d5c1ebc1bb267be44ee15a553225ac607ed28bb5a031e8861",
       "mode": "100644"
     },
     {
@@ -365,8 +365,8 @@
     },
     {
       "path": "panda-docs/docs/building.md",
-      "bytes": 8836,
-      "sha256": "94818e3693fcc12b5e0b62a25becc2a15390670f5edeedcc4bfbf4f31d8aa7d9",
+      "bytes": 12245,
+      "sha256": "4935074ee26d68f2eec6d33c476471c51d2864eb4bf5285684de4cfaa932f3fb",
       "mode": "100644"
     },
     {
@@ -377,8 +377,8 @@
     },
     {
       "path": "panda-docs/docs/cluster.md",
-      "bytes": 7390,
-      "sha256": "47edd8abb0ea81390fc0568eae766e08bde2789df4e064adebc7a5ac118f9c0a",
+      "bytes": 7910,
+      "sha256": "6468a2cdbed5ed4becdcf67d3d24741cfd1a5300ee2f30bb32d8c1702d6939a3",
       "mode": "100644"
     },
     {
@@ -395,14 +395,14 @@
     },
     {
       "path": "panda-docs/docs/installation.md",
-      "bytes": 9953,
-      "sha256": "2b79de0785d36c17b6be4bbb7a2b07d0ab694834cb44d0dd0fb135d2ee1a9403",
+      "bytes": 12157,
+      "sha256": "77266689a881e0b5d5d9a1c37dcfe665d81534779d6b8f8641f9f021b822da0c",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/kubernetes.md",
-      "bytes": 9474,
-      "sha256": "ae014e858dbe7a1030069c4a7c79ab0803451be1639382db43f6b72c688742a8",
+      "bytes": 11393,
+      "sha256": "536e956dff65620af7f565def6bdb39a0e29277d9e167e21d61b547d54332cd4",
       "mode": "100644"
     },
     {
@@ -413,14 +413,14 @@
     },
     {
       "path": "panda-docs/docs/overview.md",
-      "bytes": 1303,
-      "sha256": "bdf49bc7934ff16231dba09292725641ecdca8cac28b76a0a90f592b18a1496a",
+      "bytes": 1375,
+      "sha256": "e5c6b95a4f88af2dd85e71ddb358ab2640d67de949189d6d6090dbe44a32a824",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 16282,
-      "sha256": "172a14c705be6cd0a8df5de0198b1979b9717acbc5b372656cc284b360e69cbf",
+      "bytes": 17311,
+      "sha256": "054369be17879e4415a81bd37a6865e7fa04465fec94476e9f07a450afd3e4c0",
       "mode": "100644"
     },
     {
@@ -455,8 +455,8 @@
     },
     {
       "path": "panda-docs/docusaurus.config.js",
-      "bytes": 952,
-      "sha256": "877e4f900df0245367fca2361829a3f2d560f28c51d3b306894d97f9440eaf77",
+      "bytes": 1136,
+      "sha256": "bf81f63226c243cc11f494c66c32e3b7aeaa640c2066fed424d0d1a06ceac1f6",
       "mode": "100644"
     },
     {
@@ -490,6 +490,12 @@
       "mode": "100644"
     },
     {
+      "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md",
+      "bytes": 4717,
+      "sha256": "a86460e6b689ee0e7529b5791f0779ae6b04be441d87ce6c7bcefd4fccdde818",
+      "mode": "100644"
+    },
+    {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/cdn-build.md",
       "bytes": 9228,
       "sha256": "acbe455fd147ab3fd8e79e25a2d30acc6bef8832e35e3710fe8ca9f543b91475",
@@ -499,6 +505,12 @@
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md",
       "bytes": 14032,
       "sha256": "7d9f8a3b80032832ac2e1d9664f6751deb4b5c72d9f0b404f571bb3438ead232",
+      "mode": "100644"
+    },
+    {
+      "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/installation.md",
+      "bytes": 3967,
+      "sha256": "30485915560f4de516807fd0757843e92d81b32700c815dccb923318628c338e",
       "mode": "100644"
     },
     {
@@ -527,20 +539,20 @@
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-cluster.yaml",
-      "bytes": 6667,
-      "sha256": "be175d6d819e598d4b10128621eab1e1e6f8561d225e2e7f762c697ea102b763",
+      "bytes": 7199,
+      "sha256": "53e41d06ba58a3221076d8ff5065048a639dca3176ad53af599c43db3aed75e2",
       "mode": "100644"
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-isolated.yaml",
-      "bytes": 3848,
-      "sha256": "842dd1a5ce389c85286f1e0a4e1ddf85635dc3db25888518f750e32d4b33abf2",
+      "bytes": 3959,
+      "sha256": "dd56e2b252ee367cebe8872d6902ba34954b22dbbff9af2b0e0543be26b31422",
       "mode": "100644"
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-shared.yaml",
-      "bytes": 4595,
-      "sha256": "a3dfa862f264b3037f58c6da0f75602be54e761489bf1aeac4528883465a0854",
+      "bytes": 4706,
+      "sha256": "ae6eac168f59ba0a42d8140d3a7f8fe8caffa2f6fe1ef03a251a775c881ab360",
       "mode": "100644"
     },
     {
@@ -1433,8 +1445,8 @@
     },
     {
       "path": "release/community/.env.example",
-      "bytes": 1320,
-      "sha256": "7c41336931d09a7833bbde2e365216a93909a4af6cfc9ebcfca167ab77e256df",
+      "bytes": 1355,
+      "sha256": "f9c4071e9cbdb7a9fec29b80cdf1d5a4428f38df7025b9b2301b862a011297f5",
       "mode": "100644"
     },
     {
@@ -1457,14 +1469,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 15948,
-      "sha256": "1bddbeb5becd5eeb4c842179282e5310580a33f0aba09b8bbbd97ad9a279b421",
+      "bytes": 16114,
+      "sha256": "1fc19c26f419a1cc6cad5e7be4125b9a0264239459ba5ccdd3c03e2eb3062b75",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 16980,
-      "sha256": "fdd29b0cadb989527be82d477fc6b840718812acdd195494fed162c2ee3d0c4e",
+      "bytes": 16931,
+      "sha256": "969800d62fe6a9addea4e9286d9e47e4b1e34442b2eaf512dea40e1c0e3f7400",
       "mode": "100644"
     },
     {
@@ -1475,8 +1487,8 @@
     },
     {
       "path": "release/community/docker-compose.build.yml",
-      "bytes": 598,
-      "sha256": "f5d2f503c190d88f55178d223b96579f0c5212009832c81d99e74aa89ceb8882",
+      "bytes": 596,
+      "sha256": "a1c02f1289b8ac600cc6b0d65caddf38d502a07abf309f7cb793297f4b6dad7b",
       "mode": "100644"
     },
     {
@@ -1487,14 +1499,20 @@
     },
     {
       "path": "release/community/docker-compose.yml",
-      "bytes": 2078,
-      "sha256": "086318e6bed56eddc3fbd34dab59f91407672b7008d4ef9ae6be5ca4a19578da",
+      "bytes": 2128,
+      "sha256": "fac5dfa60933c7b2eccaed7e2d4e835653227d2e95bef0192952e05d3512a623",
+      "mode": "100644"
+    },
+    {
+      "path": "release/community/edition.json",
+      "bytes": 40,
+      "sha256": "edf6c38cb07d835e3080da3423d56039ed0691dee109b4d7451840300488890a",
       "mode": "100644"
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 170448,
-      "sha256": "abe335ec8ba09d58943dfa86195e481d38af67b5d20c89ee57fe5482d08cea4e",
+      "bytes": 170797,
+      "sha256": "6337bb0a5ee50d7906cd08a91f46601adbe20e0c3995a0c7586684406e602788",
       "mode": "100644"
     },
     {
@@ -1523,8 +1541,8 @@
     },
     {
       "path": "scripts/build/Dockerfile.bases",
-      "bytes": 3309,
-      "sha256": "b1f0c49bbe7bdb5c829181b170a613693bb05ec0df6b5ba45ac0b186348f3491",
+      "bytes": 3436,
+      "sha256": "1f550e660fd87ffc7a1eb0eda8e277b59996380fcc161bbb82180a7d481d9286",
       "mode": "100644"
     },
     {
@@ -1542,7 +1560,7 @@
     {
       "path": "scripts/build/base-images.json",
       "bytes": 903,
-      "sha256": "d9236f2b61a4acdc169aec81ecdde4093683e42f455d785305fdd62eb6fd97ef",
+      "sha256": "fe85ec116fd561c944afab216b8a6fff1358186c7c4324a515b47be44f4eee48",
       "mode": "100644"
     },
     {
@@ -1553,8 +1571,8 @@
     },
     {
       "path": "scripts/build/dependencies.mjs",
-      "bytes": 3997,
-      "sha256": "37b3ae3a940b9b1af8e7e1196ea8ffeec04133f080e3b7cad0e9c446b8a308ab",
+      "bytes": 4131,
+      "sha256": "0672ec01b5dca2e45b878cf2564c0b0fa0761b9ce16312f2462ab516de55a122",
       "mode": "100644"
     },
     {
@@ -1697,8 +1715,8 @@
     },
     {
       "path": "scripts/release/export-free.mjs",
-      "bytes": 5451,
-      "sha256": "2d23984e93d7c2c18c1f76140eabcc7538bab286fcc54db434038d7292f468c8",
+      "bytes": 5987,
+      "sha256": "0bd1f65e3a1fbf3afbfecc278503d672c2ab0b572e6f9648fc950ef5642a3022",
       "mode": "100644"
     },
     {
@@ -7937,8 +7955,8 @@
     },
     {
       "path": "src/server/database/bootstrap.ts",
-      "bytes": 1308,
-      "sha256": "080eca513c85fb37cb6eb186dee03028e772238d1d45fc5aa002ed432a9f5c28",
+      "bytes": 1462,
+      "sha256": "50fa44b496497eb5b5c906f4d6405057107da0cee5011cf9014362e9d2fb3d1a",
       "mode": "100644"
     },
     {
@@ -8033,8 +8051,8 @@
     },
     {
       "path": "src/server/database/migration/coordinator.ts",
-      "bytes": 12961,
-      "sha256": "816e0d7147d5a364c8bd2749e7d5e287b0832b0a8858e565f4a7570a68898785",
+      "bytes": 13229,
+      "sha256": "079e4856e8f1960605ba283bee0f9f8795056c726d65910c44b0496d39241243",
       "mode": "100644"
     },
     {
@@ -10997,8 +11015,8 @@
     },
     {
       "path": "src/server/main.ts",
-      "bytes": 33738,
-      "sha256": "bc1520d0b277732b8f75b7db8657752dd691fc13d31d5514fce562b7e0c79211",
+      "bytes": 33786,
+      "sha256": "33a05a35509ca5bb8bf77fc0252294286835280bbf41a4f7de0f80e538435895",
       "mode": "100644"
     },
     {
@@ -20182,6 +20200,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/unit/application-migration-coverage.test.ts",
+      "bytes": 2748,
+      "sha256": "741a7bf73c4ea4a77382656ed63a2529645a1f5be5575e7c9396efd77b961c96",
+      "mode": "100644"
+    },
+    {
       "path": "tests/unit/application-session-visibility.test.ts",
       "bytes": 1826,
       "sha256": "6f40aee3d6580f9fa160a9e822b56c5755a2ce87ea22fae41c530eb138947666",
@@ -20395,6 +20419,12 @@
       "path": "tests/unit/browser-wire.test.ts",
       "bytes": 1459,
       "sha256": "1aeaa42b4cd33d1260113dec846cac730611fd154567701c43eb94ec4a967708",
+      "mode": "100644"
+    },
+    {
+      "path": "tests/unit/build-base-compatibility.test.ts",
+      "bytes": 2993,
+      "sha256": "b5badd961daa3d8bff9eb7e2c2e146738d86d19a51b0b69a2b6b699368411eae",
       "mode": "100644"
     },
     {
@@ -20825,8 +20855,8 @@
     },
     {
       "path": "tests/unit/database-management.test.ts",
-      "bytes": 29398,
-      "sha256": "fb74b027601bc84b14a6d3f547d89dee335fc840ad86efa43365b6b5cbe9b68b",
+      "bytes": 30833,
+      "sha256": "e2e0e65b96e797d301d2eb383ccbe914bda785bbe7e94206b49b112295f68c79",
       "mode": "100644"
     },
     {
@@ -21304,6 +21334,12 @@
       "mode": "100644"
     },
     {
+      "path": "tests/unit/kubernetes-templates.test.ts",
+      "bytes": 5221,
+      "sha256": "f7dfc84877f734d5c4b6dea69ab31bf02e9d2c158313b18deb7d5da5d3f41cbe",
+      "mode": "100644"
+    },
+    {
       "path": "tests/unit/live-session-service.test.ts",
       "bytes": 9906,
       "sha256": "0359d265f391a08d4bfed63b5333b9bdb42575b97fa94af53ec9c15addca8d74",
@@ -21713,8 +21749,8 @@
     },
     {
       "path": "tests/unit/release-snapshot.test.ts",
-      "bytes": 6165,
-      "sha256": "3d032956cb6e34e45398dcfa1204a7c4076c6318c94c8104cf2d07bd9f24fd62",
+      "bytes": 6404,
+      "sha256": "2794a82f41e4488ee8daf9845fd5b4e9c96d7107b1a0fc5b5f4fa1400cb56671",
       "mode": "100644"
     },
     {
@@ -22360,5 +22396,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "a9e16ebc02b593aab39dfe0e2ecdb99aa4f808951a6ee4cd96e6641f40bc8bdf"
+  "contentSha256": "8c99315c0dae1eca04750f96941cd47606cd7cbfe998ca0c6e0081c438777976"
 }

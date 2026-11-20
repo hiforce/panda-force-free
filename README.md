@@ -136,41 +136,45 @@ For a larger workflow—supplier assets, a theme brief, product details, human r
 
 PandaForce also includes streaming AI conversations and coding, a terminal for administrators, rich-text documents, publishing adapters, source-based knowledge workflows and search. Desktop and mobile layouts support English, Simplified Chinese, Hong Kong Traditional Chinese and Taiwan Traditional Chinese. **[Explore all features and prerequisites →](./panda-docs/docs/features.md)**
 
-## Run this branch from source
+## Install 0.1.0
 
-The execution engine today is **Codex app-server**. Published images such as `hiforceai/panda-force:0.0.21` have their own feature baseline and do not automatically include develop changes.
-
-Requires Git and Docker with Compose. The documented image platform is Linux amd64. Codex CLI is included in the build/runtime images; no host Codex installation or host authentication-file mount is required.
+PandaForce 0.1.0 uses **Codex app-server** and is published as **`hiforceai/panda-force:0.1.0`** for Linux amd64. Install Git and Docker with Compose; Bun, Node.js and the supported Codex CLI are included in the image. Other CPU architectures require Linux amd64 emulation or a separately built compatible image.
 
 ```bash
-git clone --branch develop https://github.com/hiforce/panda-force-free.git
+git clone --branch v0.1.0 --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+docker compose pull panda-force
+docker compose up -d --no-build
 docker compose logs panda-force
 ```
 
-The source build automatically pulls our public, digest-pinned **compiler and media runtime bases** from Docker Hub. They include the locked dependencies, Codex CLI, FFmpeg and CJK fonts; you do not need to build or import the bases yourself. The first build downloads these layers; later builds reuse them and compile the application. [Base images, caching and private-registry overrides →](./panda-docs/docs/building.md#container-base-images)
+Open **http://localhost:8899** and create your administrator. The password requires at least six characters including uppercase, lowercase and a number. If an installation code is requested, read your container startup logs. The first administrator then chooses **SQLite** (ready locally) or **Configure MySQL**. MySQL setup tests the connection, reviews the migration, verifies the copied data and restarts onto MySQL. Administrator identity and password hashes move with the account data. [Installation and database selection →](./panda-docs/docs/installation.md)
 
-Open **http://localhost:8899** and create your PandaForce administrator. Email is optional at initialization. Choose a password with at least six characters, including uppercase and lowercase letters and a number. If an installation code is requested, find it in the startup logs.
-
-Sign in to the model account separately:
+Sign in to the model service separately:
 
 ```bash
 docker compose exec -it panda-force codex login --device-auth
 docker compose restart panda-force
 ```
 
-Follow the terminal link, refresh PandaForce and start a conversation. API-key and other model-provider configuration is described in the [model-provider guide](./panda-docs/docs/model-providers.md). PandaForce accounts and provider credentials are separate; provider charges follow the provider's terms.
+PandaForce accounts and model-provider credentials are independent. API-key setup is described in the [model-provider guide](./panda-docs/docs/model-providers.md). Configure SMTP in administration before email binding, invitations or email recovery. This shared-engine installation gives administrators access to its workspace and engine; use authorized business content for ordinary members.
 
-Configure SMTP in administration before binding an email, inviting members or using email recovery. Members set their own passwords. Administrators retain access to the shared host workspace and engine; ordinary members use their authorized business content. This shared-engine installation is not an untrusted multi-user coding sandbox.
+Application state, model login and workspace files use persistent Docker volumes. `docker compose down` keeps those volumes. The default port binds to localhost. Read [storage and backups](./panda-docs/docs/storage.md) before upgrading an existing installation.
 
-Source packaging defaults to compilation and packaging checks. Run `bun run check` and the affected behavior checks independently during development; a completed image build is not a full product regression result.
+## Build from source with cached bases
 
-## Use a published image
+From the versioned checkout above:
 
-For the existing published release, clone the default branch and run `docker compose up -d`; its current template selects **`hiforceai/panda-force:0.0.21`**. Consult that release's documentation rather than assuming feature parity with develop.
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+docker compose logs panda-force
+```
 
-State, model credentials, attachments and workspace files persist in Docker volumes across container restarts. `docker compose down` keeps those volumes. The default port is accessible only from the local machine. See [installation](./panda-docs/docs/installation.md) for remote access and [storage](./panda-docs/docs/storage.md) for mounts and backups.
+The default local tag is `panda-force:local`. The Dockerfile automatically pulls the existing, digest-pinned **build and media runtime bases**. Locked dependencies, Codex CLI, FFmpeg and CJK fonts are reused; ordinary application builds compile the source without reinstalling those packages. The first pull downloads the bases and later builds use Docker's layer cache. You can override both bases for your own registry.
+
+[Build both base images yourself, use local tags, and configure mirrors →](./panda-docs/docs/building.md#build-your-own-base-images)
+
+Packaging defaults to compilation and packaging (`VERIFICATION_PROFILE=none`). Run source and affected behavior checks independently; image packaging does not claim a fresh full-product regression. The `develop` branch continues after the tagged release; use `v0.1.0` for its exact source.
 
 ## Optional services and configuration
 

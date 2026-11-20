@@ -4,7 +4,7 @@ title: Optional gateway cluster
 
 import useBaseUrl from '@docusaurus/useBaseUrl';
 
-This optional deployment is available in **0.0.8 and later**. Keep the [single-instance templates](./kubernetes.md) for a simple installation; single-instance deployments continue to use SQLite and do not require PostgreSQL. This example uses one workspace, two web gateways, one engine owner and an operator-managed PostgreSQL database; it is not a multi-user tenant isolation feature.
+This optional deployment is available in **0.0.8 and later**. Keep the [single-instance templates](./kubernetes.md) for a simple installation; single-instance deployments support SQLite or MySQL and do not require PostgreSQL coordination. This example uses one workspace, two web gateways, one engine owner and an operator-managed PostgreSQL database; it is not a multi-user tenant isolation feature.
 
 <a href={useBaseUrl('/downloads/kubernetes/panda-force-cluster.yaml')} download>Download optional cluster template (.yaml)</a>
 
@@ -18,11 +18,13 @@ PostgreSQL holds the workspace owner and monotonically increasing generation, an
 
 This scales the **web entry points**. It does not distribute a single workspace's CLI execution across owners, migrate SQLite to PostgreSQL, automatically take over unfinished tasks, or provide a ready-made Claude adapter. The current registered conversation engine is Codex. An unavailable owner makes its workspace temporarily unavailable.
 
+The application database selected after first administrator creation (SQLite or MySQL) is separate from PostgreSQL cluster coordination. A MySQL-backed installation must also back up that application database; account identity and password hashes use its selected backend.
+
 ## Prepare and start
 
-Use PostgreSQL reachable from every Pod, with a dedicated database and credentials authorized to create the coordination tables. Manage database backups and connection security yourself. Use a CSI volume provisioner supporting `ReadWriteOncePod` for the owner, so another Pod cannot mount the workspace concurrently. SQLite WAL remains on that exclusive owner volume; it is never shared between gateway processes. [Kubernetes access modes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) and [SQLite WAL restrictions](https://sqlite.org/wal.html) explain these storage constraints.
+Use PostgreSQL reachable from every Pod, with a dedicated database and credentials authorized to create the coordination tables. Manage database backups and connection security yourself. Use a CSI volume provisioner supporting `ReadWriteOncePod` for the owner, so another Pod cannot mount the workspace concurrently. SQLite WAL, when selected, remains on that exclusive owner volume; it is never shared between gateway processes. [Kubernetes access modes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) and [SQLite WAL restrictions](https://sqlite.org/wal.html) explain these storage constraints.
 
-1. Download the template. Replace **every** `REPLACE_WITH_VERIFIED_IMAGE` with your tested release image or immutable digest. Set `PANDA_FORCE_PUBLIC_URL` to your actual HTTPS origin on both roles. Configure `storageClassName` if there is no suitable default. Keep the owner at one replica and isolated engine mode.
+1. Download the template. The template selects `hiforceai/panda-force:0.1.0` for both roles and the init container. Override all of those references together when using another verified image or digest. Set `PANDA_FORCE_PUBLIC_URL` to your actual HTTPS origin on both roles. Configure `storageClassName` if there is no suitable default. Keep the owner at one replica and isolated engine mode.
 2. Create the namespace and Secret. Put your PostgreSQL URL in a local file named `database-url`, and a randomly generated signing key of at least 32 characters in `signing-key`. Keep those files private and out of Git. The two roles use the same values:
 
    ```bash
@@ -67,6 +69,6 @@ Back up the owner volume and coordination database together while the owner is s
 - Use `/health/liveness` for process health and `/health/readiness` for owner availability.
 - The owner persists rolling logs under `/var/lib/panda-force/logs`. Gateways keep bounded local logs in their temporary volume and also write to Kubernetes stdout/stderr; use your cluster log collector for gateway history across Pod replacement.
 - A lost or stalled lease closes the owner rather than continuing native writes. Fix PostgreSQL connectivity before recovery.
-- Gateway image builds run the same complete verification gate as the owner image. The runtime image includes `/app/verification.json`, recording tested source identity and tool versions.
+- Both roles use the same versioned application image and source identity. Packaging defaults to compilation and startup checks; source and affected behavior checks run independently. `/app/build-info.json` records the source and verification scope. An explicitly selected proof profile also produces `/app/verification.json`.
 
 The template contains no organization-specific domains, node paths, credentials or deployment identifiers. It does not create PostgreSQL, an ingress controller, a TLS certificate, backups or automatic failover.

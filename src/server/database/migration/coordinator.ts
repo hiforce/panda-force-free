@@ -88,6 +88,19 @@ const publicFailure = (error: unknown) => {
     : "migrationFailed";
 };
 
+/** Runtime coordination rows are recreated by their repositories, rather than copied as business data. */
+export function isApplicationMigrationControlTable(table: string) {
+  return (
+    /(?:_mutex|_guard)$/.test(table) ||
+    [
+      "panda_force_bot_control",
+      "panda_force_cli_control",
+      "panda_force_skill_workspace_controls",
+      "panda_force_gadget_workspace_controls",
+    ].includes(table)
+  );
+}
+
 /** No workers start here. A failed copy remains an inactive, resumable target with its original frozen sources. */
 export async function executeApplicationMigration(options: ApplicationMigrationOptions): Promise<DatabaseOperation> {
   const { state, operationId, registry } = options;
@@ -139,12 +152,10 @@ export async function executeApplicationMigration(options: ApplicationMigrationO
       throw Error("incompleteDatabaseBackend");
     for (const m of plan.public.modules.filter((m) => m.action === "copy"))
       for (const table of ownership.modules.get(m.module) ?? []) {
-        const control =
-          /(?:_mutex|_guard)$/.test(table) ||
-          ["panda_force_bot_control", "panda_force_cli_control", "panda_force_skill_workspace_controls"].includes(
-            table,
-          );
-        if (!control && !copied.some((c) => c.unit.module === m.module && c.table === table))
+        if (
+          !isApplicationMigrationControlTable(table) &&
+          !copied.some((c) => c.unit.module === m.module && c.table === table)
+        )
           throw Error("incompleteDatabaseBackend");
       }
     sql = await (options.connect ?? connectMySQL)(config);

@@ -8,9 +8,9 @@ PandaForce provides the browser interface and a service that sends your requests
 
 There are two independent choices:
 
-| Choice | Options |
-| --- | --- |
-| Where PandaForce runs | Directly on a machine, in Docker, or in a Kubernetes container |
+| Choice                     | Options                                                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Where PandaForce runs      | Directly on a machine, in Docker, or in a Kubernetes container                                                                        |
 | Which Codex executes tasks | A separate Codex service started inside the PandaForce container (`isolated`), or an existing Codex service on the machine (`shared`) |
 
 A host is the machine running a container. It can be a physical server or a virtual machine; in Kubernetes it is the node running the Pod. Connecting to an existing Codex service does **not** mean PandaForce itself must run directly from a host terminal.
@@ -21,13 +21,13 @@ A Unix socket is a local communication endpoint between processes, represented b
 
 ## Start the published container
 
-The current container release is **hiforceai/panda-force:0.0.21**, currently for Linux amd64. The image contains Bun, Node.js and the supported Codex CLI. You do not need to install those tools separately on the host.
+The current container release is **hiforceai/panda-force:0.1.0**, currently for Linux amd64. The image contains Bun, Node.js and the supported Codex CLI. You do not need to install those tools separately on the host.
 
-From a checkout of this repository:
+From a checkout of the release tag (`git clone --branch v0.1.0 --depth 1 https://github.com/hiforce/panda-force-free.git`):
 
 ```bash
 docker compose pull panda-force
-docker compose up -d
+docker compose up -d --no-build
 docker compose logs panda-force
 ```
 
@@ -41,6 +41,16 @@ docker compose restart panda-force
 ```
 
 The default port binds only to localhost. State persists in named volumes. See [storage](./storage.md) before replacing an existing installation. The administrator and model-provider accounts are independent.
+
+## Choose the database on first installation
+
+After creating the first administrator, the application offers **Use SQLite** or **Configure MySQL**. SQLite is stored in the application state volume and requires no database service. Choosing it is recorded and survives restarts; MySQL remains available later in **Settings → Storage and logs**.
+
+For MySQL, prepare a dedicated empty database and a user allowed to create and update its tables. Enter the hostname reachable **from the PandaForce container**, port, database and user credentials. A database on the same Compose network is addressed by its service name; `localhost` inside the container refers to that container. Open TLS settings to configure server-certificate verification and an optional CA file mounted into the application container.
+
+Use **Test connection**, then **Review migration** and **Move data to MySQL**. A failed connection keeps the source database selected and the form available for correction. The migration backs up the source, pauses writes, copies and verifies application data, and restarts the application onto MySQL. Keep the state volume and recovery records until completion. Existing data belonging to another installation is not silently adopted.
+
+The administrator account is created during local bootstrap, then its identity, password hashes, account settings and session-revocation records move with the account domain. After a successful MySQL switch, authentication reads that backend. Model-provider authentication, attachments and workspace files remain in their own persistent locations. Back up both the database and the application/model/workspace volumes.
 
 ## Use Codex already installed on the host
 
@@ -71,7 +81,7 @@ docker run -d --name panda-force-host --restart unless-stopped \
   -e PANDA_FORCE_APP_SERVER_MODE=shared \
   -e PANDA_FORCE_APP_SERVER_SOCKET="/run/panda-force/codex-control/$(basename "$PANDA_FORCE_HOST_SOCKET")" \
   -e PANDA_FORCE_AUTH_MODE=password \
-  hiforceai/panda-force:0.0.21
+  hiforceai/panda-force:0.1.0
 
 docker logs panda-force-host
 ```
@@ -124,7 +134,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up --build -d
 docker compose logs panda-force
 ```
 
-The community Dockerfile automatically pulls our public, digest-pinned compiler and media runtime bases. Locked dependencies, Codex CLI, FFmpeg and CJK fonts are already installed; no manual base build or import is needed. The first download is cached for later application builds. See [container base images](./building.md#container-base-images) for the two images, verification scope and private-registry overrides. This source build is optional; normal installation pulls the released application image.
+The community Dockerfile automatically pulls our public, digest-pinned compiler and media runtime bases. Locked dependencies, Codex CLI, FFmpeg and CJK fonts are already installed; no manual base build or import is needed. The first download is cached for later application builds. See [container base images](./building.md#container-base-images) and [build your own bases](./building.md#build-your-own-base-images) for the two images, verification scope and private-registry overrides. This source build is optional; normal installation pulls the released application image.
 
 ## Install on your phone
 

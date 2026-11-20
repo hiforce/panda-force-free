@@ -136,41 +136,45 @@ curl --fail-with-body --silent --show-error \
 
 工作台还包含流式对话与编程、管理员终端、富文本编辑、发布适配器、基于来源的知识流程和搜索。桌面与手机支持英文、简体中文、香港繁体和台湾繁体。**[查看完整功能和服务前提 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md)**
 
-## 从当前分支构建运行
+## 安装 0.1.0
 
-当前执行引擎为 **Codex app-server**。`hiforceai/panda-force:0.0.21` 等已发布镜像有独立功能基线，不会自动包含 develop 的更新。
-
-需要 Git、Docker 和 Compose。文档镜像平台为 Linux amd64。构建和运行镜像已包含 Codex CLI，无需提前在宿主机安装 Codex，也无需挂载宿主机认证文件。
+PandaForce 0.1.0 使用 **Codex app-server**，公开镜像为 **`hiforceai/panda-force:0.1.0`**，平台为 Linux amd64。准备 Git、Docker 和 Compose 即可；镜像内包含 Bun、Node.js 和支持的 Codex CLI。其他 CPU 架构需要 Linux amd64 模拟，或自行构建兼容镜像。
 
 ```bash
-git clone --branch develop https://github.com/hiforce/panda-force-free.git
+git clone --branch v0.1.0 --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+docker compose pull panda-force
+docker compose up -d --no-build
 docker compose logs panda-force
 ```
 
-源码构建会自动从 Docker Hub 拉取我们公开的、固定摘要的**编译基础镜像和媒体运行基础镜像**，其中已包含锁定依赖、Codex CLI、FFmpeg 和中日韩字体，无需自行构建或导入基础层。首次构建需要下载这些层，后续构建复用它们并编译应用。[基础镜像、缓存与私有仓库配置 →](./panda-docs/docs/building.md#container-base-images)
+打开 **http://localhost:8899** 创建管理员，密码至少六位并包含大小写字母和数字。如果要求安装验证码，请查看容器启动日志。首次创建管理员后，可选择本地即可使用的 **SQLite**，或进入 **配置 MySQL**。MySQL 流程包括测试连接、审阅迁移、校验数据并重启切换；管理员身份、密码哈希及账号设置会一并迁入。[安装与数据库选择 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/installation.md)
 
-打开 **http://localhost:8899**，创建 PandaForce 管理员。初始化时邮箱可选，密码至少六位，包含大小写字母和数字。如果要求安装验证码，请在启动日志中查看。
-
-模型账号需要单独登录：
+模型服务需要独立登录：
 
 ```bash
 docker compose exec -it panda-force codex login --device-auth
 docker compose restart panda-force
 ```
 
-按终端链接完成登录，刷新 PandaForce 后即可开始会话。API Key 和其他模型配置见[模型服务商指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md)。PandaForce 账号与模型凭据相互独立，模型费用遵循服务商规则。
+PandaForce 账号与模型凭据相互独立。API Key 等配置见[模型服务商指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md)。管理员先配置 SMTP，再使用邮箱绑定、邀请和邮件找回。共享引擎模式允许管理员访问工作区和引擎，普通成员应使用有权限的业务内容。
 
-管理员先配置 SMTP，再绑定邮箱、邀请成员或使用邮件找回。成员自行设置密码。管理员可以访问共享宿主机工作区和引擎，普通成员使用其有权限的业务内容。共享引擎安装模式不提供不受信任用户的编程沙箱。
+应用状态、模型登录和工作文件存放在持久 Docker 卷中，`docker compose down` 会保留这些卷。默认端口仅本机可访问。升级已有安装前，先阅读[存储与备份](./panda-docs/docs/storage.md)。
 
-源码打包默认执行编译与打包检查。开发时独立运行 `bun run check` 和受影响行为检查，镜像构建完成不等于全产品回归通过。
+## 使用缓存基础镜像从源码构建
 
-## 使用已发布镜像
+在上述版本化源码目录中运行：
 
-如需现有已发布版本，克隆默认分支后运行 `docker compose up -d`；其当前模板选择 **`hiforceai/panda-force:0.0.21`**。请按该版本文档使用，不要假定它与 develop 功能一致。
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+docker compose logs panda-force
+```
 
-状态、模型认证、附件和工作文件通过 Docker 卷持久保存，重启容器不会丢失；`docker compose down` 保留这些卷。默认端口仅本机可访问。远程访问见[安装指南](./panda-docs/docs/installation.md)，挂载和备份见[存储指南](./panda-docs/docs/storage.md)。
+默认本地标签为 `panda-force:local`。Dockerfile 会自动拉取之前公开的、固定摘要的**编译基础镜像和媒体运行基础镜像**，复用锁定依赖、Codex CLI、FFmpeg 和中日韩字体。一般应用更新只编译源码，不重装这些依赖。首次拉取需要下载基础层，后续使用 Docker 层缓存；两种基础镜像均可覆盖为自有仓库地址。
+
+[自行构建两种基础镜像、使用本地标签及配置镜像源 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md#自行构建基础镜像)
+
+镜像打包默认执行编译与打包（`VERIFICATION_PROFILE=none`），开发时独立执行源码和受影响行为检查；打包成功不等于重新完成全产品回归。`develop` 会继续更新，需要此版本的准确源码时使用 `v0.1.0`。
 
 ## 可选服务与配置
 
