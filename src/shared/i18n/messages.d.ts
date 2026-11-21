@@ -1630,6 +1630,7 @@ export interface MessageParameters {
   "creation.empty": {  };
   "creation.failed": {  };
   "creation.failedFileChanged": {  };
+  "creation.failedInactive": {  };
   "creation.failedInterrupted": {  };
   "creation.failedInvalidOutput": {  };
   "creation.failedTargetChanged": {  };
@@ -1658,6 +1659,7 @@ export interface MessageParameters {
   "creation.loadingEarlier": {  };
   "creation.loadingSkill": {  };
   "creation.location": {  };
+  "creation.longRunningHint": {  };
   "creation.manualWrite": {  };
   "creation.materialBusy": {  };
   "creation.materialEmpty": {  };
@@ -1679,6 +1681,12 @@ export interface MessageParameters {
   "creation.noSkills": {  };
   "creation.noTaskMatches": {  };
   "creation.notFound": {  };
+  "creation.notificationsEmpty": {  };
+  "creation.notificationsLoadFailed": {  };
+  "creation.notificationsOpen": {  };
+  "creation.notificationsReady": {  };
+  "creation.notificationsTitle": {  };
+  "creation.notificationsUnread": { "count": string };
   "creation.openDocument": {  };
   "creation.orderedSkillsHint": {  };
   "creation.outputVersions": {  };

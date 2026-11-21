@@ -46,7 +46,7 @@ export function consolidateCreationSnapshots(
       for (const model of tables) {
         const columns = model.columns.filter((c) => c.name !== "pendingTaskId");
         target.exec(
-          `CREATE TABLE ${model.name.replace("panda_force_", "")}(${columns.map((c) => `"${c.name}" ${c.type === "bigint" ? "INTEGER" : "TEXT"}${c.nullable ? "" : " NOT NULL"}`).join(",")},PRIMARY KEY(namespace,id))`,
+          `CREATE TABLE ${model.name.replace("panda_force_", "")}(${columns.map((c) => `"${c.name}" ${c.type === "bigint" ? "INTEGER" : "TEXT"}${c.nullable ? "" : " NOT NULL"}`).join(",")},PRIMARY KEY(${model.indexes.find((i) => i.name === "PRIMARY")!.columns.join(",")}))`,
         );
       }
       for (const ledger of ledgers) {
@@ -54,10 +54,11 @@ export function consolidateCreationSnapshots(
         try {
           source.transaction(() => {
             const version = source.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version;
-            if (version !== 2 && version !== 3 && version !== 4 && version !== 5 && version !== 6)
+            if (version !== 2 && version !== 3 && version !== 4 && version !== 5 && version !== 6 && version !== 7)
               throw Error("unsupportedCreationMigrationSchema");
             target.query("INSERT INTO creation_ledgers VALUES(?)").run(ledger.namespace);
             for (const model of tables) {
+              if (version < 7 && model.name === "panda_force_creation_notifications") continue;
               if (version === 2 && model.name === "panda_force_creation_progress") continue;
               if (version < 4 && model.name === "panda_force_creation_messages") continue;
               if (
@@ -100,5 +101,5 @@ export function importCreationSQLite(options: {
   migrationId: string;
   progress?: (value: MigrationProgress) => void | Promise<void>;
 }) {
-  return migrateSQLiteModule({ ...options, module: "creation", converterVersion: 5, tables: creationSQLiteMappings });
+  return migrateSQLiteModule({ ...options, module: "creation", converterVersion: 6, tables: creationSQLiteMappings });
 }

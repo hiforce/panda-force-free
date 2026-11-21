@@ -12,9 +12,9 @@ export async function isolatedMySQLDatabase(role: string) {
   return {
     sql,
     async close() {
-      await sql.close();
+      await sql.close({ timeout: 1 });
       await admin.unsafe(`DROP DATABASE ${schema}`);
-      await admin.close();
+      await admin.close({ timeout: 1 });
     },
   };
 }

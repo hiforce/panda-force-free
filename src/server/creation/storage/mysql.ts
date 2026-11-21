@@ -19,6 +19,8 @@ export class MySQLCreationLedger {
   readonly create: MySQLCreationTasks["create"];
   readonly cancel: MySQLCreationTasks["cancel"];
   readonly complete: MySQLCreationTasks["complete"];
+  readonly notifications: MySQLCreationTasks["notifications"];
+  readonly readNotification: MySQLCreationTasks["readNotification"];
   readonly outputFailure: MySQLCreationTasks["outputFailure"];
   readonly pending: MySQLCreationTasks["pending"];
   readonly retry: MySQLCreationTasks["retry"];
@@ -57,6 +59,8 @@ export class MySQLCreationLedger {
     this.create = tasks.create.bind(tasks);
     this.cancel = tasks.cancel.bind(tasks);
     this.complete = tasks.complete.bind(tasks);
+    this.notifications = tasks.notifications.bind(tasks);
+    this.readNotification = tasks.readNotification.bind(tasks);
     this.outputFailure = tasks.outputFailure.bind(tasks);
     this.pending = tasks.pending.bind(tasks);
     this.retry = tasks.retry.bind(tasks);

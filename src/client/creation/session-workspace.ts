@@ -31,6 +31,7 @@ import { CreationSessionSections } from "./session-sections.js";
 import { CreationSessionState } from "./session-state.js";
 import { CreationSkillDiscovery } from "./skill-discovery.js";
 import { creationStateMessage } from "./state.js";
+import { creationDocumentRoute } from "./delivery-route.js";
 
 export type { CreationWorkspaceBridge } from "./session-port.js";
 
@@ -457,15 +458,14 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     const document = this.state.task?.document || creationDocumentArtifact(artifact);
     if (saved && document)
       this.navigate(
-        "/documents?" +
-          new URLSearchParams({
-            project:
-              document.projectId ??
-              creationDocumentArtifact(saved.artifact)?.location?.projectId ??
-              saved.artifact?.projectId ??
-              saved.projectId,
-            document: document.documentId,
-          }),
+        creationDocumentRoute({
+          projectId:
+            document.projectId ??
+            creationDocumentArtifact(saved.artifact)?.location?.projectId ??
+            saved.artifact?.projectId ??
+            saved.projectId,
+          documentId: document.documentId,
+        }),
       );
   }
   private readFailed(error: unknown) {
@@ -587,6 +587,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     }
   }
   private present(task: CreationTaskDetail, rounds: CreationTaskDetail[]) {
+    const newlyCompleted =
+      task.state === "succeeded" && (this.state.task?.id !== task.id || this.state.task?.state !== "succeeded");
     this.state.task = task;
     if (!this.state.runtimePreferenceSaved && task.runtimeId) {
       this.state.runtimeId = task.runtimeId;
@@ -600,6 +602,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     for (const round of rounds) this.state.previous.set(round.id, { task: round, at: Date.now() });
     if (task.selections !== undefined) this.bridge.seedDraft("", task.selections);
     this.presenter.render(task, rounds, this.cards);
+    if (newlyCompleted) window.dispatchEvent(new Event("panda-force:creation-completed"));
     this.renderActions();
     this.bridge.changed();
   }
@@ -607,6 +610,12 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   private renderPending() {
     setOpaqueText(this.notice, "");
     this.notice.dataset.phase = this.state.pending ? "pending" : "idle";
+    const task = this.state.task;
+    const began =
+      task?.progress.findLast((event) => event.generation === task.generation && event.stage === "started")?.at ??
+      task?.createdAt;
+    if (task && began && creationActive(task) && !task.question && !this.state.pending && Date.now() - began >= 60000)
+      localizeText(this.notice, "creation.longRunningHint", {}, this.t);
     if (this.state.pendingGoal) {
       localizeText(this.notice, "creation.goalPending", {}, this.t);
       const retryGoal = document.createElement("button");

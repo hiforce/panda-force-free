@@ -60,3 +60,15 @@ export interface CreationDocumentRevisions {
     body: import("../../shared/documents/rich-body.js").RichDocumentBody,
   ): Promise<import("../../shared/creation/contracts.js").CreationDocumentArtifact>;
 }
+
+export interface CreationNotificationRecord {
+  taskId: string;
+  generation: number;
+  createdAt: number;
+  readAt: number | null;
+}
+/** Receipts are committed with the saved task; delivery never depends on a browser being connected. */
+export interface CreationNotificationStore {
+  notifications(owner: string): CreationResult<CreationNotificationRecord[]>;
+  readNotification(owner: string, taskId: string, generation: number, now: number): CreationResult<void>;
+}

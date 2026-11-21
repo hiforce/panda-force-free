@@ -1,3 +1,4 @@
+import { CreationCompletionNotifications } from "./notifications/controller.js";
 import { CreationSessionWorkspace } from "./creation/session-workspace.js";
 import { harnessId } from "../shared/harness/presentation.js";
 import { parkMessageComposer } from "./message-composer-placement.js";
@@ -75,6 +76,7 @@ export function createWorkbench({
   creationBridge,
 }) {
   createWorkbenchFrame(t);
+  const completionNotifications = new CreationCompletionNotifications(t, identityKey, (path) => navigate(path));
   const shell = requireElement(".conversation-shell"),
     viewport = requireElement(".conversation-viewport"),
     dock = requireElement(".composer-dock"),
@@ -802,6 +804,7 @@ export function createWorkbench({
     // Bindings update owned copy in place, preserving search focus and selection.
     document.title = `PandaForce · ${t(labels[route.page] || "common.workspace")}`;
     i18n.bindings.refresh();
+    completionNotifications.render();
     gadgetHome.refresh();
   });
   preparation.subscribe((snapshot) => {

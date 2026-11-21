@@ -46,7 +46,7 @@
   "deliveryUncertain": "The submission could not be confirmed. Retry the same request to check its status.",
   "retrySubmission": "Check submission",
   "showTasks": "Writing tasks",
-  "failedInterrupted": "The engine stopped before saving a document. You can retry.",
+  "failedInterrupted": "The engine stopped before saving your creation. You can retry.",
   "failedInvalidOutput": "No valid document was saved. Review the brief or skills, then retry.",
   "failedTargetChanged": "The saved document or destination changed. Your document and accepted requirements are retained. Save any manual edits, then retry with the latest content.",
   "failedWriteUnavailable": "The generated content is retained. Retry saving when storage is available.",
@@ -76,7 +76,7 @@
   "selectedCount": "{count, plural, =0 {No skills selected} one {# skill selected} other {# skills selected}}",
   "browserSearchHint": "Search by name or keyword…",
   "categoryLoadFailed": "Categories could not be refreshed. Available skills remain selectable; you can retry.",
-  "failedTimedOut": "The writing time limit was reached before saving. Your brief is retained; you can retry.",
+  "failedTimedOut": "The creation engine reached its execution time limit before saving. Your brief is retained; you can retry.",
   "activityTitle": "Creation activity",
   "activityHint": "Close the progress panel at any time. Your requests and results stay here.",
   "activityFilter": "Filter creation tasks",
@@ -205,5 +205,13 @@
   "progressEditSlides": "Edit the presentation",
   "progressRenderWeb": "Generate the web page",
   "progressRenderVideo": "Render the video",
-  "progressSaveArtifact": "Save the generated artifact"
+  "progressSaveArtifact": "Save the generated artifact",
+  "failedInactive": "The engine stopped making progress. Your request is retained; you can retry.",
+  "longRunningHint": "This task is taking longer. You can leave and return later; a notification will appear when the deliverable is saved.",
+  "notificationsTitle": "Notifications",
+  "notificationsEmpty": "No completed creations yet.",
+  "notificationsReady": "Your deliverable is ready",
+  "notificationsUnread": "{count} unread notifications",
+  "notificationsLoadFailed": "Notifications could not be refreshed. Try again.",
+  "notificationsOpen": "View deliverable"
 }

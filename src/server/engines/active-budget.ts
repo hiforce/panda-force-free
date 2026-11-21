@@ -19,7 +19,7 @@ export class ActiveRunBudget {
   private closed = false;
   private cancel: (() => void) | null = null;
   constructor(
-    duration: number,
+    private readonly duration: number,
     private readonly exhausted: () => void,
     private readonly clock: RunBudgetClock = systemClock,
   ) {
@@ -38,6 +38,14 @@ export class ActiveRunBudget {
       },
       Math.max(0, this.remaining),
     );
+  }
+  /** Inactivity policies renew on owned execution events without retaining their content. */
+  refresh() {
+    if (this.closed) return;
+    this.remaining = this.duration;
+    this.cancel?.();
+    this.cancel = null;
+    this.arm();
   }
   hold() {
     if (this.closed) return () => {};

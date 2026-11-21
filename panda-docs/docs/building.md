@@ -43,6 +43,8 @@ The documentation build currently inherits a low-severity [deepmerge advisory](h
 
 ## Container base images
 
+For the 0.1.2 source, see [base image contents and purpose](base-images.md) for the standard/creative distinction, full Rocky tool inventory, self-build commands and plugin/monthly maintenance.
+
 Source builds use two public Docker Hub images for **Linux amd64**:
 
 | Image                                                              | Purpose                                                                                         |

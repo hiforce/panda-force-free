@@ -9,7 +9,7 @@ import type { CodexConnection, CodexTransport, CodexTransportFactory } from "../
 import { createCodexBridge } from "../../bridge/codex-process.js";
 import { codexApplicationThread } from "./codex-policy.js";
 import { codexApplicationCalls } from "./codex-calls.js";
-import { ActiveRunBudget } from "../active-budget.js";
+import { ActiveRunBudget, type RunBudgetClock } from "../active-budget.js";
 import { rememberApplicationSession } from "./sessions.js";
 import { applicationVisibleEvents } from "../../../shared/engine/application-visible-events.js";
 import { forgetCodexApplicationSession } from "./codex-forget.js";
@@ -28,6 +28,7 @@ export function createCodexApplicationEngine(
     model?: string;
     effort?: string;
     timeoutMs?: number;
+    budgetClock?: RunBudgetClock;
     purpose?: "creation" | "knowledge" | "bots" | "bot-chat" | "editorial";
   },
   factory: CodexTransportFactory = createCodexBridge,
@@ -85,6 +86,17 @@ export function createCodexApplicationEngine(
           tools: input.tools,
           callbacks: {
             ...callbacks,
+            async call(call) {
+              if (options.purpose !== "creation") return callbacks.call(call);
+              budget.refresh();
+              const resume = budget.hold();
+              try {
+                return await callbacks.call(call);
+              } finally {
+                budget.refresh();
+                resume();
+              }
+            },
             ...(callbacks.question
               ? {
                   async question(scope, questions) {
@@ -92,6 +104,7 @@ export function createCodexApplicationEngine(
                     try {
                       return await callbacks.question!(scope, questions);
                     } finally {
+                      if (options.purpose === "creation") budget.refresh();
                       resume();
                     }
                   },
@@ -136,6 +149,17 @@ export function createCodexApplicationEngine(
           }
         },
         onMessage(message) {
+          if (
+            options.purpose === "creation" &&
+            !stopping &&
+            scope?.runId &&
+            message.params?.threadId === scope.sessionId &&
+            (message.params.turnId === scope.runId || message.method === "thread/tokenUsage/updated") &&
+            (message.method?.startsWith("item/") ||
+              message.method === "turn/plan/updated" ||
+              message.method === "thread/tokenUsage/updated")
+          )
+            budget.refresh();
           if (message.id !== undefined && message.method) {
             void calls(message);
             return;
@@ -181,11 +205,19 @@ export function createCodexApplicationEngine(
           }
         },
       });
-      budget = new ActiveRunBudget(timeoutMs, () => {
-        stopping = true;
-        markReady();
-        fail(Object.assign(new Error("Application engine deadline exceeded"), { code: "APPLICATION_ENGINE_DEADLINE" }));
-      });
+      budget = new ActiveRunBudget(
+        timeoutMs,
+        () => {
+          stopping = true;
+          markReady();
+          fail(
+            Object.assign(new Error("Application engine stopped making progress"), {
+              code: options.purpose === "creation" ? "APPLICATION_ENGINE_INACTIVE" : "APPLICATION_ENGINE_DEADLINE",
+            }),
+          );
+        },
+        options.budgetClock,
+      );
       callbacks.signal.addEventListener("abort", abort, { once: true });
       if (callbacks.signal.aborted) abort();
       try {

@@ -86,6 +86,7 @@ export interface HarnessNativeSession {
   info?: HarnessAgentInfo;
 }
 export type HarnessAgentEvent =
+  | { type: "activity" }
   | { type: "text"; text: string }
   | { type: "thought"; text: string }
   | { type: "tool"; id: string; name: string; status: "running" | "complete" | "error"; text?: string }

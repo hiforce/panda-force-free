@@ -117,3 +117,7 @@ The application presentation template was generated with [python-pptx 1.0.2](htt
 ## Optional video tools and CJK fonts
 
 Docker source builds obtain FFmpeg, Fontconfig and Noto CJK fonts from the configured Linux package repository. Their distribution notices remain installed with those packages, including `/usr/share/doc/ffmpeg/copyright` and `/usr/share/doc/fonts-noto-cjk/copyright`. Administrator-supplied tools and fonts retain their own notices.
+
+## Optional Rocky creative toolchain
+
+The optional `scripts/build/Dockerfile.rocky-bases` recipe installs separately distributed Office, PDF/OCR, font, browser, image, research, writing and video tools. Their upstream licenses remain applicable; the application MIT license does not replace them. Reviewed sources, package versions and hashes are maintained under `scripts/build/creative-tools/`, with the Harness license/checksum inputs in `scripts/build/harness-engines.lock.json`. The image retains copied font license documents and the Grok license; installed RPMs and Python/Node packages retain their own license metadata. See `panda-docs/docs/base-images.md` for the inventory and build purpose.

@@ -2,6 +2,8 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { sourceIdentity } from "../verification/source.js";
 import { dependencyProfile } from "./dependencies.mjs";
+import { existsSync } from "node:fs";
+import { inputDigest } from "./creative-tools.mjs";
 
 /** Application packaging and explicitly requested regression proofs have separate outcomes. */
 const expected = JSON.parse(readFileSync("scripts/build/base-images.json", "utf8"));
@@ -28,6 +30,12 @@ if (
 )
   throw new Error("Build base Harness versions do not match the reviewed lock.");
 const profile = process.env.PANDA_FORCE_VERIFICATION_PROFILE || "none";
+const creativeInputs = "/opt/panda-creative/inputs";
+const creativeToolchain = existsSync(creativeInputs)
+  ? { platform: "rocky9", inputsSha256: inputDigest("scripts/build/creative-tools") }
+  : undefined;
+if (creativeToolchain && creativeToolchain.inputsSha256 !== inputDigest(creativeInputs))
+  throw new Error("Creative toolchain inputs changed; rebuild both Rocky bases before packaging.");
 if (!["none", "full", "brand", "cdn"].includes(profile)) throw new Error("Unknown verification profile: " + profile);
 rmSync(".build-info", { recursive: true, force: true });
 const source = sourceIdentity();
@@ -54,6 +62,7 @@ writeFileSync(
         ...expected,
         buildBase: process.env.PANDA_FORCE_BUILD_BASE || expected.buildBase,
         runtimeBase: process.env.PANDA_FORCE_RUNTIME_BASE || expected.runtimeBase,
+        ...(creativeToolchain ? { creativeToolchain } : {}),
       },
       verification:
         profile === "none"

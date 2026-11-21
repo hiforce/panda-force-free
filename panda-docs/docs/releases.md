@@ -23,6 +23,17 @@ docker compose logs panda-force
 
 Review source, dependency licenses, English comments and the explicit public inventory before exporting. Verify the final clean tree, then review staged files. No internal Git history, old help, design records or agent directories belong in the public snapshot. Release changes go to the private repository for review first.
 
+## 0.1.2 develop source
+
+This is a source update on `develop`. The published `main`, `v0.1.1` tag and `0.1.1` application image keep their existing release contents.
+
+- Keep active creation runs alive through activity-based budgets, while retaining inactivity, cancellation, disconnect and user-question handling.
+- Persist completion notifications atomically with saved artifacts; the inbox opens the authorized document or exact asset version and retains read state.
+- Add maintained Rocky Linux creative build/runtime recipes, dependency profiles and locks for slides, images, research, writing, web and video. Document the [contents, purpose and self-build workflow](base-images.md); the existing public standard base pair remains the default.
+- Renew Grok credentials through an account-owned broker and preserve portable account directories and socket mounts across runtime sessions.
+- Compact project context in the session inspector and remove the Files/Changes/Terminal shortcut block from its overview.
+- Align the application and community source version at 0.1.2. The project uses `bun.lock`; no root `package-lock.json` is generated.
+
 ## 0.1.1
 
 - Add the shared camera, photo, file, installed-skill and project-document picker to Bot conversations. Project documents attach a copy of the selected saved version under the existing read permissions.

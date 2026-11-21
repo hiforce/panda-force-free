@@ -84,6 +84,14 @@ createInterface({ input: process.stdin }).on(
         session[params.configId] = params.value;
         result = { configOptions: [] };
       } else if (frame.method === "session/prompt") {
+        const account = JSON.parse(await readFile(join(home, "auth.json"), "utf8"));
+        if (account.fixture?.rejectPrompt) {
+          const counter = join(home, "rejected-prompts.txt");
+          const previous = await readFile(counter, "utf8").catch(() => "0");
+          await writeFile(counter, String(Number(previous) + 1));
+          send({ id: frame.id, error: { code: -32000, message: "Fixture prompt authentication failed" } });
+          return;
+        }
         const text = params.prompt
           .filter((part) => part.type === "text")
           .map((part) => part.text)

@@ -18,11 +18,12 @@ import { BotChatService } from "../../src/server/bots/workspace/chat-service.js"
 import { BotChatWorker } from "../../src/server/bots/workspace/chat-worker.js";
 import { BotWorker } from "../../src/server/bots/worker.js";
 import { randomUUID } from "node:crypto";
+import { ManualRunClock } from "../support/run-clock.js";
 const cleanups: Array<() => Promise<unknown>> = [];
 afterEach(async () => {
   for (const work of cleanups.splice(0).reverse()) await work();
 });
-async function fixture(now?: () => number) {
+async function fixture(now?: () => number, runClock?: ManualRunClock) {
   const root = await mkdtemp(join(tmpdir(), "panda-runtime-app-"));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const account = join(root, "account");
@@ -64,6 +65,7 @@ async function fixture(now?: () => number) {
   const port = applicationRuntimes({
     registry,
     now,
+    runClock,
     scratchRoot: join(root, "scratch"),
     principal: async (owner) => ({ owner, administrator: owner === "alice" }),
     codex: (selection) => ({
@@ -215,6 +217,65 @@ test("ACP application execution uses real MCP calls and configured model/effort 
   expect(answer).toContain("grok-fixture low");
   expect(codexCalls).toHaveLength(0);
   expect(engine.persistentSession).toBe(false);
+});
+for (const outcome of ["idle-disconnect", "idle-complete", "cancelled", "disconnected", "progressing"] as const)
+  test(`ACP creation execution classifies ${outcome} and keeps productive runs alive`, async () => {
+    const clock = new ManualRunClock();
+    const { port, root, registry } = await fixture(undefined, clock);
+    await port.discover("alice", "grok-local");
+    const cancellation = new AbortController(),
+      original = registry.agent.bind(registry);
+    const opened = spyOn(registry, "agent").mockImplementationOnce(async (...args) => {
+      const value = await original(...args);
+      value.agent.prompt = async (_session, _input, emit) => {
+        if (outcome === "progressing") {
+          for (let i = 0; i < 8; i++) {
+            clock.advance(590000);
+            await emit({ type: "activity" });
+          }
+          return { stopReason: "complete" };
+        }
+        if (outcome.startsWith("idle")) clock.advance(600001);
+        else if (outcome === "cancelled") cancellation.abort(new Error("User cancelled"));
+        if (outcome === "idle-complete") return { stopReason: "complete" };
+        throw new Error("Private ACP transport failure");
+      };
+      return value;
+    });
+    cleanups.push(async () => opened.mockRestore());
+    const run = port
+      .engine("alice", { runtimeId: "grok-local", model: "grok-fixture", effort: "low" }, root, "creation")
+      .run(
+        { prompt: "Create a presentation", instructions: "Use scoped tools", tools: [replyTool] },
+        {
+          signal: cancellation.signal,
+          started() {},
+          async call() {
+            throw new Error("Unexpected write");
+          },
+        },
+      );
+    if (outcome.startsWith("idle")) await expect(run).rejects.toMatchObject({ code: "APPLICATION_ENGINE_INACTIVE" });
+    else if (outcome === "progressing") expect((await run).status).toBe("completed");
+    else await expect(run).rejects.toThrow("Private ACP transport failure");
+  });
+test("ACP creation excludes the full duration of an application tool from inactivity", async () => {
+  const clock = new ManualRunClock(),
+    { port, root } = await fixture(undefined, clock);
+  const result = await port
+    .engine("alice", { runtimeId: "grok-local", model: "grok-fixture", effort: "low" }, root, "creation")
+    .run(
+      { prompt: "hello", instructions: "Use the reply tool", tools: [replyTool] },
+      {
+        signal: new AbortController().signal,
+        started() {},
+        async call() {
+          clock.advance(3600000);
+          return { success: true, text: "Saved" };
+        },
+      },
+    );
+  expect(result.status).toBe("completed");
 });
 test("MCP callbacks reject other callers and coalesce duplicate IDs without replaying a side effect", async () => {
   let calls = 0;

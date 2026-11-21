@@ -5,7 +5,8 @@
     "src/client/workbench/styles/shell.css",
     "src/client/workbench/styles/project-context.css",
     "src/client/workbench/styles/sidebar-typography.css",
-    "src/client/workbench/styles/preparation.css"
+    "src/client/workbench/styles/preparation.css",
+    "src/client/workbench/styles/completion-notifications.css"
   ],
   "public/creation.css": [
     "src/client/creation/styles/authoring.css",

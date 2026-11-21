@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "libreoffice": {
+    "version": "26.8.3",
+    "url": "https://download.documentfoundation.org/libreoffice/stable/26.8.3/rpm/x86_64/LibreOffice_26.8.3_Linux_x86-64_rpm.tar.gz",
+    "sha256": "432c9da50c588cbf69c9f18d20f7e86497cb2f54e478ee3dbfbd0cb74dfd8993"
+  },
+  "rpmfusion": {
+    "url": "https://download1.rpmfusion.org/free/el/rpmfusion-free-release-9.noarch.rpm",
+    "sha256": "766d53de37d36d1364fe573e48d9fee337b1fd71281129883096bc7537e79ae1"
+  }
+}

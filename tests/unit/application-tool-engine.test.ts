@@ -1,3 +1,4 @@
+import { ManualRunClock } from "../support/run-clock.js";
 import { expect, test } from "bun:test";
 import type { CodexTransportOptions } from "../../src/server/engines/codex-transport.js";
 import type { ApplicationRunCallbacks } from "../../src/shared/engine/application-tools.js";
@@ -9,7 +10,13 @@ const input = {
   tools: [{ name: "panda_documents_create", description: "Save the document", inputSchema: { type: "object" } }],
 };
 function fixture(
-  overrides: { timeoutMs?: number; purpose?: "creation" | "knowledge" | "bots"; model?: string; effort?: string } = {},
+  overrides: {
+    budgetClock?: ManualRunClock;
+    timeoutMs?: number;
+    purpose?: "creation" | "knowledge" | "bots";
+    model?: string;
+    effort?: string;
+  } = {},
 ) {
   let wire!: CodexTransportOptions,
     closed = false,
@@ -104,6 +111,9 @@ function fixture(
         method: "item/completed",
         params: { threadId, turnId: "owned-run", item: { id: "message", ...item } },
       });
+    },
+    notification(method: string, params: Record<string, unknown>) {
+      wire.onMessage({ method, params });
     },
     disconnect() {
       wire.onDisconnected(1006, null);
@@ -349,9 +359,9 @@ test("progress exposes only bounded visible assistant text from the bound execut
   expect(messages).toEqual(["The outline is ready.", "x".repeat(8000)]);
 });
 
-test("an exhausted active deadline has a typed failure and interrupts only its owned run", async () => {
+test("an exhausted creation inactivity deadline interrupts only its owned run", async () => {
   const f = fixture({ timeoutMs: 1000, purpose: "creation" });
-  await expect(f.run()).rejects.toMatchObject({ code: "APPLICATION_ENGINE_DEADLINE" });
+  await expect(f.run()).rejects.toMatchObject({ code: "APPLICATION_ENGINE_INACTIVE" });
   expect(f.requests.filter((request) => request.method === "turn/interrupt")).toEqual([
     { method: "turn/interrupt", params: { threadId: "owned-session", turnId: "owned-run" } },
   ]);
@@ -371,5 +381,71 @@ test("application runs pass the chosen effort and resolve model defaults on resu
     expect(f.requests.find((r) => r.method === "turn/start")?.params?.effort).toBe(expectedEffort);
     f.complete();
     expect((await running).status).toBe("completed");
+  }
+});
+
+test("creation reasoning activity renews inactivity without exposing private content", async () => {
+  const clock = new ManualRunClock(),
+    f = fixture({ purpose: "creation", timeoutMs: 1000, budgetClock: clock }),
+    messages: string[] = [];
+  f.callbacks.message = (text) => {
+    messages.push(text);
+  };
+  const run = f.run();
+  await until(() => f.turns() === 1);
+  await Bun.sleep(1);
+  for (let i = 0; i < 10; i++) {
+    clock.advance(900);
+    f.notification("item/reasoning/textDelta", {
+      threadId: "owned-session",
+      turnId: "owned-run",
+      delta: "Private reasoning",
+    });
+  }
+  f.complete();
+  expect((await run).status).toBe("completed");
+  expect(messages).toEqual([]);
+});
+test("foreign activity cannot keep a stalled creation alive", async () => {
+  const clock = new ManualRunClock(),
+    f = fixture({ purpose: "creation", timeoutMs: 1000, budgetClock: clock });
+  const run = f.run();
+  await until(() => f.turns() === 1);
+  await Bun.sleep(1);
+  clock.advance(900);
+  f.notification("item/reasoning/textDelta", { threadId: "other-session", turnId: "owned-run", delta: "Foreign" });
+  clock.advance(101);
+  await expect(run).rejects.toMatchObject({ code: "APPLICATION_ENGINE_INACTIVE" });
+});
+test("creation waits for long tools and user answers without consuming inactivity", async () => {
+  for (const method of ["item/tool/call", "item/tool/requestUserInput"]) {
+    const clock = new ManualRunClock(),
+      f = fixture({ purpose: "creation", timeoutMs: 1000, budgetClock: clock });
+    f.callbacks.call = async () => {
+      clock.advance(10000);
+      return { success: true, text: "Saved" };
+    };
+    f.callbacks.question = async () => {
+      clock.advance(10000);
+      return { question: { answers: ["One"] } };
+    };
+    const run = f.run();
+    await until(() => f.turns() === 1);
+    await Bun.sleep(1);
+    f.call(
+      80,
+      method.includes("requestUserInput")
+        ? {
+            questions: [
+              { id: "question", header: "Choice", question: "Choose", options: [{ label: "One", description: "One" }] },
+            ],
+          }
+        : {},
+      method,
+    );
+    await until(() => f.responses.length === 1);
+    clock.advance(900);
+    f.complete();
+    expect((await run).status).toBe("completed");
   }
 });

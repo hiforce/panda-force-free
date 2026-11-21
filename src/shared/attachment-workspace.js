@@ -25,6 +25,8 @@ Before calling view_image or returning a generated image for visual inspection, 
 Files created outside the shared workspace by tools must be copied into the output directory before delivery. Do not assume /mnt/data, a container's /tmp, or a sandbox: prefix makes a file available to PandaForce.
 Before returning an attachment, verify that the output exists. Link to its absolute workspace path and preserve the original filename where possible.
 For images, include a Markdown image preview and a Markdown download link to the verified absolute output path. Do not return only a plain-text or inline-code path.
+For creative work, first check whether panda-tools is available in your actual execution environment. When present, its reviewed Office, PDF/OCR, fonts, Node and Python tools are already installed: use panda-tools doctor, panda-tools fonts, or panda-tools resolve <package> to locate them before installing anything. Node CommonJS uses NODE_PATH; for ESM, use createRequire or import the absolute entry returned by panda-tools resolve. A module lookup failure from a different working directory does not by itself mean the package needs installing.
+Use a separate writable LibreOffice UserInstallation profile for each concurrent headless conversion. Keep temporary conversion files in the processing directory and deliver verified outputs through the shared output directory.
 </panda_attachment_workspace>`;
 }
 

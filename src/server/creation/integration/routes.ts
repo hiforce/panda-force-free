@@ -11,7 +11,9 @@ export function creationRoutes(
     CreationService,
     "options" | "list" | "detail" | "submit" | "cancel" | "retry" | "answer" | "followUp"
   > &
-    Partial<Pick<CreationService, "message" | "goal" | "clearHistory" | "rounds">>,
+    Partial<
+      Pick<CreationService, "message" | "goal" | "clearHistory" | "rounds" | "notifications" | "readNotification">
+    >,
   owner: (context: RouteContext) => string,
 ): Route[] {
   const protect = creationProtection(owner),
@@ -21,6 +23,22 @@ export function creationRoutes(
       return creationText(url.searchParams.get(key));
     };
   return [
+    {
+      path: "/api/document-creations/notifications",
+      method: "GET",
+      handler: protect(async ({ url, res }, actor) => {
+        if (url.search || !service.notifications) throw new CreationError("invalidInput");
+        respondJson(res, 200, await service.notifications(actor));
+      }),
+    },
+    {
+      path: "/api/document-creations/notifications/read",
+      method: "POST",
+      handler: protect(async ({ req, url, res }, actor) => {
+        if (url.search || !service.readNotification) throw new CreationError("invalidInput");
+        respondJson(res, 200, await service.readNotification(actor, await readJsonBody(req, 4096)));
+      }),
+    },
     {
       path: "/api/document-creations/rounds",
       method: "GET",

@@ -43,7 +43,8 @@ USER root
 WORKDIR /app
 ARG INSTALL_VIDEO_TOOLS=1
 RUN if [ "$INSTALL_VIDEO_TOOLS" = "1" ] && ! (command -v ffmpeg > /dev/null && command -v ffprobe > /dev/null \
-      && command -v fc-match > /dev/null && fc-match ':lang=zh-cn' --format '%{family}\n' | grep -qi 'Noto Sans CJK'); then \
+      && command -v fc-match > /dev/null && fc-match 'Noto Sans CJK SC' --format '%{family}\n' | grep -qi 'Noto Sans CJK SC'); then \
+      command -v apt-get > /dev/null || { echo 'Selected runtime base lacks required video tools or Noto CJK fonts; rebuild the matching creative base.' >&2; exit 1; }; \
       apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-noto-cjk \
       && rm -rf /var/lib/apt/lists/*; \
     fi
@@ -57,6 +58,7 @@ RUN node /opt/panda-force-dependencies.mjs verify /app /tmp/panda-force-base-dep
 COPY --from=build /app/public ./public
 COPY --from=build /app/.build-info/ ./
 RUN node -e 'const fs=require("node:fs"),c=require("node:crypto"),i=JSON.parse(fs.readFileSync("build-info.json"));if(i.bases.engineLockSha256&&c.createHash("sha256").update(fs.readFileSync("/opt/panda-harness/engines.json")).digest("hex")!==i.bases.engineLockSha256)throw Error("Runtime base Harness versions differ from the reviewed lock");'
+RUN node -e 'const fs=require("node:fs"),p=require("node:child_process"),i=JSON.parse(fs.readFileSync("build-info.json"));if(i.bases.creativeToolchain&&p.execFileSync("node",["/usr/local/lib/panda-creative.mjs","digest"],{encoding:"utf8"}).trim()!==i.bases.creativeToolchain.inputsSha256)throw Error("Runtime creative toolchain differs from the reviewed build base");'
 COPY src ./src
 COPY scripts/start.ts ./scripts/start.ts
 COPY LICENSE THIRD_PARTY_NOTICES.md ./
@@ -66,7 +68,12 @@ RUN find /app/src /app/public /app/scripts /app/LICENSES \( ! -perm -a=r -o \( -
     && bun build src/cli/main.ts --target=node --outfile=/usr/local/lib/panda/panda.mjs \
     && chmod 0755 /usr/local/lib/panda/panda.mjs \
     && ln -s /usr/local/lib/panda/panda.mjs /usr/local/bin/panda
+RUN if ! getent passwd 1000 > /dev/null; then \
+      getent group 1000 > /dev/null || /usr/sbin/groupadd --gid 1000 codex; \
+      /usr/sbin/useradd --uid 1000 --gid 1000 --home-dir /home/codex --shell /bin/bash --no-create-home codex; \
+    fi
 ENV BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 \
+    PATH="${PATH}:/usr/local/sbin:/usr/sbin:/sbin" \
     NODE_ENV=production \
     HOME=/home/codex \
     CODEX_HOME=/home/codex/.codex \

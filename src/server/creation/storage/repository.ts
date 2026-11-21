@@ -179,8 +179,32 @@ export class CreationTaskRepository implements CreationOutputTasks {
           "UPDATE creation_tasks SET state=CASE WHEN cancelRequested=1 THEN 'cancelled' ELSE 'succeeded' END,artifact=?,failure=NULL,token=NULL,leaseUntil=NULL,updatedAt=? WHERE id=?",
         )
         .run(stableJson(checked), now, id);
+      if (!row.cancelRequested)
+        this.db
+          .query("INSERT OR IGNORE INTO creation_notifications(taskId,owner,generation,createdAt) VALUES(?,?,?,?)")
+          .run(id, owner, row.generation, now);
       return this.get(owner, id);
     });
+  }
+  notifications(owner: string): import("../ports.js").CreationNotificationRecord[] {
+    return this.db
+      .query<import("../ports.js").CreationNotificationRecord, [string]>(
+        "SELECT taskId,generation,createdAt,readAt FROM creation_notifications WHERE owner=? ORDER BY (readAt IS NULL) DESC,createdAt DESC,taskId DESC LIMIT 100",
+      )
+      .all(creationText(owner));
+  }
+  readNotification(owner: string, taskId: string, generation: number, now: number) {
+    creationInteger(generation);
+    creationInteger(now);
+    const row = this.db
+      .query("SELECT 1 FROM creation_notifications WHERE owner=? AND taskId=? AND generation=?")
+      .get(creationText(owner), creationUuid(taskId), generation);
+    if (!row) throw new CreationError("notFound");
+    this.db
+      .query(
+        "UPDATE creation_notifications SET readAt=? WHERE owner=? AND taskId=? AND generation=? AND readAt IS NULL",
+      )
+      .run(now, owner, taskId, generation);
   }
   outputFailure(owner: string, id: string, digest: string, failure: CreationFailure, now: number) {
     creationInteger(now);

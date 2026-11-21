@@ -33,14 +33,6 @@ export function createSessionToolsView({ registry, store, t, openDialog, readSes
     setOpaqueText(requireElement("#sessionToolsCount"), String(enabled().length));
     if (next !== signature) {
       signature = next;
-      setMessageHtml(
-        requireElement("#sessionToolShortcuts"),
-        preferences.pinned
-          .map((id) => registry.get(id))
-          .filter(Boolean)
-          .map((tool) => toolButton(tool, true))
-          .join(""),
-      );
       renderList();
     }
     const id = readSessionId();

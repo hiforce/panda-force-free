@@ -7,8 +7,7 @@ PandaForce is a self-hosted AI workspace with a friendly kung-fu panda at its he
 
 > This page showcases the **develop source**. [Build this branch to try it →](#run-this-branch-from-source)
 
-> The current develop source adds Codex and Grok Build Harness Runtimes, runtime-specific model and reasoning choices, conversation history handoff, and shared recovery and settings components. Build `develop` to use these updates. The published `v0.1.1` tag and `0.1.1` image retain their release contents; the source package version is also `0.1.1`.
-
+> The **0.1.2 develop source** includes Codex and Grok Build Harness Runtimes, runtime-specific model and reasoning choices, account-owned credential renewal, activity-based creation execution and a persistent completion inbox. It also adds a maintained Rocky Linux creative toolchain for slides, images, research, writing, web and video. [Base image contents, purpose and build instructions →](./panda-docs/docs/base-images.md) Build `develop` to use these updates. The published `v0.1.1` tag and `0.1.1` application image retain their release contents; this source update does not publish a `0.1.2` image.
 
 ## Create something fun
 

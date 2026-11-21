@@ -1,0 +1,19 @@
+# Reviewed creative toolchain; resolved versions and hashes are in requirements.lock.
+Pillow
+beautifulsoup4
+defusedxml
+httpx
+lxml
+markitdown[docx,pptx,pdf,xlsx]
+matplotlib
+moviepy
+numpy
+openpyxl
+pandas
+pdf2image
+pymupdf
+pypdf
+python-docx
+python-pptx
+reportlab
+trafilatura

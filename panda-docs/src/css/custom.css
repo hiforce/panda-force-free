@@ -1,1 +1,63 @@
-:root{--ifm-color-primary:#465bf3;--ifm-color-primary-dark:#3048f1;--ifm-color-primary-darker:#263ff0;--ifm-color-primary-darkest:#112ad9;--ifm-color-primary-light:#5c6ef5;--ifm-color-primary-lighter:#6778f6;--ifm-color-primary-lightest:#8895f8;--ifm-font-family-base:Inter,system-ui,sans-serif;--ifm-code-font-size:90%}.navbar__brand{font-weight:750}.theme-doc-sidebar-container{background:var(--ifm-background-surface-color)}article{max-width:850px}.markdown h1{letter-spacing:-.035em}.markdown pre{border:1px solid var(--ifm-color-emphasis-200);border-radius:12px}
+:root {
+  --ifm-color-primary: #465bf3;
+  --ifm-color-primary-dark: #3048f1;
+  --ifm-color-primary-darker: #263ff0;
+  --ifm-color-primary-darkest: #112ad9;
+  --ifm-color-primary-light: #5c6ef5;
+  --ifm-color-primary-lighter: #6778f6;
+  --ifm-color-primary-lightest: #8895f8;
+  --ifm-font-family-base: Inter, system-ui, sans-serif;
+  --ifm-code-font-size: 90%;
+}
+.navbar__brand {
+  font-weight: 750;
+}
+.theme-doc-sidebar-container {
+  background: var(--ifm-background-surface-color);
+}
+article {
+  max-width: 850px;
+}
+.markdown h1 {
+  letter-spacing: -0.035em;
+}
+.markdown pre {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+}
+/* These explanatory inventories become stacked rows on narrow screens. */
+@media (max-width: 600px) {
+  .base-image-table table,
+  .base-image-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .base-image-table thead {
+    display: none;
+  }
+
+  .base-image-table tbody tr {
+    display: grid;
+    gap: var(--ifm-spacing-vertical);
+    padding: var(--ifm-spacing-horizontal);
+    margin-bottom: var(--ifm-spacing-vertical);
+    border: 1px solid var(--ifm-table-border-color);
+    border-radius: var(--ifm-global-radius);
+  }
+
+  .base-image-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .base-image-table td:first-child {
+    font-weight: var(--ifm-font-weight-bold);
+  }
+
+  .base-image-table td:last-child {
+    color: var(--ifm-color-emphasis-700);
+  }
+}

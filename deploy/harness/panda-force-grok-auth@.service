@@ -1,0 +1,26 @@
+[Unit]
+Description=PandaForce Grok credential owner for %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=%i
+EnvironmentFile=/etc/panda-force/grok-auth-%i.env
+ExecStart=/usr/bin/env bun /opt/panda-force/grok-auth/broker.js
+Restart=on-failure
+RestartSec=3
+UMask=0077
+RuntimeDirectory=panda-force-grok-auth-%i
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+WorkingDirectory=/run/panda-force-grok-auth-%i
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=full
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+TimeoutStopSec=35
+
+[Install]
+WantedBy=multi-user.target

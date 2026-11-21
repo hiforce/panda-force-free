@@ -76,7 +76,6 @@ export function createSessionWorkspace(options) {
     const overview = tab === "overview";
     requireElement("#sessionOverview").hidden = !overview;
     requireElement("#sessionToolsView").hidden = overview;
-    requireElement("#sessionInspectorFooter").hidden = !overview;
     for (const { id, selected } of [
       { id: "#sessionOverviewTab", selected: overview },
       { id: "#sessionToolsTab", selected: !overview },
@@ -148,7 +147,6 @@ export function createSessionWorkspace(options) {
     toggleClass("creation-entry-layout", creation && !hasInspector);
     actionButton.hidden ||= creation;
     requireElement("#sessionToolsTab").hidden = creation;
-    requireElement("#sessionInspectorFooter").hidden = creation || selectedTab !== "overview";
     const extension = requireElement("#sessionDomainSections");
     extension.hidden = !creation;
     if (creation) options.renderSections?.(extension);
@@ -191,8 +189,8 @@ export function createSessionWorkspace(options) {
     else localizeText(requireElement("#threadTitle"), "common.newSession", undefined, t);
     requireElement("#threadTitle").title = view.title;
     setOpaqueText(requireElement("#sessionProjectName"), view.project?.name || t("common.unassigned"));
-    setOpaqueText(requireElement("#sessionProjectCode"), view.project?.code || "—");
     setOpaqueText(requireElement("#sessionWorkingFolder"), view.cwd || t("common.noWorkingFolder"));
+    requireElement("#sessionWorkingFolder").title = view.cwd || "";
     setOpaqueText(requireElement("#sessionMirrorModel"), view.modelLabel);
     setOpaqueText(requireElement("#sessionMirrorEffort"), view.effortLabel);
     setOpaqueText(requireElement("#sessionMirrorPermission"), view.permissionLabel);

@@ -4,10 +4,61 @@ services:
     image: ${PANDA_FORCE_HARNESS_IMAGE:-${PANDA_FORCE_IMAGE:-panda-force:local}}
     environment:
       PANDA_FORCE_HARNESS_PROFILES: >-
-        [{"id":"grok-build","name":"Grok Build","command":"/usr/local/bin/grok","accountHome":"/run/panda-grok-account","deployment":"local"}]
+        [{"id":"grok-build","name":"Grok Build","command":"/usr/local/bin/grok","accountHome":"/run/panda-grok-account","credentialSocket":"/run/panda-grok-auth/broker.sock","deployment":"container"}]
+    depends_on:
+      grok-auth:
+        condition: service_healthy
     volumes:
-      # Bind the account directory so atomic token replacement remains visible to new sessions.
-      - type: bind
-        source: ${PANDA_FORCE_GROK_ACCOUNT_HOME_HOST:?Set the operator-owned Grok account directory}
-        target: /run/panda-grok-account
-        read_only: true
+      # The application never mounts the account owner's refresh credentials.
+      - panda-force-grok-auth:/run/panda-grok-auth:ro
+  grok-auth-socket-init:
+    image: ${PANDA_FORCE_HARNESS_IMAGE:-${PANDA_FORCE_IMAGE:-panda-force:local}}
+    pull_policy: ${PANDA_FORCE_PULL_POLICY:-missing}
+    user: "0:0"
+    network_mode: none
+    command:
+      - bun
+      - --eval
+      - >-
+        import fs from 'node:fs';
+        const uid=Number(process.env.PUID),gid=Number(process.env.PGID);
+        if(!Number.isSafeInteger(uid)||!Number.isSafeInteger(gid)||uid<0||gid<0)throw Error('Invalid socket owner');
+        fs.chownSync('/run/panda-grok-auth',uid,gid);fs.chmodSync('/run/panda-grok-auth',0o700);
+        fs.chownSync('/run/panda-grok-account',uid,gid);fs.chmodSync('/run/panda-grok-account',0o700);
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+    volumes:
+      - panda-force-grok-auth:/run/panda-grok-auth
+      - panda-force-grok-account:/run/panda-grok-account
+  grok-auth:
+    image: ${PANDA_FORCE_HARNESS_IMAGE:-${PANDA_FORCE_IMAGE:-panda-force:local}}
+    pull_policy: ${PANDA_FORCE_PULL_POLICY:-missing}
+    user: "${PUID:-1000}:${PGID:-1000}"
+    restart: unless-stopped
+    command: ["bun", "/app/src/server/harness/auth/main.ts"]
+    environment:
+      GROK_HOME: /run/panda-grok-account
+      PANDA_FORCE_GROK_AUTH_HOME: /run/panda-grok-account
+      PANDA_FORCE_GROK_AUTH_SOCKET: /run/panda-grok-auth/broker.sock
+      PANDA_FORCE_GROK_AUTH_COMMAND: /usr/local/bin/grok
+    depends_on:
+      grok-auth-socket-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "--eval",
+          "import http from 'node:http';const r=http.get({socketPath:'/run/panda-grok-auth/broker.sock',path:'/health'},s=>{s.resume();s.on('end',()=>process.exit(s.statusCode===200?0:1))});r.setTimeout(2000,()=>{r.destroy();process.exit(1)});r.on('error',()=>process.exit(1));",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    volumes:
+      - ${PANDA_FORCE_GROK_ACCOUNT_HOME_HOST:-panda-force-grok-account}:/run/panda-grok-account
+      - panda-force-grok-auth:/run/panda-grok-auth
+volumes:
+  panda-force-grok-auth:
+  panda-force-grok-account:

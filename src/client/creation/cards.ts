@@ -17,6 +17,7 @@ import { appendCreationArtifact } from "./artifact-card.js";
 const failures: Record<CreationFailure, MessageId> = {
   interrupted: "creation.failedInterrupted",
   timedOut: "creation.failedTimedOut",
+  inactive: "creation.failedInactive",
   invalidOutput: "creation.failedInvalidOutput",
   targetChanged: "creation.failedTargetChanged",
   fileChanged: "creation.failedFileChanged",

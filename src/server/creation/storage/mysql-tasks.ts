@@ -112,7 +112,32 @@ export class MySQLCreationTasks {
       if (row.state !== "committing") throw new CreationError("conflict");
       await this.context
         .sql`UPDATE panda_force_creation_tasks SET state=CASE WHEN cancelRequested=1 THEN 'cancelled' ELSE 'succeeded' END,artifact=${stableJson(checked)},failure=NULL,token=NULL,leaseUntil=NULL,updatedAt=${now} WHERE namespace=${this.context.namespace} AND id=${id}`;
+      if (!row.cancelRequested)
+        await this.context
+          .sql`INSERT IGNORE INTO panda_force_creation_notifications(namespace,taskId,owner,generation,createdAt) VALUES(${this.context.namespace},${id},${owner},${row.generation},${now})`;
       return this.get(owner, id);
+    });
+  }
+  async notifications(owner: string): Promise<import("../ports.js").CreationNotificationRecord[]> {
+    return (
+      await this.context
+        .sql`SELECT taskId,generation,createdAt,readAt FROM panda_force_creation_notifications WHERE namespace=${this.context.namespace} AND owner=${creationText(owner)} ORDER BY (readAt IS NULL) DESC,createdAt DESC,taskId DESC LIMIT 100`
+    ).map((row: Record<string, unknown>) => ({
+      taskId: creationUuid(row.taskId),
+      generation: mysqlInteger(row.generation),
+      createdAt: mysqlInteger(row.createdAt),
+      readAt: row.readAt === null ? null : mysqlInteger(row.readAt),
+    }));
+  }
+  async readNotification(owner: string, taskId: string, generation: number, now: number) {
+    creationInteger(generation);
+    creationInteger(now);
+    await this.context.transaction(async () => {
+      const rows = await this.context
+        .sql`SELECT 1 FROM panda_force_creation_notifications WHERE namespace=${this.context.namespace} AND owner=${creationText(owner)} AND taskId=${creationUuid(taskId)} AND generation=${generation}`;
+      if (!rows.length) throw new CreationError("notFound");
+      await this.context
+        .sql`UPDATE panda_force_creation_notifications SET readAt=${now} WHERE namespace=${this.context.namespace} AND owner=${owner} AND taskId=${taskId} AND generation=${generation} AND readAt IS NULL`;
     });
   }
   async outputFailure(owner: string, id: string, digest: string, failure: CreationFailure, now: number) {

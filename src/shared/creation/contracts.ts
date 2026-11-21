@@ -59,7 +59,7 @@ export interface CreationAvailability {
 }
 export type CreationTaskState = "queued" | "running" | "committing" | "succeeded" | "failed" | "cancelled";
 export type CreationFailure =
-  "interrupted" | "timedOut" | "invalidOutput" | "targetChanged" | "fileChanged" | "writeUnavailable";
+  "interrupted" | "timedOut" | "inactive" | "invalidOutput" | "targetChanged" | "fileChanged" | "writeUnavailable";
 export interface CreationGoal {
   id: string;
   objective: string;
@@ -145,6 +145,15 @@ export interface CreationTaskView {
   previousTaskId?: string;
   document?: { documentId: string; title: string; revision: number; projectId?: string; projectName?: string };
   documentStatus?: "available" | "unavailable";
+}
+export interface CreationNotification {
+  taskId: string;
+  generation: number;
+  createdAt: number;
+  readAt: number | null;
+  title: string;
+  kind: CreationOutputType;
+  artifact: CreationArtifact;
 }
 export interface CreationTaskDetail extends CreationTaskView {
   workspaceDirectory?: string;

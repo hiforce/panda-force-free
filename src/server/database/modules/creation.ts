@@ -32,6 +32,21 @@ export const creationMySQLModels: readonly MySQLModel[] = [
     ],
   },
   {
+    name: "panda_force_creation_notifications",
+    columns: [
+      t("namespace", 256),
+      t("taskId", 128),
+      t("owner", 200),
+      n("generation"),
+      n("createdAt"),
+      n("readAt", true),
+    ],
+    indexes: [
+      pk("namespace", "taskId", "generation"),
+      { name: "creation_notification_owner", unique: false, columns: ["namespace", "owner", "readAt", "createdAt"] },
+    ],
+  },
+  {
     name: "panda_force_creation_tasks",
     columns: [
       t("namespace", 256),
@@ -149,6 +164,7 @@ const allSteps = creation.migrations.mysql![0]!.steps;
 const shippedSteps = allSteps.filter(
   (step) =>
     ![
+      "panda_force_creation_notifications",
       "panda_force_creation_messages",
       "panda_force_creation_goals",
       "panda_force_creation_history_hidden",
@@ -173,6 +189,7 @@ export const mysqlCreationModule = {
           ["panda_force_creation_history_hidden", "panda_force_creation_history_actions"].includes(step.id),
         ),
       },
+      { version: 6, steps: allSteps.filter((step) => step.id === "panda_force_creation_notifications") },
     ],
   },
 };

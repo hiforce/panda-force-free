@@ -310,7 +310,9 @@ export class CreationWorker {
               ? "targetChanged"
               : error instanceof Error && "code" in error && error.code === "APPLICATION_ENGINE_DEADLINE"
                 ? "timedOut"
-                : "interrupted",
+                : error instanceof Error && "code" in error && error.code === "APPLICATION_ENGINE_INACTIVE"
+                  ? "inactive"
+                  : "interrupted",
           this.now(),
         );
     } finally {

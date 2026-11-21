@@ -1,0 +1,88 @@
+# Rebuild native application dependencies on Rocky; retain the older Debian/NJ recipes.
+ARG ROCKY_IMAGE=rockylinux:9@sha256:03303863808e9cd79f0c58c833db3e5f9cde9f2abe16804a267b05dc54af86e4
+ARG SEED_IMAGE=hiforceai/panda-force-build-base@sha256:66696cf2668c2b2e017d9f106533bdd016ac2a5d5a4c0f593ee59e8f36b75e5e
+FROM ${SEED_IMAGE} AS seed
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-core fonts-noto-ui-core fonts-noto-cjk fonts-noto-mono fonts-liberation fonts-dejavu-core fonts-wqy-zenhei \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir /opt/panda-font-licenses && cp -a /usr/share/doc/fonts-* /opt/panda-font-licenses/
+
+FROM ${ROCKY_IMAGE} AS tools
+USER root
+ARG NPM_REGISTRY=https://registry.npmjs.org
+RUN dnf -y install dnf-plugins-core epel-release \
+    && dnf config-manager --set-enabled crb
+COPY scripts/build/creative-tools /opt/panda-creative/inputs
+COPY scripts/build/Dockerfile.rocky-bases /opt/panda-creative/inputs/Dockerfile.rocky-bases
+COPY --from=seed /usr/local/bin/node /usr/local/bin/node
+COPY --from=seed /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=seed /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+COPY --from=seed /usr/local/include/node /opt/node-headers/include/node
+COPY --from=seed /opt/panda-harness /opt/panda-harness
+# Font files are portable data; Debian executables and native modules are not copied.
+COPY --from=seed /usr/share/fonts /usr/local/share/fonts/panda
+COPY --from=seed /opt/panda-font-licenses /usr/share/licenses/panda-fonts
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+    && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && ln -s /opt/panda-harness/bin/codex /usr/local/bin/codex \
+    && ln -s /opt/panda-harness/bin/grok /usr/local/bin/grok \
+    && node /opt/panda-creative/inputs/install-rocky.mjs \
+    && rm -rf /var/cache/dnf /tmp/rpmfusion.rpm \
+    && ln -sf /usr/bin/python3.11 /usr/local/bin/python3 \
+    && fc-cache -f
+COPY LibreOffice.tar.gz /tmp/LibreOffice.tar.gz
+RUN node -e 'const f=require("fs"),c=require("crypto"),s=JSON.parse(f.readFileSync("/opt/panda-creative/inputs/sources.lock.json")).libreoffice;if(c.createHash("sha256").update(f.readFileSync("/tmp/LibreOffice.tar.gz")).digest("hex")!==s.sha256)throw Error("Office archive checksum mismatch")' \
+    && mkdir /tmp/office && tar -xzf /tmp/LibreOffice.tar.gz -C /tmp/office \
+    && dnf -y install /tmp/office/*/RPMS/*.rpm && dnf clean all \
+    && ln -sf /opt/libreoffice*/program/soffice /usr/local/bin/soffice \
+    && ln -sf /opt/libreoffice*/program/soffice /usr/local/bin/libreoffice \
+    && rm -rf /tmp/office /tmp/LibreOffice.tar.gz
+ENV PANDA_FORCE_CREATIVE_HOME=/opt/panda-creative \
+    NODE_PATH=/opt/panda-creative/node/node_modules \
+    PLAYWRIGHT_BROWSERS_PATH=/opt/panda-creative/browsers \
+    PATH=/opt/panda-creative/python/bin:/opt/panda-creative/node/node_modules/.bin:/usr/local/bin:/usr/bin:/bin
+RUN mkdir /opt/panda-creative/node \
+    && cp /opt/panda-creative/inputs/package.json /opt/panda-creative/inputs/bun.lock /opt/panda-creative/node/ \
+    && cd /opt/panda-creative/node && bun install --frozen-lockfile --ignore-scripts --registry="${NPM_REGISTRY}" \
+    && python3 -m venv /opt/panda-creative/python \
+    && /opt/panda-creative/python/bin/pip install --no-cache-dir --require-hashes -r /opt/panda-creative/inputs/requirements.lock \
+    && node /opt/panda-creative/node/node_modules/playwright/cli.js install chromium \
+    && chmod -R a+rX /opt/panda-creative
+COPY scripts/build/creative-tools.mjs /usr/local/lib/panda-creative.mjs
+RUN cp /usr/local/lib/panda-creative.mjs /opt/panda-creative/inputs/creative-tools.mjs \
+    && printf '#!/bin/sh\nexec node /usr/local/lib/panda-creative.mjs "$@"\n' > /usr/local/bin/panda-tools \
+    && chmod 0755 /usr/local/bin/panda-tools \
+    && panda-tools doctor \
+    && grok --no-auto-update --version && codex --version
+
+FROM tools AS application-dependencies
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY patches ./patches
+RUN dnf -y install gcc-c++ make python3.11-devel && dnf clean all \
+    && bun install --frozen-lockfile --ignore-scripts \
+    && npm rebuild node-pty --build-from-source --nodedir=/opt/node-headers
+
+FROM application-dependencies AS build-base
+COPY scripts/build/creative-tools.mjs /usr/local/lib/panda-creative.mjs
+RUN sha256sum package.json bun.lock patches/* > /opt/panda-force-dependencies.sha256
+LABEL org.pandaforce.base.layer="rocky-creative-build"
+
+FROM tools AS production-dependencies
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY patches ./patches
+RUN dnf -y install gcc-c++ make python3.11-devel && dnf clean all \
+    && bun install --frozen-lockfile --production --omit=peer --ignore-scripts \
+    && npm rebuild node-pty --build-from-source --nodedir=/opt/node-headers
+
+FROM tools AS runtime-base
+WORKDIR /app
+COPY --from=production-dependencies /app/node_modules ./node_modules
+COPY package.json bun.lock ./
+COPY patches ./patches
+RUN node -e "require('node-pty'); require('sharp')" \
+    && sha256sum package.json bun.lock patches/* > /opt/panda-force-dependencies.sha256 \
+    && mkdir -p /home/codex/.codex /home/codex/workspace /var/lib/panda-force \
+    && chmod 700 /var/lib/panda-force && chown -R 1000:1000 /home/codex /var/lib/panda-force
+LABEL org.pandaforce.base.layer="rocky-creative-runtime"

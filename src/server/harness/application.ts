@@ -8,6 +8,7 @@ import type { ApplicationRunScope, ApplicationToolEngine } from "../../shared/en
 import type { HarnessRegistry, HarnessPrincipal } from "./registry.js";
 import type { HarnessAgent } from "./ports.js";
 import { applicationMcp } from "./application-mcp.js";
+import { ActiveRunBudget, type RunBudgetClock } from "../engines/active-budget.js";
 
 /** Resolve every application selection against the same installed runtime registry used by conversations. */
 export function applicationRuntimes(options: {
@@ -15,6 +16,7 @@ export function applicationRuntimes(options: {
   scratchRoot: string;
   principal(owner: string): Promise<HarnessPrincipal>;
   now?: () => number;
+  runClock?: RunBudgetClock;
   codex(
     selection: ApplicationRuntimeSelection,
     directory: string,
@@ -162,14 +164,37 @@ export function applicationRuntimes(options: {
           let scope: ApplicationRunScope | null = null,
             agent: HarnessAgent | undefined,
             text = "";
-          const timeout = AbortSignal.timeout(purpose === "creation" ? 600000 : 180000),
+          const inactive = new AbortController(),
+            budget =
+              purpose === "creation"
+                ? new ActiveRunBudget(600000, () => inactive.abort(), options.runClock)
+                : undefined,
+            timeout = budget ? inactive.signal : AbortSignal.timeout(180000),
             signal = AbortSignal.any([callbacks.signal, timeout]),
-            bridge = await applicationMcp(input.tools, { ...callbacks, signal }, () => scope),
             abort = () => {
               void agent?.close().catch(() => {});
             };
+          let bridge: Awaited<ReturnType<typeof applicationMcp>> | undefined;
           signal.addEventListener("abort", abort, { once: true });
           try {
+            bridge = await applicationMcp(
+              input.tools,
+              {
+                ...callbacks,
+                signal,
+                async call(call) {
+                  budget?.refresh();
+                  const resume = budget?.hold();
+                  try {
+                    return await callbacks.call(call);
+                  } finally {
+                    budget?.refresh();
+                    resume?.();
+                  }
+                },
+              },
+              () => scope,
+            );
             const opened = await options.registry.agent(
               await options.principal(owner),
               runtimeId,
@@ -194,6 +219,7 @@ export function applicationRuntimes(options: {
               { text: input.prompt, attachments: [], model, effort: effort || null, operationId: scope.runId },
               async (event) => {
                 signal.throwIfAborted();
+                if (["activity", "text", "tool", "usage"].includes(event.type)) budget?.refresh();
                 if (event.type === "permission") {
                   // Native actions are absent from the curated application profile; never grant a fallback action.
                   await agent!.respondPermission(event.id, null);
@@ -205,6 +231,7 @@ export function applicationRuntimes(options: {
                 }
               },
             );
+            signal.throwIfAborted();
             if (text.trim()) {
               await callbacks.event?.({
                 kind: "message",
@@ -216,10 +243,22 @@ export function applicationRuntimes(options: {
               await callbacks.message?.(text);
             }
             return { ...scope, status: result.stopReason === "complete" ? "completed" : "interrupted" };
+          } catch (error) {
+            // Closing ACP after the deadline can surface as a transport failure. Keep the
+            // application deadline distinct from user cancellation and engine disconnects.
+            if (timeout.aborted && !callbacks.signal.aborted)
+              throw Object.assign(
+                new Error(budget ? "Application engine inactive" : "Application engine deadline exceeded"),
+                {
+                  code: budget ? "APPLICATION_ENGINE_INACTIVE" : "APPLICATION_ENGINE_DEADLINE",
+                },
+              );
+            throw error;
           } finally {
+            budget?.close();
             signal.removeEventListener("abort", abort);
             await agent?.close();
-            await bridge.close();
+            await bridge?.close();
           }
         },
       };

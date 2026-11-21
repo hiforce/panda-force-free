@@ -7,8 +7,7 @@ PandaForce 是可以自行部署的 AI 创作工作台。选一项技能，把�
 
 > 本页展示 **develop 分支源码**。[从当前分支构建体验 →](#从当前分支构建运行)
 
-> 当前 develop 源码已加入 Codex 与 Grok Build Harness Runtime、按运行实例选择模型与推理强度、会话历史交接，以及共用的恢复与设置组件。请从 `develop` 构建体验这些更新。已发布的 `v0.1.1` 标签和 `0.1.1` 镜像保留原发行内容，源码包版本也统一为 `0.1.1`。
-
+> **0.1.2 develop 源码**包含 Codex 与 Grok Build Harness Runtime、按运行实例选择模型与推理强度、账户凭据续期、按活动续期的创作执行和持久化完成通知，并加入可维护的 Rocky Linux 创作工具链，覆盖幻灯片、图像、研究、写作、网页与视频。[基础镜像的内容、目的与构建方法 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md) 请从 `develop` 构建体验。已发布的 `v0.1.1` 标签和 `0.1.1` 应用镜像保留原发行内容；本次源码更新不发布 `0.1.2` 镜像。
 
 ## 先来做点好玩的
 

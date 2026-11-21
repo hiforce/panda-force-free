@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "profiles": {
+    "common": {
+      "system": [
+        "ca-certificates",
+        "curl",
+        "zip",
+        "unzip",
+        "python3",
+        "python3-venv",
+        "fontconfig",
+        "fonts-noto-core",
+        "fonts-noto-ui-core",
+        "fonts-noto-cjk",
+        "fonts-noto-mono",
+        "fonts-liberation",
+        "fonts-dejavu-core",
+        "fonts-wqy-zenhei"
+      ],
+      "commands": ["node", "python3", "fc-match", "curl", "unzip"]
+    },
+    "slides": {
+      "system": ["libreoffice-impress", "poppler-utils"],
+      "node": ["pptxgenjs"],
+      "python": ["python-pptx", "pdf2image", "defusedxml"],
+      "commands": ["soffice", "pdftoppm", "pdfinfo", "pdftotext"]
+    },
+    "images": {
+      "node": ["sharp"],
+      "python": ["Pillow"]
+    },
+    "research": {
+      "system": ["tesseract-ocr", "tesseract-ocr-eng", "tesseract-ocr-chi-sim", "tesseract-ocr-chi-tra"],
+      "python": [
+        "numpy",
+        "pandas",
+        "matplotlib",
+        "httpx",
+        "beautifulsoup4",
+        "lxml",
+        "trafilatura",
+        "pymupdf",
+        "markitdown[docx,pptx,pdf,xlsx]"
+      ],
+      "commands": ["tesseract"]
+    },
+    "writing": {
+      "system": ["libreoffice-writer", "libreoffice-calc", "pandoc"],
+      "node": ["docx", "exceljs", "markdown-it", "katex"],
+      "python": ["python-docx", "openpyxl", "pypdf", "reportlab"],
+      "commands": ["pandoc"]
+    },
+    "web": {
+      "node": ["playwright", "cheerio"],
+      "browsers": ["chromium"]
+    },
+    "video": {
+      "system": ["ffmpeg"],
+      "python": ["moviepy"],
+      "commands": ["ffmpeg", "ffprobe"]
+    }
+  },
+  "reviewedPlugins": [
+    {
+      "id": "panda-force.essentials",
+      "profiles": ["common", "slides", "images", "research", "writing", "web", "video"]
+    }
+  ],
+  "fonts": {
+    "en": ["Noto Sans", "Noto Serif"],
+    "zh-CN": ["Noto Sans CJK SC", "Noto Serif CJK SC"],
+    "zh-HK": ["Noto Sans CJK HK", "Noto Serif CJK HK"],
+    "zh-TW": ["Noto Sans CJK TC", "Noto Serif CJK TC"],
+    "ja": ["Noto Sans CJK JP", "Noto Serif CJK JP"],
+    "ko": ["Noto Sans CJK KR", "Noto Serif CJK KR"],
+    "ar": ["Noto Naskh Arabic", "Noto Sans Arabic"],
+    "ur": ["Noto Nastaliq Urdu", "Noto Naskh Arabic"],
+    "he": ["Noto Sans Hebrew", "Noto Serif Hebrew"],
+    "hi": ["Noto Sans Devanagari", "Noto Serif Devanagari"],
+    "bn": ["Noto Sans Bengali", "Noto Serif Bengali"],
+    "th": ["Noto Sans Thai", "Noto Serif Thai"],
+    "ta": ["Noto Sans Tamil", "Noto Serif Tamil"]
+  },
+  "platforms": {
+    "rocky9": {
+      "common": [
+        "ca-certificates",
+        "curl-minimal",
+        "zip",
+        "unzip",
+        "python3.11",
+        "python3.11-pip",
+        "fontconfig",
+        "git",
+        "openssh-clients",
+        "bubblewrap",
+        "procps-ng",
+        "tar",
+        "gzip",
+        "which",
+        "libstdc++",
+        "libXinerama",
+        "libXrender",
+        "libSM",
+        "libICE"
+      ],
+      "slides": ["poppler-utils"],
+      "research": ["tesseract", "tesseract-langpack-eng", "tesseract-langpack-chi_sim", "tesseract-langpack-chi_tra"],
+      "writing": ["pandoc"],
+      "images": [],
+      "video": ["ffmpeg"],
+      "web": [
+        "alsa-lib",
+        "atk",
+        "at-spi2-atk",
+        "at-spi2-core",
+        "cairo",
+        "cups-libs",
+        "dbus-libs",
+        "gdk-pixbuf2",
+        "glib2",
+        "gtk3",
+        "libX11",
+        "libXcomposite",
+        "libXdamage",
+        "libXext",
+        "libXfixes",
+        "libXrandr",
+        "libxcb",
+        "libxkbcommon",
+        "mesa-libgbm",
+        "nspr",
+        "nss",
+        "pango"
+      ]
+    }
+  }
+}

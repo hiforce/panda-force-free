@@ -18,6 +18,7 @@ import type {
   HarnessApplicationPolicy,
 } from "../ports.js";
 import { HarnessStdioTransport, type HarnessStdioOptions } from "./stdio.js";
+import type { HarnessCredentialLease } from "../auth/contracts.js";
 const record = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {});
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 /** ACP terminates here. It never exposes a Codex envelope or treats thought chunks as portable context. */
@@ -26,6 +27,8 @@ export class GrokHarnessAgent implements HarnessAgent {
   private initialized: Promise<HarnessAgentInfo> | null = null;
   private closing: Promise<void> | null = null;
   private readonly cleanup: (() => Promise<void>) | undefined;
+  private readonly credentials?: Pick<HarnessCredentialLease, "prepare" | "rejected">;
+  private authRecoveryUsed = false;
   private info: HarnessAgentInfo = {
     capabilities: {
       text: true,
@@ -50,9 +53,11 @@ export class GrokHarnessAgent implements HarnessAgent {
     options: Omit<HarnessStdioOptions, "onNotification" | "onRequest"> & {
       cleanup?: () => Promise<void>;
       application?: HarnessApplicationPolicy;
+      credentials?: Pick<HarnessCredentialLease, "prepare" | "rejected">;
     },
   ) {
     this.cleanup = options.cleanup;
+    this.credentials = options.credentials;
     this.application = options.application;
     this.transport = new HarnessStdioTransport({
       ...options,
@@ -79,9 +84,30 @@ export class GrokHarnessAgent implements HarnessAgent {
       this.updateModels(record(record(result._meta).modelState));
       const methods = Array.isArray(result.authMethods) ? result.authMethods : [];
       if (methods.some((method) => record(method).id === "cached_token"))
-        await this.transport.request("authenticate", { methodId: "cached_token" });
+        await this.authenticatedRequest("authenticate", { methodId: "cached_token", _meta: { headless: true } });
       return this.info;
     })());
+  }
+  /** Only authentication and session opening are recoverable here. A dispatched prompt is never replayed. */
+  private async authenticatedRequest(method: string, params: Record<string, unknown>) {
+    try {
+      return await this.transport.request(method, params);
+    } catch (error) {
+      if (
+        !(error instanceof HarnessError) ||
+        error.code !== "authentication" ||
+        !this.credentials ||
+        this.authRecoveryUsed
+      )
+        throw error;
+      this.authRecoveryUsed = true;
+      await this.credentials.rejected();
+      const authenticated = await this.transport.request("authenticate", {
+        methodId: "cached_token",
+        _meta: { headless: true },
+      });
+      return method === "authenticate" ? authenticated : this.transport.request(method, params);
+    }
   }
   private updateModels(models: Record<string, unknown>) {
     if (!Array.isArray(models.availableModels)) return;
@@ -115,7 +141,7 @@ export class GrokHarnessAgent implements HarnessAgent {
       throw new HarnessError("capabilityUnavailable");
     await this.initialize();
     const result = record(
-      await this.transport.request(method, {
+      await this.authenticatedRequest(method, {
         cwd,
         mcpServers: this.application ? [this.application.mcpServer] : [],
         _meta: {
@@ -172,7 +198,8 @@ export class GrokHarnessAgent implements HarnessAgent {
       return;
     }
     if (!this.emit) return;
-    if (kind === "agent_message_chunk" && record(update.content).type === "text")
+    if (kind === "agent_thought_chunk") await this.emit({ type: "activity" });
+    else if (kind === "agent_message_chunk" && record(update.content).type === "text")
       await this.emit({ type: "text", text: text(record(update.content).text) });
     else if (kind === "tool_call" || kind === "tool_call_update") {
       const status = update.status === "completed" ? "complete" : update.status === "failed" ? "error" : "running";
@@ -253,6 +280,7 @@ export class GrokHarnessAgent implements HarnessAgent {
     if (this.emit || this.session?.id !== session.id) throw new HarnessPromptError("busy", false, 409);
     let prompt: Array<Record<string, unknown>>;
     try {
+      await this.credentials?.prepare();
       prompt = await this.preparePrompt(session, input);
     } catch (error) {
       throw new HarnessPromptError(
@@ -265,7 +293,11 @@ export class GrokHarnessAgent implements HarnessAgent {
     this.emit = emit;
     try {
       const result = record(
-        await this.transport.request("session/prompt", { sessionId: session.id, prompt }, 30 * 60 * 1000),
+        await this.transport.request(
+          "session/prompt",
+          { sessionId: session.id, prompt },
+          this.application ? null : 30 * 60 * 1000,
+        ),
       );
       if (result.stopReason === "cancelled") return { stopReason: "cancelled" as const };
       if (result.stopReason !== "end_turn") throw new HarnessError("deliveryUncertain", 409);

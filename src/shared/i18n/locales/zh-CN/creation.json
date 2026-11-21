@@ -46,7 +46,7 @@
   "deliveryUncertain": "暂时无法确认提交结果，请使用同一请求检查任务状态。",
   "retrySubmission": "检查提交结果",
   "showTasks": "创作任务",
-  "failedInterrupted": "引擎在保存文档前中断，可以重试。",
+  "failedInterrupted": "引擎在保存作品前中断，可以重试。",
   "failedInvalidOutput": "尚未保存有效文档，请检查需求或技能后重试。",
   "failedTargetChanged": "文档或保存位置已变化。原文档和已接收的补充要求均已保留；请先保存手工修改，再基于最新内容重试。",
   "failedWriteUnavailable": "生成内容已保留，存储恢复后可重试保存。",
@@ -76,7 +76,7 @@
   "selectedCount": "{count, plural, =0 {尚未选择技能} other {已选择 # 项技能}}",
   "browserSearchHint": "按名称或关键词查找…",
   "categoryLoadFailed": "分类暂时无法更新，可用技能仍可选择。您可以重试。",
-  "failedTimedOut": "写作达到时限，尚未保存文档。需求已保留，可以重试。",
+  "failedTimedOut": "创作引擎已达到执行时限，尚未保存作品。需求已保留，可以重试。",
   "activityTitle": "创作记录",
   "activityHint": "关闭进度窗口后，也可以在这里查看请求和成果。",
   "activityFilter": "筛选创作任务",
@@ -205,5 +205,13 @@
   "progressEditSlides": "编辑演示文稿",
   "progressRenderWeb": "生成网页",
   "progressRenderVideo": "渲染视频",
-  "progressSaveArtifact": "保存生成的成果"
+  "progressSaveArtifact": "保存生成的成果",
+  "failedInactive": "引擎长时间没有执行进展，任务已停止。需求已保留，可以重试。",
+  "longRunningHint": "这项任务需要一些时间。你可以稍后回来查看，交付件保存完成后会在消息中心提醒。",
+  "notificationsTitle": "消息中心",
+  "notificationsEmpty": "暂无已完成的创作消息。",
+  "notificationsReady": "交付件已准备好",
+  "notificationsUnread": "{count} 条未读消息",
+  "notificationsLoadFailed": "消息暂时无法刷新，请重试。",
+  "notificationsOpen": "查看交付件"
 }

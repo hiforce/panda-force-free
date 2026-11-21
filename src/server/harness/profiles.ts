@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, constants } from "node:fs";
-import { chmod, mkdir, readFile, open, realpath, mkdtemp, rm, unlink } from "node:fs/promises";
+import { chmod, mkdir, readFile, open, realpath, mkdtemp, rm, unlink, rename } from "node:fs/promises";
 import { join, resolve, isAbsolute } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { HarnessError } from "../../shared/harness/contracts.js";
@@ -9,11 +9,15 @@ import type { EngineDriver } from "../../shared/engine/contracts.js";
 import type { HarnessProfile } from "./registry.js";
 import { CodexHarnessAgent } from "./adapters/codex.js";
 import { GrokHarnessAgent } from "./adapters/grok.js";
+import { accessCredentials } from "./auth/snapshot.js";
+import { brokerCredentialSource, credentialLease } from "./auth/remote.js";
+import type { HarnessCredentialLease } from "./auth/contracts.js";
 interface GrokProfileConfig {
   id: string;
   name: string;
   command: string;
   accountHome: string;
+  credentialSocket?: string;
   deployment?: "local" | "container" | "remote";
 }
 /** Only this operator configuration can grant executables and account sources, never browser or document input. */
@@ -47,6 +51,7 @@ export function harnessProfiles(
         name: "Grok Build",
         command: env.PANDA_FORCE_GROK_COMMAND || "/usr/local/bin/grok",
         accountHome: env.PANDA_FORCE_GROK_HOME || join(homedir(), ".grok"),
+        ...(env.PANDA_FORCE_GROK_AUTH_SOCKET ? { credentialSocket: env.PANDA_FORCE_GROK_AUTH_SOCKET } : {}),
       },
     ];
   }
@@ -59,6 +64,10 @@ export function harnessProfiles(
       typeof profile.accountHome !== "string" ||
       !isAbsolute(profile.command) ||
       !isAbsolute(profile.accountHome) ||
+      (profile.credentialSocket !== undefined &&
+        (typeof profile.credentialSocket !== "string" ||
+          !isAbsolute(profile.credentialSocket) ||
+          Buffer.byteLength(profile.credentialSocket) > 100)) ||
       (profile.deployment !== undefined && !["local", "container", "remote"].includes(profile.deployment))
     )
       throw new HarnessError("invalidInput");
@@ -77,35 +86,33 @@ export function harnessProfiles(
           if ((await realpath(home)) !== home) throw new HarnessError("forbidden", 403);
           await chmod(home, 0o700);
           const privateWrite = async (name: string, value: string) => {
+            const temporary = join(home, ".credential-" + randomUUID());
             const file = await open(
-              join(home, name),
-              constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW,
+              temporary,
+              constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
               0o600,
             );
             try {
-              await file.chmod(0o600);
-              await file.writeFile(value);
-              await file.sync();
+              try {
+                await file.chmod(0o600);
+                await file.writeFile(value);
+                await file.sync();
+              } finally {
+                await file.close();
+              }
+              await rename(temporary, join(home, name));
             } finally {
-              await file.close();
+              await unlink(temporary).catch(() => {});
             }
           };
-          // Refresh remains with the operator's account owner. Copies never contain a refresh token and cannot rotate it.
-          try {
-            const credentials: unknown = JSON.parse(await readFile(join(profile.accountHome, "auth.json"), "utf8"));
-            const clean = (value: unknown): unknown =>
-              Array.isArray(value)
-                ? value.map(clean)
-                : isRecord(value)
-                  ? Object.fromEntries(
-                      Object.entries(value)
-                        .filter(([key]) => !/refresh.?token/i.test(key))
-                        .map(([key, value]) => [key, clean(value)]),
-                    )
-                  : value;
-            await privateWrite("auth.json", JSON.stringify(clean(credentials)));
-          } catch {
-            throw new HarnessError("authentication", 503);
+          if (!profile.credentialSocket) {
+            // Legacy operator-owned snapshots stay supported without granting refresh capability to an agent.
+            try {
+              const credentials: unknown = JSON.parse(await readFile(join(profile.accountHome, "auth.json"), "utf8"));
+              await privateWrite("auth.json", JSON.stringify(accessCredentials(credentials)));
+            } catch {
+              throw new HarnessError("authentication", 503);
+            }
           }
           await privateWrite(
             "config.toml",
@@ -150,6 +157,9 @@ export function harnessProfiles(
             "HTTPS_PROXY",
             "HTTP_PROXY",
             "NO_PROXY",
+            "NODE_PATH",
+            "PANDA_FORCE_CREATIVE_HOME",
+            "PLAYWRIGHT_BROWSERS_PATH",
           ])
             if (env[name]) nativeEnv[name] = env[name];
           nativeEnv.GROK_HOME = home;
@@ -157,26 +167,52 @@ export function harnessProfiles(
           nativeEnv.GROK_SHARED_DAEMON = "false";
           // Unix socket paths have a small OS limit; the durable account directory can be arbitrarily deep.
           const socketDirectory = await mkdtemp(join(tmpdir(), "pf-grok-"));
-          return new GrokHarnessAgent({
-            command: profile.command,
-            args: [
-              "--no-auto-update",
-              "--no-subagents",
-              "--leader-socket",
-              join(socketDirectory, "leader.sock"),
-              "agent",
-              "stdio",
-            ],
-            cwd: scope.cwd,
-            env: nativeEnv,
-            application: scope.application,
-            cleanup: async () => {
-              await unlink(join(home, "auth.json")).catch(() => {});
-              await rm(socketDirectory, { recursive: true, force: true });
-              if (scope.application || scope.scopeId.startsWith("catalog-"))
-                await rm(home, { recursive: true, force: true });
-            },
-          });
+          let credentials: HarnessCredentialLease | undefined;
+          try {
+            if (profile.credentialSocket)
+              credentials = await credentialLease(
+                brokerCredentialSource(profile.credentialSocket),
+                async (snapshot) => {
+                  const principalFile = join(home, "credential-principal.json");
+                  try {
+                    if (JSON.parse(await readFile(principalFile, "utf8")) !== snapshot.principal)
+                      throw new HarnessError("authentication", 503);
+                  } catch (error) {
+                    if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT"))
+                      throw error;
+                    await privateWrite("credential-principal.json", JSON.stringify(snapshot.principal));
+                  }
+                  await privateWrite("auth.json", JSON.stringify(snapshot.credentials));
+                },
+              );
+            return new GrokHarnessAgent({
+              command: profile.command,
+              args: [
+                "--no-auto-update",
+                "--no-subagents",
+                "--leader-socket",
+                join(socketDirectory, "leader.sock"),
+                "agent",
+                "stdio",
+              ],
+              cwd: scope.cwd,
+              env: nativeEnv,
+              application: scope.application,
+              ...(credentials ? { credentials } : {}),
+              cleanup: async () => {
+                await credentials?.close();
+                await unlink(join(home, "auth.json")).catch(() => {});
+                await rm(socketDirectory, { recursive: true, force: true });
+                if (scope.application || scope.scopeId.startsWith("catalog-"))
+                  await rm(home, { recursive: true, force: true });
+              },
+            });
+          } catch (error) {
+            await credentials?.close();
+            await unlink(join(home, "auth.json")).catch(() => {});
+            await rm(socketDirectory, { recursive: true, force: true });
+            throw error;
+          }
         },
       },
     });

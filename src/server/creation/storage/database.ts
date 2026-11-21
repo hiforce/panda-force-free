@@ -12,7 +12,7 @@ export function openCreationDatabase(path: string): Database {
     db.exec("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;");
     db.transaction(() => {
       const version = db.query<{ user_version: number }, []>("PRAGMA user_version").get()!.user_version;
-      if (version > 6) throw new CreationError("unavailable");
+      if (version > 7) throw new CreationError("unavailable");
       if (!version)
         db.exec(`
           CREATE TABLE creation_tasks (
@@ -80,6 +80,16 @@ export function openCreationDatabase(path: string): Database {
         CREATE INDEX creation_history_owner ON creation_history_hidden(owner,id);
         CREATE TABLE creation_history_actions(id TEXT PRIMARY KEY,owner TEXT NOT NULL,request TEXT NOT NULL,result TEXT NOT NULL,createdAt INTEGER NOT NULL);
         PRAGMA user_version=6;
+      `);
+      if (version < 7)
+        db.exec(`
+        CREATE TABLE creation_notifications (
+          taskId TEXT NOT NULL REFERENCES creation_tasks(id), owner TEXT NOT NULL,
+          generation INTEGER NOT NULL, createdAt INTEGER NOT NULL, readAt INTEGER,
+          PRIMARY KEY(taskId,generation)
+        );
+        CREATE INDEX creation_notifications_owner ON creation_notifications(owner,readAt,createdAt);
+        PRAGMA user_version=7;
       `);
     }).immediate();
     return db;

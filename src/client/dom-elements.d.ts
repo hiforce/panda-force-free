@@ -208,7 +208,6 @@ export interface InterfaceElements {
   "#sessionHeadingProject": HTMLElementTagNameMap["button"];
   "#sessionInfoButton": HTMLElementTagNameMap["button"];
   "#sessionInspector": HTMLElementTagNameMap["dialog"];
-  "#sessionInspectorFooter": HTMLElementTagNameMap["footer"];
   "#sessionInspectorScroll": HTMLElementTagNameMap["div"];
   "#sessionInspectorTitle": HTMLElementTagNameMap["h2"];
   "#sessionLocalTool": HTMLElementTagNameMap["div"];
@@ -224,7 +223,6 @@ export interface InterfaceElements {
   "#sessionOverview": HTMLElementTagNameMap["section"];
   "#sessionOverviewTab": HTMLElementTagNameMap["button"];
   "#sessionPendingAction": HTMLElementTagNameMap["button"];
-  "#sessionProjectCode": HTMLElementTagNameMap["small"];
   "#sessionProjectName": HTMLElementTagNameMap["strong"];
   "#sessionProjectSelect": HTMLElementTagNameMap["select"];
   "#sessionReloadModels": HTMLElementTagNameMap["button"];
@@ -237,7 +235,6 @@ export interface InterfaceElements {
   "#sessionToolsCount": HTMLElementTagNameMap["small"];
   "#sessionToolsDialog": HTMLElementTagNameMap["dialog"];
   "#sessionToolSearch": HTMLElementTagNameMap["input"];
-  "#sessionToolShortcuts": HTMLElementTagNameMap["div"];
   "#sessionToolsList": HTMLElementTagNameMap["div"];
   "#sessionToolsListView": HTMLElementTagNameMap["div"];
   "#sessionToolsManager": HTMLElementTagNameMap["div"];

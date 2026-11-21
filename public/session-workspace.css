@@ -266,58 +266,48 @@
 .session-project-selector {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 11px;
-  border: 1px solid var(--pf-line);
-  background: var(--pf-card);
-  border-radius: 9px;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--pf-radius);
   text-align: start;
 }
 .session-project-selector:hover {
-  border-color: var(--pf-accent);
+  color: var(--pf-accent);
 }
 .session-project-selector > .icon-slot {
-  color: var(--pf-muted);
-  width: 16px;
-  height: 16px;
-}
-.session-project-selector > .icon-slot:last-child {
   margin-inline-start: auto;
-  width: 13px;
-  height: 13px;
-}
-.session-project-selector > span:not(.icon-slot) {
-  min-width: 0;
+  flex-shrink: 0;
+  color: var(--pf-muted);
+  width: 14px;
+  height: 14px;
 }
 .session-project-selector strong {
-  font-size: 12px;
-  font-weight: 550;
-  display: block;
-  overflow-wrap: anywhere;
-}
-.session-project-selector small {
-  font-size: 10px;
-  color: var(--pf-muted);
-  display: block;
-  margin-top: 4px;
-  overflow-wrap: anywhere;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .session-working-folder {
   display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 11px;
+  align-items: baseline;
+  gap: 8px;
   color: var(--pf-muted);
-  font-size: 10px;
+  font-size: 11px;
   min-width: 0;
 }
-.session-working-folder .icon-slot,
-.session-working-folder svg {
-  width: 13px;
-  height: 13px;
+.session-context-caption {
+  flex-shrink: 0;
+  font-size: 10px;
 }
 .session-working-folder > span:last-child {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -569,14 +559,6 @@
 }
 .session-usage-compact .session-context-usage > div:first-child {
   font-size: var(--pf-text-label);
-}
-.session-inspector-footer {
-  border-top: 1px solid var(--pf-line);
-  padding: 16px 23px 20px;
-  flex-shrink: 0;
-}
-.session-inspector-footer .session-section-heading {
-  margin-bottom: 10px;
 }
 .session-text-button {
   padding: 3px 0;
@@ -1308,17 +1290,8 @@
     height: 26px;
     min-height: 26px;
   }
-  .session-inspector-footer {
-    padding: 13px 23px 18px;
-  }
-  .session-inspector-footer .session-text-button {
-    min-height: 28px;
-  }
   .session-configuration-mirror {
     display: block;
-  }
-  .session-inspector .session-project-selector {
-    min-height: 60px;
   }
   .session-field {
     font-size: 16px;

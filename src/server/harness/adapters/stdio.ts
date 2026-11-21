@@ -26,7 +26,7 @@ interface Pending {
   method: string;
   resolve(value: unknown): void;
   reject(error: unknown): void;
-  timer: ReturnType<typeof setTimeout>;
+  timer: ReturnType<typeof setTimeout> | null;
   dispatched: boolean;
 }
 const MAX_FRAME_BYTES = 4 * 1024 * 1024;
@@ -129,7 +129,7 @@ export class HarnessStdioTransport {
         const pending = this.pending.get(frame.id);
         if (!pending) continue;
         this.pending.delete(frame.id);
-        clearTimeout(pending.timer);
+        if (pending.timer) clearTimeout(pending.timer);
         void this.notifications.then(() => {
           if (this.notificationFailure) pending.reject(this.notificationFailure);
           else if (frame.error !== undefined)
@@ -180,7 +180,11 @@ export class HarnessStdioTransport {
     if (Buffer.byteLength(bytes) > MAX_FRAME_BYTES) throw new HarnessTransportError("invalidInput", false);
     this.child.stdin.write(bytes);
   }
-  async request(method: string, params: Record<string, unknown> = {}, timeout = 30000): Promise<unknown> {
+  async request(
+    method: string,
+    params: Record<string, unknown> = {},
+    timeout: number | null = 30000,
+  ): Promise<unknown> {
     await this.start();
     if (this.failure || this.stopped) throw this.failure ?? new HarnessTransportError("unavailable", false);
     const id = ++this.sequence;
@@ -190,18 +194,20 @@ export class HarnessStdioTransport {
         resolve,
         reject,
         dispatched: false,
-        timer: setTimeout(() => {
+        timer: null,
+      };
+      if (timeout !== null)
+        item.timer = setTimeout(() => {
           this.pending.delete(id);
           reject(new HarnessTransportError("timeout", item.dispatched));
-        }, timeout),
-      };
+        }, timeout);
       this.pending.set(id, item);
       try {
         this.write({ jsonrpc: "2.0", id, method, params });
         item.dispatched = true;
       } catch (error) {
         this.pending.delete(id);
-        clearTimeout(item.timer);
+        if (item.timer) clearTimeout(item.timer);
         reject(error);
       }
     });
@@ -214,7 +220,7 @@ export class HarnessStdioTransport {
     if (this.failure || this.stopped) return;
     this.failure = error;
     for (const item of this.pending.values()) {
-      clearTimeout(item.timer);
+      if (item.timer) clearTimeout(item.timer);
       item.reject(new HarnessTransportError(error.code, item.dispatched));
     }
     this.pending.clear();
@@ -230,7 +236,7 @@ export class HarnessStdioTransport {
     if (this.stopped) return;
     this.stopped = true;
     for (const item of this.pending.values()) {
-      clearTimeout(item.timer);
+      if (item.timer) clearTimeout(item.timer);
       item.reject(new HarnessTransportError("deliveryUncertain", item.dispatched));
     }
     this.pending.clear();

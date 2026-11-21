@@ -40,6 +40,7 @@ export function mysqlCreationTaskRow(row: Row): CreationTaskRow {
         : choice(row.failure, [
             "interrupted",
             "timedOut",
+            "inactive",
             "invalidOutput",
             "targetChanged",
             "fileChanged",

@@ -46,7 +46,7 @@
   "deliveryUncertain": "暫時無法確認提交結果，請使用同一請求檢查任務狀態。",
   "retrySubmission": "檢查提交結果",
   "showTasks": "創作任務",
-  "failedInterrupted": "引擎在儲存文件前中斷，可以重試。",
+  "failedInterrupted": "引擎在儲存作品前中斷，可以重試。",
   "failedInvalidOutput": "尚未儲存有效文件，請檢查需求或技能後重試。",
   "failedTargetChanged": "文件或儲存位置已變更。原文件與已接收的補充需求皆已保留；請先儲存手動修改，再以最新內容重試。",
   "failedWriteUnavailable": "產生內容已保留，儲存恢復後可重試儲存。",
@@ -76,7 +76,7 @@
   "selectedCount": "{count, plural, =0 {尚未選擇技能} other {已選擇 # 項技能}}",
   "browserSearchHint": "按名稱或關鍵詞查詢…",
   "categoryLoadFailed": "暫時無法更新分類，仍可選取可用技能。你可以重試。",
-  "failedTimedOut": "寫作已達時限，尚未儲存文件。需求已保留，可以重試。",
+  "failedTimedOut": "創作引擎已達執行時間上限，尚未儲存作品。需求已保留，可以重試。",
   "activityTitle": "創作紀錄",
   "activityHint": "關閉進度視窗後，仍可在這裡查看請求與成果。",
   "activityFilter": "篩選創作任務",
@@ -205,5 +205,13 @@
   "progressEditSlides": "編輯簡報",
   "progressRenderWeb": "產生網頁",
   "progressRenderVideo": "算繪影片",
-  "progressSaveArtifact": "儲存產生的成果"
+  "progressSaveArtifact": "儲存產生的成果",
+  "failedInactive": "引擎長時間沒有執行進展，任務已停止。需求已保留，可以重試。",
+  "longRunningHint": "這項任務需要一些時間。你可以稍後回來查看，交付成果儲存完成後會在通知中心提醒。",
+  "notificationsTitle": "通知中心",
+  "notificationsEmpty": "目前沒有已完成的創作通知。",
+  "notificationsReady": "交付成果已就緒",
+  "notificationsUnread": "{count} 則未讀通知",
+  "notificationsLoadFailed": "通知暫時無法重新整理，請重試。",
+  "notificationsOpen": "查看交付成果"
 }

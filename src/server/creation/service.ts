@@ -8,11 +8,11 @@ import type { CreationQuestions } from "./questions/service.js";
 import { creationHistoryCommand } from "./history/contracts.js";
 import { CreationError } from "./contracts.js";
 import { creationGoalCommand, creationGoalView } from "./goals/contracts.js";
-import { creationId, creationUuid } from "./validation.js";
+import { creationId, creationUuid, creationRecord, creationInteger } from "./validation.js";
 import type { CreationProgressStore } from "./ports.js";
 import type { CreationTaskDetail } from "../../shared/creation/contracts.js";
 
-export interface CreationManagement {
+export interface CreationManagement extends Partial<import("./ports.js").CreationNotificationStore> {
   get(owner: string, id: string): CreationResult<CreationTask>;
   cancel(owner: string, id: string, now: number): CreationResult<CreationTask>;
 }
@@ -72,6 +72,48 @@ export class CreationService {
   }
   options() {
     return this.using(this.availability);
+  }
+  notifications(owner: string) {
+    return this.using(async () => {
+      const items: import("../../shared/creation/contracts.js").CreationNotification[] = [];
+      for (const record of (await this.tasks.notifications?.(owner)) ?? []) {
+        const task = await this.tasks.get(owner, record.taskId);
+        if (task.state !== "succeeded" || !task.artifact) continue;
+        try {
+          await this.authorize(owner, task.spec.projectId);
+          if (task.artifact.projectId !== task.spec.projectId) await this.authorize(owner, task.artifact.projectId);
+        } catch {
+          continue;
+        }
+        let artifact = task.artifact;
+        if (artifact.kind === "document" && this.documentLocation) {
+          const location = await this.documentLocation(
+            owner,
+            task.spec.target.documentProjectId ?? task.spec.projectId,
+            artifact.documentId,
+          );
+          if (!location) continue;
+          await this.authorize(owner, location.projectId);
+          artifact = { ...artifact, projectId: location.projectId };
+        }
+        items.push({ ...record, title: artifact.title ?? "", kind: artifact.kind, artifact });
+      }
+      return { items, unreadCount: items.filter((item) => item.readAt === null).length };
+    });
+  }
+  readNotification(owner: string, value: unknown) {
+    return this.using(async () => {
+      if (!this.tasks.readNotification) throw new CreationError("unavailable");
+      const input = creationRecord(value, ["taskId", "generation"]),
+        id = creationUuid(input.taskId),
+        generation = creationInteger(input.generation);
+      const task = await this.tasks.get(owner, id);
+      await this.authorize(owner, task.spec.projectId);
+      if (task.artifact && task.artifact.projectId !== task.spec.projectId)
+        await this.authorize(owner, task.artifact.projectId);
+      await this.tasks.readNotification(owner, id, generation, this.now());
+      return { taskId: id, generation, read: true };
+    });
   }
   private async summary(owner: string, task: CreationTask) {
     const cacheKey = JSON.stringify([owner, task.spec.inputDigest]);
