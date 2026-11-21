@@ -10,7 +10,7 @@ npm rebuild node-pty --build-from-source
 bun run verify
 ```
 
-Full checks require Linux, Node.js 22, the tested Codex CLI 0.166.0, Vim and Playwright Chromium. The disposable PostgreSQL tests use local PostgreSQL binaries when installed, otherwise Docker. Normal verification does not need a model account or production credentials.
+Full checks require Linux, Node.js 22, the tested Codex CLI 0.171.0, Vim and Playwright Chromium. The disposable PostgreSQL tests use local PostgreSQL binaries when installed, otherwise Docker. Normal verification does not need a model account or production credentials.
 
 `verify` checks dependency direction and runtime cycles, locale contracts, TypeScript, interface element declarations, ESLint, formatting, client builds, unit tests, integration tests and the self-contained browser suites. Results and per-suite logs are written to `.artifacts/verification/`. Install Playwright Chromium and WebKit with `bun x playwright install chromium webkit` before running browser checks. Integration tests use the pinned Codex CLI with disposable local model providers and temporary state.
 
@@ -43,65 +43,57 @@ The documentation build currently inherits a low-severity [deepmerge advisory](h
 
 ## Container base images
 
-For the 0.1.2 source, see [base image contents and purpose](base-images.md) for the standard/creative distinction, full Rocky tool inventory, self-build commands and plugin/monthly maintenance.
+The 0.1.2 source defaults to the public **Rocky creative build/runtime pair** for Linux amd64. Both include Codex CLI and Grok Build plus the reviewed Office/PDF/OCR, font, image, research, writing, browser and video tools. The build image adds the application development/native compilation dependencies; the runtime image carries production dependencies. [Contents, purpose, exact inputs and self-build workflow](base-images.md) explains the pair.
 
-Source builds use two public Docker Hub images for **Linux amd64**:
-
-| Image                                                              | Purpose                                                                                         |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `hiforceai/panda-force-build-base:engines-20261120-b3302dd60ade`   | Node.js, Bun, Codex CLI, Grok Build, compilers and locked development dependencies              |
-| `hiforceai/panda-force-runtime-base:engines-20261120-b3302dd60ade` | Node.js, Bun, Codex CLI, Grok Build, production dependencies, FFmpeg/FFprobe and Noto CJK fonts |
-
-The Dockerfile, Compose build overlay and `scripts/build/base-images.json` pin the same immutable image digests. Docker pulls them automatically; no registry account, manual image import or separate base build is required. These are dependency bases, not runnable PandaForce releases. Ordinary installations serve static assets from the application; CDN is optional and requires your own configuration.
+The Dockerfile, both Compose build overlays and `scripts/build/base-images.json` use the same actual public digests. Normal installation pulls `hiforceai/panda-force:0.1.2`; source developers can use:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
-The initial download can be large. Later builds reuse the downloaded layers and compile the checked-out application; they do not reinstall JavaScript dependencies, FFmpeg or fonts. Compilation and any explicitly enabled CDN upload still take time. Packaging records that regression tests run separately. Run `bun run check` and the affected tests during development, or select a verification profile explicitly.
-
-For a private registry, mirror **both** bases with your normal registry tools, log in using Docker's own credential configuration, and set `PANDA_FORCE_BUILD_BASE` and `PANDA_FORCE_RUNTIME_BASE` to the corresponding mirrored references before the same Compose command. For direct `docker build`, pass the independently overridable `BUILD_BASE` and `RUNTIME_BASE` arguments. Keep credentials out of Dockerfiles and build arguments; deployment registry credentials and pull policies remain administrator-managed. The original dependency tags remain available for existing pinned installations.
-
-The reusable recipes are `scripts/build/Dockerfile.bases` for locked dependency cores and `scripts/build/Dockerfile.media-bases` for the media overlay. Ordinary application changes do not require rebuilding either. A changed lockfile, dependency, patch or base recipe requires publishing and selecting a matching pair; compatibility checks stop a mismatched build rather than reinstalling dependencies silently. Selecting an older runtime without media tools may trigger the explicitly enabled installation fallback.
-
-Both dependency stages defer installation scripts and then explicitly rebuild `node-pty` with npm's native toolchain. Development dependencies stay out of the runtime image. This build-lifecycle correction preserves the locked dependency inventory and compatibility with the pinned published bases.
-
-The 0.1.1 application release reuses the same digest-pinned bases as 0.1.0; its dependency inputs and base recipes are unchanged. Use the matching release checkout when rebuilding either base yourself.
+The first pull can be large. Later application builds reuse these installed layers. Ordinary assets are served by the application; an optional CDN requires your own settings. For a private registry, mirror both bases and set `PANDA_FORCE_BUILD_BASE` / `PANDA_FORCE_RUNTIME_BASE`, or use direct Docker build arguments `BUILD_BASE` / `RUNTIME_BASE`. Registry credentials and pull policies remain administrator-managed outside source and image layers.
 
 ## Build your own base images
 
-Run these commands from a **clean checkout of the same release**, using Docker with Linux amd64 support. The first core builds install locked JavaScript/native dependencies, the pinned Codex CLI, compilers and browser tools; they take longer than an application build. They use public upstream images and the checked-in `bun.lock` and `patches/`.
+Use the [Rocky creative builder](base-images.md#rebuild-and-select-rocky-bases) from the same clean release checkout. It builds both roles from reviewed locks, checksums and profiles, verifies installed inventories, and supports explicit pull policies and trusted image/npm overrides. After dependency or plugin changes, rebuild and verify the pair before selecting new immutable digests. A version-only application release can reuse compatible bases.
+
+The earlier Debian recipes remain an explicit legacy alternative and supply the Debian Harness seed used by the Rocky recipe. They do not install the complete creative toolset. The full legacy chain includes **core → media → Harness engines**; a core/media pair alone does not satisfy this release's engine lock.
+
+<details>
+<summary>Advanced: rebuild the compatible legacy Debian pair</summary>
 
 ```bash
-# 1. Build the two dependency cores.
+# 1. Locked dependency cores.
 docker build --platform linux/amd64 -f scripts/build/Dockerfile.bases --target build-base \
-  --build-arg APT_MIRROR=http://deb.debian.org \
-  --build-arg NPM_REGISTRY=https://registry.npmjs.org \
-  -t panda-force-build-base:local-core .
+  --build-arg APT_MIRROR=http://deb.debian.org --build-arg NPM_REGISTRY=https://registry.npmjs.org \
+  -t panda-build:legacy-core .
 docker build --platform linux/amd64 -f scripts/build/Dockerfile.bases --target runtime-base \
-  --build-arg APT_MIRROR=http://deb.debian.org \
-  --build-arg NPM_REGISTRY=https://registry.npmjs.org \
-  -t panda-force-runtime-base:local-core .
-
-# 2. Add the compiler label and runtime media tools.
+  --build-arg APT_MIRROR=http://deb.debian.org --build-arg NPM_REGISTRY=https://registry.npmjs.org \
+  -t panda-runtime:legacy-core .
+# 2. Media overlay.
 docker build --platform linux/amd64 -f scripts/build/Dockerfile.media-bases --target build-base \
-  --build-arg BUILD_BASE=panda-force-build-base:local-core \
-  --build-arg RUNTIME_BASE=panda-force-runtime-base:local-core \
-  -t panda-force-build-base:local .
+  --build-arg BUILD_BASE=panda-build:legacy-core --build-arg RUNTIME_BASE=panda-runtime:legacy-core \
+  -t panda-build:legacy-media .
 docker build --platform linux/amd64 -f scripts/build/Dockerfile.media-bases --target runtime-base \
-  --build-arg BUILD_BASE=panda-force-build-base:local-core \
-  --build-arg RUNTIME_BASE=panda-force-runtime-base:local-core \
-  -t panda-force-runtime-base:local .
-
-# 3. Build and run the application with that pair.
-export PANDA_FORCE_BUILD_BASE=panda-force-build-base:local
-export PANDA_FORCE_RUNTIME_BASE=panda-force-runtime-base:local
+  --build-arg BUILD_BASE=panda-build:legacy-core --build-arg RUNTIME_BASE=panda-runtime:legacy-core \
+  -t panda-runtime:legacy-media .
+# 3. Reviewed native Harness engines.
+node scripts/build/harness-engines.mjs prepare --output .artifacts/legacy-engine-inputs
+docker build --platform linux/amd64 -f scripts/build/Dockerfile.engine-bases --target build-base \
+  --build-arg BUILD_BASE=panda-build:legacy-media --build-arg RUNTIME_BASE=panda-runtime:legacy-media \
+  -t panda-build:legacy-engines .artifacts/legacy-engine-inputs
+docker build --platform linux/amd64 -f scripts/build/Dockerfile.engine-bases --target runtime-base \
+  --build-arg BUILD_BASE=panda-build:legacy-media --build-arg RUNTIME_BASE=panda-runtime:legacy-media \
+  -t panda-runtime:legacy-engines .artifacts/legacy-engine-inputs
+# 4. Explicitly select the complete legacy pair for the application.
+export PANDA_FORCE_BUILD_BASE=panda-build:legacy-engines
+export PANDA_FORCE_RUNTIME_BASE=panda-runtime:legacy-engines
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
-For a direct application build, pass `--build-arg BUILD_BASE=panda-force-build-base:local` and `--build-arg RUNTIME_BASE=panda-force-runtime-base:local` to `docker build -t panda-force:local .`. These tags are local examples: choose your own registry and publish both bases with your normal tools when builds run on another machine. Docker credentials stay in its separately managed credential store. Use your trusted APT/npm mirror overrides where appropriate; the recipe also accepts `BUN_IMAGE` and `NODE_IMAGE` overrides for administrator-managed upstream images.
+For a Rocky seed refresh, use the verified **Debian engine build** image with `creative-tools.mjs build --seed-image ...`; the seed stage installs portable fonts through apt. The final Rocky stages install RPMs and rebuild native modules themselves. Do not select the new Rocky default as that Debian seed.
 
-The application still validates the selected bases against the dependency inputs. A normal release-version change can reuse existing bases when the root package has no installation hooks. Dependency, lockfile, patch, installation-hook or base-recipe changes require a compatible newly built pair and an updated `scripts/build/base-images.json` compatibility fingerprint. Record that fingerprint with `node scripts/build/dependencies.mjs profile .`; keep image references and the media-recipe digest consistent with the pair you built. Regenerate and review the metadata only after checking the new bases, rather than disabling compatibility checks.
+</details>
 
 ## Monthly Harness engine refresh
 
@@ -123,7 +115,7 @@ docker build -f scripts/build/Dockerfile.engine-bases --platform linux/amd64 \
 
 `prepare` verifies the pinned Codex npm integrity, Grok binary checksum and license checksum. Normal application builds use this reviewed lock; they do not resolve `latest` or upgrade engines at startup. The current published architecture is Linux amd64. Parent `BUILD_BASE` and `RUNTIME_BASE` arguments and the installation `NPM_REGISTRY` can be overridden for administrator-managed registries.
 
-Check both CLI versions, Codex app-server initialization and Grok ACP initialization in disposable containers without account credentials or model inference. Keep the existing dependency compatibility and application startup checks. Then publish new immutable tags, verify registry digests, and update the build/runtime references plus engine recipe/lock hashes in `scripts/build/base-images.json`, the Dockerfiles and Compose build defaults. Each application is released independently; the host's shared daemon is managed separately.
+Check both CLI versions, Codex app-server initialization and Grok ACP initialization in disposable containers without account credentials or model inference. Publish and verify the new Debian seed, then rebuild both Rocky creative bases with that reviewed `--seed-image`, refresh the creative locks and run the offline output probe. Update the default build/runtime references only to that verified full Rocky pair, together with the engine/creative input hashes in `scripts/build/base-images.json`, Dockerfiles and Compose defaults. Keep `legacyEngineBuildBase` / `legacyEngineRuntimeBase` for the separate seed/legacy references. Each application is released independently; the shared host daemon is managed separately.
 
 The engine manifest is `/opt/panda-harness/engines.json`; the Grok license is `/opt/panda-harness/licenses/grok-LICENSE`. Prior image tags remain available for rollback. This is a manual monthly maintenance workflow, not an installed background schedule.
 

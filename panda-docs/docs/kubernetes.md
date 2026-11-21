@@ -26,7 +26,7 @@ The optional <a href={useBaseUrl('/downloads/kubernetes/panda-force-cluster.yaml
 
 ## Before deploying
 
-Use a Linux amd64 cluster, `kubectl`, and a working persistent-volume provisioner. The templates use the public `hiforceai/panda-force:0.1.1` image and a 10 GiB `ReadWriteOnce` PVC. If your cluster has no default StorageClass, add `storageClassName: YOUR_STORAGE_CLASS` under the PVC's `spec`. Confirm the class supports your node placement; a class using `WaitForFirstConsumer` can defer volume binding until scheduling.
+Use a Linux amd64 cluster, `kubectl`, and a working persistent-volume provisioner. The templates use the public `hiforceai/panda-force:0.1.2` image and a 10 GiB `ReadWriteOnce` PVC. If your cluster has no default StorageClass, add `storageClassName: YOUR_STORAGE_CLASS` under the PVC's `spec`. Confirm the class supports your node placement; a class using `WaitForFirstConsumer` can defer volume binding until scheduling.
 
 The two single-instance templates include a Namespace, PVC, Deployment and ClusterIP Service. They use one replica and `Recreate` updates for this single-instance application and its SQLite data. CPU/memory values are starting points; adjust them for your workload. Persistent-volume ownership must allow the configured Unix user to write; the example uses UID/GID 1000 and `fsGroup: 1000`. The init container creates only application directories on the PVC, and does not change node directories.
 
@@ -74,7 +74,7 @@ The container still runs PandaForce. Task execution happens in the node's existi
    id -g
    ```
 
-   The tested CLI is 0.166.0. Preserve a custom `CODEX_HOME` when running these commands. This step starts a service; it does not start PandaForce directly on the node.
+   The tested CLI is 0.171.0. Preserve a custom `CODEX_HOME` when running these commands. This step starts a service; it does not start PandaForce directly on the node.
 
 3. Split the resolved socket path into its directory and filename. Set the `host-control` volume's `hostPath.path` to that directory. Replace `REPLACE_WITH_SOCKET_FILENAME` in `PANDA_FORCE_APP_SERVER_SOCKET` with the actual filename. The directory is mounted at `/run/panda-force/codex-control` inside the container. Mounting only the original symlink's directory can leave its target inaccessible.
 4. Replace **every** `/srv/panda-force/workspace` occurrence with your chosen, existing workspace's absolute path, including `HOME`, `PANDA_FORCE_CWD`, `PANDA_FORCE_REVIEW_ROOT`, `PANDA_FORCE_ATTACHMENT_ROOT`, `volumeMounts` and `hostPath`. Keep the workspace at the **same absolute path** inside and outside the container. The Codex account must be able to write it and the attachment subdirectory.

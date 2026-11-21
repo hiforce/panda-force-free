@@ -2,63 +2,23 @@
 title: 编译源码与基础镜像
 ---
 
-0.1.2 源码新增可自行构建的 Rocky 创作环境；[基础镜像的内容与用途](base-images.md)说明标准与创作镜像的区别、工具清单、构建命令和月度维护。
+0.1.2 默认使用已公开、配套的 **Rocky 创作构建/运行基础镜像**，平台为 Linux amd64。两种镜像均包含 Codex CLI、Grok Build 与完整的 Office/PDF/OCR、字体、图像、研究、写作、浏览器和视频工具；构建镜像增加应用开发/原生编译依赖，运行镜像保留生产依赖。[基础镜像内容与用途](base-images.md)说明清单、目的和锁定输入。
 
-普通安装直接使用 `hiforceai/panda-force:0.1.1`。需要自己编译时，在 `v0.1.1` 源码目录运行：
+普通安装拉取 `hiforceai/panda-force:0.1.2`。需要源码构建时，在配套发行版中运行：
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
-应用 Dockerfile 默认使用 `scripts/build/base-images.json` 中固定摘要的 Linux amd64 基础镜像：
-
-| 镜像                                                               | 内容                                                                  |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| `hiforceai/panda-force-build-base:engines-20261120-b3302dd60ade`   | Node.js、Bun、Codex CLI、Grok Build、编译工具和锁定的开发依赖         |
-| `hiforceai/panda-force-runtime-base:engines-20261120-b3302dd60ade` | 运行环境、两种 Harness CLI、生产依赖、FFmpeg/FFprobe 和 Noto CJK 字体 |
-
-首次会下载基础层，之后复用 Docker 缓存，只编译应用更新。打包默认 `VERIFICATION_PROFILE=none`；源码和受影响行为应独立验证。两种基础镜像均允许通过 `PANDA_FORCE_BUILD_BASE` 和 `PANDA_FORCE_RUNTIME_BASE` 覆盖，使用自有仓库时通过 Docker 的独立凭据配置登录。
-
-两套依赖阶段均先安装锁定的依赖，再使用 npm 的原生构建工具显式编译 `node-pty`，运行镜像不包含开发依赖。这项构建顺序修正保留原有锁定依赖清单，与已固定摘要的公开基础镜像兼容。
-
-0.1.1 应用继续复用 0.1.0 使用的固定摘要基础镜像，依赖输入和基础配方未变。自行重建时使用对应版本的干净源码。
+Dockerfile、Compose 构建叠加文件与 `scripts/build/base-images.json` 固定实际公开的配套摘要。首次下载较大，之后复用已安装层。自有仓库请同时覆盖 `PANDA_FORCE_BUILD_BASE` 与 `PANDA_FORCE_RUNTIME_BASE`；直接 Docker 构建分别使用 `BUILD_BASE`、`RUNTIME_BASE`。仓库凭据与拉取策略独立管理，普通安装无需 CDN，启用 CDN 时使用自己的存储配置。
 
 ## 自行构建基础镜像
 
-从同一版本的干净源码构建，准备支持 Linux amd64 的 Docker。首次构建核心层会下载并安装依赖、原生模块和浏览器工具，耗时比普通应用构建长。以下命令使用官方 Debian/npm 源；可按需覆盖为可信镜像源：
+在同版干净源码中使用 [Rocky 创作构建器](base-images.md#构建并选用-rocky-基础镜像)。它按 profile、Node/Python 锁和校验值构建两种基础镜像，验证实际清单，支持明确的拉取策略和可信源覆盖。插件或依赖变化后先重建验证配套镜像，再选用新摘要；仅应用版本号变化可复用兼容基础层。
 
-```bash
-# 1. Build the two dependency cores.
-docker build --platform linux/amd64 -f scripts/build/Dockerfile.bases --target build-base \
-  --build-arg APT_MIRROR=http://deb.debian.org \
-  --build-arg NPM_REGISTRY=https://registry.npmjs.org \
-  -t panda-force-build-base:local-core .
-docker build --platform linux/amd64 -f scripts/build/Dockerfile.bases --target runtime-base \
-  --build-arg APT_MIRROR=http://deb.debian.org \
-  --build-arg NPM_REGISTRY=https://registry.npmjs.org \
-  -t panda-force-runtime-base:local-core .
+旧版 Debian 配方保留为明确选择的兼容环境，并提供 Rocky 配方使用的 Debian Harness seed。它不包含完整创作工具。[旧环境的完整构建顺序](https://github.com/hiforce/panda-force-free/blob/v0.1.2/panda-docs/docs/building.md#build-your-own-base-images)是 **核心依赖 → 媒体层 → Harness 引擎层**；单独的核心/媒体层不能满足本版引擎锁。
 
-# 2. Add the compiler label and runtime media tools.
-docker build --platform linux/amd64 -f scripts/build/Dockerfile.media-bases --target build-base \
-  --build-arg BUILD_BASE=panda-force-build-base:local-core \
-  --build-arg RUNTIME_BASE=panda-force-runtime-base:local-core \
-  -t panda-force-build-base:local .
-docker build --platform linux/amd64 -f scripts/build/Dockerfile.media-bases --target runtime-base \
-  --build-arg BUILD_BASE=panda-force-build-base:local-core \
-  --build-arg RUNTIME_BASE=panda-force-runtime-base:local-core \
-  -t panda-force-runtime-base:local .
-
-# 3. Build and run the application with that pair.
-export PANDA_FORCE_BUILD_BASE=panda-force-build-base:local
-export PANDA_FORCE_RUNTIME_BASE=panda-force-runtime-base:local
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-```
-
-前两步构建依赖核心和媒体层，第三步通过环境变量选择本地基础镜像并构建应用。若直接使用 `docker build`，传入 `--build-arg BUILD_BASE=panda-force-build-base:local` 和 `--build-arg RUNTIME_BASE=panda-force-runtime-base:local`。
-
-在其他构建机器使用时，将两个本地基础镜像分别打标签并推送到自有仓库，再覆盖这两个引用。仓库凭据独立管理，不写入源码或构建参数。核心配方支持 `APT_MIRROR`、`NPM_REGISTRY`、`BUN_IMAGE` 和 `NODE_IMAGE`，可选择管理员管理的镜像源。
-
-根包没有安装钩子时，普通发布版本号变化可以复用原基础镜像；依赖、锁文件、补丁、安装钩子或基础配方变化仍要求匹配的新基础镜像。确认新镜像兼容后，用 `node scripts/build/dependencies.mjs profile .` 计算兼容指纹，并审查 `scripts/build/base-images.json` 中的引用和媒体配方摘要，保留兼容检查。
+Rocky 的 seed 阶段通过 apt 准备可移植字体，所以 `--seed-image` 使用已验证的 **Debian 引擎构建镜像**，而非新的 Rocky 默认镜像；最终 Rocky 阶段自行安装 RPM 并重新编译原生模块。
 
 ## 每月更新 Harness 引擎
 
@@ -76,12 +36,12 @@ docker build -f scripts/build/Dockerfile.engine-bases --platform linux/amd64 \
   .artifacts/harness-engine-inputs
 ```
 
-审核版本和校验值后，在隔离容器中验证两种 CLI 与协议初始化、依赖兼容和应用启动，再发布新的不可变配套镜像。标准镜像需要同步更新 `scripts/build/base-images.json`、Dockerfile 与 Compose 的配套引用及引擎 recipe/lock 哈希。构建 Rocky 创作镜像时，以审核后的新 seed 摘要传入 `--seed-image`，并按[创作工具链维护流程](base-images.md#每月刷新)重建验证。
+审核版本和校验值后，在隔离容器中验证两种 CLI 与协议初始化、依赖兼容和应用启动，再发布新的不可变配套镜像。默认镜像需要同步更新 `scripts/build/base-images.json`、Dockerfile 与 Compose 的配套引用及引擎 recipe/lock 哈希。构建 Rocky 创作镜像时，以审核后的新 seed 摘要传入 `--seed-image`，并按[创作工具链维护流程](base-images.md#每月刷新)重建验证。
 
 账户目录按运维配置持久化；Grok 账户目录只读挂载时，需要完整目录来跟随原子令牌更新。引擎清单在 `/opt/panda-harness/engines.json`，Grok 许可在 `/opt/panda-harness/licenses/grok-LICENSE`。普通应用构建和启动不会自动更新引擎；每月维护由运维手动执行。
 
 ## 源码与文档检查
 
-本地应用工具链使用 Bun 1.4.2、Node.js 22 和 Codex CLI 0.166.0。运行 `bun install --frozen-lockfile`、`npm rebuild node-pty --build-from-source` 后，使用 `bun run check`、相关单元/集成/浏览器用例。完整验证可独立使用 `bun run verify`，不把它默认附加到每次镜像打包。浏览器检查需要 Playwright Chromium 和 WebKit。
+本地应用工具链使用 Bun 1.4.2、Node.js 22 和 Codex CLI 0.171.0。运行 `bun install --frozen-lockfile`、`npm rebuild node-pty --build-from-source` 后，使用 `bun run check`、相关单元/集成/浏览器用例。完整验证可独立使用 `bun run verify`，不把它默认附加到每次镜像打包。浏览器检查需要 Playwright Chromium 和 WebKit。
 
 帮助站独立构建：进入 `panda-docs`，运行 `bun install --frozen-lockfile` 和 `bun run build`，使用 Node.js 22 或更新版本。原生/远程诊断、真实模型账号和生产凭据不属于普通安装要求。

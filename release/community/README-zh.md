@@ -1,13 +1,11 @@
 <p align="center">
   <img src="./panda-docs/static/img/readme-hero-zh-CN.svg" width="1200" alt="PandaForce — 小熊猫，大功夫。用技能创作，让 Bot 干活。" />
 </p>
-<p align="center"><a href="./README.md">English</a> · <a href="#先来做点好玩的">体验创作</a> · <a href="#认识你的-bot">配置 Bot</a> · <a href="#从当前分支构建运行">开始使用</a> · <a href="./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md">完整功能</a></p>
+<p align="center"><a href="./README.md">English</a> · <a href="#先来做点好玩的">体验创作</a> · <a href="#认识你的-bot">配置 Bot</a> · <a href="#安装-012">开始使用</a> · <a href="./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md">完整功能</a></p>
 
 PandaForce 是可以自行部署的 AI 创作工作台。选一项技能，把想法变成插画、幻灯片、网页或文档；把重复工作交给 Bot，再通过技能和插件，教这只可爱的小熊猫学会更多功夫。
 
-> 本页展示 **develop 分支源码**。[从当前分支构建体验 →](#从当前分支构建运行)
-
-> **0.1.2 develop 源码**包含 Codex 与 Grok Build Harness Runtime、按运行实例选择模型与推理强度、账户凭据续期、按活动续期的创作执行和持久化完成通知，并加入可维护的 Rocky Linux 创作工具链，覆盖幻灯片、图像、研究、写作、网页与视频。[基础镜像的内容、目的与构建方法 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md) 请从 `develop` 构建体验。已发布的 `v0.1.1` 标签和 `0.1.1` 应用镜像保留原发行内容；本次源码更新不发布 `0.1.2` 镜像。
+> **PandaForce 0.1.2** 将多个 Harness Runtime 带入 Docker：**Codex + Grok Build**、按运行实例选择模型与推理强度、持久化创作进展/完成通知，以及预装创作工具。[安装发行版 →](#安装-012) · [Harness 配置 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
 ## 先来做点好玩的
 
@@ -140,45 +138,57 @@ curl --fail-with-body --silent --show-error \
 
 工作台还包含流式对话与编程、管理员终端、富文本编辑、发布适配器、基于来源的知识流程和搜索。桌面与手机支持英文、简体中文、香港繁体和台湾繁体。**[查看完整功能和服务前提 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md)**
 
-## 安装 0.1.1
+## 多个 Harness Runtime
 
-PandaForce 0.1.1 使用 **Codex app-server**，公开镜像为 **`hiforceai/panda-force:0.1.1`**，平台为 Linux amd64。准备 Git、Docker 和 Compose 即可；镜像内包含 Bun、Node.js 和支持的 Codex CLI。其他 CPU 架构需要 Linux amd64 模拟，或自行构建兼容镜像。
+0.1.2 镜像包含 **Codex CLI 0.171.0** 和本次新增集成的 **Grok Build 1.0.89**。会话、助理/Bot 和支持的创作设置统一按 **Harness Runtime → 模型 → 推理强度**选择。当前轮完成后可以切换会话引擎，交接选定上下文，文件继续保留在工作区。
+
+Codex 使用应用的 app-server 连接，Grok 使用按需启动的 ACP 进程；可选账户服务负责原生命令行凭据续期，无需在宿主机保持 Grok/tmux 会话。模型账户与 PandaForce 管理员相互独立。[容器分工、登录、持久化与恢复 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
+
+## 安装 0.1.2
+
+使用配套发行源码与 **`hiforceai/panda-force:0.1.2`**，平台为 **Linux amd64**。镜像采用 **Rocky Linux 9**，包含两种 Harness CLI、Bun、Node.js、Python、Office、PDF/OCR、字体、图像/研究/写作库、Chromium 和 FFmpeg。宿主机准备 Git、Docker 和 Compose 即可。[基础镜像的内容与用途 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)
 
 ```bash
-git clone --branch v0.1.1 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch v0.1.2 --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
 docker compose logs panda-force
 ```
 
-打开 **http://localhost:8899** 创建管理员，密码至少六位并包含大小写字母和数字。如果要求安装验证码，请查看容器启动日志。首次创建管理员后，可选择本地即可使用的 **SQLite**，或进入 **配置 MySQL**。MySQL 流程包括测试连接、审阅迁移、校验数据并重启切换；管理员身份、密码哈希及账号设置会一并迁入。[安装与数据库选择 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/installation.md)
+打开 **http://localhost:8899** 创建管理员。密码至少六位，包含大小写字母和数字；如需安装验证码，请查看容器启动日志。首次创建后选择 **SQLite** 或 **配置 MySQL**。[安装与数据库选择 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/installation.md)
 
-模型服务需要独立登录：
+**Codex 账户：**
 
 ```bash
 docker compose exec -it panda-force codex login --device-auth
 docker compose restart panda-force
 ```
 
-PandaForce 账号与模型凭据相互独立。API Key 等配置见[模型服务商指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md)。管理员先配置 SMTP，再使用邮箱绑定、邀请和邮件找回。共享引擎模式允许管理员访问工作区和引擎，普通成员应使用有权限的业务内容。
+**Grok Build 账户与原生自动续期：**加入版本配套的账户服务，再完成设备登录：
 
-应用状态、模型登录和工作文件存放在持久 Docker 卷中，`docker compose down` 会保留这些卷。默认端口仅本机可访问。升级已有安装前，先阅读[存储与备份](./panda-docs/docs/storage.md)。
+```bash
+docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml pull
+docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml up -d
+docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
+  run --rm grok-auth grok --no-auto-update login --device-auth
+```
 
-## 使用缓存基础镜像从源码构建
+打开 **设置 → Harness Runtime** 检查 Grok Build，然后选择模型与强度。明确的 **hi** 测试会使用你的模型账户发送一次真实小型请求。应用与 Grok 辅助服务默认使用同一份 0.1.2 镜像。[完整配置与账户卷说明 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
-在上述版本化源码目录中运行：
+应用状态、Codex 登录、Grok 账户和工作文件保存在独立 Docker 卷中。升级保留原 Compose 项目/卷名，并检查 `.env` 是否仍用 `PANDA_FORCE_IMAGE` 覆盖旧版；`docker compose down` 保留命名卷。默认端口只绑定本机，远程访问请配置自己的 HTTPS 入口。[存储与备份 →](./panda-docs/docs/storage.md)
+
+## 从源码复用基础层构建
+
+在配套发行源码目录中运行：
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-docker compose logs panda-force
 ```
 
-默认本地标签为 `panda-force:local`。Dockerfile 会自动拉取之前公开的、固定摘要的**编译基础镜像和媒体运行基础镜像**，复用锁定依赖、Codex CLI、FFmpeg 和中日韩字体。一般应用更新只编译源码，不重装这些依赖。首次拉取需要下载基础层，后续使用 Docker 层缓存；两种基础镜像均可覆盖为自有仓库地址。
+本地镜像为 `panda-force:local`。Docker 自动拉取按摘要固定、配套的公开 **Rocky 创作构建/运行基础镜像**，后续应用更新复用预装工具。两种基础镜像均支持覆盖为自有仓库。本地构建加入 Grok 叠加配置时，设置 `PANDA_FORCE_IMAGE=panda-force:local`，让辅助服务使用同一镜像。[完整源码/基础镜像构建与月度维护 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)
 
-[自行构建两种基础镜像、使用本地标签及配置镜像源 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md#自行构建基础镜像)
-
-镜像打包默认执行编译与打包（`VERIFICATION_PROFILE=none`），开发时独立执行源码和受影响行为检查；打包成功不等于重新完成全产品回归。`develop` 会继续更新，需要此版本的准确源码时使用 `v0.1.1`。
+镜像打包默认进行编译与启动检查（`VERIFICATION_PROFILE=none`），源码及受影响行为独立验证。需要本版准确源码时使用 `v0.1.2`；`main` 跟踪稳定发行版，`develop` 继续开发。
 
 ## 可选服务与配置
 

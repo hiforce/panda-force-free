@@ -11,7 +11,15 @@ export default {
     {
       type: "category",
       label: "Administration",
-      items: ["configuration", "model-providers", "cluster", "storage", "security", "troubleshooting"],
+      items: [
+        "configuration",
+        "harness-runtimes",
+        "model-providers",
+        "cluster",
+        "storage",
+        "security",
+        "troubleshooting",
+      ],
     },
     { type: "category", label: "Development", items: ["building", "base-images", "cdn-build", "releases", "updates"] },
   ],

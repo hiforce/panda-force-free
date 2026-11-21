@@ -1,7 +1,7 @@
-# Combine with the regular source-build overlay; standard bases already contain both CLI engines.
+# Add Grok account renewal to the versioned application image; both CLIs are already included.
 services:
   panda-force:
-    image: ${PANDA_FORCE_HARNESS_IMAGE:-${PANDA_FORCE_IMAGE:-panda-force:local}}
+    # Inherit the application image from the main Compose file or build overlay.
     environment:
       PANDA_FORCE_HARNESS_PROFILES: >-
         [{"id":"grok-build","name":"Grok Build","command":"/usr/local/bin/grok","accountHome":"/run/panda-grok-account","credentialSocket":"/run/panda-grok-auth/broker.sock","deployment":"container"}]
@@ -12,7 +12,7 @@ services:
       # The application never mounts the account owner's refresh credentials.
       - panda-force-grok-auth:/run/panda-grok-auth:ro
   grok-auth-socket-init:
-    image: ${PANDA_FORCE_HARNESS_IMAGE:-${PANDA_FORCE_IMAGE:-panda-force:local}}
+    image: ${PANDA_FORCE_HARNESS_IMAGE:-${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.1.2}}
     pull_policy: ${PANDA_FORCE_PULL_POLICY:-missing}
     user: "0:0"
     network_mode: none
@@ -32,7 +32,7 @@ services:
       - panda-force-grok-auth:/run/panda-grok-auth
       - panda-force-grok-account:/run/panda-grok-account
   grok-auth:
-    image: ${PANDA_FORCE_HARNESS_IMAGE:-${PANDA_FORCE_IMAGE:-panda-force:local}}
+    image: ${PANDA_FORCE_HARNESS_IMAGE:-${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.1.2}}
     pull_policy: ${PANDA_FORCE_PULL_POLICY:-missing}
     user: "${PUID:-1000}:${PGID:-1000}"
     restart: unless-stopped

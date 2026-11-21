@@ -8,17 +8,16 @@ PandaForce 0.1.2 source separates the reusable toolchain from application code. 
 
 <div className="base-image-table">
 
-| Layer                       | Contents                                                                                                                       | Purpose and availability                                                                                                                                                           |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Standard build base         | Debian userspace, Node.js, Bun, Codex CLI, Grok Build, native compilers and locked application development dependencies        | Default public source-build environment. The published `hiforceai/panda-force-build-base:engines-20261120-b3302dd60ade` is pinned by digest in the Dockerfile and Compose overlay. |
-| Standard runtime base       | Node.js, Bun, both Harness CLIs, application production dependencies, FFmpeg/FFprobe and Noto CJK fonts                        | Default public application runtime. The matching `hiforceai/panda-force-runtime-base:engines-20261120-b3302dd60ade` is also digest-pinned.                                         |
-| Rocky creative build base   | Rocky Linux 9, the creative tools below, both Harness CLIs, native build tools and locked application development dependencies | Compile an application with the maintained creative environment. Build it yourself from `scripts/build/Dockerfile.rocky-bases`.                                                    |
-| Rocky creative runtime base | Rocky Linux 9, the same creative tools and Harness CLIs, plus application production dependencies                              | Run creation work with Office, image, research, writing, browser and video dependencies already available. Build and select it together with the matching Rocky build base.        |
-| Application image           | Selected runtime base, application source, compiled browser assets, CLI and startup command                                    | The runnable web application. Base images do not contain a configured PandaForce installation.                                                                                     |
+| Layer                               | Contents                                                                                                                         | Purpose and availability                                                                                                                                                                                           |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Default Rocky creative build base   | Rocky Linux 9, both Harness CLIs, native compilers, locked application development dependencies and the creative inventory below | Public `hiforceai/panda-force-build-base:rocky9-creative-20261121-14a4a23a90de`, selected by immutable digest in the source Dockerfile and Compose build overlay.                                                  |
+| Default Rocky creative runtime base | Rocky Linux 9, both Harness CLIs, application production dependencies and the same creative inventory                            | Public `hiforceai/panda-force-runtime-base:rocky9-creative-20261121-14a4a23a90de`, paired by its own immutable digest. Runs tasks with expensive tools already installed.                                          |
+| Application image                   | Selected runtime, application source, compiled browser assets, CLI and startup command                                           | Runnable `hiforceai/panda-force:0.1.2`; the normal installation pulls this image.                                                                                                                                  |
+| Legacy Debian build/runtime bases   | The earlier locked application dependencies, Harness engines, FFmpeg and Noto CJK fonts                                          | The `engines-20261120-b3302dd60ade` pair remains available for explicitly selected compatible legacy builds and as the reviewed Debian Harness seed. It is not the 0.1.2 default or the complete creative toolset. |
 
 </div>
 
-This `develop` update publishes **0.1.2 source**. The existing public application image and release tag remain `0.1.1`; no `0.1.2` application image or publicly downloadable Rocky creative base is announced by this source update. Default builds continue to use the existing public standard bases. The Rocky recipe and all its dependency inputs are included for self-builds and administrator-managed registries.
+The stable 0.1.2 application image and both default Rocky creative bases are public for **Linux amd64**. Use the matching `v0.1.2` source and installation files. The Dockerfile, Compose overlay and `scripts/build/base-images.json` pin the actual published build/runtime digests; the two roles use distinct image references. Their installed inventories match the reviewed creative inputs. [Codex and Grok container setup](harness-runtimes.md) covers account services and login.
 
 The container userspace is independent of the host distribution. A Rocky host can run either pair; choose the Rocky pair when you want that userspace and the complete creative toolset. The current recipe targets **Linux amd64**.
 
@@ -61,9 +60,9 @@ The recipe copies portable Node/Bun/Harness binaries and font data from the revi
 
 When a plugin needs another executable or library, update these maintained inputs, its profile and platform mapping. Review licenses, refresh the corresponding lock and rebuild both bases. Installing a dependency only in a running container or a temporary task directory does not maintain the next image. Unknown profiles, missing package mappings and inconsistent Node/Python declarations fail validation. Plugin input cannot choose an arbitrary execution image or supply installation commands to this builder.
 
-## Build and select Rocky bases
+## Rebuild and select Rocky bases
 
-From a clean checkout of this source, with Docker, Node.js and Bun available:
+Normal installations pull the application image, and normal source builds automatically pull the public base pair. Rebuild the bases only after changing reviewed tool inputs. From a clean matching checkout, with Docker, Node.js and Bun available:
 
 ```bash
 node scripts/build/creative-tools.mjs validate
@@ -113,4 +112,4 @@ A container image does not install tools into an external SSH host or shared Cod
 4. Verify both installed inventories, CLI/protocol compatibility, offline creative output, application packaging/startup and the affected workflows. Record the actual RPM inventories, checksums and image digests.
 5. Publish a new immutable pair to your selected registry, update the application selectors and release each application independently. Keep credentials and old rollback images separate from these artifacts.
 
-This is a maintained manual workflow. Application startup and creation tasks do not automatically upgrade tools, and the source does not install a monthly background scheduler. See [source builds](building.md) for the standard Debian base recipes and [CDN builds](cdn-build.md) for optional static resource delivery.
+This is a maintained manual workflow. Application startup and creation tasks do not automatically upgrade tools, and the source does not install a monthly background scheduler. See [source builds](building.md) for the optional legacy Debian base recipes and [CDN builds](cdn-build.md) for optional static resource delivery.

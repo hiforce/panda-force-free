@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "inputsSha256": "f0d8f4b3ef3e1c13140d56e844ff4d6c21314bcf0483fc76f871d03bc81d66a9",
-  "baseTag": "engines-20261120-b3302dd60ade",
+  "baseTag": "rocky9-creative-20261121-14a4a23a90de",
   "platform": "linux/amd64",
-  "buildBase": "hiforceai/panda-force-build-base@sha256:66696cf2668c2b2e017d9f106533bdd016ac2a5d5a4c0f593ee59e8f36b75e5e",
-  "runtimeBase": "hiforceai/panda-force-runtime-base@sha256:d55e7cb61e32fe11750903d32a3d16bd0433be6881e84254772f30312cd4b9c5",
+  "buildBase": "hiforceai/panda-force-build-base@sha256:d7eb98ddaddf65c4247f887c9c491c76a6d43c1fa17c03fa6f1ece3eb3e2f22c",
+  "runtimeBase": "hiforceai/panda-force-runtime-base@sha256:d9ff95b034564c9d167070fd052c3ee5446509206e14471226a846342271004c",
   "coreBaseTag": "deps-7fc21178477adfc2",
   "coreBuildBase": "hiforceai/panda-force-build-base:deps-7fc21178477adfc2@sha256:d1b3e34b9afe1405a52181f54b233e2ad1eedc7eb45babfd58548afbdaf6adf5",
   "coreRuntimeBase": "hiforceai/panda-force-runtime-base:deps-7fc21178477adfc2@sha256:7d5b745416b1321c73ebd6cf1b08535d3757de8ddb63c7bdf67a6312265c32c8",
@@ -17,5 +17,10 @@
   "engineVersions": {
     "codex": "0.171.0",
     "grok": "1.0.89"
-  }
+  },
+  "legacyEngineBaseTag": "engines-20261120-b3302dd60ade",
+  "legacyEngineBuildBase": "hiforceai/panda-force-build-base@sha256:66696cf2668c2b2e017d9f106533bdd016ac2a5d5a4c0f593ee59e8f36b75e5e",
+  "legacyEngineRuntimeBase": "hiforceai/panda-force-runtime-base@sha256:d55e7cb61e32fe11750903d32a3d16bd0433be6881e84254772f30312cd4b9c5",
+  "defaultProfile": "rocky9-creative",
+  "creativeInputsSha256": "14a4a23a90dee89956da2e8fded97130659c5d58fae295aa148a9fe82e18219c"
 }

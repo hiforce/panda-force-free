@@ -6,6 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        BUILD_BASE: ${PANDA_FORCE_BUILD_BASE:-hiforceai/panda-force-build-base@sha256:66696cf2668c2b2e017d9f106533bdd016ac2a5d5a4c0f593ee59e8f36b75e5e}
-        RUNTIME_BASE: ${PANDA_FORCE_RUNTIME_BASE:-hiforceai/panda-force-runtime-base@sha256:d55e7cb61e32fe11750903d32a3d16bd0433be6881e84254772f30312cd4b9c5}
+        BUILD_BASE: ${PANDA_FORCE_BUILD_BASE:-hiforceai/panda-force-build-base@sha256:d7eb98ddaddf65c4247f887c9c491c76a6d43c1fa17c03fa6f1ece3eb3e2f22c}
+        RUNTIME_BASE: ${PANDA_FORCE_RUNTIME_BASE:-hiforceai/panda-force-runtime-base@sha256:d9ff95b034564c9d167070fd052c3ee5446509206e14471226a846342271004c}
         VERIFICATION_PROFILE: ${PANDA_FORCE_VERIFICATION_PROFILE:-none}
+        INSTALL_VIDEO_TOOLS: ${PANDA_FORCE_INSTALL_VIDEO_TOOLS:-1}

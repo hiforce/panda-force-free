@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.1` for Linux amd64. Application builds reuse the digest-pinned build and media runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.2` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -23,15 +23,16 @@ docker compose logs panda-force
 
 Review source, dependency licenses, English comments and the explicit public inventory before exporting. Verify the final clean tree, then review staged files. No internal Git history, old help, design records or agent directories belong in the public snapshot. Release changes go to the private repository for review first.
 
-## 0.1.2 develop source
+## 0.1.2
 
-This is a source update on `develop`. The published `main`, `v0.1.1` tag and `0.1.1` application image keep their existing release contents.
+The stable `main`, `develop`, `v0.1.2` tag and `hiforceai/panda-force:0.1.2` application image identify this release. Both Codex CLI and Grok Build are included; the optional Compose account service provides native Grok credential renewal. [Install and select Harness Runtimes](harness-runtimes.md).
 
 - Keep active creation runs alive through activity-based budgets, while retaining inactivity, cancellation, disconnect and user-question handling.
 - Persist completion notifications atomically with saved artifacts; the inbox opens the authorized document or exact asset version and retains read state.
-- Add maintained Rocky Linux creative build/runtime recipes, dependency profiles and locks for slides, images, research, writing, web and video. Document the [contents, purpose and self-build workflow](base-images.md); the existing public standard base pair remains the default.
+- Add maintained Rocky Linux creative build/runtime recipes, dependency profiles and locks for slides, images, research, writing, web and video. Document the [contents, purpose and self-build workflow](base-images.md); the matching public Rocky pair is now the default.
 - Renew Grok credentials through an account-owned broker and preserve portable account directories and socket mounts across runtime sessions.
 - Compact project context in the session inspector and remove the Files/Changes/Terminal shortcut block from its overview.
+- Align README, installation/upgrade instructions, Compose application/account helpers and all Kubernetes application/init roles at 0.1.2; verify a clean install and upgrade without replacing account/data volumes.
 - Align the application and community source version at 0.1.2. The project uses `bun.lock`; no root `package-lock.json` is generated.
 
 ## 0.1.1

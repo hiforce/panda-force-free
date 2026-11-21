@@ -8,7 +8,7 @@
     "start": "bun run scripts/start.ts",
     "dev": "bun run scripts/dev.ts",
     "build": "bun run build:client && bun run build:server",
-    "check": "bun run check:dependencies && bun run check:contracts && bun run check:state && bun run typecheck && bun run check:dom && bun run check:build",
+    "check": "bun run check:dependencies && bun run check:installation && bun run check:contracts && bun run check:state && bun run typecheck && bun run check:dom && bun run check:build",
     "test": "bun scripts/testing/run.mjs unit",
     "test:unit": "bun scripts/testing/run.mjs unit",
     "test:integration": "bun scripts/testing/run.mjs integration",
@@ -39,7 +39,8 @@
     "release:proof": "bun scripts/verification/build-proof.ts",
     "build:cli": "bun build src/cli/main.ts --target=node --outfile=dist/panda.mjs",
     "package:cli": "bun scripts/package-panda-cli.mjs",
-    "build:gadget-sdk": "bun scripts/build-gadget-sdk.mjs"
+    "build:gadget-sdk": "bun scripts/build-gadget-sdk.mjs",
+    "check:installation": "bun scripts/release/check-installation.mjs"
   },
   "dependencies": {
     "@codemirror/lang-cpp": "^6.0.3",

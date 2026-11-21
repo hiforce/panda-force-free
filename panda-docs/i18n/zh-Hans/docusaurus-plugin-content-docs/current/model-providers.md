@@ -2,7 +2,7 @@
 title: 模型服务配置
 ---
 
-PandaForce 通过服务端的 Codex CLI 执行模型请求。请先配置实际运行的命令行，再在网页中选择模型。网页账号登录与模型服务的密钥认证相互独立。本文介绍智谱 GLM、Ollama 和 DeepSeek。请在实际执行环境中使用 `codex --version` 查看命令行版本。
+PandaForce 0.1.2 通过不同 Harness Runtime 支持 Codex 和 Grok Build；[容器配置](harness-runtimes.md)说明运行实例选择及 Grok 登录/续期。本文介绍 Codex 兼容服务的配置，请先配置实际运行的 Codex CLI，再在网页选择对应模型。网页账号登录与模型服务的密钥认证相互独立。本文介绍智谱 GLM、Ollama 和 DeepSeek。请在实际执行环境中使用 `codex --version` 查看命令行版本。
 
 ## 配置目录
 

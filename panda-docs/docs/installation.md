@@ -4,7 +4,7 @@ title: Install and sign in
 
 ## Understand what runs where
 
-PandaForce provides the browser interface and a service that sends your requests to an execution engine. Codex is the currently supported engine: it reads files, runs commands and returns results. Your PandaForce administrator account controls access to the interface; your Codex login controls access to the model service.
+PandaForce provides the browser interface and sends requests through the selected Harness Runtime. The 0.1.2 container includes Codex CLI and Grok Build. Choose a runtime, then its model and reasoning level. Your PandaForce administrator account controls application access; each model-provider login is separate. [Codex/Grok container setup and account lifecycle](harness-runtimes.md) describes both engines. The host-service options below apply specifically to Codex.
 
 There are two independent choices:
 
@@ -21,9 +21,9 @@ A Unix socket is a local communication endpoint between processes, represented b
 
 ## Start the published container
 
-The current container release is **hiforceai/panda-force:0.1.1**, currently for Linux amd64. The image contains Bun, Node.js and the supported Codex CLI. You do not need to install those tools separately on the host.
+The current container release is **hiforceai/panda-force:0.1.2**, currently for Linux amd64. The Rocky Linux 9 image contains Bun, Node.js, Codex CLI 0.171.0, Grok Build 1.0.89 and the reviewed creative tools. You do not need to install those tools on the host. Use the matching 0.1.2 Compose files; check an existing `.env` for an old image override.
 
-From a checkout of the release tag (`git clone --branch v0.1.1 --depth 1 https://github.com/hiforce/panda-force-free.git`):
+From a checkout of the release tag (`git clone --branch v0.1.2 --depth 1 https://github.com/hiforce/panda-force-free.git`):
 
 ```bash
 docker compose pull panda-force
@@ -42,6 +42,10 @@ docker compose restart panda-force
 
 The default port binds only to localhost. State persists in named volumes. See [storage](./storage.md) before replacing an existing installation. The administrator and model-provider accounts are independent.
 
+## Add Grok Build
+
+Use the [Grok account-service overlay](harness-runtimes.md#enable-grok-build-with-managed-account-renewal) from this same checkout, then complete its native device login. The application and account helpers default to the same versioned image. Codex remains available. Dedicated account and socket volumes preserve credentials and support native renewal without a host terminal session.
+
 ## Choose the database on first installation
 
 After creating the first administrator, the application offers **Use SQLite** or **Configure MySQL**. SQLite is stored in the application state volume and requires no database service. Choosing it is recorded and survives restarts; MySQL remains available later in **Settings → Storage and logs**.
@@ -56,7 +60,7 @@ The administrator account is created during local bootstrap, then its identity, 
 
 This option is for a Linux Docker host with an existing Codex login. Shared mode connects to the host's app-server over a Unix socket. It does not start the image's Codex backend or require a second model login. The image still includes the CLI for standalone installations.
 
-The tested CLI is **0.166.0**. Check `codex --version` and `codex app-server daemon start --help`; older CLI versions may not offer the daemon or compatible session APIs. Run the following as the same host user who normally runs Codex. If that account uses a custom `CODEX_HOME`, preserve it in this shell.
+The tested CLI is **0.171.0**. Check `codex --version` and `codex app-server daemon start --help`; older CLI versions may not offer the daemon or compatible session APIs. Run the following as the same host user who normally runs Codex. If that account uses a custom `CODEX_HOME`, preserve it in this shell.
 
 ```bash
 codex app-server daemon start
@@ -81,7 +85,7 @@ docker run -d --name panda-force-host --restart unless-stopped \
   -e PANDA_FORCE_APP_SERVER_MODE=shared \
   -e PANDA_FORCE_APP_SERVER_SOCKET="/run/panda-force/codex-control/$(basename "$PANDA_FORCE_HOST_SOCKET")" \
   -e PANDA_FORCE_AUTH_MODE=password \
-  hiforceai/panda-force:0.1.1
+  hiforceai/panda-force:0.1.2
 
 docker logs panda-force-host
 ```
@@ -115,12 +119,12 @@ The default Compose setup instead starts its own Codex service inside the contai
 
 ## Build from source
 
-Install Bun 1.4.2, Node.js 22, Git, Python 3 and a C++ build toolchain. The tested CLI is 0.166.0.
+Install Bun 1.4.2, Node.js 22, Git, Python 3 and a C++ build toolchain. The tested CLI is 0.171.0.
 
 ```bash
 bun install --frozen-lockfile
 npm rebuild node-pty --build-from-source
-npm install -g @openai/codex@0.166.0
+npm install -g @openai/codex@0.171.0
 codex
 bun run start
 ```
@@ -134,7 +138,7 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up --build -d
 docker compose logs panda-force
 ```
 
-The community Dockerfile automatically pulls our public, digest-pinned compiler and media runtime bases. Locked dependencies, Codex CLI, FFmpeg and CJK fonts are already installed; no manual base build or import is needed. The first download is cached for later application builds. See [container base images](./building.md#container-base-images) and [build your own bases](./building.md#build-your-own-base-images) for the two images, verification scope and private-registry overrides. This source build is optional; normal installation pulls the released application image.
+The community Dockerfile automatically pulls the matched public, digest-pinned Rocky creative build/runtime bases. Both Harness CLIs and the Office/PDF/OCR, font, image, research, writing, browser and video tools are preinstalled; no manual base build or import is needed. The first download is cached for later application builds. See [container base images](./building.md#container-base-images) and [build your own bases](./building.md#build-your-own-base-images) for the two images, verification scope and private-registry overrides. This source build is optional; normal installation pulls the released application image.
 
 ## Install on your phone
 

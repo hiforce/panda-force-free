@@ -1,13 +1,11 @@
 <p align="center">
   <img src="./panda-docs/static/img/readme-hero-en.svg" width="1200" alt="PandaForce — Small panda. Big ideas. Create with skills. Put Bots to work." />
 </p>
-<p align="center"><a href="./README-zh.md">简体中文</a> · <a href="#create-something-fun">Try a creation</a> · <a href="#meet-your-bot">Build a Bot</a> · <a href="#run-this-branch-from-source">Get started</a> · <a href="./panda-docs/docs/features.md">All features</a></p>
+<p align="center"><a href="./README-zh.md">简体中文</a> · <a href="#create-something-fun">Try a creation</a> · <a href="#meet-your-bot">Build a Bot</a> · <a href="#install-012">Get started</a> · <a href="./panda-docs/docs/features.md">All features</a></p>
 
 PandaForce is a self-hosted AI workspace with a friendly kung-fu panda at its heart. Create illustrations, slides, web pages and documents with skills. Put repeatable work behind a Bot API, and teach your panda new moves through skills and plugins.
 
-> This page showcases the **develop source**. [Build this branch to try it →](#run-this-branch-from-source)
-
-> The **0.1.2 develop source** includes Codex and Grok Build Harness Runtimes, runtime-specific model and reasoning choices, account-owned credential renewal, activity-based creation execution and a persistent completion inbox. It also adds a maintained Rocky Linux creative toolchain for slides, images, research, writing, web and video. [Base image contents, purpose and build instructions →](./panda-docs/docs/base-images.md) Build `develop` to use these updates. The published `v0.1.1` tag and `0.1.1` application image retain their release contents; this source update does not publish a `0.1.2` image.
+> **PandaForce 0.1.2** brings multiple Harness Runtimes to Docker: **Codex + Grok Build**, runtime-specific models and reasoning levels, durable creation progress/completion notifications, and preinstalled creative tools. [Install the release →](#install-012) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
 
 ## Create something fun
 
@@ -140,45 +138,57 @@ For a larger workflow—supplier assets, a theme brief, product details, human r
 
 PandaForce also includes streaming AI conversations and coding, a terminal for administrators, rich-text documents, publishing adapters, source-based knowledge workflows and search. Desktop and mobile layouts support English, Simplified Chinese, Hong Kong Traditional Chinese and Taiwan Traditional Chinese. **[Explore all features and prerequisites →](./panda-docs/docs/features.md)**
 
-## Install 0.1.1
+## Multiple Harness Runtimes
 
-PandaForce 0.1.1 uses **Codex app-server** and is published as **`hiforceai/panda-force:0.1.1`** for Linux amd64. Install Git and Docker with Compose; Bun, Node.js and the supported Codex CLI are included in the image. Other CPU architectures require Linux amd64 emulation or a separately built compatible image.
+The 0.1.2 image contains **Codex CLI 0.171.0** and the newly integrated **Grok Build 1.0.89**. In conversations, assistants/Bots and supported creation settings, choose **Harness Runtime → model → reasoning level**. Finish the current turn before switching a conversation; selected context is handed over and files remain in the workspace.
+
+Codex starts through the application's app-server connection. Grok uses on-demand ACP processes; its optional account service handles native credential renewal. No host Grok/tmux session is required. Provider logins remain separate from the PandaForce administrator. [Container roles, login, persistence and recovery →](./panda-docs/docs/harness-runtimes.md)
+
+## Install 0.1.2
+
+Use **`hiforceai/panda-force:0.1.2`** for **Linux amd64** with the matching release checkout. The image uses **Rocky Linux 9** and includes both Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
 
 ```bash
-git clone --branch v0.1.1 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch v0.1.2 --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
 docker compose logs panda-force
 ```
 
-Open **http://localhost:8899** and create your administrator. The password requires at least six characters including uppercase, lowercase and a number. If an installation code is requested, read your container startup logs. The first administrator then chooses **SQLite** (ready locally) or **Configure MySQL**. MySQL setup tests the connection, reviews the migration, verifies the copied data and restarts onto MySQL. Administrator identity and password hashes move with the account data. [Installation and database selection →](./panda-docs/docs/installation.md)
+Open **http://localhost:8899** and create the administrator. The password requires at least six characters including uppercase, lowercase and a number. If requested, read the installation code from the container startup logs. Choose **SQLite** or **Configure MySQL** after bootstrap. [Installation and database selection →](./panda-docs/docs/installation.md)
 
-Sign in to the model service separately:
+**Codex account:**
 
 ```bash
 docker compose exec -it panda-force codex login --device-auth
 docker compose restart panda-force
 ```
 
-PandaForce accounts and model-provider credentials are independent. API-key setup is described in the [model-provider guide](./panda-docs/docs/model-providers.md). Configure SMTP in administration before email binding, invitations or email recovery. This shared-engine installation gives administrators access to its workspace and engine; use authorized business content for ordinary members.
+**Grok Build account and automatic native renewal:** add the version-matched account-service overlay, then complete device login:
 
-Application state, model login and workspace files use persistent Docker volumes. `docker compose down` keeps those volumes. The default port binds to localhost. Read [storage and backups](./panda-docs/docs/storage.md) before upgrading an existing installation.
+```bash
+docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml pull
+docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml up -d
+docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
+  run --rm grok-auth grok --no-auto-update login --device-auth
+```
+
+Open **Settings → Harness Runtimes**, check Grok Build, and select its model/effort. The explicit **hi** test sends a real small request using your model account. The application and Grok helper services use the same 0.1.2 image by default. [Detailed setup and account volumes →](./panda-docs/docs/harness-runtimes.md)
+
+State, Codex login, Grok account and workspace files persist in separate Docker volumes. Keep the same Compose project/volume names when upgrading and check `.env` for an old `PANDA_FORCE_IMAGE` override. `docker compose down` preserves named volumes. The default port binds to localhost; configure your own HTTPS entry for remote access. [Storage and backups →](./panda-docs/docs/storage.md)
 
 ## Build from source with cached bases
 
-From the versioned checkout above:
+From the matching checkout:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-docker compose logs panda-force
 ```
 
-The default local tag is `panda-force:local`. The Dockerfile automatically pulls the existing, digest-pinned **build and media runtime bases**. Locked dependencies, Codex CLI, FFmpeg and CJK fonts are reused; ordinary application builds compile the source without reinstalling those packages. The first pull downloads the bases and later builds use Docker's layer cache. You can override both bases for your own registry.
+The local image is `panda-force:local`. Docker automatically pulls the matched, digest-pinned public **Rocky creative build/runtime bases**; later application builds reuse their installed tools. Override both references for your own registry. When adding the Grok overlay to a local build, set `PANDA_FORCE_IMAGE=panda-force:local` so its helpers use that same image. [Complete source/base build and monthly maintenance →](./panda-docs/docs/base-images.md)
 
-[Build both base images yourself, use local tags, and configure mirrors →](./panda-docs/docs/building.md#build-your-own-base-images)
-
-Packaging defaults to compilation and packaging (`VERIFICATION_PROFILE=none`). Run source and affected behavior checks independently; image packaging does not claim a fresh full-product regression. The `develop` branch continues after the tagged release; use `v0.1.1` for its exact source.
+Packaging defaults to compilation/startup checks (`VERIFICATION_PROFILE=none`); source and affected behavior checks run separately. Use `v0.1.2` for this release's exact source. `main` tracks the stable release and `develop` continues development.
 
 ## Optional services and configuration
 
