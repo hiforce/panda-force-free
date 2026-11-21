@@ -1,3 +1,4 @@
+import { selectSessionModel, selectedSessionModel, selectSessionEffort } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
@@ -6,6 +7,7 @@ import { createAppFixture } from "../support/app-fixture.mjs";
 const out = ".artifacts/composer-settings";
 await mkdir(out, { recursive: true });
 const app = await createAppFixture({
+  startupTimeoutMs: 60000,
   applicationCreation: true,
   models: [
     {
@@ -47,6 +49,7 @@ try {
         hasTouch: mobile,
         isMobile: mobile,
         locale,
+        ignoreHTTPSErrors: process.env.PANDA_TEST_HTTPS === "true",
       });
       await context.addInitScript(
         ({ locale, theme }) => {
@@ -87,7 +90,7 @@ try {
           overflow: document.documentElement.scrollWidth > innerWidth,
         };
       });
-      assert.equal(geometry.visibleButtons, 3, JSON.stringify(geometry));
+      assert.equal(geometry.visibleButtons, 4, JSON.stringify(geometry));
       assert(!geometry.overflow);
       assert(geometry.settings.x - geometry.add.right >= 24, JSON.stringify(geometry));
       for (const r of [geometry.add, geometry.settings, geometry.send]) {
@@ -104,12 +107,10 @@ try {
       assert(rootBounds.y >= 0 && rootBounds.y + rootBounds.height <= height + 1);
       await page.screenshot({ path: `${out}/root-${locale}-${width}.png` });
       await page.locator('[data-composer-setting="model"]').click();
-      await page.locator("#modelMenu").waitFor();
-      await page.locator('#modelMenu input[type="range"]').press("End");
-      await page.locator("#modelSubmenuButton").click();
-      await page.locator('[data-model="gpt-5.6-luna"]').waitFor();
-      await page.locator("#modelMenuBack").click();
-      await page.locator("#modelMenuBack").click();
+      await page.locator("#sessionSettingsDialog[open]").waitFor();
+      await selectSessionModel(page, "gpt-5.6-luna");
+      await selectSessionEffort(page, "high");
+      await page.locator("[data-settings-back]").click();
       await page.locator("#composerSettingsMenu").waitFor();
       await page.locator('[data-composer-setting="permissions"]').click();
       await page.locator("#permissionMenu").waitFor();
@@ -127,17 +128,17 @@ try {
       const before = await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel);
       await page.locator("#composerSettingsButton").click();
       await page.locator('[data-composer-setting="model"]').click();
-      await page.locator('#sessionSettingsDialog [data-settings-model="gpt-5.6-luna"]').click();
-      await page.locator('#sessionSettingEfforts input[type="range"]').press("End");
+      await selectSessionModel(page, "gpt-5.6-luna");
+      await selectSessionEffort(page, "high");
       await page.locator("[data-settings-back]").click();
       await page.locator("#composerSettingsMenu").waitFor();
       await page.locator('[data-composer-setting="model"]').click();
-      assert.equal(await page.locator('[data-settings-model="gpt-5.6-luna"]').getAttribute("aria-pressed"), "true");
+      assert.equal(await selectedSessionModel(page), "gpt-5.6-luna");
       await page.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
       assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), before);
       await page.locator("#composerSettingsButton").click();
       await page.locator('[data-composer-setting="model"]').click();
-      await page.locator('[data-settings-model="gpt-5.6-luna"]').click();
+      await selectSessionModel(page, "gpt-5.6-luna");
       await page.locator('#sessionSettingsDialog button[type="submit"]').click();
       await page.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
       assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel), "gpt-5.6-luna");
@@ -156,8 +157,8 @@ try {
       assert(await page.locator('[data-composer-setting="permissions"]').isDisabled());
       await page.locator('[data-composer-setting="model"]').click();
       await page.locator("#sessionSettingsDialog[open]").waitFor();
-      await page.locator('[data-settings-model="gpt-5.6-sol"]').click();
-      await page.locator('#sessionSettingEfforts input[type="range"]').press("End");
+      await selectSessionModel(page, "gpt-5.6-sol");
+      await selectSessionEffort(page, "high");
       await page.screenshot({ path: `${out}/creation-model-${locale}-${width}.png` });
       await page.locator('#sessionSettingsDialog button[type="submit"]').click();
       assert.equal(

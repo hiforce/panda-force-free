@@ -269,7 +269,9 @@ export function creationImageTools(options: {
                   ),
                   slot: creationInteger(args.slot),
                   prompt: creationPrompt(args.prompt),
-                  profile: context.input.profile,
+                  profile: context.input.profile.media
+                    ? { id: "codex", engineId: "codex", ...context.input.profile.media }
+                    : context.input.profile,
                   images,
                 },
                 intent = await imageRenderIntent(request);

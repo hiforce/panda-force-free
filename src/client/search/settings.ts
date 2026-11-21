@@ -1,3 +1,4 @@
+import { SettingsPageLifetime } from "../settings-pages/lifetime.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { setMessageHtml } from "../i18n.js";
@@ -33,15 +34,14 @@ const errorKeys = {
   notReady: "search.notReady",
 } as const;
 export function createSearchSettings(t: Translate) {
+  const page = new SettingsPageLifetime();
   let host: HTMLElement | null = null,
-    epoch = 0,
     scopeEpoch = 0,
     selectionEpoch = 0,
     formDirty = false,
     formRevision: number | null = null,
     formSettings: SearchStatus["settings"] | null = null,
     busy = false,
-    closing = new AbortController(),
     scopeRead: AbortController | null = null,
     poll: ReturnType<typeof setTimeout> | undefined;
   let catalog: SearchCatalog,
@@ -55,7 +55,7 @@ export function createSearchSettings(t: Translate) {
     notice = (message: string) => {
       if (host) get("[data-search-notice]").textContent = message;
     };
-  const api = <T>(path: string, method = "GET", body?: unknown) => searchRequest<T>(path, method, body, closing.signal);
+  const api = <T>(path: string, method = "GET", body?: unknown) => searchRequest<T>(path, method, body, page.signal);
   const scope = () => ({
     project: get<HTMLSelectElement>("[data-scope-project]").value,
     source: get<HTMLSelectElement>("[data-scope-source]").value,
@@ -63,17 +63,17 @@ export function createSearchSettings(t: Translate) {
   async function run(work: () => Promise<void>) {
     if (!host || busy) return;
     busy = true;
-    const generation = epoch;
+    const generation = page.epoch;
     notice(t("search.working"));
     host.setAttribute("aria-busy", "true");
     try {
       await work();
-      if (host && generation === epoch) {
+      if (host && generation === page.epoch) {
         const current = get("[data-search-notice]").textContent;
         if (!current || current === t("search.working")) notice(t("search.saved"));
       }
     } catch (error) {
-      if (host && generation === epoch && !closing.signal.aborted)
+      if (host && generation === page.epoch && !page.signal.aborted)
         notice(
           t(
             error instanceof SearchRequestError
@@ -82,7 +82,7 @@ export function createSearchSettings(t: Translate) {
           ),
         );
     } finally {
-      if (host && generation === epoch) {
+      if (host && generation === page.epoch) {
         busy = false;
         host.removeAttribute("aria-busy");
       }
@@ -104,7 +104,7 @@ export function createSearchSettings(t: Translate) {
     scopeRead = new AbortController();
     const local = scopeRead,
       read = ++scopeEpoch,
-      generation = epoch,
+      generation = page.epoch,
       s = scope();
     if (attempt === 0) {
       selectionEpoch++;
@@ -127,9 +127,9 @@ export function createSearchSettings(t: Translate) {
         "/status?" + new URLSearchParams(s),
         "GET",
         undefined,
-        AbortSignal.any([closing.signal, local.signal]),
+        AbortSignal.any([page.signal, local.signal]),
       );
-      if (!host || epoch !== generation || read !== scopeEpoch) return;
+      if (!host || page.epoch !== generation || read !== scopeEpoch) return;
       status = next;
       if (!formDirty) {
         formRevision = next.revision;
@@ -157,16 +157,16 @@ export function createSearchSettings(t: Translate) {
       get<HTMLButtonElement>("[data-index-audit]").disabled =
         !next.settings.enabled || !!next.audit?.running || ["queued", "running"].includes(next.state);
       if (["queued", "running"].includes(next.state) || next.audit?.running || next.audit?.queued)
-        poll = setTimeout(() => void readScope(attempt + 1), attempt < 30 ? 1000 : 5000);
+        poll = page.timeout(() => void readScope(attempt + 1), attempt < 30 ? 1000 : 5000);
     } catch (error) {
-      if (host && epoch === generation && read === scopeEpoch && !local.signal.aborted)
+      if (host && page.epoch === generation && read === scopeEpoch && !local.signal.aborted)
         get("[data-scope-status]").textContent = t("search.unavailable");
     }
   }
   async function reload() {
-    const generation = epoch,
+    const generation = page.epoch,
       next = await api<SearchCatalog>("/catalog");
-    if (!host || generation !== epoch) return;
+    if (!host || generation !== page.epoch) return;
     catalog = next;
     render();
   }
@@ -232,12 +232,12 @@ export function createSearchSettings(t: Translate) {
     };
     get<HTMLDetailsElement>(".search-connections").open = connectionsOpen;
     bindSearchConfiguration(host, catalog, t, { api, run, reload, notice });
-    vectorStorage = bindVectorStorage(host, t, closing.signal);
+    vectorStorage = bindVectorStorage(host, t, page.signal);
     selection = bindSearchIndexSelection(host, t, () => {
       formDirty = true;
     });
     policyHistory = bindSearchPolicyHistory(host, t, {
-      signal: closing.signal,
+      signal: page.signal,
       scope,
       choose(settings) {
         fillIndexForm(settings);
@@ -381,32 +381,32 @@ export function createSearchSettings(t: Translate) {
       busy = false;
       host = target;
       host.classList.add("search-settings", "wb-form");
-      epoch++;
-      closing.abort();
-      closing = new AbortController();
+      page.invalidate();
+
+      page.renew();
       setMessageHtml(
         host,
         `<header class="resource-heading"><h1>${e(t("search.settingsTitle"))}</h1></header><p data-search-notice role="status">${e(t("search.loading"))}</p>`,
       );
-      const generation = epoch;
-      void Promise.all([api<SearchCatalog>("/catalog"), searchProjects(closing.signal)])
+      const generation = page.epoch;
+      void Promise.all([api<SearchCatalog>("/catalog"), searchProjects(page.signal)])
         .then(([c, p]) => {
-          if (!host || generation !== epoch) return;
+          if (!host || generation !== page.epoch) return;
           catalog = c;
           projects = p;
           render();
         })
         .catch(() => {
-          if (host && generation === epoch) notice(t("search.unavailable"));
+          if (host && generation === page.epoch) notice(t("search.unavailable"));
         });
     },
     hide() {
       vectorStorage?.close();
       vectorStorage = null;
-      epoch++;
+      page.invalidate();
       scopeEpoch++;
       selectionEpoch++;
-      closing.abort();
+
       scopeRead?.abort();
       clearTimeout(poll);
       const secret = host?.querySelector<HTMLInputElement>('[data-connection-form] [name="pf-search-secret"]');

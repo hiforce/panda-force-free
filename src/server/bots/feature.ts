@@ -18,6 +18,7 @@ import { prepareBotProfile } from "./profile.js";
 import { createBotIntegrationFeature } from "./integrations/feature.js";
 import { createBotWorkspaceFeature } from "./workspace/feature.js";
 import type { BotChatContextPort } from "./workspace/chat-context.js";
+import type { ApplicationRuntimePort } from "../engines/application-tools/runtime-port.js";
 
 export function createBotFeature(options: {
   stateRoot: string;
@@ -28,6 +29,7 @@ export function createBotFeature(options: {
   chatEngine?: (bot: BotConfig) => ApplicationToolEngine;
   store?: BotRepository;
   chatContext?: BotChatContextPort;
+  runtimes?: ApplicationRuntimePort;
 }) {
   const store = options.store ?? new BotStore(join(options.stateRoot, "data", "bot-tasks.sqlite")),
     scratchRoot = join(options.stateRoot, "bots");
@@ -35,14 +37,17 @@ export function createBotFeature(options: {
     store,
     options.engine ??
       ((bot) =>
-        createCodexApplicationEngine({
-          connection: options.connection,
-          scratchDirectory: join(scratchRoot, bot.id),
-          version: options.version,
-          purpose: "bots",
-          ...(bot.model ? { model: bot.model } : {}),
-          timeoutMs: 180000,
-        })),
+        options.runtimes
+          ? options.runtimes.engine(bot.owner, bot, join(scratchRoot, bot.id), "bots")
+          : createCodexApplicationEngine({
+              connection: options.connection,
+              scratchDirectory: join(scratchRoot, bot.id),
+              version: options.version,
+              purpose: "bots",
+              ...(bot.model ? { model: bot.model } : {}),
+              effort: bot.effort ?? "",
+              timeoutMs: 180000,
+            })),
     scratchRoot,
   );
   let closed = false;
@@ -69,6 +74,29 @@ export function createBotFeature(options: {
     const value = await readJsonBody(context.req, 512000);
     if (!isRecord(value)) throw new BotError("invalidInput");
     return value;
+  };
+  const validateSelection = async (owner: string, value: Record<string, unknown>, previous?: BotConfig) => {
+    if (!options.runtimes || !["runtimeId", "model", "effort"].some((key) => key in value)) return;
+    if (!value.runtimeId && !previous?.runtimeId) return;
+    for (const key of ["runtimeId", "model", "effort"] as const)
+      if (key in value && typeof value[key] !== "string") throw new BotError("invalidInput");
+    if (
+      previous &&
+      (value.runtimeId ?? previous.runtimeId ?? "codex") === (previous.runtimeId ?? "codex") &&
+      (value.model ?? previous.model) === previous.model &&
+      (value.effort ?? previous.effort ?? "") === (previous.effort ?? "")
+    )
+      return;
+    const switched = value.runtimeId !== undefined && value.runtimeId !== (previous?.runtimeId ?? "codex");
+    try {
+      await options.runtimes.resolve(owner, {
+        runtimeId: String(value.runtimeId ?? previous?.runtimeId ?? "codex"),
+        model: String(value.model ?? (switched ? "" : previous?.model) ?? ""),
+        effort: String(value.effort ?? (switched ? "" : previous?.effort) ?? ""),
+      });
+    } catch {
+      throw new BotError("runtimeSelectionUnavailable", 409);
+    }
   };
   const routes: Route[] = [
     {
@@ -125,6 +153,7 @@ export function createBotFeature(options: {
         }
         if (pathname === "/api/bots" && method === "POST") {
           const prepared = await prepareBotProfile(owner, await json(context));
+          await validateSelection(owner, prepared.value);
           respondJson(context.res, 201, {
             bot: await store.configureBot(owner, prepared.value, undefined, prepared.image),
           });
@@ -162,8 +191,13 @@ export function createBotFeature(options: {
           respondJson(context.res, 200, { bot: await store.bot(owner, bot[1]!) });
           return;
         }
+        if (bot && method === "DELETE") {
+          respondJson(context.res, 200, await store.deleteBot(owner, bot[1]!));
+          return;
+        }
         if (bot && method === "PATCH") {
           const prepared = await prepareBotProfile(owner, await json(context));
+          await validateSelection(owner, prepared.value, await store.bot(owner, bot[1]!));
           respondJson(context.res, 200, {
             bot: await store.configureBot(owner, prepared.value, bot[1]!, prepared.image),
           });

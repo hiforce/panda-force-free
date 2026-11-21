@@ -1,3 +1,4 @@
+import { restoreComposerInput } from "./input-recovery.js";
 import { localizeText, setOpaqueText } from "../i18n.js";
 import { errorMessage } from "./../../shared/errors.js";
 
@@ -264,12 +265,7 @@ export function assembleQueue({
       // A queue snapshot can confirm an add even if its acknowledgement was lost.
       if (!message.queueId) message.status = uncertain ? "unconfirmed" : "failed";
       if (current() && !uncertain && !message.queueId && !input.value && !state.composerAttachments.length) {
-        input.value = text;
-        mutations.set("composerMentions", mentions);
-        mutations.set("composerAttachments", attachments);
-        uploadsPort.renderComposerAttachments();
-        suggestionsPort.renderContextTray();
-        viewUpdates.request("composerLayout");
+        restoreComposerInput({ text, mentions, attachments }, { input, mutations, uploadsPort, suggestionsPort, viewUpdates });
       }
       if (current() && !message.queueId && !uncertain)
         noticesPort.addPersistentError(errorMessage(error) || t("composer.queueFailed"));

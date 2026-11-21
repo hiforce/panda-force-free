@@ -31,7 +31,7 @@ export function assembleSynchronization({
     threadListSignature = "";
   const activeThreadPoller = createSerialPoller({
     read: (current) => syncActiveThreadRead(current),
-    enabled: () => Boolean(state.active && state.connected),
+    enabled: () => Boolean(state.active && (state.connected || transportPort.harnessAvailable())),
     interval: ACTIVE_THREAD_SYNC_IDLE_MS,
     hiddenInterval: 6000,
   });
@@ -50,7 +50,7 @@ export function assembleSynchronization({
         if (current()) statusPort.refreshThreadRowMetadata();
       }
     },
-    enabled: () => state.connected,
+    enabled: () => state.connected || transportPort.harnessAvailable(),
     interval: THREAD_LIST_POLL_MS,
     hiddenInterval: 8000,
   });

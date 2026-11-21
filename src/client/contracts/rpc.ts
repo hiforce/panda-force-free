@@ -15,7 +15,12 @@ export interface QueuedSubmission {
 }
 /** Application RPC results are independent of any engine's transport envelopes. */
 export interface RpcResults {
-  "thread/start": { thread: Conversation; pandaProjectId?: string; pandaProjectCatalog?: ProjectSnapshot };
+  "thread/start": {
+    thread: Conversation;
+    pandaProjectId?: string;
+    pandaProjectCatalog?: ProjectSnapshot;
+    pandaHarness?: boolean;
+  };
   "thread/resume": { thread: Conversation };
   "thread/read": { thread: Conversation };
   "thread/fork": { thread: Conversation };

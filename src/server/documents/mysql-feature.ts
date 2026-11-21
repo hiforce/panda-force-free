@@ -1,3 +1,4 @@
+import { documentApplication } from "./application.js";
 import type { MetadataStore } from "../../shared/async-value.js";
 import type { SQL } from "bun";
 import { join } from "node:path";
@@ -14,7 +15,7 @@ import { MySQLProjectDocumentLibrary } from "./mysql-library-service.js";
 import { MySQLDocumentPlacements } from "./placements/mysql-service.js";
 import { MySQLProjectDocumentNavigation } from "./navigation/mysql-service.js";
 import { MySQLDocumentSpaceSnapshots } from "./mysql-space-snapshot.js";
-import { mysqlDocumentRoutes } from "./mysql-routes.js";
+import { documentRoutes } from "./routes.js";
 import { mysqlProjectLibraryRoutes } from "./mysql-library-routes.js";
 import { mysqlDocumentPlacementRoutes } from "./placements/mysql-routes.js";
 import { projectDocumentTreeRoutes } from "./navigation/routes.js";
@@ -94,7 +95,7 @@ export function createMySQLDocumentFeature(options: {
     navigation,
     snapshots: new MySQLDocumentSpaceSnapshots(session, service, placements),
     routes: [
-      ...mysqlDocumentRoutes(service, assets, languages, profiles),
+      ...documentRoutes(documentApplication(service, assets, languages, profiles)),
       ...mysqlProjectLibraryRoutes(library),
       ...projectDocumentTreeRoutes(navigation),
       ...mysqlDocumentPlacementRoutes(placements),

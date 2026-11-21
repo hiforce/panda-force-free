@@ -598,5 +598,7 @@
   "pageLoadFailed": "This page couldn’t load. Try again.",
   "pageReloadRequired": "Reload the page to continue.",
   "openSourceAttribution": "Open-source attribution",
-  "openSourceLicense": "MIT License"
+  "openSourceLicense": "MIT License",
+  "sidebarMenu": "Menu",
+  "sidebarSections": "Sidebar sections"
 }

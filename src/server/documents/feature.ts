@@ -1,3 +1,4 @@
+import { documentApplication } from "./application.js";
 import { builtinSiteThemes, type SiteThemeCatalog } from "../../shared/presentation/themes.js";
 import { DocumentImageIngestion } from "./ingestion/images.js";
 import { DocumentIngestionRepository } from "./ingestion/repository.js";
@@ -110,7 +111,7 @@ export function createDocumentFeature(options: {
       navigation,
       snapshots: new DocumentSpaceSnapshots(db, service, placements),
       routes: [
-        ...documentRoutes(service, assets, languages, profiles),
+        ...documentRoutes(documentApplication(service, assets, languages, profiles)),
         ...projectLibraryRoutes(library),
         ...projectDocumentTreeRoutes(asyncLegacyNavigation(navigation)),
         ...documentPlacementRoutes(placements),

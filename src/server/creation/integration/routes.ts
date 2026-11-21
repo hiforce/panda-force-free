@@ -61,6 +61,7 @@ export function creationRoutes(
           "id",
           "action",
           "objective",
+          "runtimeId",
           "model",
           "effort",
         ]);
@@ -80,6 +81,7 @@ export function creationRoutes(
           "selections",
           "attachments",
           "outputType",
+          "runtimeId",
           "model",
           "effort",
         ]);

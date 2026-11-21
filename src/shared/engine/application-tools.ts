@@ -38,6 +38,7 @@ export interface ApplicationRunCallbacks {
 }
 export interface ApplicationToolEngine {
   readonly id: string;
+  readonly persistentSession?: boolean;
   /** Delete an application-owned engine conversation without touching shared engine credentials or state. */
   forget?(sessionId: string): Promise<void>;
   run(

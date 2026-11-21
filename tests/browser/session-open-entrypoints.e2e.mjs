@@ -138,6 +138,7 @@ for (const [engine, width, locale] of [
     await opened("old-alpha");
     assert.equal(await page.locator("#prompt").inputValue(), "Preserve the session draft " + locale);
     if (width < 768) await page.locator("#workspaceNavigationToggle").click();
+    await page.locator("#sidebarSessionsTab").click();
     const unassigned = page.locator('[data-project="__tasks__"]');
     const expand = unassigned.locator(".sidebar-project-row").first();
     if ((await expand.getAttribute("aria-expanded")) === "false") await expand.click();

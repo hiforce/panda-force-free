@@ -35,7 +35,7 @@ export class CreationService {
   private closed = false;
   private readonly summaries = new Map<
     string,
-    Promise<{ prompt: string; model: string | null; effort: string | null; documentTitle?: string }>
+    Promise<{ prompt: string; runtimeId?: string; model: string | null; effort: string | null; documentTitle?: string }>
   >();
   private readonly pending = new Set<Promise<unknown>>();
   constructor(
@@ -79,6 +79,7 @@ export class CreationService {
     if (!summary) {
       summary = this.inputs.read(task.spec).then((input) => ({
         prompt: input.prompt,
+        runtimeId: input.profile.runtimeId ?? "codex",
         model: input.profile.model ?? null,
         effort: input.profile.effort ?? null,
         documentTitle: input.previous?.document.title,
@@ -155,6 +156,7 @@ export class CreationService {
       generation: current.generation,
       prompt: input.prompt,
       outputType: current.spec.kind,
+      runtimeId: input.runtimeId,
       model: input.model,
       effort: input.effort,
       artifact: current.artifact,
@@ -304,6 +306,7 @@ export class CreationService {
         task = await this.submissions.followUp(owner, id, {
           id: command.id,
           prompt: command.objective,
+          ...(command.runtimeId === undefined ? {} : { runtimeId: command.runtimeId }),
           ...(command.model === undefined ? {} : { model: command.model }),
           ...(command.effort === undefined ? {} : { effort: command.effort }),
           ...(last ? { selections: last.selections } : {}),

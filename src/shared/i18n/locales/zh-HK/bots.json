@@ -6,6 +6,7 @@
   "summaryAttention": "需要關注",
   "summaryIntegrations": "已啟用整合",
   "chat": "對話",
+  "chatOptions": "對話選項",
   "tasks": "任務管理",
   "integrations": "外部整合",
   "emptyTitle": "建立第一位 Bot 助理",
@@ -161,5 +162,6 @@
   "copyTooLarge": "對話太長，無法一次複製。請分別複製所需的回覆。",
   "chatContextUnavailable": "附件或技能已無法用於此對話，請檢查所選內容後重試。",
   "downloadContent": "下載",
-  "chatDeliveryHint": "產生的文件不會歸檔至專案。"
+  "chatDeliveryHint": "產生的文件不會歸檔至專案。",
+  "runtimeSelectionUnavailable": "此執行個體、模型或思考強度無法使用，請檢查選擇後重試。"
 }

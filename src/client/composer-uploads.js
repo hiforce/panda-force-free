@@ -16,6 +16,7 @@ export function createComposerUploads({
   addPersistentError,
   onChange,
   mutations,
+  conversationMaterials = () => false,
   onAttachmentUpdated = (_id, _patch) => {},
 }) {
   function completeAttachment(id, patch) {
@@ -50,6 +51,7 @@ export function createComposerUploads({
   }
   function uploadComposerSource(name, load) {
     const creation = Boolean(creationSessionRoute());
+    const managed = conversationMaterials();
     // Capture the destination before an upload can outlive navigation to another draft.
     /** @type {Record<string, string>} */
     const destination = state.active?.cwd
@@ -75,15 +77,20 @@ export function createComposerUploads({
         const file = await load();
         if (file.size > ATTACHMENT_MAX_BYTES) throw new Error("composer.eachAttachmentMustBe25MibOrSmaller");
         if (!file.size) throw new Error("errors.cannotUploadAnEmptyFile");
-        const query = new URLSearchParams({ name: file.name, ...(creation ? {} : destination) });
-        const response = await fetch(`${creation ? "/api/creation-materials" : "/api/attachments"}?${query}`, {
-          method: "POST",
-          headers: { "content-type": "application/octet-stream" },
-          body: file,
-        });
+        const query = new URLSearchParams({ name: file.name, ...(creation || managed ? {} : destination) });
+        const response = await fetch(
+          `${creation ? "/api/creation-materials" : managed ? "/api/chat-materials" : "/api/attachments"}?${query}`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/octet-stream" },
+            body: file,
+          },
+        );
         const result = await response.json();
         if (!response.ok)
-          throw new Error(creation ? errorText(result, t, "creation.unavailable") : result.error || "Upload failed");
+          throw new Error(
+            creation || managed ? errorText(result, t, "creation.unavailable") : result.error || "Upload failed",
+          );
         completeAttachment(attachment.id, result.attachment);
       } catch (error) {
         completeAttachment(attachment.id, { status: "failed", error: errorMessage(error) });

@@ -19,7 +19,11 @@ export interface CreationSubmissionAuthority {
     owner: string,
     artifact: import("../../shared/creation/contracts.js").CreationAssetArtifact,
   ): Promise<import("../../shared/creation/contracts.js").CreationAssetArtifact>;
-  profile(id: string, selection?: { model?: string; effort?: string }): Promise<CreationEngineProfile>;
+  profile(
+    id: string,
+    selection?: { runtimeId?: string; model?: string; effort?: string },
+    owner?: string,
+  ): Promise<CreationEngineProfile>;
   capture(owner: string, request: CreationRequest, requestDigest: string): Promise<SkillCapture>;
 }
 /** Submission is idempotent before mutable catalogs are consulted. Only the first accepted input snapshot enters the queue. */
@@ -59,6 +63,7 @@ export class CreationSubmissions {
         prompt: input.prompt,
         ...(input.outputType === undefined ? {} : { outputType: input.outputType }),
         profileId: input.profile.id,
+        ...(input.profile.runtimeId ? { runtimeId: input.profile.runtimeId } : {}),
         ...(input.profile.model ? { model: input.profile.model } : {}),
         ...(input.profile.effort ? { effort: input.profile.effort } : {}),
         attachments: (input.materials || []).map(({ id }) => ({ materialId: id })),
@@ -78,6 +83,7 @@ export class CreationSubmissions {
         "id",
         "prompt",
         "selections",
+        "runtimeId",
         "model",
         "effort",
         "attachments",
@@ -96,6 +102,7 @@ export class CreationSubmissions {
       parentId: task.spec.target.parentId,
       locale: task.spec.target.locale,
       profileId: input.profile.id,
+      runtimeId: request.runtimeId ?? input.profile.runtimeId,
       ...((request.outputType ?? input.outputType) === undefined
         ? {}
         : { outputType: request.outputType ?? input.outputType }),
@@ -197,7 +204,8 @@ export class CreationSubmissions {
     }
     const permitted = await this.authority.profile(
       request.profileId,
-      recoveryFrom ? undefined : { model: request.model, effort: request.effort },
+      recoveryFrom ? recoveredProfile : { runtimeId: request.runtimeId, model: request.model, effort: request.effort },
+      owner,
     );
     if (recoveredProfile && recoveredProfile.engineId !== permitted.engineId) throw new CreationError("unavailable");
     const profile = structuredClone(recoveredProfile || permitted);

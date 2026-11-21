@@ -1,3 +1,4 @@
+import { deleteSQLiteProfile } from "./profile-deletion.js";
 import { SQLiteBotProfiles } from "./sqlite-profiles.js";
 import { SQLiteBotKeys } from "./sqlite-keys.js";
 import { SQLiteBotQueries } from "./sqlite-queries.js";
@@ -97,6 +98,9 @@ export class BotStore {
   createBot = (...args: Parameters<SQLiteBotProfiles["createBot"]>) => this.profiles.createBot(...args);
   updateBot = (...args: Parameters<SQLiteBotProfiles["updateBot"]>) => this.profiles.updateBot(...args);
   configureBot = (...args: Parameters<SQLiteBotProfiles["configureBot"]>) => this.profiles.configureBot(...args);
+  deleteBot(owner: string, id: string) {
+    return deleteSQLiteProfile(this.db, owner, id);
+  }
   keys = (...args: Parameters<SQLiteBotKeys["keys"]>) => this.credentials.keys(...args);
   issue = (...args: Parameters<SQLiteBotKeys["issue"]>) => this.credentials.issue(...args);
   revoke = (...args: Parameters<SQLiteBotKeys["revoke"]>) => this.credentials.revoke(...args);

@@ -1,0 +1,82 @@
+:root {
+  --pf-accent: #91a4ff;
+  --pf-primary: #425ee8;
+  --pf-radius: 12px;
+  --pf-gap: 24px;
+  --pf-text-nav: 14px;
+  --pf-text-body: 13px;
+  --pf-text-label: 12px;
+  --pf-text-meta: 11px;
+  --pf-text-heading: 26px;
+  --pf-card: #202020;
+  --pf-canvas: #181818;
+  --pf-sidebar: #202020;
+  --pf-ink: #f2f2f2;
+  --pf-muted: #b0b0b0;
+  --pf-line: #3b3b3b;
+  --pf-soft: #2c2c2c;
+  --pf-message-bg: #303030;
+  --pf-danger: #ed928b;
+}
+:root[data-theme="light"] {
+  --pf-accent: #425ee8;
+  --pf-card: #fff;
+  --pf-canvas: #fff;
+  --pf-sidebar: #f7f7f7;
+  --pf-ink: #1f1f1f;
+  --pf-muted: #666;
+  --pf-line: #e5e5e5;
+  --pf-soft: #f3f3f3;
+  --pf-message-bg: #ededed;
+  --pf-danger: #a52f2a;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --pf-accent: #425ee8;
+    --pf-card: #fff;
+    --pf-canvas: #fff;
+    --pf-sidebar: #f7f7f7;
+    --pf-ink: #1f1f1f;
+    --pf-muted: #666;
+    --pf-line: #e5e5e5;
+    --pf-soft: #f3f3f3;
+    --pf-message-bg: #ededed;
+    --pf-danger: #a52f2a;
+  }
+}
+:root {
+  --app-main: var(--pf-canvas);
+  --app-sidebar: var(--pf-sidebar);
+  --app-panel: var(--pf-card);
+  --app-text: var(--pf-ink);
+  --app-text-secondary: var(--pf-muted);
+  --app-text-tertiary: var(--pf-muted);
+  --app-border: var(--pf-line);
+  --app-border-default: var(--pf-line);
+  --app-hover: var(--pf-soft);
+  --app-link: var(--pf-accent);
+  --app-input: var(--pf-card);
+  --app-surface-raised: var(--pf-card);
+  --app-surface-hover: var(--pf-soft);
+  --user-message-bg: var(--pf-message-bg);
+  --user-message-border: var(--pf-line);
+  --bg: var(--pf-canvas);
+  --sidebar: var(--pf-sidebar);
+  --surface: var(--pf-card);
+  --surface-raised: var(--pf-card);
+  --surface-hover: var(--pf-soft);
+  --border: var(--pf-line);
+  --border-strong: var(--pf-line);
+  --text: var(--pf-ink);
+  --text-strong: var(--pf-ink);
+  --muted: var(--pf-muted);
+  --faint: var(--pf-muted);
+  --selection: var(--pf-soft);
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+.app-shell {

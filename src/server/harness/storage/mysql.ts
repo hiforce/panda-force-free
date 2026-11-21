@@ -1,0 +1,53 @@
+import type { SQL } from "bun";
+import { mysqlInteger } from "../../database/mysql-model.js";
+import { HarnessError } from "../../../shared/harness/contracts.js";
+import type { HarnessMetadata, HarnessMetadataTransaction, HarnessRecord } from "../ports.js";
+
+/** A database guard fences metadata and the corresponding committed JSONL offsets across application processes. */
+export class MySQLHarnessMetadata implements HarnessMetadata {
+  constructor(private readonly pool: SQL) {}
+  private port(sql: SQL): HarnessMetadataTransaction {
+    const record = (row: HarnessRecord): HarnessRecord => ({
+      ...row,
+      revision: mysqlInteger(row.revision),
+      updatedAt: mysqlInteger(row.updatedAt),
+    });
+    const get = async (id: string) => {
+      const rows = await sql`SELECT * FROM panda_force_harness_records WHERE id=${id}`;
+      return rows[0] ? record(rows[0] as HarnessRecord) : null;
+    };
+    return {
+      get,
+      list: async (kind, owner) => {
+        const rows =
+          owner === undefined
+            ? await sql`SELECT * FROM panda_force_harness_records WHERE kind=${kind} ORDER BY updatedAt DESC,id`
+            : await sql`SELECT * FROM panda_force_harness_records WHERE kind=${kind} AND owner=${owner} ORDER BY updatedAt DESC,id`;
+        return rows.map((row: HarnessRecord) => record(row as HarnessRecord));
+      },
+      put: async (row, expected) => {
+        if ((await get(row.id))?.revision !== (expected ?? undefined) || row.revision !== (expected ?? 0) + 1)
+          throw new HarnessError("conflict", 409);
+        await sql`INSERT INTO panda_force_harness_records(id,kind,owner,revision,data,updatedAt) VALUES(${row.id},${row.kind},${row.owner},${row.revision},${row.data},${row.updatedAt}) ON DUPLICATE KEY UPDATE kind=VALUES(kind),owner=VALUES(owner),revision=VALUES(revision),data=VALUES(data),updatedAt=VALUES(updatedAt)`;
+      },
+      remove: async (id, expected) => {
+        if ((await get(id))?.revision !== expected) throw new HarnessError("conflict", 409);
+        await sql`DELETE FROM panda_force_harness_records WHERE id=${id} AND revision=${expected}`;
+      },
+    };
+  }
+  read(id: string) {
+    return this.port(this.pool).get(id);
+  }
+  list(kind: string, owner?: string) {
+    return this.port(this.pool).list(kind, owner);
+  }
+  transaction<T>(work: (transaction: HarnessMetadataTransaction) => Promise<T>) {
+    return this.pool.begin(async (sql) => {
+      await sql`INSERT INTO panda_force_harness_guard(id) VALUES(1) ON DUPLICATE KEY UPDATE id=VALUES(id)`;
+      await sql`SELECT id FROM panda_force_harness_guard WHERE id=1 FOR UPDATE`;
+      return work(this.port(sql));
+    });
+  }
+  close() {}
+}

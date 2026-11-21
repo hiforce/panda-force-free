@@ -9,6 +9,10 @@ export interface CreationLineageRow extends CreationTaskRow {
   creationRounds: number;
   latestTaskId?: string;
 }
+export type CreationRoundRow = Pick<
+  CreationLineageRow,
+  "id" | "createdAt" | "creationRootId" | "creationCreatedAt" | "creationRounds" | "latestTaskId"
+>;
 /** Legacy document identity is a fallback for roots only. Every continuation inherits its root across output types. */
 export function creationLineageSql(mysql: boolean, project = false) {
   const table = mysql ? "panda_force_creation_tasks" : "creation_tasks",
@@ -57,7 +61,7 @@ export function creationRoundCursor(cursor?: string) {
   if (!match) throw new CreationError("invalidInput");
   return { at: creationInteger(Number(match[1])), id: creationUuid(match[2]) };
 }
-export function creationRoundPage(rows: CreationLineageRow[]): CreationRoundPage {
+export function creationRoundPage(rows: CreationRoundRow[]): CreationRoundPage {
   if (!rows.length) throw new CreationError("invalidInput");
   const page = rows.slice(0, 10),
     last = page.at(-1)!;

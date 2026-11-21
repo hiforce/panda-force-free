@@ -74,7 +74,8 @@ try {
       assert(await skill.isVisible());
       await openComposerSettings(page, "model");
       const modelDialog = page.locator("#sessionSettingsDialog[open]");
-      await modelDialog.locator('#sessionSettingEfforts input[type="range"]').press("End");
+      await modelDialog.locator('[name="session-runtime-model"]').selectOption("gpt-fixture");
+      await modelDialog.locator('[name="session-runtime-effort"]').selectOption("high");
       await modelDialog.locator('button[type="submit"]').click();
       await modelDialog.waitFor({ state: "hidden" });
       const prompt = "Write a requirements document for a multi-channel product platform. " + locale;

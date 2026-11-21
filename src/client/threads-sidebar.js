@@ -1,3 +1,4 @@
+import { harnessId } from "../shared/harness/presentation.js";
 import { sidebarSessionGroups } from "./sidebar-session-groups.js";
 import { createSidebarSessionBrowser } from "./sidebar-session-browser.js";
 import { errorMessage } from "./../shared/errors.js";
@@ -57,6 +58,7 @@ export function createThreadSidebar({
   toastProject,
   dismissToast,
   addPersistentError,
+  removePersistentError,
   refreshThreadList,
   cleanupDeletedThread,
   removeCachedConversation,
@@ -261,12 +263,14 @@ export function createThreadSidebar({
     sidebarProjectMenuTrigger = trigger;
     const project = closestElement(".sidebar-project-group", trigger)?.dataset.project || "";
     const thread = closestElement(".thread-item", trigger)?.dataset.id;
-    sidebarProjectMenuSelector = `[data-project="${CSS.escape(project)}"] ${thread ? `.thread-item[data-id="${CSS.escape(thread)}"] .thread-options` : ".sidebar-project-options"}`;
+    sidebarProjectMenuSelector = trigger.matches('[data-wb="session-options"]')
+      ? `#workbenchView [data-wb="session-options"][data-id="${CSS.escape(trigger.dataset.id)}"]`
+      : `#threadList [data-project="${CSS.escape(project)}"] ${thread ? `.thread-item[data-id="${CSS.escape(thread)}"] .thread-options` : ".sidebar-project-options"}`;
     sidebarMenus.toggle(trigger, menu);
   }
   function refreshSidebarMenu() {
     if (!sidebarProjectMenu) return;
-    const trigger = findElement(sidebarProjectMenuSelector, $("#threadList"));
+    const trigger = findElement(sidebarProjectMenuSelector);
     sidebarProjectMenuTrigger = trigger;
     sidebarMenus.reanchor(trigger);
   }
@@ -323,7 +327,7 @@ export function createThreadSidebar({
         addPersistentError(error?.message || String(error)),
       );
     };
-    menu.append(fork);
+    if (!harnessId(thread.id)) menu.append(fork);
     const pinned = sidebarPinnedThreads.has(thread.id),
       pin = document.createElement("button");
     pin.type = "button";
@@ -356,33 +360,48 @@ export function createThreadSidebar({
     menu.append(remove);
     showSidebarMenu(menu, trigger);
   }
+  const deleting = new Set();
   async function deleteThread(thread, returnFocus) {
-    if (!thread?.id) return;
+    if (!thread?.id || deleting.has(thread.id)) return;
+    deleting.add(thread.id);
+    try {
+      await confirmDeleteThread(thread, returnFocus);
+    } finally {
+      deleting.delete(thread.id);
+    }
+  }
+  async function confirmDeleteThread(thread, returnFocus) {
     const title = titleOf(thread);
     if (
       !(await confirmAction({
         title: "sessions.deleteSession2",
-        message: "sessions.titleAndItsDescendantSessionsWillBePermanentlyDeletedThis",
+        message: harnessId(thread.id)
+          ? "sessions.deleteHarnessMessage"
+          : "sessions.titleAndItsDescendantSessionsWillBePermanentlyDeletedThis",
         values: { title },
         confirmText: "sessions.deleteSession",
         cancelText: "common.cancel",
         returnFocus: () =>
           returnFocus?.isConnected
             ? returnFocus
-            : findElement(
-                ".thread-options",
-                [...$("#threadList").querySelectorAll(".thread-item")].find((row) => row.dataset.id === thread.id),
-              ),
+            : returnFocus?.matches('[data-wb="session-options"]')
+              ? findElement(`#workbenchView [data-wb="session-options"][data-id="${CSS.escape(thread.id)}"]`)
+              : findElement(
+                  ".thread-options",
+                  [...$("#threadList").querySelectorAll(".thread-item")].find((row) => row.dataset.id === thread.id),
+                ),
       }))
     )
       return;
     try {
       await rpc("thread/delete", { threadId: thread.id });
+      removePersistentError(`session-delete:${thread.id}`);
       cleanupDeletedThread(thread.id);
       sidebarPinnedThreads.delete(thread.id);
       saveSidebarPinnedThreads();
       const wasActive = state.active?.id === thread.id;
-      if (wasActive) startNewTask();
+      if (wasActive)
+        startNewTask({ saveCurrentDraft: false, keepRoute: !!returnFocus?.matches('[data-wb="session-options"]') });
       await removeCachedConversation(thread.id);
       sessions.removeSummary(thread.id);
       await refreshThreadList();
@@ -390,7 +409,9 @@ export function createThreadSidebar({
       toast(t("sessions.threadDeleted"));
     } catch (error) {
       console.error("Could not delete thread", error);
-      addPersistentError(errorMessage(error) || t("errors.couldNotDeleteThread"));
+      addPersistentError(errorMessage(error) || t("errors.couldNotDeleteThread"), {
+        key: `session-delete:${thread.id}`,
+      });
     }
   }
   function appendSessionRows(threads, visibleThreads) {
@@ -620,6 +641,11 @@ export function createThreadSidebar({
   return {
     dispose: () => sidebarMenus.dispose(),
     renderThreads,
+    refreshSessionMenu: refreshSidebarMenu,
+    openSessionMenu(id, trigger) {
+      const thread = (projectCatalog ? projectCatalog.sessions() : state.threads).find((item) => item.id === id);
+      if (thread) openSidebarThreadMenu(thread, trigger);
+    },
     applyProjectVisibility,
     loadProjectVisibility,
     getProjects,

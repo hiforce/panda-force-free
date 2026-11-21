@@ -4,7 +4,7 @@ import { isModuleNetworkError } from "../documents/module-network-error.js";
 import { setMessageHtml } from "../i18n.js";
 import { escapeHtml } from "../../shared/html.js";
 import type { settingsPageFactories } from "./runtime.js";
-import type { SettingsModelCatalog, SettingsPageMount } from "./contracts.js";
+import type { SettingsPageMount } from "./contracts.js";
 
 const runtime = new DocumentRuntimeLoader<typeof import("./runtime.js")>({
   prime: async () => {},
@@ -12,11 +12,7 @@ const runtime = new DocumentRuntimeLoader<typeof import("./runtime.js")>({
   evaluate: (entry) => (entry ? import("/settings-pages.bundle.js?retry=1") : import("/settings-pages.bundle.js")),
 });
 /** One cached view owns each page; leaving always clears its secrets and invalidates late module loads. */
-export function createLazySettingsPage(
-  t: Translate,
-  kind: keyof typeof settingsPageFactories,
-  models?: SettingsModelCatalog,
-) {
+export function createLazySettingsPage(t: Translate, kind: keyof typeof settingsPageFactories) {
   let epoch = 0,
     mountedHost: HTMLElement | null = null,
     mountedKey = "",
@@ -39,12 +35,9 @@ export function createLazySettingsPage(
       return retryable ? show(host, mountOptions) : location.reload();
     };
   }
-  function mount(
-    host: HTMLElement,
-    create?: (t: Translate, models?: SettingsModelCatalog) => NonNullable<typeof view>,
-  ) {
+  function mount(host: HTMLElement, create?: (t: Translate) => NonNullable<typeof view>) {
     try {
-      view ??= create!(t, models);
+      view ??= create!(t);
       view.show(host, mountOptions);
     } catch {
       fatal = true;

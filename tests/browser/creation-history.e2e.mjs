@@ -1,3 +1,4 @@
+import { fillComposer } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
@@ -48,7 +49,7 @@ try {
       const api = async (path, data) => {
         const r = await context.request.fetch(app.base + path, {
           method: data ? "POST" : "GET",
-          headers: { Origin: app.base },
+          headers: { ...app.headers, Origin: app.base },
           ...(data ? { data } : {}),
         });
         assert(r.ok(), await r.text());
@@ -57,8 +58,8 @@ try {
       const prefix = "/api/personal/document-creations";
       await api(prefix + "/history/clear", { id: crypto.randomUUID() });
       await page.goto(app.base + "/create");
-      await page.locator("#composerSkillControl button").waitFor();
-      await page.locator("#prompt").fill("Write the requirements document. " + locale);
+      await page.locator("#composer").waitFor();
+      await fillComposer(page, "Write the requirements document. " + locale);
       const submitted = page.waitForResponse((r) => r.url().endsWith(prefix) && r.request().method() === "POST");
       await page.locator("#sendButton").click();
       const response = await submitted,
@@ -165,7 +166,7 @@ try {
       await waitFor(async () => (await recent.locator('[data-history-pending="false"]').count()) === 1);
       assert.equal(await recent.locator(`[data-activity-task="${fifth}"]`).count(), 1);
       assert.equal(await recent.locator(`[data-activity-task="${fourth}"]`).count(), 0);
-      await page.locator("#prompt").fill("Keep this unsent creation draft.");
+      await fillComposer(page, "Keep this unsent creation draft.");
       phase = "all";
       await recent.locator("[data-history-clear-all]").click();
       await dialog.waitFor();
@@ -195,7 +196,7 @@ try {
       for (const id of [second, third, fourth, fifth]) await api(prefix + "/cancel", { id });
       await page.goto(app.base + "/creation/" + latest + "?creationScope=personal");
       await page.locator(".creation-session-status .user-input-card").waitFor();
-      await page.locator("#prompt").fill("Retain the draft while clearing sidebar history.");
+      await fillComposer(page, "Retain the draft while clearing sidebar history.");
       if (!(await page.locator("#sessionInspector").isVisible())) await page.locator("#sessionInfoButton").click();
       const inspector = page.locator("#sessionInspector");
       await inspector.locator(`[data-history-clear="${latest}"]`).waitFor();

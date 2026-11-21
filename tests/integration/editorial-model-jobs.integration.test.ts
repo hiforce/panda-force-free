@@ -4,6 +4,29 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createAppFixture, waitFor } from "../support/app-fixture.mjs";
 
+async function authenticatedHeaders(app: { base: string }) {
+  const cookies = new Map<string, string>();
+  const post = async (path: string, data: unknown) => {
+    const response = await fetch(app.base + path, {
+      method: "POST",
+      headers: { "content-type": "application/json", Origin: app.base, cookie: [...cookies.values()].join("; ") },
+      body: JSON.stringify(data),
+    });
+    for (const value of response.headers.getSetCookie()) {
+      const part = value.split(";")[0]!;
+      cookies.set(part.split("=")[0]!, part);
+    }
+    expect(response.status).toBeLessThan(300);
+    return response.json();
+  };
+  const login = await post("/api/auth/login", { username: "fixture-owner", password: "visibility-test" });
+  if (login.migrationRequired) await post("/api/auth/setup", { username: "fixture-owner" });
+  const headers = { cookie: [...cookies.values()].join("; "), Origin: app.base };
+  const database = await (await fetch(app.base + "/api/system/database", { headers })).json();
+  if (database.initialChoiceRequired) await post("/api/system/database/selection", { driver: "sqlite" });
+  return headers;
+}
+
 test("configured model HTTP jobs preserve source review, recover after restart and fence cancellation without coding turns", async () => {
   const requests: Record<string, unknown>[] = [],
     authorizations: string[] = [];
@@ -72,13 +95,14 @@ test("configured model HTTP jobs preserve source review, recover after restart a
       return { PANDA_FORCE_EDITORIAL_CONFIG_FILE: path };
     },
   });
+  const authHeaders = await authenticatedHeaders(app);
   const call = async (path: string, method = "GET", body?: unknown, headers = {}) => {
     const response =
       path === "/api/projects" && method === "POST"
         ? Response.json(app.legacyProject(body), { status: 201 })
         : await fetch(app.base + path, {
             method,
-            headers: { ...app.headers, "content-type": "application/json", ...headers },
+            headers: { ...authHeaders, "content-type": "application/json", ...headers },
             ...(body === undefined ? {} : { body: JSON.stringify(body) }),
           });
     return { status: response.status, body: await response.json() };
@@ -92,7 +116,7 @@ test("configured model HTTP jobs preserve source review, recover after restart a
     const catalog = (await call("/api/projects")).body;
     const project = (
       await call("/api/projects", "POST", { code: "model-jobs", name: "Model tasks", revision: catalog.revision })
-    ).body.projects[0];
+    ).body.projects.find((entry: { code: string }) => entry.code === "model-jobs");
     const source = (
       await call("/api/project-documents", "POST", { projectId: project.id, title: "Original", locale: "en" })
     ).body;
@@ -196,13 +220,14 @@ test("invalid optional processing configuration does not prevent writing or loca
       return { PANDA_FORCE_EDITORIAL_CONFIG_FILE: path };
     },
   });
+  const authHeaders = await authenticatedHeaders(app);
   const call = async (path: string, method = "GET", data?: unknown) => {
     const response =
       path === "/api/projects" && method === "POST"
         ? Response.json(app.legacyProject(data), { status: 201 })
         : await fetch(app.base + path, {
             method,
-            headers: { ...app.headers, "content-type": "application/json" },
+            headers: { ...authHeaders, "content-type": "application/json" },
             ...(data === undefined ? {} : { body: JSON.stringify(data) }),
           });
     expect(response.status).toBeLessThan(300);
@@ -210,7 +235,7 @@ test("invalid optional processing configuration does not prevent writing or loca
   };
   try {
     const settings = await call("/api/document-editorial/processors");
-    expect(settings).toEqual({ profiles: [], configurationInvalid: true });
+    expect(settings).toEqual({ profiles: [], configurationInvalid: true, runtimeSelection: true });
     expect(JSON.stringify(settings)).not.toContain("private-fixture-setting");
     const catalog = await call("/api/projects"),
       created = await call("/api/projects", "POST", {
@@ -218,7 +243,7 @@ test("invalid optional processing configuration does not prevent writing or loca
         name: "Writing remains available",
         revision: catalog.revision,
       }),
-      project = created.projects[0];
+      project = created.projects.find((entry: { code: string }) => entry.code === "local-review");
     const source = await call("/api/project-documents", "POST", {
       projectId: project.id,
       title: "Original",

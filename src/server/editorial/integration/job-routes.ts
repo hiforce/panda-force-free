@@ -11,6 +11,7 @@ export function editorialJobRoutes(
   models: ReadonlyMap<string, EditorialModel>,
   wake: () => void,
   configurationInvalid = false,
+  runtimeSelection = false,
 ): Route[] {
   return [
     {
@@ -21,6 +22,7 @@ export function editorialJobRoutes(
         respondJson(context.res, 200, {
           profiles: [...models.values()].map((model) => model.profile),
           configurationInvalid,
+          runtimeSelection,
         });
       }),
     },

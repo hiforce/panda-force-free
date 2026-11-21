@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "platform": "linux/amd64",
+  "channel": "stable",
+  "checkedAt": "2026-11-20T12:47:35.533Z",
+  "codex": {
+    "version": "0.171.0",
+    "url": "https://registry.npmjs.org/@openai/codex/-/codex-0.171.0.tgz",
+    "integrity": "sha512-1IOFzL2Xg86tLdw6kDo3GoKbkQENgQi7TI6rlEvN132R7ngSw7SNOIQoTcnKzSZZ8kf9N9GynCweSoaFbqk2Eg=="
+  },
+  "grok": {
+    "version": "1.0.89",
+    "url": "https://x.ai/cli/grok-1.0.89-linux-x86_64.gz",
+    "sha256": "a3dface51d9bdc71fd121e0481dd02d9b46a721f7a6b892f756480e9666eba1f",
+    "license": {
+      "url": "https://raw.githubusercontent.com/xai-org/grok-build/main/LICENSE",
+      "sha256": "116f7778b9802e569b7fa3a532b17bd80eb13c67837def01eed093d4ea472f28"
+    }
+  }
+}

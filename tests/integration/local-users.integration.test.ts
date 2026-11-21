@@ -71,6 +71,17 @@ test("local email invitation, role boundaries, optional root binding and passwor
     const memberLogin = await f.post("/api/auth/login", { username: "member@example.com", password });
     expect(memberLogin.status).toBe(200);
     let member = cookie(memberLogin);
+    const runtimeCatalog = await fetch(f.base + "/api/model-catalog", { headers: { cookie: member } });
+    expect(runtimeCatalog.status).toBe(200);
+    expect(await runtimeCatalog.json()).toMatchObject({ canManage: false, profiles: [], runtimes: [{ id: "codex" }] });
+    const nativeCatalog = await fetch(f.base + "/api/harness-runtimes", { headers: { cookie: member } }).then(
+      (response) => response.json(),
+    );
+    expect(nativeCatalog.runtimes).toEqual([]);
+    expect((await fetch(f.base + "/api/model-catalog?runtimeId=codex", { headers: { cookie: member } })).status).toBe(
+      200,
+    );
+
     for (const path of [
       "/api/local-users",
       "/api/local-users/mail",

@@ -1,4 +1,5 @@
 import { CreationSessionWorkspace } from "./creation/session-workspace.js";
+import { harnessId } from "../shared/harness/presentation.js";
 import { parkMessageComposer } from "./message-composer-placement.js";
 import { creationSessionRoute } from "./creation/session-route.js";
 import { createCreationHome } from "./creation/home.js";
@@ -37,7 +38,12 @@ import { codexIcon } from "./codex-icons.js";
 import { createProjectDialogs } from "./project-dialogs.js";
 import { storage } from "./storage.js";
 import { createWorkbenchFrame } from "./workbench-chrome/frame.js";
-import { parseWorkbenchRoute, workbenchLinkPath, workbenchRouteSurface } from "./workbench-route.js";
+import {
+  parseWorkbenchRoute,
+  workbenchLinkPath,
+  workbenchRouteSurface,
+  isBotConversationRoute,
+} from "./workbench-route.js";
 export { parseWorkbenchRoute } from "./workbench-route.js";
 
 const INTRO_KEY = "panda-force-introduction-dismissed";
@@ -56,6 +62,8 @@ export function createWorkbench({
   showSettings,
   hideSettings = () => {},
   catalog,
+  openSessionMenu,
+  refreshSessionMenu,
   setProjectHidden,
   toggleProjectPinned,
   isProjectPinned,
@@ -65,7 +73,6 @@ export function createWorkbench({
   openFiles,
   onViewChange = () => {},
   creationBridge,
-  botModels = /** @type {import("./settings-pages/contracts.js").SettingsModelCatalog | undefined} */ (undefined),
 }) {
   createWorkbenchFrame(t);
   const shell = requireElement(".conversation-shell"),
@@ -160,7 +167,7 @@ export function createWorkbench({
     (path) => navigate(path),
     templateManager,
   );
-  const bots = createLazySettingsPage(t, "botWorkspace", botModels);
+  const bots = createLazySettingsPage(t, "botWorkspace");
   const botNavigation = createBotNavigation(t, identityKey, () => ({
     key: globalThis.__pandaForceIdentityKey,
     canUseBots: globalThis.__pandaForceIdentity?.role !== "member",
@@ -294,6 +301,7 @@ export function createWorkbench({
     isProjectPinned,
     taskStatus,
     hasPendingApproval,
+    afterSessionListRender: refreshSessionMenu,
     content,
     hero,
     INTRO_KEY,
@@ -356,6 +364,9 @@ export function createWorkbench({
       !(unavailableId && unavailableId === route.id) && workbenchRouteSurface(routeUrl, route) !== "workspace";
     hideInactiveWorkspaces();
     document.body.dataset.workbenchPage = route.page;
+    const dockedWorkspace = isBotConversationRoute(routeUrl);
+    view.classList.toggle("conversation-workspace-view", dockedWorkspace);
+    document.body.classList.toggle("conversation-workspace-layout", dockedWorkspace);
     document.title = `PandaForce · ${t(labels[route.page] || "common.workspace")}`;
     syncConversationSurfaces(conversation);
     renderPage(conversation);
@@ -556,7 +567,7 @@ export function createWorkbench({
       route.page !== "task" ||
       !route.id ||
       state.active?.id === route.id ||
-      !state.connected ||
+      (!state.connected && !harnessId(route.id)) ||
       !state.config.home ||
       opening === route.id ||
       unavailableId === route.id
@@ -662,6 +673,9 @@ export function createWorkbench({
     "project-link": async (el, what) => {
       await projectDialogs.associate(el.dataset.projectId);
       return;
+    },
+    "session-options": async (el) => {
+      openSessionMenu(el.dataset.id, el);
     },
     "session-project": async (el, what) => {
       await associateSession(el.dataset.id);

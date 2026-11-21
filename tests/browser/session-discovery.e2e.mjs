@@ -12,6 +12,7 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(fixture.base + "/projects");
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
+  await page.locator("#sidebarSessionsTab").click();
   const unassigned = page.locator('[data-project="__tasks__"]');
   if ((await unassigned.locator(".sidebar-project-row").getAttribute("aria-expanded")) !== "true")
     await unassigned.locator(".sidebar-project-row").click();
@@ -62,8 +63,10 @@ try {
     const box = document.querySelector("#sidebar").getBoundingClientRect();
     return box.x >= -1 && box.right <= innerWidth + 1;
   });
+  await page.locator("#sidebarSessionsTab").click();
   const touch = await alphaFolder.boundingBox();
   assert.ok(touch.height >= 44 && touch.x >= -1 && touch.x + touch.width <= 391, JSON.stringify(touch));
+  await page.locator("#sidebarSessionsTab").click();
   await page.locator("#sidebar").screenshot({ path: ".artifacts/sidebar-design/folders-mobile.png" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.evaluate(async () => {
@@ -140,6 +143,7 @@ try {
   });
   assert.equal(linked.status(), 200);
   await page.reload();
+  await page.locator("#sidebarSessionsTab").click();
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
   if ((await unassigned.locator(".sidebar-project-row").getAttribute("aria-expanded")) !== "true")
     await unassigned.locator(".sidebar-project-row").click();

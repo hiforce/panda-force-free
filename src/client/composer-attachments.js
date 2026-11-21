@@ -45,7 +45,7 @@ export function buildComposerInput(text, attachments = []) {
 /** @param {readonly {type: string; text?: string; path?: string; url?: string}[]} input @returns {import("../shared/data-contracts.js").ComposerAttachment[]} */
 export function attachmentsFromInput(input = []) {
   return input.flatMap((part) => {
-    if (part.type === "image" && /^https:\/\//i.test(part.url || "")) {
+    if (part.type === "image" && /^(https:\/\/|\/api\/chat-materials\/original\?)/i.test(part.url || "")) {
       const url = canonicalAttachmentUrl(part.url) || part.url || "";
       return [{ id: url, url, name: attachmentUrlName(url), kind: "image", status: "ready" }];
     }
@@ -63,7 +63,9 @@ export function attachmentsFromInput(input = []) {
       const files = [];
       for (const match of (part.text || "").matchAll(/^Attached file: (".*")\n([^\n]+)$/gm)) {
         try {
-          const url = /^https:\/\//i.test(match[2]) ? canonicalAttachmentUrl(match[2]) || match[2] : null;
+          const url = /^(https:\/\/|\/api\/chat-materials\/original\?)/i.test(match[2])
+            ? canonicalAttachmentUrl(match[2]) || match[2]
+            : null;
           files.push({
             id: url || match[2],
             ...(url ? { url } : { path: match[2] }),

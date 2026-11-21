@@ -39,7 +39,7 @@ export function editorialApiFor(projectId?: string) {
     accept: (id: string, digest: string, selected: string[]) =>
       json<{ receipt: EditorialReceipt }>("/api/document-editorial/accept", "POST", { id, digest, selected }),
     processors: () =>
-      json<{ profiles: EditorialProcessingProfile[]; configurationInvalid: boolean }>(
+      json<{ profiles: EditorialProcessingProfile[]; configurationInvalid: boolean; runtimeSelection?: boolean }>(
         "/api/document-editorial/processors",
       ),
     jobs: (document: string) => json<{ jobs: EditorialJob[] }>("/api/document-editorial/jobs?" + query({ document })),
@@ -49,6 +49,9 @@ export function editorialApiFor(projectId?: string) {
       documentId: string;
       revisionId: string;
       profileId: string;
+      runtimeId?: string;
+      model?: string;
+      effort?: string;
       mode: "proofread" | "rewrite";
     }) =>
       json<{ job: EditorialJob }>("/api/document-editorial/jobs", "POST", {

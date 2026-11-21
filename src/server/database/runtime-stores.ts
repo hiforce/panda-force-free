@@ -1,3 +1,4 @@
+import { MySQLHarnessMetadata } from "../harness/storage/mysql.js";
 import { MySQLGadgetStore } from "../gadget/mysql-store.js";
 import type { SQL } from "bun";
 import { MySQLIdentityCredentials } from "../auth/mysql-credentials.js";
@@ -42,6 +43,7 @@ export const applicationMySQLRuntimeBindings = [
   "cli-auth",
   "settings",
   "bots",
+  "harness",
 ] as const;
 
 /** Bootstrap owns activation and the pool. This factory never opens a business SQLite ledger or starts a worker. */
@@ -61,6 +63,7 @@ export async function createMySQLRuntimeStores(
       documentTransaction: (work) => documents.session.transactionConnection(work),
     });
   return {
+    harness: new MySQLHarnessMetadata(sql),
     credentials: new MySQLIdentityCredentials(sql),
     users: new MySQLLocalUsers(sql),
     revocations: new MySQLSessionRevocations(sql),

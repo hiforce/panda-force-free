@@ -33,6 +33,10 @@ export class BotChatService {
   constructor(
     readonly store: BotRepository,
     private readonly context?: BotChatContextPort,
+    private readonly freeze?: (
+      owner: string,
+      bot: import("../../../shared/bots/contracts.js").BotConfig,
+    ) => Promise<import("../../engines/application-tools/runtime-port.js").ApplicationRuntimeSelection>,
   ) {}
   async state(owner: string, botId: string) {
     if ((await this.store.bot(owner, botId)).id !== botId) throw new BotError("notFound", 404);
@@ -143,7 +147,8 @@ export class BotChatService {
       ),
       bot = await this.store.bot(owner, botId),
       receiptKey = { kind: "chat-receipt" as const, id: chatReceiptPrefix(botId, expectedGeneration) + id };
-    let prepared: BotChatContext | undefined;
+    let prepared: BotChatContext | undefined,
+      execution: Awaited<ReturnType<NonNullable<typeof this.freeze>>> | undefined;
     for (let retry = 0; retry < 8; retry++) {
       const current = await this.state(owner, botId),
         prior = await this.store.workspace.get<BotChatReceipt>(owner, receiptKey);
@@ -168,6 +173,7 @@ export class BotChatService {
           throw new BotError("chatContextUnavailable", 409);
         }
       }
+      execution ??= this.freeze ? await this.freeze(owner, bot) : {};
       const now = Date.now(),
         userId = chatMessageId(botId, expectedGeneration, current.data.sequence + 1),
         assistantId = chatMessageId(botId, expectedGeneration, current.data.sequence + 2),
@@ -180,7 +186,15 @@ export class BotChatService {
             userId,
             assistantId,
             lease: null,
-            bot: { name: bot.name, model: bot.model, instructions: bot.instructions, persona: bot.persona },
+            bot: {
+              name: bot.name,
+              runtimeId: bot.runtimeId ?? "codex",
+              model: bot.model,
+              effort: bot.effort ?? "",
+              instructions: bot.instructions,
+              persona: bot.persona,
+              ...execution,
+            },
             ...(prepared ? { context: prepared } : {}),
             locale,
           },
@@ -278,7 +292,12 @@ export class BotChatService {
           state: "pending",
           dueAt: Date.now(),
           expiresAt: null,
-          data: { type: "engine", sessionId: current.data.sessionId, model: current.data.pending?.bot.model ?? "" },
+          data: {
+            type: "engine",
+            sessionId: current.data.sessionId,
+            model: current.data.pending?.bot.model ?? "",
+            runtimeId: current.data.runtimeId ?? "codex",
+          },
         });
       if (
         await this.store.workspace.batch(owner, {

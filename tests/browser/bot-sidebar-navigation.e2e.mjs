@@ -47,7 +47,7 @@ try {
   await last.scrollIntoViewIfNeeded();
   assert.ok(await region.evaluate((n) => n.scrollTop > 0));
   await page.keyboard.press("Enter");
-  await page.locator("[data-clear]:enabled").waitFor();
+  await page.locator("[data-clear]:enabled").waitFor({ state: "attached" });
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   console.log(
     JSON.stringify({ staleCatalogCannotReplaceCreatedBot: true, shortViewportScroll: true, keyboardDirectChat: true }),

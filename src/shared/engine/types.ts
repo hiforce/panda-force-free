@@ -40,6 +40,7 @@ export interface ToolOutput {
 }
 export interface EngineItem {
   id: string;
+  historyOrder?: number;
   type: string;
   phase?: string;
   text?: string;
@@ -95,6 +96,7 @@ export interface EngineItem {
 }
 export interface EngineTurn {
   id: string;
+  historyOrder?: number;
   status: string;
   items: EngineItem[];
   error?: string | EngineError;
@@ -149,6 +151,7 @@ export interface Conversation extends SessionSummary {
   turns: EngineTurn[];
 }
 export interface SessionSettings {
+  runtimeContext?: string;
   model?: string;
   effort?: string;
   reasoningEffort?: string;
@@ -248,6 +251,7 @@ export interface ProjectAssignment {
   updatedAt: number;
 }
 export interface ProjectSnapshot {
+  reloadRequired?: boolean;
   revision: number;
   projects: ProductProject[];
   assignments: ProjectAssignment[];

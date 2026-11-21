@@ -1,3 +1,4 @@
+import { restoreComposerInput } from "./input-recovery.js";
 import { creationSessionRoute } from "../creation/session-route.js";
 import { threadInputErrorMessage } from "../../shared/bridge-errors.js";
 import { isTransportSwitch } from "../../shared/errors.js";
@@ -247,12 +248,7 @@ export function assembleSubmission({
       deliveryPort.setPendingMessageDelivery(optimisticId || "", uncertain ? "unconfirmed" : "failed");
       if (isCurrent()) {
         if (!questionAnswer && !uncertain && !input.value && !state.composerAttachments.length) {
-          input.value = text;
-          mutations.set("composerMentions", mentions);
-          mutations.set("composerAttachments", attachments);
-          uploadsPort.renderComposerAttachments();
-          suggestionsPort.renderContextTray();
-          viewUpdates.request("composerLayout");
+          restoreComposerInput({ text, mentions, attachments }, { input, mutations, uploadsPort, suggestionsPort, viewUpdates });
         }
         if (!isTransportSwitch(error))
           noticesPort.addPersistentError(

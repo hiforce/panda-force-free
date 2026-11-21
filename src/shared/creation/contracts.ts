@@ -10,6 +10,8 @@ export type CreationRequestedOutput = CreationOutputType | "auto";
 export interface CreationEngineProfile {
   id: string;
   engineId: string;
+  media?: { model: string; effort?: string };
+  runtimeId?: string;
   model?: string;
   effort?: string;
 }
@@ -40,6 +42,7 @@ export interface CreationRequest {
   profileId: string;
   selections: readonly CreationSkillSelection[];
   previousTaskId?: string;
+  runtimeId?: string;
   model?: string;
   effort?: string;
   attachments?: readonly { materialId: string }[];
@@ -67,17 +70,20 @@ export interface CreationGoalCommand {
   id: string;
   action: "set" | "create" | "pause" | "resume" | "clear";
   objective?: string;
+  runtimeId?: string;
   model?: string;
   effort?: string;
 }
 export interface CreationProgress {
   at: number;
   generation: number;
-  stage: "started" | "saving" | "waiting" | "answered" | "message" | "usage";
+  stage: "preparing" | "started" | "saving" | "waiting" | "answered" | "message" | "usage" | "activity";
   text?: string;
   id?: string;
   streaming?: boolean;
   usage?: TokenUsage;
+  operation?: import("./progress.js").CreationOperation;
+  status?: "running" | "completed" | "failed";
 }
 export interface CreationDocumentArtifact {
   kind: "document";
@@ -127,6 +133,7 @@ export interface CreationTaskView {
   prompt: string;
   outputType?: CreationRequestedOutput;
   goal?: CreationGoal | null;
+  runtimeId?: string;
   model: string | null;
   effort?: string | null;
   cancelRequested: boolean;

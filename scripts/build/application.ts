@@ -13,6 +13,20 @@ if (
     expected.mediaRecipeSha256
 )
   throw new Error("Media base recipe changed; publish and select matching bases before packaging.");
+for (const [path, key] of [
+  ["scripts/build/Dockerfile.engine-bases", "engineRecipeSha256"],
+  ["scripts/build/harness-engines.lock.json", "engineLockSha256"],
+] as const) {
+  if (expected[key] && createHash("sha256").update(readFileSync(path)).digest("hex") !== expected[key])
+    throw new Error("Harness engine inputs changed; rebuild and select matching bases before packaging.");
+}
+if (
+  expected.engineLockSha256 &&
+  process.env.PANDA_FORCE_BUILD_BASE &&
+  createHash("sha256").update(readFileSync("/opt/panda-harness/engines.json")).digest("hex") !==
+    expected.engineLockSha256
+)
+  throw new Error("Build base Harness versions do not match the reviewed lock.");
 const profile = process.env.PANDA_FORCE_VERIFICATION_PROFILE || "none";
 if (!["none", "full", "brand", "cdn"].includes(profile)) throw new Error("Unknown verification profile: " + profile);
 rmSync(".build-info", { recursive: true, force: true });

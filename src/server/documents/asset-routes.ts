@@ -1,3 +1,4 @@
+import { respondPrivateDocumentAsset } from "./private-response.js";
 import type { Route, RouteContext } from "../http/router.js";
 import { respondJson } from "../http/respond.js";
 import { readRequestBytes } from "../request-bytes.js";
@@ -42,15 +43,7 @@ export function projectDocumentAssetRoutes(
           text(url.searchParams.get("project"), 128),
           text(url.searchParams.get("id"), 128),
         );
-        res.writeHead(200, {
-          "content-type": asset.mime,
-          "content-length": String(bytes.length),
-          "cache-control": "private, no-store",
-          "x-content-type-options": "nosniff",
-          "content-security-policy": "default-src 'none'",
-          "content-disposition": "inline; filename*=UTF-8''" + encodeURIComponent(asset.name),
-        });
-        res.end(bytes);
+        respondPrivateDocumentAsset(res, asset, bytes);
       }),
     },
   ];

@@ -24,7 +24,10 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
     const el = findElement(".project-error", dialog);
     if (el) {
       el.hidden = false;
-      localizeText(el, reason.messageId || reason.message || String(reason), reason.messageArgs, t);
+      localizeText(el, reason?.messageId || "errors.couldNotUpdateProject", reason?.messageArgs, t);
+      el.tabIndex = -1;
+      el.scrollIntoView({ block: "nearest" });
+      el.focus({ preventScroll: true });
     }
   }
   dialog.addEventListener("close", () => {
@@ -92,6 +95,7 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
       directory,
       requestVersion = 0,
       busy = false,
+      saving = false,
       revision = catalog.revision;
     open(
       fixedProject ? "common.linkExistingSessions" : "common.changeProject",
@@ -145,14 +149,22 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
               .map((s) => {
                 const current = catalog.projectForSession(s.id),
                   already = fixedProject && current?.id === projectId;
-                return `<label class="project-session-option"><input type="checkbox" value="${escape(s.id)}" ${selected.has(s.id) ? "checked" : ""} ${already ? "disabled" : ""}><span data-i18n-ignore><strong>${escape(s.name || s.id)}</strong><small>${escape(s.cwd || t("common.noWorkingFolder"))}</small><small>${current ? escape(t("projects.currentlyInProject", { project: current.name })) : escape(t("common.unassigned"))}${already ? " · " + escape(t("projects.alreadyLinked")) : ""}</small></span></label>`;
+                return `<label class="project-session-option"><input type="checkbox" value="${escape(s.id)}" ${selected.has(s.id) ? "checked" : ""} ${already || saving ? "disabled" : ""}><span data-i18n-ignore><strong>${escape(s.name || s.id)}</strong><small>${escape(s.cwd || t("common.noWorkingFolder"))}</small><small>${current ? escape(t("projects.currentlyInProject", { project: current.name })) : escape(t("common.unassigned"))}${already ? " · " + escape(t("projects.alreadyLinked")) : ""}</small></span></label>`;
               })
               .join("")
           : `<p class="wb-help">${messageHtml(busy ? "workbench.loadingSessions" : "common.noMatchingSessions", undefined, t)}</p>`,
       );
       more.hidden = !cursor;
       more.disabled = busy;
-      submit.disabled = busy || selected.size === 0 || selected.size > 100;
+      submit.disabled = busy || saving || selected.size === 0 || selected.size > 100;
+      form.setAttribute("aria-busy", String(saving));
+      requireElement("#associationProject", dialog).disabled = fixedProject || saving;
+      localizeText(
+        submit,
+        saving ? "projects.savingAssociation" : fixedProject ? "common.linkSelectedSessions" : "common.saveAssociation",
+        undefined,
+        t,
+      );
       localizeText(
         findElement("#associationCount", dialog),
         "projects.countSessionsSelected",
@@ -241,17 +253,24 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
     } else render();
     form.onsubmit = async (event) => {
       event.preventDefault();
-      if (!selected.size || selected.size > 100) return;
-      submit.disabled = true;
+      if (saving || busy || !selected.size || selected.size > 100) return;
+      saving = true;
+      render();
       try {
         const target = fixedProject ? projectId : requireElement("#associationProject", dialog).value || null;
         await catalog.assign(target, [...selected], revision);
-        dialog.close();
+        if (generation === opened) dialog.close();
         onAssigned?.();
       } catch (reason) {
-        error(reason);
-        revision = catalog.revision;
-        render();
+        if (generation === opened) {
+          error(reason);
+          revision = catalog.revision;
+        }
+      } finally {
+        if (generation === opened) {
+          saving = false;
+          render();
+        }
       }
     };
   }

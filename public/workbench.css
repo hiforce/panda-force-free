@@ -202,6 +202,7 @@
 }
 .workbench-navigation {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
 .workbench-navigation > button {
@@ -301,11 +302,18 @@
     }
   }
 }
-.panda-workspace :is(.workbench-view, .conversation, .settings-content, .document-canvas) {
+.panda-workspace :is(.workbench-view, .conversation, .conversation-scroll-region, .settings-content, .document-canvas) {
   scrollbar-width: none;
   scrollbar-gutter: auto;
 }
-.panda-workspace :is(.workbench-view, .conversation, .settings-content, .document-canvas)::-webkit-scrollbar {
+.panda-workspace
+  :is(
+    .workbench-view,
+    .conversation,
+    .conversation-scroll-region,
+    .settings-content,
+    .document-canvas
+  )::-webkit-scrollbar {
   display: none;
 }
 .workbench-view {
@@ -314,6 +322,24 @@
   padding-block: var(--pf-page-padding);
   padding-inline: var(--pf-page-padding-inline);
   flex: 1;
+}
+.conversation-workspace-view {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-block: 0;
+}
+.conversation-workspace-view > #workbenchContent {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.conversation-scroll-region {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  overflow-anchor: none;
 }
 .workbench-view[hidden],
 .conversation-viewport[hidden],
@@ -2104,6 +2130,10 @@
   box-shadow: 0 1px 3px #0000000a;
   font-weight: 600;
 }
+.sidebar-section-tabs {
+  display: none;
+  flex: none;
+}
 .sidebar-session-recent-count {
   min-width: 18px;
   padding-inline: 3px;
@@ -2231,10 +2261,16 @@
   .sidebar-session-directory {
     min-height: 56px;
   }
-  .sidebar .thread-options {
-    width: 44px;
-    height: 44px;
-    flex-basis: 44px;
+  .sidebar .thread-options,
+  .sidebar .sidebar-project-options,
+  .sidebar .sidebar-help-button {
+    width: var(--pf-touch-target);
+    height: var(--pf-touch-target);
+    flex-basis: var(--pf-touch-target);
+  }
+  .sidebar .sidebar-sessions-more,
+  .sidebar .workbench-connection {
+    min-height: var(--pf-touch-target);
   }
 }
 @media (prefers-reduced-motion: reduce) {

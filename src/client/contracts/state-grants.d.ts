@@ -18,6 +18,7 @@ export interface StateGrants {
   diagnostics: { read: "account" | "active" | "activeReview" | "activities" | "activityItems" | "backgroundAgentsVisible" | "changes" | "cloudStartingState" | "composerAttachments" | "composerMentions" | "composerMode" | "config" | "connected" | "dividers" | "events" | "goalMode" | "goals" | "items" | "modelLoadStatus" | "models" | "newSessionProjectId" | "pending" | "permissionMode" | "permissionProfiles" | "permissionVisibility" | "persistentErrors" | "placeholderText" | "planMode" | "projectless" | "requestCards" | "rpcId" | "selectedModel" | "sessionSettings" | "sideTasks" | "threads" | "tokenUsage" | "transport" | "turnDiffs" | "turnTimings" | "turnWindow" | "turns" | "workspaceContext" | "ws" | "wsFallbackTimer"; write: never };
   environment: { read: "config"; write: never };
   goals: { read: "active" | "goals" | "planMode"; write: "goals" };
+  harness: { read: "active" | "newSessionProjectId"; write: never };
   history: { read: "active" | "turnWindow"; write: "turnWindow" };
   identity: { read: "active" | "config" | "items"; write: "items" };
   images: { read: never; write: never };

@@ -1,4 +1,5 @@
 import { LazyCreativeAssetsPanel } from "../creative/assets-lazy.js";
+import { createRuntimeModelField } from "../harness/model-field.js";
 import type { CreationAvailability, CreationTaskView, CreationArtifact } from "../../shared/creation/contracts.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import { setMessageHtml, errorText } from "../i18n.js";
@@ -26,6 +27,7 @@ export interface CreationContext {
 }
 /** Owns one project panel and its fetch generation. Draft identity, skill fields and task cards have separate owners. */
 export class DocumentCreationPanel {
+  private modelFields?: ReturnType<typeof createRuntimeModelField>;
   private epoch = 0;
   private reads = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -59,6 +61,8 @@ export class DocumentCreationPanel {
     this.reads++;
     clearTimeout(this.timer);
     this.assets.close();
+    this.modelFields?.close();
+    this.modelFields = undefined;
     this.cards?.dispose();
     this.cards = null;
     this.skills?.close();
@@ -100,7 +104,12 @@ export class DocumentCreationPanel {
         creationApi,
       ),
       get = <T extends HTMLElement>(selector: string) => this.dialog.querySelector<T>(selector)!;
-    setMessageHtml(this.dialog, creationFrame(this.t, options, context.locations, context.projectId === "personal"));
+    const modelFields = createRuntimeModelField(this.t, "creation", () => remember());
+    this.modelFields = modelFields;
+    setMessageHtml(
+      this.dialog,
+      creationFrame(this.t, options, context.locations, context.projectId === "personal", modelFields.html()),
+    );
     const form = get<HTMLFormElement>("form.creation-compose"),
       prompt = get<HTMLTextAreaElement>('[name="prompt"]'),
       profile = get<HTMLSelectElement>('[name="profileId"]'),
@@ -140,6 +149,7 @@ export class DocumentCreationPanel {
         const pending = !!submission.state.pending;
         for (const field of [prompt, profile, parent]) field.disabled = busy || pending;
         this.skills?.setLocked(busy || pending);
+        modelFields.setLocked(busy || pending);
         submit.disabled = busy || (!pending && options.state !== "ready");
         submit.textContent = this.t(
           busy ? "creation.creating" : pending ? "creation.retrySubmission" : "creation.create",
@@ -150,6 +160,7 @@ export class DocumentCreationPanel {
           submission.remember({
             prompt: prompt.value,
             profileId: profile.value,
+            ...modelFields.read(),
             parentId: parent.value || null,
             selections: this.skills?.read() ?? [],
           });
@@ -229,6 +240,13 @@ export class DocumentCreationPanel {
     const send = async () => {
       if (busy || submit.disabled) return;
       if (!submission.state.pending) {
+        await modelReady;
+        if (!modelFields.ready()) {
+          report(new Error(this.t("harness.selectionError")));
+          return;
+        }
+      }
+      if (!submission.state.pending) {
         if (!form.checkValidity()) {
           form.hidden = false;
           const invalid = form.querySelector<HTMLElement>(":invalid");
@@ -248,6 +266,9 @@ export class DocumentCreationPanel {
           return {
             prompt,
             profileId,
+            runtimeId: submission.state.runtimeId,
+            ...(submission.state.model ? { model: submission.state.model } : {}),
+            ...(submission.state.effort ? { effort: submission.state.effort } : {}),
             parentId,
             selections,
             outputType: defaultCreationOutput(options),
@@ -286,6 +307,11 @@ export class DocumentCreationPanel {
         controls();
       }
     };
+    const modelReady = modelFields.mount(form, {
+      runtimeId: submission.state.runtimeId,
+      model: submission.state.model,
+      effort: submission.state.effort,
+    });
     form.onsubmit = (event) => {
       event.preventDefault();
       void send();

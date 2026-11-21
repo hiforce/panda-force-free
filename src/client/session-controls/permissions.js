@@ -19,6 +19,7 @@ export function createSessionPermissionControls({
   const permissionProfileRequestGate = createLatestRequestGate();
   let pendingFullAccessAction = "select",
     pendingFullAccessSession = "";
+  let pendingFullAccessCallback = /** @type {(() => void) | null} */ (null);
   let permissionMenuBack = /** @type {(() => void) | null} */ (null);
   let permissionMenuTrigger = $("#modeButton");
   const permissionModes = {
@@ -293,18 +294,22 @@ export function createSessionPermissionControls({
   }
   $("#confirmFullAccess").onclick = () => {
     const action = pendingFullAccessAction,
-      sessionId = pendingFullAccessSession;
+      sessionId = pendingFullAccessSession,
+      callback = pendingFullAccessCallback;
+    pendingFullAccessCallback = null;
     $("#fullAccessDialog").close();
     if (sessionId && state.active?.id !== sessionId) {
       toast(t("sessionview.sessionChanged"));
       return;
     }
-    if (action === "enable") setPermissionVisibility("fullAccess", true);
+    if (callback) callback();
+    else if (action === "enable") setPermissionVisibility("fullAccess", true);
     else setPermissionMode("full-access");
     pendingFullAccessAction = "select";
     pendingFullAccessSession = "";
   };
   $("#fullAccessDialog").addEventListener("close", () => {
+    pendingFullAccessCallback = null;
     pendingFullAccessAction = "select";
     pendingFullAccessSession = "";
     syncPermissionSettings();
@@ -327,6 +332,15 @@ export function createSessionPermissionControls({
     choosePermissionMode(mode);
     if (mode === "full-access" && $("#fullAccessDialog").open) pendingFullAccessSession = sessionId;
   }
+  /** @param {string} sessionId @param {() => void} callback */
+  function confirmFullAccessSelection(sessionId, callback) {
+    if (!permissionModeAvailable("full-access") || state.active?.id !== sessionId)
+      throw new Error(t("sessionview.permissionUnavailable"));
+    pendingFullAccessSession = sessionId;
+    pendingFullAccessCallback = callback;
+    const dialog = $("#fullAccessDialog");
+    if (!dialog.open) dialog.showModal();
+  }
   $("#permissionMenuBack").onclick = () => {
     closePermissionMenu();
     permissionMenuBack?.();
@@ -347,6 +361,7 @@ export function createSessionPermissionControls({
     syncPermissionControl,
     syncPermissionSettings,
     applyPermissionSelection,
+    confirmFullAccessSelection,
     permissionsView,
   };
 }

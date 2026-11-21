@@ -1,6 +1,6 @@
 // Reading anchors belong to visible content, not the height of an entire response.
 const blocks = "p, pre, li, h1, h2, h3, h4, h5, h6, tr, blockquote, img";
-const identities = ["data-item-id", "data-turn-id", "data-user-turn-id"];
+const identities = ["data-item-id", "data-turn-id", "data-user-turn-id", "data-message-id"];
 
 /** @param {Element} owner @param {Element} target */
 function childPath(owner, target) {

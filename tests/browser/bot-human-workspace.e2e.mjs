@@ -70,21 +70,25 @@ try {
       await shortcut.waitFor();
       await page.screenshot({ path: join(out, `sidebar-${locale}-${width}.png`) });
       await shortcut.click();
-      await page.locator("[data-clear]:enabled").waitFor();
+      await page.locator("[data-clear]:enabled").waitFor({ state: "attached" });
+      await page.locator("[data-message]").waitFor();
       if (width === 320) {
         bot.name = "盼盼 <Curious & Kind> " + "LongName".repeat(11);
         await api("/" + bot.id, { name: bot.name }, "patch");
         await page.reload();
-        await page.locator("[data-clear]:enabled").waitFor();
+        await page.locator("[data-clear]:enabled").waitFor({ state: "attached" });
+        await page.locator("[data-message]").waitFor();
       }
       const input = page.locator("[data-message]");
       await input.fill("Keep this draft while I look at my tasks.");
-      await page.locator(`a[href="/bots/${bot.id}/tasks"]`).click();
+      await page.locator("[data-chat-options]").click();
+      await page.locator(`.bot-chat-menu [data-route="/bots/${bot.id}/tasks"]`).click();
       await page.locator("[data-bot-task-rows]").waitFor();
       assert.equal(await page.locator("[data-bot-select]").inputValue(), bot.id);
       assert.equal(await page.locator("[data-bot-select]").isDisabled(), true);
       await page.goBack();
-      await page.locator("[data-clear]:enabled").waitFor();
+      await page.locator("[data-clear]:enabled").waitFor({ state: "attached" });
+      await page.locator("[data-message]").waitFor();
       assert.equal(await input.inputValue(), "Keep this draft while I look at my tasks.");
       let lost = false;
       await page.route(`**/api/bots/${bot.id}/chat`, async (route) => {
@@ -122,17 +126,19 @@ try {
       await second.goto(app.base + `/bots/${bot.id}/chat`);
       await second
         .locator("[data-clear]:enabled")
-        .waitFor()
+        .waitFor({ state: "attached" })
         .catch(async (error) => {
           console.log("Second tab failure:", await second.locator("body").innerText(), errors);
           await second.screenshot({ path: join(out, "second-tab-failure.png") });
           throw error;
         });
+      await second.locator("[data-message]").waitFor();
       console.log("Second tab ready", locale);
       assert.equal(
         await second.locator('.bot-chat-message[data-role="assistant"] > header > strong').innerText(),
         bot.name,
       );
+      await second.locator("[data-chat-options]").click();
       await second.locator("[data-clear]").click();
       await second.locator("[data-confirm-clear]").click();
       await second.locator("[data-chat-empty]").waitFor();
@@ -166,6 +172,8 @@ try {
       await page.evaluate((locale) => globalThis.__pandaForceI18n.setPreference(locale), locale);
       await input.fill("My next question…");
       await input.focus();
+      await page.keyboard.press("Tab");
+      assert.equal(await page.evaluate(() => document.activeElement?.matches('[data-composer-control="add"]')), true);
       await page.keyboard.press("Tab");
       assert.equal(await page.evaluate(() => document.activeElement?.matches("button[type=submit]")), true);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);

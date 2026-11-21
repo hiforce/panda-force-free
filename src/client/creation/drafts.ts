@@ -3,6 +3,9 @@ import type { CreationRequest, CreationSkillSelection } from "../../shared/creat
 export interface CreationDraft {
   prompt: string;
   profileId: string;
+  runtimeId?: string;
+  model?: string;
+  effort?: string;
   parentId: string | null;
   selections: CreationSkillSelection[];
   pending: CreationRequest | null;

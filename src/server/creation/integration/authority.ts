@@ -35,7 +35,7 @@ export function creationAuthority(options: {
       )
         throw new CreationError("conflict");
     },
-    profile: (id, selection) => options.profiles.resolve(id, selection),
+    profile: (id, selection, owner) => options.profiles.resolve(id, selection, owner),
     capture: async (owner, input, requestDigest) => {
       const allowed = new Set<SkillCapability>(
         creationCaptureCapabilities(input.outputType, (await options.rendering?.available()) ?? []),

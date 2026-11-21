@@ -1,9 +1,11 @@
+import { createHarnessBrowserBoundary } from "../harness/boundary.js";
 import { checkAuthentication } from "../http-client.js";
 import { createTransport } from "../transport.js";
 // Transport produces envelopes; the application attaches one router after assembly.
 /** @param {import("./ports.js").FeatureOptions<"state" | "mutations" | "t", never, "transport">} options */
 export function assembleTransport({ t, state, mutations }) {
   let router = null;
+  const harness = createHarnessBrowserBoundary();
   const transport = createTransport({
     onMessage: (message) => router.envelope(message),
     setStatus: (kind, text) => router.status(kind, text),
@@ -16,8 +18,16 @@ export function assembleTransport({ t, state, mutations }) {
   });
   return {
     connect: transport.connect,
-    rpc: transport.rpc,
-    postBridge: transport.postBridge,
+    rpc: (method, params) => harness.rpc(method, params, transport.rpc),
+    postBridge: (path, payload, signal) =>
+      harness.post(path, payload, () => transport.postBridge(path, payload, signal)),
+    attachHarness: harness.attach,
+    harnessControls: harness.controls,
+    applyHarnessPermission: harness.applyPermission,
+    applyHarnessRuntime: harness.applyRuntime,
+    harnessAvailable: harness.available,
+    harnessManaged: harness.managed,
+    harnessContext: harness.context,
     respondToEngine: transport.respondToEngine,
     clearTransportReconnectTimer: transport.clearTransportReconnectTimer,
     resetReconnectBackoff: transport.resetReconnectBackoff,

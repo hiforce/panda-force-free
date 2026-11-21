@@ -12,11 +12,17 @@ export function createLifecycle() {
       if (disposed) return;
       const timer = setInterval(callback, milliseconds);
       cleanups.add(() => clearInterval(timer));
+      return timer;
     },
     timeout(callback, milliseconds) {
       if (disposed) return;
-      const timer = setTimeout(callback, milliseconds);
-      cleanups.add(() => clearTimeout(timer));
+      const cleanup = () => clearTimeout(timer);
+      const timer = setTimeout(() => {
+        cleanups.delete(cleanup);
+        callback();
+      }, milliseconds);
+      cleanups.add(cleanup);
+      return timer;
     },
     dispose() {
       if (disposed) return;

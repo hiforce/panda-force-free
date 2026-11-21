@@ -52,6 +52,8 @@ export interface BotConfig {
   code: string;
   name: string;
   model: string;
+  runtimeId?: string;
+  effort?: string;
   instructions: string;
   active: boolean;
   callbackHosts: string[];
@@ -150,6 +152,7 @@ export interface BotTask {
   createdAt: number;
   updatedAt: number;
   sessionId: string | null;
+  sessionRuntimeId?: string;
   runId: string | null;
 }
 export type BotDirectoryEntry = Pick<BotConfig, "id" | "name" | "active" | "avatar"> & { role?: string };

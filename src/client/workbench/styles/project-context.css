@@ -1,0 +1,373 @@
+
+/* Product projects and native session working folders have independent controls. */
+.business-project-context {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: min(100%, 848px);
+  margin: 12px auto 0;
+  padding: 0 16px;
+  color: var(--pf-muted);
+  font-size: 12px;
+}
+.business-project-context[hidden] {
+  display: none;
+}
+.business-project-context select {
+  flex: 1;
+  max-width: 420px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--pf-line);
+  border-radius: 8px;
+  background: var(--pf-card);
+  color: var(--pf-ink);
+  font: inherit;
+}
+.business-project-context strong {
+  font-weight: 600;
+  color: var(--pf-ink);
+}
+.business-project-context .wb-button {
+  margin-inline-start: auto;
+  min-height: 40px;
+}
+.working-folder-label {
+  color: var(--pf-muted);
+  font-size: 12px;
+}
+.conversation-project-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.project-code {
+  font:
+    12px ui-monospace,
+    monospace;
+  color: var(--pf-muted);
+  overflow-wrap: anywhere;
+}
+.project-description {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--pf-muted);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.wb-session-entry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--pf-line);
+}
+.wb-session-entry .wb-task-row {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 0;
+}
+.wb-session-association {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+}
+.project-dialog {
+  width: min(680px, calc(100vw - 24px));
+  max-height: 85dvh;
+  overflow: auto;
+}
+.project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+}
+.project-form > label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 10px;
+}
+.project-form > input,
+.project-form > select,
+.project-form > textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--pf-line);
+  border-radius: 8px;
+  background: var(--pf-card);
+  color: var(--pf-ink);
+  font: inherit;
+}
+.project-form > textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+.project-form :focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 2px;
+}
+.project-form footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--pf-muted);
+}
+.project-form footer .wb-button {
+  margin-inline-start: auto;
+}
+.wb-help {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--pf-muted);
+  margin: 4px 0 12px;
+}
+.project-error {
+  color: var(--app-error, #ce4242);
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.project-error[hidden] {
+  display: none;
+}
+.project-session-picker {
+  max-height: min(44dvh, 390px);
+  overflow: auto;
+  border-block: 1px solid var(--pf-line);
+  margin-top: 12px;
+}
+.project-session-option {
+  display: flex;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--pf-line);
+  cursor: pointer;
+}
+.project-session-option:has(input:disabled) {
+  opacity: 0.6;
+  cursor: default;
+}
+.project-session-option input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 4px;
+  accent-color: var(--pf-accent);
+}
+.project-session-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.project-session-option strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.project-session-option small {
+  font-size: 11px;
+  color: var(--pf-muted);
+  overflow-wrap: anywhere;
+}
+#associationMore[hidden] {
+  display: none;
+}
+@media (max-width: 760px) {
+  .business-project-context {
+    padding-inline: 12px;
+    gap: 8px;
+  }
+  .project-form footer {
+    flex-wrap: wrap;
+  }
+  .project-dialog > header h2 {
+    font-size: 18px;
+  }
+}
+
+.pending-approval-notice {
+  position: fixed;
+  inset-inline-end: 16px;
+  bottom: max(
+    calc(76px + env(safe-area-inset-bottom, 0px)),
+    calc(var(--pf-mobile-nav-height, 0px) + var(--workspace-attribution-height, 0px) + 16px)
+  );
+  z-index: 1150;
+  min-height: 44px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border: 1px solid var(--pf-accent);
+  border-radius: 999px;
+  background: var(--pf-card);
+  color: var(--pf-ink);
+  box-shadow: 0 5px 20px #0002;
+  font: 600 13px/1.5 system-ui;
+  cursor: pointer;
+}
+.pending-approval-notice[hidden] {
+  display: none;
+}
+.approval-inbox {
+  width: min(720px, calc(100vw - 24px));
+  max-height: 85dvh;
+  overflow: auto;
+}
+.approval-inbox .approval-card {
+  margin-bottom: 18px;
+  border: 1px solid var(--pf-line);
+  background: var(--pf-card);
+  box-shadow: none;
+  border-radius: 12px;
+}
+.approval-inbox .approval-actions button {
+  min-height: 44px;
+  white-space: normal;
+  height: auto;
+}
+.approval-card .approval-actions {
+  flex-direction: row;
+  align-items: stretch;
+}
+.approval-card .approval-actions-main {
+  display: grid;
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  width: min(100%, 480px);
+  margin-inline-start: auto;
+}
+.approval-card .approval-actions-main > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: auto;
+  padding: 8px 10px;
+  border-radius: 9px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: 1.4;
+}
+.approval-card .approval-actions .approval-deny.danger {
+  color: var(--pf-danger);
+  border-color: color-mix(in srgb, var(--pf-danger) 55%, var(--pf-line));
+  background: color-mix(in srgb, var(--pf-danger) 10%, var(--pf-card));
+}
+.approval-card .approval-actions .approval-deny.danger:hover:not(:disabled) {
+  color: var(--pf-danger);
+  background: color-mix(in srgb, var(--pf-danger) 18%, var(--pf-card));
+}
+.approval-card .approval-actions-main > button:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 2px;
+}
+.approval-card .approval-deny.danger:focus-visible {
+  outline-color: var(--pf-danger);
+}
+.approval-session-context {
+  font-size: 12px;
+  color: var(--pf-muted);
+  padding: 12px 16px 0;
+  overflow-wrap: anywhere;
+}
+.approval-submit-error {
+  padding: 0 16px 12px;
+  color: var(--app-error, #ce4242);
+  font-size: 12px;
+}
+
+.user-input-progress,
+.user-input-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--app-text-secondary);
+  margin: 0 0 12px;
+}
+.user-input-submit {
+  min-height: 44px;
+}
+.user-input-option {
+  min-height: 44px;
+}
+.approval-inbox .user-input-card {
+  margin: 0 0 16px;
+}
+.approval-inbox .user-input-option input[type="radio"] {
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 50%;
+}
+.conversation-project-picker .working-folder-label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.conversation-project-picker .composer-project-control {
+  flex: 1 1 0;
+  max-width: none;
+  min-width: 0;
+  min-height: 44px;
+  justify-content: flex-start;
+}
+.conversation-project-picker .composer-project-control > .icon-slot {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+.conversation-project-picker #composerProjectLabel {
+  max-width: none;
+  min-width: 0;
+}
+#conversationProjectPicker[hidden] {
+  display: none !important;
+}
+@media (max-width: 720px) {
+}
+
+.async-question-card {
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.async-question-card > summary {
+  padding: 14px 16px;
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 44px;
+}
+.async-question-hint {
+  margin: 0;
+  padding: 0 16px 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.async-question-card .user-input-card {
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+.async-question-card[data-status="earlier"] {
+  opacity: 0.8;
+}
+
+@media (max-height: 480px) {
+  .mobile-device.visual-viewport-active .composer-dock {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}

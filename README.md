@@ -7,6 +7,9 @@ PandaForce is a self-hosted AI workspace with a friendly kung-fu panda at its he
 
 > This page showcases the **develop source**. [Build this branch to try it →](#run-this-branch-from-source)
 
+> The current develop source adds Codex and Grok Build Harness Runtimes, runtime-specific model and reasoning choices, conversation history handoff, and shared recovery and settings components. Build `develop` to use these updates. The published `v0.1.1` tag and `0.1.1` image retain their release contents; the source package version is also `0.1.1`.
+
+
 ## Create something fun
 
 ### “Introduce Greek history—as a comic.”

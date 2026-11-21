@@ -8,6 +8,7 @@ export async function queueChatEngineCleanup(
   botId: string,
   sessionId: string,
   model: string,
+  runtimeId = "codex",
 ) {
   const key = { kind: "cleanup" as const, id: botId + ":engine:" + sessionId };
   await store.batch(owner, {
@@ -19,7 +20,7 @@ export async function queueChatEngineCleanup(
         state: "pending",
         dueAt: Date.now(),
         expiresAt: null,
-        data: { type: "engine", sessionId, model },
+        data: { type: "engine", sessionId, model, runtimeId },
       },
     ],
   });
@@ -58,11 +59,11 @@ export class BotChatLease {
     }
     return false;
   }
-  async bind(sessionId: string, model: string, runId?: string, toolset?: BotChatState["toolset"]) {
+  async bind(sessionId: string, model: string, runId?: string, toolset?: BotChatState["toolset"], runtimeId = "codex") {
     for (let retry = 0; retry < 8; retry++) {
       const current = await this.current();
       if (!current) {
-        await queueChatEngineCleanup(this.store, this.owner, this.botId, sessionId, model);
+        await queueChatEngineCleanup(this.store, this.owner, this.botId, sessionId, model, runtimeId);
         throw new Error("Bot conversation generation changed");
       }
       const cleanupKey =
@@ -73,6 +74,7 @@ export class BotChatLease {
         state = {
           ...current.data,
           sessionId,
+          runtimeId,
           ...(toolset ? { toolset } : {}),
           pending: { ...current.data.pending!, ...(runId ? { runId } : {}) },
         };
@@ -92,7 +94,12 @@ export class BotChatLease {
                     state: "pending",
                     dueAt: Date.now(),
                     expiresAt: null,
-                    data: { type: "engine", sessionId: current.data.sessionId, model },
+                    data: {
+                      type: "engine",
+                      sessionId: current.data.sessionId,
+                      model,
+                      runtimeId: current.data.runtimeId ?? "codex",
+                    },
                   },
                 ]
               : []),
@@ -160,7 +167,12 @@ export class BotChatLease {
           state: "pending",
           dueAt: Date.now(),
           expiresAt: null,
-          data: { type: "engine", sessionId: current.data.sessionId, model: current.data.pending!.bot.model },
+          data: {
+            type: "engine",
+            sessionId: current.data.sessionId,
+            model: current.data.pending!.bot.model,
+            runtimeId: current.data.runtimeId ?? "codex",
+          },
         });
       if (
         await this.store.batch(this.owner, {
@@ -207,7 +219,12 @@ export async function recoverBotChat(store: BotWorkspaceStorage, current: BotWor
                 state: "pending",
                 dueAt: Date.now(),
                 expiresAt: null,
-                data: { type: "engine", sessionId: current.data.sessionId, model: current.data.pending.bot.model },
+                data: {
+                  type: "engine",
+                  sessionId: current.data.sessionId,
+                  model: current.data.pending.bot.model,
+                  runtimeId: current.data.runtimeId ?? "codex",
+                },
               },
             ]
           : []),

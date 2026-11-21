@@ -45,10 +45,10 @@ The documentation build currently inherits a low-severity [deepmerge advisory](h
 
 Source builds use two public Docker Hub images for **Linux amd64**:
 
-| Image                                                       | Purpose                                                                             |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `hiforceai/panda-force-build-base:media-44d133985283bf79`   | Node.js, Bun, Codex CLI, compilers and locked development dependencies              |
-| `hiforceai/panda-force-runtime-base:media-44d133985283bf79` | Node.js, Bun, Codex CLI, production dependencies, FFmpeg/FFprobe and Noto CJK fonts |
+| Image                                                              | Purpose                                                                                         |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `hiforceai/panda-force-build-base:engines-20261120-b3302dd60ade`   | Node.js, Bun, Codex CLI, Grok Build, compilers and locked development dependencies              |
+| `hiforceai/panda-force-runtime-base:engines-20261120-b3302dd60ade` | Node.js, Bun, Codex CLI, Grok Build, production dependencies, FFmpeg/FFprobe and Noto CJK fonts |
 
 The Dockerfile, Compose build overlay and `scripts/build/base-images.json` pin the same immutable image digests. Docker pulls them automatically; no registry account, manual image import or separate base build is required. These are dependency bases, not runnable PandaForce releases. Ordinary installations serve static assets from the application; CDN is optional and requires your own configuration.
 
@@ -100,6 +100,30 @@ docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 For a direct application build, pass `--build-arg BUILD_BASE=panda-force-build-base:local` and `--build-arg RUNTIME_BASE=panda-force-runtime-base:local` to `docker build -t panda-force:local .`. These tags are local examples: choose your own registry and publish both bases with your normal tools when builds run on another machine. Docker credentials stay in its separately managed credential store. Use your trusted APT/npm mirror overrides where appropriate; the recipe also accepts `BUN_IMAGE` and `NODE_IMAGE` overrides for administrator-managed upstream images.
 
 The application still validates the selected bases against the dependency inputs. A normal release-version change can reuse existing bases when the root package has no installation hooks. Dependency, lockfile, patch, installation-hook or base-recipe changes require a compatible newly built pair and an updated `scripts/build/base-images.json` compatibility fingerprint. Record that fingerprint with `node scripts/build/dependencies.mjs profile .`; keep image references and the media-recipe digest consistent with the pair you built. Regenerate and review the metadata only after checking the new bases, rather than disabling compatibility checks.
+
+## Monthly Harness engine refresh
+
+Both standard bases include Codex CLI and Grok Build. The separate engine layer is built by `scripts/build/Dockerfile.engine-bases` on top of the reviewed dependency/media parents. Credentials and mutable `CODEX_HOME` / `GROK_HOME` directories stay outside images. Bind the operator-owned Grok account **directory** read-only, as in `deploy/harness/docker-compose.grok.yml`; binding only `auth.json` can retain an obsolete inode after an atomic token refresh. New runtime sessions copy the current access credentials without refresh tokens. The connection check opens an authenticated session; the runtime list also offers an explicit real “hi” test, with its reply and duration, in a temporary workspace outside normal chat history.
+
+During the monthly maintenance window, resolve the latest stable versions and review `scripts/build/harness-engines.lock.json`:
+
+```bash
+node scripts/build/harness-engines.mjs refresh
+node scripts/build/harness-engines.mjs prepare --output .artifacts/harness-engine-inputs
+
+docker build -f scripts/build/Dockerfile.engine-bases --platform linux/amd64 \
+  --target build-base -t my-registry/panda-force-build-base:NEW_FIXED_TAG \
+  .artifacts/harness-engine-inputs
+docker build -f scripts/build/Dockerfile.engine-bases --platform linux/amd64 \
+  --target runtime-base -t my-registry/panda-force-runtime-base:NEW_FIXED_TAG \
+  .artifacts/harness-engine-inputs
+```
+
+`prepare` verifies the pinned Codex npm integrity, Grok binary checksum and license checksum. Normal application builds use this reviewed lock; they do not resolve `latest` or upgrade engines at startup. The current published architecture is Linux amd64. Parent `BUILD_BASE` and `RUNTIME_BASE` arguments and the installation `NPM_REGISTRY` can be overridden for administrator-managed registries.
+
+Check both CLI versions, Codex app-server initialization and Grok ACP initialization in disposable containers without account credentials or model inference. Keep the existing dependency compatibility and application startup checks. Then publish new immutable tags, verify registry digests, and update the build/runtime references plus engine recipe/lock hashes in `scripts/build/base-images.json`, the Dockerfiles and Compose build defaults. Each application is released independently; the host's shared daemon is managed separately.
+
+The engine manifest is `/opt/panda-harness/engines.json`; the Grok license is `/opt/panda-harness/licenses/grok-LICENSE`. Prior image tags remain available for rollback. This is a manual monthly maintenance workflow, not an installed background schedule.
 
 ## Select release verification scope
 

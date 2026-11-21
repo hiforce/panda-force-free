@@ -1,3 +1,4 @@
+import { createHarnessController } from "./harness/controller.js";
 import { createFeaturePort, installFeature as install } from "./application/composition.js";
 // Composition root. Read/write grants are supplied per feature, never shared as a writable global.
 import { assembleApplicationProjections } from "./application/application-projections.js";
@@ -532,6 +533,7 @@ export function startApplication() {
   install(
     uploads,
     assembleUploads({
+      transportPort: transport,
       drafts: environment.drafts,
       viewUpdates: environment.viewUpdates,
       $: environment.$,
@@ -950,6 +952,20 @@ export function startApplication() {
     sessionWorkspacePort: sessionWorkspace,
     noticesPort: notices,
   });
+  const harness = createHarnessController({
+    projects: projects.businessProjects,
+    t: environment.t,
+    state: environment.stateFor("harness").state,
+    subscribe: environment.stateDomains.subscribe,
+    composer,
+    navigation,
+    models,
+    notices,
+    emit: (message) => connection.handle(message),
+  });
+  transport.attachHarness(harness.boundary);
+  environment.i18n.subscribe(() => harness.localize());
+  harness.bind();
   applicationProjections.bind();
   bindings.bind();
   localization.bind();

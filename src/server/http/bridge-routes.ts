@@ -7,6 +7,7 @@ import { projectRoutes } from "./project-routes.js";
 import { respondError, respondJson } from "./respond.js";
 import type { Route, RouteContext } from "./router.js";
 import { sharedWorkspaceAllowed } from "../auth/users/access.js";
+import type { ManagedProjectSessions } from "../projects/session-access.js";
 
 /** Owns bridge routes. Dependencies are supplied by the composition root. */
 export function bridgeRoutes({
@@ -26,6 +27,7 @@ export function bridgeRoutes({
   projectCatalog,
   projectWorkspaces,
   projectOwner,
+  projectSessions,
   directoryPolicy,
   sseClients,
   pendingEngineRequests,
@@ -57,7 +59,10 @@ export function bridgeRoutes({
   | "engineDriver"
   | "broadcast"
   | "dispatchBrowserMessage"
-> & { projectOwner(context: RouteContext): string | undefined }): Route[] {
+> & {
+  projectOwner(context: RouteContext): string | undefined;
+  projectSessions?: ManagedProjectSessions<RouteContext>;
+}): Route[] {
   return [
     {
       path: "/api/engine",
@@ -73,6 +78,7 @@ export function bridgeRoutes({
       catalog: projectCatalog,
       workspaces: projectWorkspaces,
       projectOwner,
+      projectSessions,
       directoryPolicy,
       request,
       getSession: (id: string) => threadHub.getThreadMetadata(id),

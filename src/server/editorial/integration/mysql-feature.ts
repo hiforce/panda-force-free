@@ -15,7 +15,11 @@ import { editorialJobRoutes } from "./job-routes.js";
 export function createMySQLEditorialFeature(
   sql: SQL,
   sources: AsyncEditorialSources | ((session: MySQLEditorialSession) => AsyncEditorialSources),
-  options: { models?: ReadonlyMap<string, EditorialModel>; configurationInvalid?: boolean } = {},
+  options: {
+    models?: ReadonlyMap<string, EditorialModel>;
+    configurationInvalid?: boolean;
+    runtimes?: import("../model/runtime.js").EditorialRuntimePort;
+  } = {},
 ) {
   const models = options.models ?? new Map<string, EditorialModel>(),
     session = new MySQLEditorialSession(sql),
@@ -23,8 +27,10 @@ export function createMySQLEditorialFeature(
     sourcePort = typeof sources === "function" ? sources(session) : sources,
     service = new MySQLEditorialService(repository, sourcePort, new Map([["spacing", richSpacingProcessor]])),
     jobRepository = new MySQLEditorialJobRepository(session),
-    jobs = new MySQLEditorialJobs(jobRepository, sourcePort, models),
-    runner = editorialRunner(new MySQLEditorialWorker(jobRepository, service, sourcePort, models));
+    jobs = new MySQLEditorialJobs(jobRepository, sourcePort, models, Date.now, options.runtimes),
+    runner = editorialRunner(
+      new MySQLEditorialWorker(jobRepository, service, sourcePort, models, Date.now, 120000, options.runtimes),
+    );
   return {
     session,
     repository,
@@ -35,7 +41,7 @@ export function createMySQLEditorialFeature(
     stop: runner.stop,
     routes: [
       ...editorialRoutes(service),
-      ...editorialJobRoutes(jobs, models, runner.wake, !!options.configurationInvalid),
+      ...editorialJobRoutes(jobs, models, runner.wake, !!options.configurationInvalid, !!options.runtimes),
     ],
   };
 }

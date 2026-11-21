@@ -1,78 +1,50 @@
-import { creationStateMessage } from "./state.js";
+import type { CreationTaskDetail } from "../../shared/creation/contracts.js";
 import { creationDocumentArtifact } from "../../shared/creation/contracts.js";
-import { LazyCreativeAssetsPanel } from "../creative/assets-lazy.js";
-import { creativeAssetsApi } from "../creative/assets-api.js";
 import { creativeKindIcons } from "../../shared/creative/file-types.js";
-import { parkMessageComposer } from "../message-composer-placement.js";
+import type { RuntimeSelection } from "../../shared/engine/runtime-selection.js";
+import { defaultRuntimeModel, runtimeModels } from "../../shared/engine/runtime-selection.js";
+import type { HarnessRuntimeView } from "../../shared/harness/contracts.js";
+import type { Translate } from "../../shared/i18n/messages.js";
+import { codexIcon } from "../codex-icons.js";
 import type {
   CreationSessionDomain,
   SessionControlView,
   SessionWorkspaceView,
 } from "../contracts/session-workspace.js";
-import type { CreationTaskDetail, CreationRequest } from "../../shared/creation/contracts.js";
-import type { EngineItem } from "../../shared/engine/types.js";
-import type { Translate } from "../../shared/i18n/messages.js";
-import { creationSessionRoute } from "./session-route.js";
-import { creationApiFor, CreationApiError } from "./api.js";
-import { CreationActivity, creationActive } from "./activity.js";
-import { CreationCards } from "./cards.js";
-import { CreationConversationHistory } from "./activity-conversation.js";
-import { documentTreeApi } from "../documents/authoring/tree-api.js";
-import { CreationDrafts } from "./drafts.js";
+import { LazyCreativeAssetsPanel } from "../creative/assets-lazy.js";
+import { runtimeModelCatalog } from "../harness/model-catalog.js";
+import { errorText, localizeAttribute, localizeText, messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+import { parkMessageComposer } from "../message-composer-placement.js";
 import { sessionUsageView } from "../session-workspace/usage.js";
-import { messageHtml, errorText, setMessageHtml, localizeAttribute, localizeText, setOpaqueText } from "../i18n.js";
-import { codexIcon } from "../codex-icons.js";
-import { escapeHtml as e } from "../../shared/html.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
-import { buildComposerInput } from "../composer-attachments.js";
-import { sessionSkillContext } from "../../shared/session-skills.js";
+import { creationActive, CreationActivity } from "./activity.js";
+import { CreationApiError, creationApiFor } from "./api.js";
+import { CreationCards } from "./cards.js";
+import { CreationDrafts } from "./drafts.js";
+import { CreationSessionCommands } from "./session-commands.js";
+import { CreationSessionGoals } from "./session-goals.js";
+import type { CreationWorkspaceBridge } from "./session-port.js";
+import { CreationSessionPresenter } from "./session-presenter.js";
+import { CreationSessionReader } from "./session-reader.js";
+import { creationSessionRoute } from "./session-route.js";
+import { CreationSessionSections } from "./session-sections.js";
+import { CreationSessionState } from "./session-state.js";
 import { CreationSkillDiscovery } from "./skill-discovery.js";
-import { defaultCreationEffort } from "../../shared/creation/effort.js";
-import { defaultCreationOutput } from "../../shared/creation/default-output.js";
+import { creationStateMessage } from "./state.js";
 
-export interface CreationWorkspaceBridge {
-  controls(): SessionControlView;
-  cwd(): string;
-  openGoal(draft?: import("../../shared/engine/types.js").Goal): void;
-  clear(): void;
-  restoreDraft(): void;
-  saveDraft(scope?: string): void;
-  accepted(scope: string, nextScope: string, prompt: string, materialIds: readonly string[]): void;
-  seedDraft(text: string, selections: NonNullable<CreationTaskDetail["selections"]>, allowEmpty?: boolean): void;
-  render(item: EngineItem, turnId: string): void;
-  preserve(render: () => void): void;
-  reset(discovery?: boolean): void;
-  changed(): void;
-  selections(): readonly import("../../shared/creation/contracts.js").CreationSkillSelection[];
-  selectSkill(selection: import("../../shared/creation/contracts.js").CreationSkillSelection): void;
-}
+export type { CreationWorkspaceBridge } from "./session-port.js";
 
 /** Creation owns public task data; one shared composer, renderer, viewport and inspector own all interaction surfaces. */
 export class CreationSessionWorkspace implements CreationSessionDomain {
+  private readonly state = new CreationSessionState();
+  private readonly reader: CreationSessionReader;
+  private readonly commands: CreationSessionCommands;
+  private readonly goals: CreationSessionGoals;
+  private readonly presenter: CreationSessionPresenter;
+  private readonly sectionView: CreationSessionSections;
   private assetViewer: LazyCreativeAssetsPanel | null = null;
-  private route: ReturnType<typeof creationSessionRoute> = null;
-  private task?: CreationTaskDetail;
-  private epoch = 0;
-  private timer?: ReturnType<typeof setTimeout>;
-  private reading = false;
-  private goalWriting = false;
-  private goalRevision = 0;
-  private pendingGoal?: import("../../shared/creation/contracts.js").CreationGoalCommand;
-  private readonly sending = new Set<string>();
-  private readonly stopping = new Map<string, Promise<void>>();
-  private pending?: { id: string; request: CreationRequest | Record<string, unknown> };
-  private model = "";
-  private effort = "";
-  private readonly conversation = new CreationConversationHistory();
-  private historyController = new AbortController();
-  private historyLoading = false;
-  private historyCheckedAt = 0;
-  private historyFailed = false;
   private readonly historyHost = document.createElement("div");
   private readonly historyButton = document.createElement("button");
-  private readonly previous = new Map<string, { task: CreationTaskDetail; at: number }>();
-  private readonly rendered = new Map<string, string>();
-  private readonly sections = document.createElement("div");
   private readonly actions = document.createElement("nav");
   private activity?: CreationActivity;
   private readonly records = document.createElement("section");
@@ -84,10 +56,6 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   private cards?: CreationCards;
   private readonly status = document.createElement("div");
   private readonly notice = document.createElement("p");
-  private readonly versions = document.createElement("section");
-  private readonly selectedDocument = document.createElement("section");
-  private readonly brief = document.createElement("section");
-  private sectionSignature = "";
   constructor(
     private readonly t: Translate,
     private readonly identity: string,
@@ -95,13 +63,44 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     private readonly projects: () => { id: string; name: string; code?: string }[],
     private readonly bridge: CreationWorkspaceBridge,
   ) {
+    this.presenter = new CreationSessionPresenter(this.bridge, this.notice, this.status, this.t);
+    this.sectionView = new CreationSessionSections(this.state, {
+      t: this.t,
+      records: () => {
+        this.ensureRecords("sidebar");
+        return this.records;
+      },
+      savedDocument: () => this.savedDocument(),
+      openGoal: (draft) => this.bridge.openGoal(draft),
+    });
+    this.reader = new CreationSessionReader(this.state, {
+      api: () => this.api,
+      present: (task, rounds) => this.present(task, rounds),
+      cache: (task, rounds) => this.cache(task, rounds),
+      paintEarlier: () => this.paintEarlier(),
+      failed: (error) => this.readFailed(error),
+      hidden: () => document.hidden,
+    });
+    const commandPorts: import("./session-commands.js").CommandPorts = {
+      t: this.t,
+      api: () => this.api,
+      controls: () => this.controls(),
+      persist: () => this.persist(),
+      preferenceKey: () => this.preferenceKey(),
+      refresh: () => this.refresh(),
+      renderPending: () => this.renderPending(),
+      navigate: this.navigate,
+      bridge: this.bridge,
+    };
+    this.commands = new CreationSessionCommands(this.state, commandPorts);
+    this.goals = new CreationSessionGoals(this.state, commandPorts);
     this.home.className = "creation-session-home";
     this.composerHome.className = "creation-entry-composer";
     this.discovery = new CreationSkillDiscovery(t, bridge.selections, (selection) => {
       bridge.selectSkill(selection);
       this.discovery.update();
     });
-    this.sections.className = "creation-session-sections";
+    this.sectionView.root.className = "creation-session-sections";
     this.actions.className = "creation-session-actions";
     this.historyHost.className = "creation-session-history";
     this.historyButton.type = "button";
@@ -110,7 +109,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.historyButton.onclick = () => void this.loadEarlier();
     this.historyHost.append(this.historyButton);
     this.historyHost.hidden = true;
-    this.versions.onclick = (event) => {
+    this.sectionView.versions.onclick = (event) => {
       const link = (event.target as Element).closest<HTMLAnchorElement>("[data-creation-round]");
       if (!link) return;
       event.preventDefault();
@@ -120,21 +119,22 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.notice.className = "creation-session-notice";
     this.notice.setAttribute("role", "status");
     this.status.className = "creation-session-status";
-    for (const section of [this.selectedDocument, this.versions, this.brief]) section.className = "session-section";
+    for (const section of [this.sectionView.selectedDocument, this.sectionView.versions, this.sectionView.brief])
+      section.className = "session-section";
   }
   get key() {
-    return this.route?.key || "";
+    return this.state.route?.key || "";
   }
   get running() {
-    return Boolean(this.task && creationActive(this.task));
+    return Boolean(this.state.task && creationActive(this.state.task));
   }
   private get api() {
-    return creationApiFor(this.route?.scope === "personal" ? "personal" : "");
+    return creationApiFor(this.state.route?.scope === "personal" ? "personal" : "");
   }
   show() {
     const route = creationSessionRoute();
     if (!route) return;
-    if (this.route?.key === route.key) {
+    if (this.state.route?.key === route.key) {
       this.renderActions();
       this.discovery.update();
       return;
@@ -144,12 +144,17 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     parkMessageComposer();
     if (!this.dock.isConnected) root.closest(".conversation-shell")!.append(this.dock);
     this.hide();
-    this.route = route;
-    const saved = storage.getJson(this.preferenceKey(), { model: "", effort: "", pending: null });
-    this.model = typeof saved.model === "string" ? saved.model : "";
-    this.effort = typeof saved.effort === "string" ? saved.effort : "";
-    this.pending = saved.pending || undefined;
-    this.pendingGoal = storage.getJson(this.preferenceKey() + ":goal", null) || undefined;
+    this.state.route = route;
+    const saved = storage.getJson(this.preferenceKey(), { runtimeId: "", model: "", effort: "", pending: null });
+    this.state.runtimeId = typeof saved.runtimeId === "string" ? saved.runtimeId : "";
+    this.state.runtimePreferenceSaved = !!this.state.runtimeId;
+    this.state.runtime = undefined;
+    if (route.id && !this.state.runtimeId) this.state.runtimeId = "codex";
+    void this.loadRuntime();
+    this.state.model = typeof saved.model === "string" ? saved.model : "";
+    this.state.effort = typeof saved.effort === "string" ? saved.effort : "";
+    this.state.pending = saved.pending || undefined;
+    this.state.pendingGoal = storage.getJson(this.preferenceKey() + ":goal", null) || undefined;
     this.bridge.clear();
     this.bridge.reset(!route.id);
     root.replaceChildren(this.historyHost, this.notice);
@@ -175,94 +180,121 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
         this.status,
         this.t,
         (task) => {
-          if (task && task.id !== this.route?.id && this.route) {
-            this.bridge.accepted(this.route.key, `creation:${this.route.scope}:${task.id}`, "", []);
-            this.navigate("/creation/" + encodeURIComponent(task.id) + "?creationScope=" + this.route.scope);
+          if (task && task.id !== this.state.route?.id && this.state.route) {
+            this.bridge.accepted(this.state.route.key, `creation:${this.state.route.scope}:${task.id}`, "", []);
+            this.navigate("/creation/" + encodeURIComponent(task.id) + "?creationScope=" + this.state.route.scope);
           } else void this.refresh();
         },
         () => this.openDocument(),
         () => {},
         this.api,
-        { brief: false, openAction: false },
+        { brief: false, openAction: false, progressDetails: false },
       );
       this.restoreSnapshot();
       void this.refresh();
     }
-    if (this.pending || this.pendingGoal || !route.id) this.renderPending();
+    if (this.state.pending || this.state.pendingGoal || !route.id) this.renderPending();
     this.renderActions();
     this.bridge.changed();
   }
   hide() {
-    if (this.route) this.bridge.reset();
-    this.epoch++;
-    this.historyController.abort();
-    this.historyController = new AbortController();
-    this.conversation.reset();
-    this.historyCheckedAt = 0;
-    this.historyLoading = false;
-    this.historyFailed = false;
+    this.state.catalogEpoch++;
+    if (this.state.route) this.bridge.reset();
+    this.state.epoch++;
+    this.state.historyController.abort();
+    this.state.historyController = new AbortController();
+    this.state.conversation.reset();
+    this.state.historyCheckedAt = 0;
+    this.state.historyLoading = false;
+    this.state.historyFailed = false;
     this.historyHost.hidden = true;
-    clearTimeout(this.timer);
+    clearTimeout(this.state.timer);
     this.activity?.hide();
     this.discovery.hide();
     this.assetViewer?.close();
-    this.sections.replaceChildren();
+    this.sectionView.root.replaceChildren();
     this.actions.remove();
-    this.task = undefined;
-    this.pendingGoal = undefined;
-    this.goalWriting = false;
-    this.route = null;
-    this.reading = false;
+    this.state.task = undefined;
+    this.state.pendingGoal = undefined;
+    this.state.goalWriting = false;
+    this.state.route = null;
+    this.state.reading = false;
     this.cards?.dispose();
     this.cards = undefined;
-    this.previous.clear();
-    this.rendered.clear();
-    this.sectionSignature = "";
+    this.state.previous.clear();
+    this.presenter.clear();
+    this.sectionView.clear();
   }
   update() {
     this.discovery.update();
   }
+  private async loadRuntime() {
+    const current = ++this.state.catalogEpoch;
+    try {
+      const catalog = runtimeModelCatalog(this.t);
+      let id = this.state.runtimeId;
+      if (!id) id = (await catalog.list()).defaultRuntimeId;
+      const runtime = await catalog.discover(id);
+      if (current !== this.state.catalogEpoch || !this.state.route) return;
+      this.state.runtimeId = id;
+      this.state.runtime = runtime;
+      this.bridge.changed();
+    } catch {
+      if (current === this.state.catalogEpoch) this.bridge.changed();
+    }
+  }
   controls(): SessionControlView {
     const base = this.bridge.controls(),
-      selected =
-        base.models.find((model) => model.id === this.model) ||
-        base.models.find((model) => model.id === base.model) ||
-        base.models[0];
-    const preferred = this.effort || (selected ? storage.get(STORAGE_KEYS.effortFor(selected.id)) : "") || "",
-      effort = selected?.efforts.some((entry) => entry.id === preferred)
-        ? preferred
-        : defaultCreationEffort(selected?.efforts.map((entry) => entry.id) || [], selected?.defaultEffort);
+      models = this.state.runtime ? runtimeModels(this.state.runtime) : [],
+      model = this.state.model || (this.state.runtime ? defaultRuntimeModel(this.state.runtime) : ""),
+      effort = this.state.effort || models.find((entry) => entry.id === model)?.defaultEffort || "";
     return {
       ...base,
+      runtimeId: this.state.runtimeId,
+      models,
       sessionId: this.key,
-      model: selected?.id || "",
+      model,
       effort,
       permission: "documents",
+      permissionHint: "composer.managedPermissions",
+      permissionOwner: "creation",
       settingsHint: "creation.nextRoundSettings",
       permissions: [],
     };
   }
+  applyRuntimeSelection(selection: RuntimeSelection, runtime: HarnessRuntimeView) {
+    if (this.running && selection.runtimeId !== this.state.runtimeId) throw new Error(this.t("harness.errorBusy"));
+    this.state.catalogEpoch++;
+    this.state.runtimeId = selection.runtimeId;
+    this.state.runtime = runtime;
+    this.state.runtimePreferenceSaved = true;
+    this.state.model = selection.model;
+    this.state.effort = selection.effort;
+    this.persist();
+    this.bridge.changed();
+  }
   applyModel(model: string, effort: string) {
     const selected = this.controls().models.find((entry) => entry.id === model);
-    if (!selected?.efforts.some((entry) => entry.id === effort)) throw new Error(this.t("errors.couldNotLoadModels"));
-    this.model = model;
-    this.effort = effort;
+    if (!selected || (effort && !selected.efforts.some((entry) => entry.id === effort)))
+      throw new Error(this.t("errors.couldNotLoadModels"));
+    this.state.model = model;
+    this.state.effort = effort;
     this.persist();
     this.bridge.changed();
   }
   read(): SessionWorkspaceView {
-    const task = this.task,
+    const task = this.state.task,
       control = this.controls();
     const project = task ? this.projects().find((p) => p.id === task.projectId) : null;
     return {
       id: this.key,
       contextKind: "creation",
-      inspectorAvailable: Boolean(this.route?.id),
+      inspectorAvailable: Boolean(this.state.route?.id),
       title: (task?.creation?.prompt || task?.prompt)?.replace(/\s+/g, " ").slice(0, 90) || this.t("creative.create"),
       cwd: task?.workspaceDirectory || "",
       project: project
         ? { id: project.id, name: project.name, code: project.code || "" }
-        : this.route?.scope === "personal"
+        : this.state.route?.scope === "personal"
           ? { id: "personal", name: this.t("creation.personalDestination"), code: "" }
           : null,
       status: task
@@ -308,86 +340,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     };
   }
   renderSections(host: HTMLElement) {
-    if (this.sections.parentNode !== host) host.replaceChildren(this.sections);
-    if (this.route?.id) {
-      this.ensureRecords("sidebar");
-      if (this.records.parentNode !== this.sections) this.sections.prepend(this.records);
-    }
-    if (this.selectedDocument.parentNode !== this.sections)
-      this.sections.append(this.selectedDocument, this.brief, this.versions);
-    const saved = this.savedDocument(),
-      selected =
-        this.task?.document ||
-        (saved?.artifact?.kind === "document"
-          ? {
-              ...saved.artifact,
-              title: saved.artifact.title || saved.prompt.slice(0, 100),
-              revision: saved.artifact.revision || 1,
-            }
-          : undefined);
-    const signature = JSON.stringify([
-      selected,
-      saved?.artifact,
-      this.task?.documentStatus,
-      creationDocumentArtifact(saved?.artifact)?.file,
-      [...this.previous.keys()],
-      this.task?.goal,
-      document.documentElement.lang,
-    ]);
-    if (signature !== this.sectionSignature) {
-      this.sectionSignature = signature;
-      this.selectedDocument.hidden = !selected && !saved?.artifact;
-      this.versions.hidden = !saved?.artifact;
-      this.brief.hidden = !this.task;
-      if (this.task) {
-        setMessageHtml(
-          this.brief,
-          `<div class="session-section-heading"><h3>${messageHtml("creation.currentBrief", {}, this.t)}</h3></div><details><summary>${e(this.task.prompt.slice(0, 100))}${this.task.prompt.length > 100 ? "…" : ""}</summary><p class="creation-session-brief">${e(this.task.prompt)}</p></details><div class="creation-brief-actions"><button type="button" class="wb-button" data-creation-supplement>${messageHtml("creation.followUp", {}, this.t)}</button>${!this.task.goal ? `<button type="button" class="wb-button" data-creation-goal>${messageHtml("creation.createGoal", {}, this.t)}</button>` : ""}</div>`,
-        );
-        this.brief.querySelector<HTMLButtonElement>("button")!.onclick = () =>
-          document.querySelector<HTMLTextAreaElement>("#prompt")!.focus();
-        this.brief.querySelector<HTMLButtonElement>("[data-creation-goal]")?.addEventListener("click", () => {
-          this.bridge.openGoal({
-            threadId: this.key,
-            goalId: "draft",
-            objective: this.task!.prompt.slice(0, 16000),
-            status: "draft",
-            detail: this.t("creation.goalScope"),
-          });
-        });
-      }
-      if (saved?.artifact && saved.artifact.kind !== "document") {
-        const asset = saved.artifact;
-        setMessageHtml(
-          this.selectedDocument,
-          `<div class="session-section-heading"><h3>${messageHtml("creative.saved", {}, this.t)}</h3></div><p data-i18n-ignore>${e(asset.title)}</p><p class="session-caption" data-i18n-ignore>${e(asset.source.name)}</p><a class="wb-button" href="${e(creativeAssetsApi.content(asset.projectId, asset.assetId, asset.version))}" download>${messageHtml("creative.assetDownload", {}, this.t)}</a>`,
-        );
-      }
-      if (selected) {
-        const projectLabel =
-            this.task?.document?.projectId === "personal"
-              ? this.t("creation.personalDestination")
-              : this.task?.document?.projectName,
-          file = creationDocumentArtifact(saved?.artifact)?.file,
-          locationOpen = this.selectedDocument.querySelector<HTMLDetailsElement>(".creation-file-location")?.open;
-        setMessageHtml(
-          this.selectedDocument,
-          `<div class="session-section-heading"><h3>${messageHtml("creation.selectedDocument", {}, this.t)}</h3></div><p>${e(selected.title)}</p><p class="session-caption">${messageHtml(this.task?.artifact ? "creation.savedRevision" : "creation.basedOnRevision", { version: selected.revision }, this.t)}</p>${projectLabel ? `<p class="session-caption" data-creation-document-project>${messageHtml("creation.documentProject", { project: projectLabel }, this.t)}</p>` : ""}${this.task?.documentStatus === "unavailable" ? `<p class="session-caption" role="status">${messageHtml("creation.documentUnavailable", {}, this.t)}</p>` : ""}${file ? `<details class="creation-file-location"${locationOpen ? " open" : ""}><summary>${codexIcon("file")}<span class="creation-file-copy"><span>${messageHtml("creation.savedFile", {}, this.t)}</span><strong title="${e(file.path.split("/").at(-1) || "")}">${e(file.path.split("/").at(-1) || "")}</strong></span>${codexIcon("chevronDown")}</summary><p class="session-caption">${e(file.path)}</p></details>` : ""}`,
-        );
-      }
-      setMessageHtml(
-        this.versions,
-        `<div class="session-section-heading"><h3>${messageHtml("creation.outputVersions", {}, this.t)}</h3></div>${[
-          ...this.previous.values(),
-        ]
-          .filter(({ task }) => task.artifact)
-          .map(
-            ({ task }) =>
-              `<a class="creation-output-version" data-creation-round="${e(task.id)}" href="/creation/${encodeURIComponent(task.id)}?creationScope=${this.route?.scope}">${codexIcon("file")}<span><strong>${task.artifact?.kind === "document" ? messageHtml("creation.savedRevision", { version: task.artifact.revision || 1 }, this.t) : messageHtml("creative.saved", {}, this.t)}</strong><time>${e(new Intl.DateTimeFormat(document.documentElement.lang, { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</time></span></a>`,
-          )
-          .join("")}`,
-      );
-    }
+    this.sectionView.render(host);
   }
   private ensureRecords(presentation: "cards" | "sidebar") {
     this.records.className =
@@ -412,25 +365,30 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     return "panda-force-creation-session:" + JSON.stringify([this.identity, this.key]);
   }
   private persist() {
-    storage.setJson(this.preferenceKey(), { model: this.model, effort: this.effort, pending: this.pending || null });
+    storage.setJson(this.preferenceKey(), {
+      runtimeId: this.state.runtimeId,
+      model: this.state.model,
+      effort: this.state.effort,
+      pending: this.state.pending || null,
+    });
   }
   private renderActions() {
-    if (!this.route) return;
+    if (!this.state.route) return;
     const artifact = this.savedDocument()?.artifact,
       openLabel = artifact && artifact.kind !== "document" ? "creative.open" : "creation.openDocument",
       parent = document.querySelector(".workspace-context-actions")!;
     if (this.actions.parentNode !== parent) parent.prepend(this.actions);
     const signature = JSON.stringify([
-      this.route.id,
-      this.task?.document || this.savedDocument()?.artifact,
-      this.task?.documentStatus,
+      this.state.route.id,
+      this.state.task?.document || this.savedDocument()?.artifact,
+      this.state.task?.documentStatus,
       document.documentElement.lang,
     ]);
     if (this.actions.dataset.signature === signature) return;
     this.actions.dataset.signature = signature;
     setMessageHtml(
       this.actions,
-      `<a class="icon-button" href="/create" data-creation-new>${codexIcon("plus")}</a><a class="icon-button" href="/create?view=works" data-creation-works>${codexIcon("folderOpen")}</a>${this.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon(artifact && artifact.kind !== "document" ? creativeKindIcons[artifact.kind] : "file")}<span>${messageHtml(openLabel, {}, this.t)}</span></button>` : ""}`,
+      `<a class="icon-button" href="/create" data-creation-new>${codexIcon("plus")}</a><a class="icon-button" href="/create?view=works" data-creation-works>${codexIcon("folderOpen")}</a>${this.state.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.state.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon(artifact && artifact.kind !== "document" ? creativeKindIcons[artifact.kind] : "file")}<span>${messageHtml(openLabel, {}, this.t)}</span></button>` : ""}`,
     );
     localizeAttribute(
       this.actions.querySelector("[data-creation-new]"),
@@ -452,16 +410,16 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       ?.addEventListener("click", () => this.openDocument());
   }
   private async openRound(id: string) {
-    const round = this.previous.get(id)?.task,
+    const round = this.state.previous.get(id)?.task,
       artifact = round?.artifact;
     if (!round || !artifact) return;
     if (artifact.kind !== "document") {
       this.assetViewer ??= new LazyCreativeAssetsPanel(this.t, "creationArtifactViewer", this.identity);
-      const epoch = this.epoch;
+      const epoch = this.state.epoch;
       try {
         await this.assetViewer.follow(artifact.projectId, artifact.assetId, async () => {}, artifact.version);
       } catch {
-        if (epoch === this.epoch) localizeText(this.notice, "documents.unavailable", {}, this.t);
+        if (epoch === this.state.epoch) localizeText(this.notice, "documents.unavailable", {}, this.t);
       }
       return;
     }
@@ -476,27 +434,27 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   }
   private savedDocument() {
     return (
-      [...this.previous.values()]
+      [...this.state.previous.values()]
         .map((value) => value.task)
         .sort((a, b) => b.createdAt - a.createdAt)
-        .find((task) => task.artifact) || this.task
+        .find((task) => task.artifact) || this.state.task
     );
   }
   private openDocument() {
-    if (this.task?.documentStatus === "unavailable") return;
+    if (this.state.task?.documentStatus === "unavailable") return;
     const saved = this.savedDocument();
     const artifact = saved?.artifact;
     if (artifact && artifact.kind !== "document") {
       this.assetViewer ??= new LazyCreativeAssetsPanel(this.t, "creationArtifactViewer", this.identity);
-      const epoch = this.epoch;
+      const epoch = this.state.epoch;
       void this.assetViewer
         .follow(artifact.projectId, artifact.assetId, async () => {}, artifact.version)
         .catch(() => {
-          if (epoch === this.epoch) localizeText(this.notice, "documents.unavailable", {}, this.t);
+          if (epoch === this.state.epoch) localizeText(this.notice, "documents.unavailable", {}, this.t);
         });
       return;
     }
-    const document = this.task?.document || creationDocumentArtifact(artifact);
+    const document = this.state.task?.document || creationDocumentArtifact(artifact);
     if (saved && document)
       this.navigate(
         "/documents?" +
@@ -510,90 +468,47 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
           }),
       );
   }
-  async refresh() {
-    if (!this.route?.id || this.reading || this.historyLoading) return;
-    const epoch = this.epoch,
-      id = this.route.id,
-      api = this.api,
-      goalRevision = this.goalRevision;
-    this.reading = true;
-    clearTimeout(this.timer);
-    try {
-      const signal = this.historyController.signal;
-      const page =
-        !this.conversation.page || Date.now() - this.historyCheckedAt >= 10000
-          ? await api.rounds(id, undefined, signal)
-          : null;
-      if (page) this.historyCheckedAt = Date.now();
-      const { task } = await api.detail(page?.latestTaskId || this.task?.id || id, signal);
-      task.creation = page?.creation || this.task?.creation || this.conversation.page?.creation;
-      if (this.task && this.task.state !== task.state) this.historyCheckedAt = 0;
-      if (epoch !== this.epoch || goalRevision !== this.goalRevision) return;
-      this.present(
-        task,
-        [...this.previous.values()]
-          .map((value) => value.task)
-          .filter((value) => value.id !== task.id)
-          .concat(task)
-          .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id)),
-      );
-      const rounds = page
-        ? await this.conversation.load(page, api.detail, this.previous, task, signal)
-        : [...this.previous.values()]
-            .map((value) => value.task)
-            .filter((value) => value.id !== task.id)
-            .concat(task)
-            .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
-      if (epoch !== this.epoch || goalRevision !== this.goalRevision) return;
-      this.present(task, rounds);
-      this.cache(task, rounds);
-      this.paintEarlier();
-    } catch (error) {
-      if (epoch !== this.epoch) return;
-      this.notice.dataset.phase = "error";
-      this.notice.textContent = errorText(
-        error instanceof CreationApiError ? error.payload : null,
-        this.t,
-        "creation.activityLoadFailed",
-      );
-      const retry = document.createElement("button");
-      retry.type = "button";
-      retry.className = "session-text-button";
-      localizeText(retry, "common.retry", {}, this.t);
-      retry.onclick = () => void this.refresh();
-      this.notice.append(" ", retry);
-      if (error instanceof CreationApiError && [401, 403, 404].includes(error.status)) {
-        this.task = undefined;
-        this.rendered.clear();
-        this.previous.clear();
-        this.conversation.reset();
-        this.historyCheckedAt = 0;
-        this.historyController.abort();
-        this.historyController = new AbortController();
-        storage.removeSession(this.cacheKey());
-        storage.removeSession(STORAGE_KEYS.creationSnapshotFor(this.identity, "list"));
-        this.renderActions();
-        this.bridge.clear();
-        this.historyHost.hidden = true;
-        document.querySelector("#conversation")!.replaceChildren(this.historyHost, this.notice);
-        this.bridge.changed();
-      }
-    } finally {
-      if (epoch === this.epoch) {
-        this.reading = false;
-        this.paintEarlier();
-        this.timer = setTimeout(() => void this.refresh(), document.hidden ? 10000 : this.running ? 1500 : 10000);
-      }
+  private readFailed(error: unknown) {
+    this.notice.dataset.phase = "error";
+    this.notice.textContent = errorText(
+      error instanceof CreationApiError ? error.payload : null,
+      this.t,
+      "creation.activityLoadFailed",
+    );
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.className = "session-text-button";
+    localizeText(retry, "common.retry", {}, this.t);
+    retry.onclick = () => void this.refresh();
+    this.notice.append(" ", retry);
+    if (error instanceof CreationApiError && [401, 403, 404].includes(error.status)) {
+      this.state.task = undefined;
+      this.presenter.clear();
+      this.state.previous.clear();
+      this.state.conversation.reset();
+      this.state.historyCheckedAt = 0;
+      this.state.historyController.abort();
+      this.state.historyController = new AbortController();
+      storage.removeSession(this.cacheKey());
+      storage.removeSession(STORAGE_KEYS.creationSnapshotFor(this.identity, "list"));
+      this.renderActions();
+      this.bridge.clear();
+      this.historyHost.hidden = true;
+      document.querySelector("#conversation")!.replaceChildren(this.historyHost, this.notice);
+      this.bridge.changed();
     }
   }
+  async refresh() {
+    await this.reader.refresh();
+  }
   private paintEarlier() {
-    this.historyHost.hidden = !this.conversation.nextCursor;
-    this.historyButton.disabled = this.historyLoading || this.reading;
+    this.historyHost.hidden = !this.state.conversation.nextCursor;
+    this.historyButton.disabled = this.state.historyLoading || this.state.reading;
     localizeText(
       this.historyButton,
-      this.historyLoading
+      this.state.historyLoading
         ? "creation.loadingEarlier"
-        : this.historyFailed
+        : this.state.historyFailed
           ? "creation.retryEarlier"
           : "creation.loadEarlier",
       {},
@@ -601,32 +516,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     );
   }
   private async loadEarlier() {
-    const cursor = this.conversation.nextCursor,
-      route = this.route,
-      current = this.task,
-      epoch = this.epoch;
-    if (!cursor || !route?.id || !current || this.historyLoading || this.reading) return;
-    this.historyLoading = true;
-    this.historyFailed = false;
-    this.paintEarlier();
-    try {
-      const signal = this.historyController.signal,
-        page = await this.api.rounds(route.id, cursor, signal);
-      if (page.latestTaskId !== this.task!.id) this.historyCheckedAt = 0;
-      this.task!.creation = page.creation;
-      const rounds = await this.conversation.load(page, this.api.detail, this.previous, this.task!, signal, true);
-      if (epoch !== this.epoch) return;
-      this.present(this.task!, rounds);
-      this.cache(this.task!, rounds);
-    } catch {
-      if (epoch === this.epoch) this.historyFailed = true;
-    } finally {
-      if (epoch === this.epoch) {
-        this.historyLoading = false;
-        this.paintEarlier();
-        void this.refresh();
-      }
-    }
+    await this.reader.loadEarlier();
   }
   private cacheKey() {
     return STORAGE_KEYS.creationSnapshotFor(this.identity, "conversation:" + this.key);
@@ -647,8 +537,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       at: Date.now(),
       task: redact(task),
       rounds: rounds.map(redact),
-      conversation: this.conversation.snapshot(),
-      routeId: this.route?.id,
+      conversation: this.state.conversation.snapshot(),
+      routeId: this.state.route?.id,
     };
     if (JSON.stringify(snapshot).length > 512000) return;
     const key = this.cacheKey(),
@@ -667,189 +557,65 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       if (
         saved &&
         Date.now() - saved.at < 300000 &&
-        (saved.routeId === this.route?.id || saved.task?.id === this.route?.id) &&
+        (saved.routeId === this.state.route?.id || saved.task?.id === this.state.route?.id) &&
         Array.isArray(saved.rounds)
       ) {
-        this.conversation.restore(saved.conversation);
+        this.state.conversation.restore(saved.conversation);
         this.present(saved.task, saved.rounds);
         this.paintEarlier();
       } else if (list && Date.now() - list.at < 300000 && Array.isArray(list.tasks)) {
         const found = list.tasks.find(
           (row: { task: CreationTaskDetail; scope: string }) =>
-            row.task?.id === this.route?.id && row.scope === this.route?.scope,
+            row.task?.id === this.state.route?.id && row.scope === this.state.route?.scope,
         );
         if (found) {
           const task = { ...found.task, progress: [], clarifications: [] };
           this.present(task, [task]);
         }
       }
-      if (this.task && !this.pending) {
+      if (this.state.task && !this.state.pending) {
         localizeText(this.notice, "creation.detailRefreshing", {}, this.t);
         this.notice.dataset.phase = "refreshing";
       }
     } catch {
       storage.removeSession(this.cacheKey());
-      this.task = undefined;
-      this.rendered.clear();
-      this.previous.clear();
+      this.state.task = undefined;
+      this.presenter.clear();
+      this.state.previous.clear();
       this.bridge.clear();
       document.querySelector("#conversation")!.replaceChildren(this.historyHost, this.notice, this.status);
     }
   }
   private present(task: CreationTaskDetail, rounds: CreationTaskDetail[]) {
-    this.task = task;
-    if (this.route) this.activity?.accept(this.route.scope, task);
-    if (!this.model && task.model) this.model = task.model;
-    if (!this.effort && task.effort) this.effort = task.effort;
+    this.state.task = task;
+    if (!this.state.runtimePreferenceSaved && task.runtimeId) {
+      this.state.runtimeId = task.runtimeId;
+      this.state.runtimePreferenceSaved = true;
+      void this.loadRuntime();
+    }
+    if (this.state.route) this.activity?.accept(this.state.route.scope, task);
+    if (!this.state.model && task.model) this.state.model = task.model;
+    if (!this.state.effort && task.effort) this.state.effort = task.effort;
     this.renderPending();
-    for (const round of rounds) this.previous.set(round.id, { task: round, at: Date.now() });
+    for (const round of rounds) this.state.previous.set(round.id, { task: round, at: Date.now() });
     if (task.selections !== undefined) this.bridge.seedDraft("", task.selections);
-    this.bridge.preserve(() => {
-      for (const round of rounds) {
-        const turn = "creation-" + round.id;
-        const requestContent = buildComposerInput(round.prompt, round.attachments || []);
-        requestContent.push({
-          type: "text",
-          text: sessionSkillContext(
-            round.skillSummaries ||
-              (round.selections || []).map((selection) => ({ selection, name: { en: selection.id } })),
-            "",
-          ),
-        });
-        this.message(
-          {
-            id: turn + "-request",
-            type: "userMessage",
-            content: requestContent,
-            sentAt: round.createdAt / 1000,
-          },
-          turn,
-        );
-        const entries: Array<{ at: number; item: EngineItem }> = round.progress.flatMap((entry, index) =>
-          entry.stage === "message" && entry.text
-            ? [
-                {
-                  at: entry.at,
-                  item: {
-                    id: turn + "-" + (entry.id || index),
-                    type: "agentMessage",
-                    text: entry.text,
-                    status: entry.streaming && creationActive(round) ? "inProgress" : "completed",
-                    receivedAt: entry.at / 1000,
-                  },
-                },
-              ]
-            : [],
-        );
-        for (const message of round.messages || []) {
-          const content = buildComposerInput(message.text, message.attachments);
-          content.push({
-            type: "text",
-            text: sessionSkillContext(
-              message.skillSummaries ||
-                message.selections.map((selection) => ({ selection, name: { en: selection.id } })),
-              "",
-            ),
-          });
-          entries.push({
-            at: message.createdAt,
-            item: {
-              id: turn + "-update-" + message.id,
-              type: "userMessage",
-              content,
-              steer: true,
-              delivery:
-                message.state === "uncertain"
-                  ? "unconfirmed"
-                  : message.state === "received"
-                    ? "creation-received"
-                    : message.state === "dispatching"
-                      ? "creation-delivering"
-                      : "sent",
-              sentAt: message.createdAt / 1000,
-            },
-          });
-        }
-        for (const [index, clarification] of round.clarifications.entries()) {
-          entries.push({
-            at: clarification.askedAt || round.createdAt,
-            item: {
-              id: turn + "-question-" + index,
-              type: "agentMessage",
-              text: clarification.questions.map((question) => question.question).join("\n\n"),
-            },
-          });
-          if (clarification.answeredAt)
-            entries.push({
-              at: clarification.answeredAt,
-              item: {
-                id: turn + "-answer-" + index,
-                type: "userMessage",
-                steer: true,
-                content: [
-                  {
-                    type: "text",
-                    text: clarification.questions
-                      .map((question) =>
-                        question.isSecret
-                          ? this.t("creation.privateAnswer")
-                          : (clarification.answers[question.id]?.answers || []).join("\n"),
-                      )
-                      .join("\n\n"),
-                  },
-                ],
-              },
-            });
-        }
-        entries.sort((a, b) => a.at - b.at);
-        for (const entry of entries) this.message(entry.item, turn);
-        const stream = document.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turn)}"] .turn-event-stream`);
-        if (stream)
-          for (const [index, entry] of entries.entries()) {
-            const node = document.querySelector<HTMLElement>(
-                `#conversation [data-item-id="${CSS.escape(String(entry.item.id))}"]`,
-              ),
-              before = stream.children[index] || null;
-            if (node && before !== node) stream.insertBefore(node, before);
-          }
-      }
-      const root = document.querySelector<HTMLElement>("#conversation")!;
-      let anchor: ChildNode = this.notice;
-      for (const round of rounds) {
-        const turn = "creation-" + round.id;
-        for (const node of [
-          root.querySelector(`[data-item-id="${CSS.escape(turn + "-request")}"]`),
-          root.querySelector(`[data-turn-id="${CSS.escape(turn)}"]`),
-        ]) {
-          if (!node || node.parentNode !== root) continue;
-          if (anchor.nextSibling !== node) root.insertBefore(node, anchor.nextSibling);
-          anchor = node;
-        }
-      }
-      this.cards?.render([task]);
-      document.querySelector("#conversation")!.append(this.status);
-    });
+    this.presenter.render(task, rounds, this.cards);
     this.renderActions();
     this.bridge.changed();
   }
-  private message(item: EngineItem, turn: string) {
-    const signature = JSON.stringify(item);
-    if (this.rendered.get(String(item.id)) === signature) return;
-    this.rendered.set(String(item.id), signature);
-    this.bridge.render(item, turn);
-  }
+
   private renderPending() {
     setOpaqueText(this.notice, "");
-    this.notice.dataset.phase = this.pending ? "pending" : "idle";
-    if (this.pendingGoal) {
+    this.notice.dataset.phase = this.state.pending ? "pending" : "idle";
+    if (this.state.pendingGoal) {
       localizeText(this.notice, "creation.goalPending", {}, this.t);
       const retryGoal = document.createElement("button");
       retryGoal.type = "button";
       retryGoal.className = "session-text-button";
-      retryGoal.disabled = this.goalWriting;
+      retryGoal.disabled = this.state.goalWriting;
       localizeText(retryGoal, "common.retry", {}, this.t);
       retryGoal.onclick = () =>
-        void this.goalCommand(this.pendingGoal!).catch((error) => {
+        void this.goalCommand(this.state.pendingGoal!).catch((error) => {
           this.renderPending();
           this.notice.append(
             " ",
@@ -858,7 +624,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
         });
       this.notice.append(" ", retryGoal);
     }
-    if (!this.pending) return;
+    if (!this.state.pending) return;
     localizeText(this.notice, "creation.pendingSubmission", {}, this.t);
     const retry = document.createElement("button");
     retry.type = "button";
@@ -875,202 +641,29 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.notice.append(" ", retry);
   }
   async submit(input: Parameters<CreationSessionDomain["submit"]>[0]) {
-    const route = this.route,
-      epoch = this.epoch;
-    if (!route || this.sending.has(route.key)) return;
-    const prompt = input.text || this.t("creation.attachmentBrief");
-    const attachments = input.attachments.map((attachment) => ({ materialId: attachment.materialId! }));
-    if (this.pending) {
-      const request = this.pending.request;
-      if (
-        request.prompt !== prompt ||
-        JSON.stringify(request.attachments) !== JSON.stringify(attachments) ||
-        JSON.stringify(request.selections) !== JSON.stringify(input.selections)
-      ) {
-        this.renderPending();
-        throw new Error(this.t("creation.pendingSubmission"));
-      }
-    } else {
-      const control = this.controls(),
-        id = crypto.randomUUID();
-      const request = {
-        id,
-        prompt,
-        selections: [...input.selections],
-        attachments,
-        model: control.model,
-        effort: control.effort,
-      };
-      if (route.id) {
-        this.sending.add(route.key);
-        try {
-          const outputType =
-            this.task?.artifact && this.task.state === "succeeded"
-              ? defaultCreationOutput(await this.api.options())
-              : undefined;
-          if (epoch !== this.epoch) return;
-          this.pending = { id, request: { ...request, ...(outputType ? { outputType } : {}) } };
-        } finally {
-          this.sending.delete(route.key);
-        }
-      } else {
-        this.sending.add(route.key);
-        try {
-          const [options, tree] = await Promise.all([this.api.options(), documentTreeApi.read("personal")]);
-          if (epoch !== this.epoch) return;
-          if (!options.defaultProfileId) throw new Error(this.t("creation.unavailable"));
-          this.pending = {
-            id,
-            request: {
-              ...request,
-              projectId: "personal",
-              treeVersion: tree.version,
-              parentId: null,
-              locale: document.documentElement.lang,
-              profileId: options.defaultProfileId,
-              outputType: defaultCreationOutput(options),
-            },
-          };
-        } finally {
-          this.sending.delete(route.key);
-        }
-      }
-      this.persist();
-    }
-    await this.dispatchPending();
+    await this.commands.submit(input);
   }
   private async dispatchPending() {
-    const route = this.route,
-      pending = this.pending,
-      epoch = this.epoch;
-    if (!route || !pending || this.sending.has(route.key)) return;
-    const key = this.preferenceKey(),
-      model = this.model,
-      effort = this.effort,
-      api = this.api;
-    const clearPending = () => {
-      const saved = storage.getJson(key, { model, effort, pending: null });
-      if (saved.pending?.id === pending.id) storage.setJson(key, { ...saved, pending: null });
-    };
-    this.sending.add(route.key);
-    this.renderPending();
-    try {
-      const result = route.id
-        ? await api.message(this.task?.id || route.id, { ...pending.request, id: pending.id })
-        : await api.submit(pending.request as CreationRequest);
-      clearPending();
-      if (epoch === this.epoch && this.pending?.id === pending.id) this.pending = undefined;
-      const materials = (pending.request.attachments || []) as readonly { materialId: string }[];
-      this.bridge.accepted(
-        route.key,
-        `creation:${route.scope}:${result.task.id}`,
-        String(pending.request.prompt),
-        materials.map((entry) => entry.materialId),
-      );
-      if (epoch !== this.epoch) return;
-      this.renderPending();
-      if (result.task.id === route.id) await this.refresh();
-      else this.navigate("/creation/" + encodeURIComponent(result.task.id) + "?creationScope=" + route.scope);
-    } catch (error) {
-      if (
-        error instanceof CreationApiError &&
-        error.status >= 400 &&
-        error.status < 500 &&
-        ![408, 429].includes(error.status)
-      ) {
-        clearPending();
-        if (epoch === this.epoch && this.pending?.id === pending.id) this.pending = undefined;
-      }
-      if (epoch === this.epoch) this.renderPending();
-      throw error;
-    } finally {
-      this.sending.delete(route.key);
-    }
+    await this.commands.dispatchPending();
   }
-  goal(): import("../../shared/engine/types.js").Goal | null {
-    const goal = this.task?.goal;
-    return goal
-      ? {
-          threadId: this.key,
-          goalId: goal.id,
-          objective: goal.objective,
-          status: goal.status,
-          updatedAt: goal.updatedAt,
-          detail: this.t("creation.goalScope"),
-          progress: { completed: goal.status === "completed" ? 1 : 0, total: 1 },
-        }
-      : null;
+  goal() {
+    return this.goals.goal();
   }
   async goalCommand(command: Parameters<CreationSessionDomain["goalCommand"]>[0]) {
-    const route = this.route,
-      task = this.task,
-      epoch = this.epoch;
-    if (!route?.id || !task) throw new Error(this.t("workbench.startATaskFirst"));
-    if (this.goalWriting) throw new Error(this.t("creation.goalPending"));
-    if (
-      this.pendingGoal &&
-      (command.action !== this.pendingGoal.action || command.objective !== this.pendingGoal.objective)
-    )
-      throw new Error(this.t("creation.goalPending"));
-    const controls = this.controls();
-    const request = this.pendingGoal || {
-      id: crypto.randomUUID(),
-      ...command,
-      ...(["set", "create"].includes(command.action) ? { model: controls.model, effort: controls.effort } : {}),
-    };
-    this.pendingGoal = request;
-    const key = this.preferenceKey() + ":goal";
-    storage.setJson(key, request);
-    this.goalWriting = true;
-    this.renderPending();
-    const clear = () => {
-      if (storage.getJson(key, null)?.id === request.id) storage.remove(key);
-      if (epoch === this.epoch) this.pendingGoal = undefined;
-    };
-    try {
-      const result = await this.api.goal(this.task?.id || route.id, request);
-      clear();
-      if (epoch !== this.epoch) return null;
-      this.goalRevision++;
-      this.renderPending();
-      if (result.task.id !== route.id) {
-        this.bridge.accepted(route.key, `creation:${route.scope}:${result.task.id}`, "", []);
-        this.navigate("/creation/" + encodeURIComponent(result.task.id) + "?creationScope=" + route.scope);
-        return null;
-      }
-      this.task = { ...task, ...result.task, goal: result.goal };
-      this.bridge.changed();
-      void this.refresh();
-      return this.goal();
-    } catch (error) {
-      if (
-        error instanceof CreationApiError &&
-        error.status >= 400 &&
-        error.status < 500 &&
-        ![408, 429].includes(error.status)
-      )
-        clear();
-      throw error;
-    } finally {
-      if (epoch === this.epoch) {
-        this.goalWriting = false;
-        this.renderPending();
-        this.bridge.changed();
-      }
-    }
+    return this.goals.goalCommand(command);
   }
   async stop() {
-    if (!this.route?.id || !this.running) return;
-    const id = this.task?.id || this.route.id,
-      epoch = this.epoch,
+    if (!this.state.route?.id || !this.running) return;
+    const id = this.state.task?.id || this.state.route.id,
+      epoch = this.state.epoch,
       api = this.api;
-    const active = this.stopping.get(id);
+    const active = this.state.stopping.get(id);
     if (active) return active;
     const pending = (async () => {
       await api.cancel(id);
-      if (epoch === this.epoch) await this.refresh();
-    })().finally(() => this.stopping.delete(id));
-    this.stopping.set(id, pending);
+      if (epoch === this.state.epoch) await this.refresh();
+    })().finally(() => this.state.stopping.delete(id));
+    this.state.stopping.set(id, pending);
     return pending;
   }
 }

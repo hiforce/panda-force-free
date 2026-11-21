@@ -24,6 +24,7 @@ For authored documents, default to the current session working directory. Honor 
 Before calling view_image or returning a generated image for visual inspection, copy it into the processing directory and use that shared path. Tool image previews also need files visible to the web service; private temporary paths are not durable previews.
 Files created outside the shared workspace by tools must be copied into the output directory before delivery. Do not assume /mnt/data, a container's /tmp, or a sandbox: prefix makes a file available to PandaForce.
 Before returning an attachment, verify that the output exists. Link to its absolute workspace path and preserve the original filename where possible.
+For images, include a Markdown image preview and a Markdown download link to the verified absolute output path. Do not return only a plain-text or inline-code path.
 </panda_attachment_workspace>`;
 }
 

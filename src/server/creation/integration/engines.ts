@@ -12,13 +12,15 @@ export function creationEngines(
     workspaceRoot?: string;
     version: string;
     engineId: string;
+    runtimes?: import("../../engines/application-tools/runtime-port.js").ApplicationRuntimePort;
   },
   factory?: CodexTransportFactory,
 ): CreationEngines {
   if (!isAbsolute(options.scratchRoot)) throw new CreationError("invalidInput");
   const engines = isolatedApplicationEngines({ ...options, purpose: "creation" }, factory);
   return {
-    select(profile) {
+    select(profile, owner) {
+      if (profile.runtimeId && owner && options.runtimes) return engines.select(profile, owner);
       if (profile.engineId !== "codex" || options.engineId !== "codex") throw new CreationError("unavailable");
       return engines.select(profile);
     },

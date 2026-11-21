@@ -2,7 +2,6 @@ import { botDialog } from "./dialog.js";
 import { openBotRetention } from "./retention.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import type { BotQueueSnapshot } from "../../shared/bots/contracts.js";
-import type { SettingsModelCatalog } from "../settings-pages/contracts.js";
 import { request } from "../http-client.js";
 import { setMessageHtml } from "../i18n.js";
 import { botUi, type BotContext, type BotSnapshot } from "./ui.js";
@@ -10,7 +9,7 @@ import { createBotManager } from "./manager.js";
 import { createBotTaskList } from "./tasks.js";
 
 /** Each surface owns its lifecycle; configuration remains separate from daily operations. */
-function createBotPanel(t: Translate, workspace: boolean, models?: SettingsModelCatalog) {
+function createBotPanel(t: Translate, workspace: boolean) {
   let container: HTMLElement | null = null,
     host: HTMLElement | null = null,
     controller = new AbortController(),
@@ -59,6 +58,7 @@ function createBotPanel(t: Translate, workspace: boolean, models?: SettingsModel
       } catch (error) {
         if (current !== epoch || controller.signal.aborted) return;
         const messages = {
+            botBusy: "cli.botAssistantBusy",
             invalidAvatar: "cli.botAvatarInvalid",
             avatarBusy: "cli.botAvatarBusy",
             callbackRequired: "cli.botCallbackRequired",
@@ -122,7 +122,7 @@ function createBotPanel(t: Translate, workspace: boolean, models?: SettingsModel
     },
   };
   const tasks = createBotTaskList(context),
-    manager = createBotManager(context, models);
+    manager = createBotManager(context);
   function hide() {
     epoch++;
     controller.abort();
@@ -179,5 +179,5 @@ function createBotPanel(t: Translate, workspace: boolean, models?: SettingsModel
   }
   return { show, hide };
 }
-export const createBotSettings = (t: Translate, models?: SettingsModelCatalog) => createBotPanel(t, false, models);
+export const createBotSettings = (t: Translate) => createBotPanel(t, false);
 export const createBotWorkspace = (t: Translate) => createBotPanel(t, true);

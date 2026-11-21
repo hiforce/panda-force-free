@@ -2,7 +2,7 @@ import OSS from "ali-oss";
 import { canonicalAttachmentUrl } from "../../shared/attachment-urls.js";
 import { pandaEnvironment } from "../environment.js";
 import { errorCode, errorStatus } from "./../../shared/errors.js";
-import { readOssImage } from "./oss-image.js";
+import { readOssImage, readOssAttachmentBytes } from "./oss-image.js";
 import { createOssInputPreparer, createOssInputPresenter } from "./oss-input.js";
 
 const INPUT_URL_TTL_SECONDS = 7 * 24 * 60 * 60;
@@ -100,6 +100,10 @@ export function createOssAttachmentStorage(config, { client, now = () => new Dat
     },
     readUrl(value) {
       return sign(keyFromUrl(value), 300);
+    },
+    async readOriginalUrl(value) {
+      const key = keyFromUrl(value);
+      return { bytes: await readOssAttachmentBytes(objectClient, key), canonicalUrl: urlForKey(key) };
     },
     prepareInput,
   };

@@ -177,3 +177,40 @@ test("the real task worker uses persona without expanding tools or bypassing the
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("Bot reasoning settings are bounded, owner scoped, atomic and durable without changing legacy records", async () => {
+  const root = await mkdtemp(join(tmpdir(), "bot-effort-")),
+    file = join(root, "bots.sqlite");
+  let store = new BotStore(file);
+  try {
+    const legacy = store.createBot("alice", { name: "Legacy", code: "legacy-effort" });
+    expect(legacy.effort).toBeUndefined();
+    const bot = store.createBot("alice", { name: "Reasoning", code: "reasoning", model: "model-a", effort: "high" });
+    expect(store.bot("alice", bot.id).effort).toBe("high");
+    expect(() => store.updateBot("bob", bot.id, { effort: "low" })).toThrow("notFound");
+    for (const effort of [null, 3, "bad\u0000level", "x".repeat(65)]) {
+      expect(() => store.updateBot("alice", bot.id, { name: "Must not save", effort })).toThrow("invalidInput");
+      expect(store.bot("alice", bot.id)).toEqual(bot);
+    }
+    store.updateBot("alice", bot.id, { effort: "" });
+    store.close();
+    store = new BotStore(file);
+    expect(store.bot("alice", bot.id).effort).toBe("");
+    expect(store.bot("alice", legacy.id)).toEqual(legacy);
+  } finally {
+    store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("saving a legacy default effort preserves quota backoff unless reasoning actually changes", () => {
+  const store = new BotStore(":memory:");
+  try {
+    const bot = store.createBot("alice", { name: "Legacy retry", code: "legacy-retry" });
+    store.saveBot({ ...bot, executionRetryAt: 123456 });
+    expect(store.updateBot("alice", bot.id, { name: "Edited name", effort: "" }).executionRetryAt).toBe(123456);
+    expect(store.updateBot("alice", bot.id, { effort: "high" }).executionRetryAt).toBeUndefined();
+  } finally {
+    store.close();
+  }
+});

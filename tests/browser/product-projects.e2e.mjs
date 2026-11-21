@@ -81,8 +81,10 @@ try {
   assert.equal(await page.locator(".wb-project-detail .project-code").innerText(), "alpha");
   checks.push("Historical sessions from different folders link to one persistent project and sidebar group");
   const changeBeta = () =>
-    page.locator('.wb-session-entry:has(.wb-task-row[data-id="old-beta"]) [data-wb="session-project"]');
+    page.locator('.wb-session-entry:has(.wb-task-row[data-id="old-beta"]) [data-wb="session-options"]');
   await changeBeta().click();
+  await page.locator('.sidebar-project-menu [role="menuitem"]').getByText("Change project", { exact: true }).click();
+
   await page.locator("#associationProject").selectOption(b.id);
   await page.locator('#projectAssociationForm [type="submit"]').click();
   await page.locator("#projectDialog").waitFor({ state: "hidden" });
@@ -90,6 +92,8 @@ try {
   assert.equal(snapshot.assignments.find((s) => s.id === "old-beta").projectId, b.id);
   await go("/tasks");
   await changeBeta().click();
+  await page.locator('.sidebar-project-menu [role="menuitem"]').getByText("Change project", { exact: true }).click();
+
   await page.locator("#associationProject").selectOption("");
   await page.locator('#projectAssociationForm [type="submit"]').click();
   await page.locator("#projectDialog").waitFor({ state: "hidden" });

@@ -1,5 +1,6 @@
 import type { CreationProgress } from "../../shared/creation/contracts.js";
 import { visibleTokenUsage } from "../../shared/engine/application-visible-events.js";
+import { creationOperation } from "../../shared/creation/progress.js";
 import { creationOutputType } from "./output-type.js";
 import { isRecord } from "../../shared/records.js";
 import { CreationError, type CreationArtifact, type CreationTaskSpec } from "./contracts.js";
@@ -221,7 +222,10 @@ export function creationProgress(event: CreationProgress): CreationProgress {
     event.at < 0 ||
     !Number.isSafeInteger(event.generation) ||
     event.generation < 0 ||
-    !["started", "saving", "waiting", "answered", "message", "usage"].includes(event.stage) ||
+    !["preparing", "started", "saving", "waiting", "answered", "message", "usage", "activity"].includes(event.stage) ||
+    (event.stage === "activity"
+      ? !creationOperation(event.operation) || !["running", "completed", "failed"].includes(event.status ?? "")
+      : event.operation !== undefined || event.status !== undefined) ||
     (event.text !== undefined && (typeof event.text !== "string" || event.text.length > 65536)) ||
     (event.streaming !== undefined && typeof event.streaming !== "boolean")
   )
@@ -234,6 +238,7 @@ export function creationProgress(event: CreationProgress): CreationProgress {
     ...(event.id === undefined ? {} : { id: creationUuid(event.id) }),
     ...(event.streaming === undefined ? {} : { streaming: event.streaming }),
     ...(event.usage === undefined ? {} : { usage: visibleTokenUsage(event.usage) }),
+    ...(event.stage === "activity" ? { operation: event.operation, status: event.status } : {}),
   };
 }
 

@@ -40,7 +40,7 @@ export function createSettingsPanel({
     },
     "publishing-styles": { title: "plugins.stylesTitle" },
     templates: { title: "templates.title" },
-    agent: { title: "creative.connections" },
+    agent: { title: "harness.title" },
     profile: { title: "common.profile" },
     usage: { title: "common.usage" },
     storage: { title: "creative.storage" },

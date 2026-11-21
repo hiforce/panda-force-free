@@ -14,6 +14,8 @@ export function memberApiAllowed(path: string, method: string) {
       "/api/config",
       "/api/health",
       "/api/engine",
+      "/api/harness-runtimes",
+      "/api/model-catalog",
       "/api/content-access",
       "/api/projects",
       "/api/local-users/self",

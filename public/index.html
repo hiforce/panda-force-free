@@ -581,8 +581,40 @@
         </div>
       </header>
 
-      <aside class="sidebar" id="sidebar">
-        <div class="sidebar-top">
+      <aside class="sidebar" id="sidebar" data-sidebar-tab="menu">
+        <div
+          class="sidebar-section-tabs sidebar-session-tabs"
+          id="sidebarSectionTabs"
+          role="tablist"
+          data-pf-aria-label="common.sidebarSections"
+          aria-label="Sidebar sections"
+          hidden
+        >
+          <button
+            id="sidebarMenuTab"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="sidebarMenuPanel"
+            data-sidebar-tab="menu"
+            data-pf-message="common.sidebarMenu"
+          >
+            Menu
+          </button>
+          <button
+            id="sidebarSessionsTab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            tabindex="-1"
+            aria-controls="sidebarSessionsPanel"
+            data-sidebar-tab="sessions"
+            data-pf-message="common.sessions"
+          >
+            Sessions
+          </button>
+        </div>
+        <div class="sidebar-top" id="sidebarMenuPanel">
           <div class="sidebar-mode-row">
             <button
               class="sidebar-product"
@@ -636,7 +668,7 @@
             ><kbd>⌘⇧K</kbd>
           </button>
         </div>
-        <div class="sidebar-scroll">
+        <div class="sidebar-scroll" id="sidebarSessionsPanel">
           <span id="projectName" hidden="" data-pf-message="common.project">Project</span
           ><span id="projectPath" hidden="" data-pf-message="common.chooseWorkingFolder">Choose working folder</span>
           <button class="sidebar-row projects-button" id="projectButton" type="button">
@@ -910,6 +942,16 @@
                 </div>
               </div>
               <div class="composer-right">
+                <button
+                  type="button"
+                  id="harnessButton"
+                  class="composer-setting-button harness-trigger"
+                  aria-haspopup="dialog"
+                  aria-expanded="false"
+                  aria-controls="harnessMenu"
+                  data-pf-aria-label="harness.select"
+                  hidden
+                ></button>
                 <button
                   type="button"
                   class="composer-setting-button"
@@ -1631,8 +1673,7 @@
             <details class="settings-nav-group" data-settings-group="services" open>
               <summary data-pf-message="creative.system"></summary>
               <button type="button" data-settings-page="agent">
-                <span class="icon-slot" data-icon="plug"></span
-                ><span data-pf-message="creative.connections"></span></button
+                <span class="icon-slot" data-icon="plug"></span><span data-pf-message="harness.title"></span></button
               ><button type="button" data-settings-page="plugins-settings">
                 <span class="icon-slot" data-icon="settings"></span
                 ><span data-pf-message="creative.extensions"></span></button
@@ -1885,6 +1926,17 @@
           <section class="settings-page" data-settings-content="plugins-settings" hidden>
             <div data-settings-view="plugins-settings"></div>
           </section>
+          <section class="settings-page" data-settings-content="agent" hidden>
+            <button
+              class="settings-mobile-back icon-button"
+              type="button"
+              data-settings-mobile-back
+              data-pf-aria-label="common.back"
+            >
+              <span class="icon-slot" data-icon="chevronLeft"></span>
+            </button>
+            <div data-settings-view="agent"></div>
+          </section>
           <section class="settings-page" data-settings-content="bots" hidden>
             <button
               class="settings-mobile-back icon-button"
@@ -2026,7 +2078,9 @@
             <strong id="imageViewerTitle" data-pf-message="common.image">Image</strong
             ><span id="imageViewerPath"></span>
           </div>
-          <a class="image-viewer-original" id="imageViewerDownload" download hidden data-pf-message="files.download">Download</a>
+          <a class="image-viewer-original" id="imageViewerDownload" download hidden data-pf-message="files.download"
+            >Download</a
+          >
           <a
             class="image-viewer-original"
             id="imageViewerOriginal"

@@ -1,0 +1,15 @@
+{
+  "public/workbench.css": [
+    "src/client/workbench/styles/notifications.css",
+    "src/client/workbench/styles/tokens.css",
+    "src/client/workbench/styles/shell.css",
+    "src/client/workbench/styles/project-context.css",
+    "src/client/workbench/styles/sidebar-typography.css",
+    "src/client/workbench/styles/preparation.css"
+  ],
+  "public/creation.css": [
+    "src/client/creation/styles/authoring.css",
+    "src/client/creation/styles/activity.css",
+    "src/client/creation/styles/conversation.css"
+  ]
+}

@@ -38,5 +38,6 @@
   "directoryLoadFailed": "目錄暫時無法載入，仍可搜尋對話。",
   "recentTab": "最近",
   "foldersTab": "目錄",
-  "browseByFolder": "按工作目錄瀏覽對話"
+  "browseByFolder": "按工作目錄瀏覽對話",
+  "deleteHarnessMessage": "刪除「{title}」後，將無法在 PandaForce 中開啟或繼續此對話。專案檔案不會被刪除。"
 }

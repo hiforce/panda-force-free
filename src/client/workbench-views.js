@@ -18,6 +18,7 @@ export function createWorkbenchViews({
   INTRO_KEY,
   viewState,
   identityKey,
+  afterSessionListRender = () => {},
 }) {
   function button(label, action, attrs = "", primary = false) {
     return `<button type="button" class="wb-button${primary ? " primary" : ""}" data-wb="${action}" ${attrs}>${messageHtml(label, undefined, t)}</button>`;
@@ -59,7 +60,7 @@ export function createWorkbenchViews({
       .slice(0, 100)
       .map((thread) => {
         const project = catalog.projectForSession(thread.id);
-        return `<div class="wb-session-entry"><button type="button" class="wb-task-row" data-wb="task" data-id="${escape(thread.id)}"><span class="wb-task-icon">${codexIcon("messageSquare")}</span><span class="wb-task-copy" data-i18n-ignore><strong>${escape((thread.name || thread.preview || t("workbench.untitledSession")).replace(/\s+/g, " ").slice(0, 110))}</strong><small>${projectId ? "" : escape(project?.name || t("common.unassigned")) + " · "}${escape(thread.cwd || t("common.noWorkingFolder"))}</small></span><span class="wb-status ${status(thread) === "common.inProgress" ? "running" : status(thread) === "workbench.needsReview" ? "review" : ""}">${messageHtml(status(thread), undefined, t)}</span></button><button type="button" class="icon-button wb-session-association" data-wb="session-project" data-id="${escape(thread.id)}" ${messageAttributes("aria-label", "common.changeProject", undefined, t)} ${messageAttributes("title", "common.changeProject", undefined, t)}>${codexIcon("ellipsis")}</button></div>`;
+        return `<div class="wb-session-entry"><button type="button" class="wb-task-row" data-wb="task" data-id="${escape(thread.id)}"><span class="wb-task-icon">${codexIcon("messageSquare")}</span><span class="wb-task-copy" data-i18n-ignore><strong>${escape((thread.name || thread.preview || t("workbench.untitledSession")).replace(/\s+/g, " ").slice(0, 110))}</strong><small>${projectId ? "" : escape(project?.name || t("common.unassigned")) + " · "}${escape(thread.cwd || t("common.noWorkingFolder"))}</small></span><span class="wb-status ${status(thread) === "common.inProgress" ? "running" : status(thread) === "workbench.needsReview" ? "review" : ""}">${messageHtml(status(thread), undefined, t)}</span></button><button type="button" class="icon-button wb-session-association" data-wb="session-options" data-id="${escape(thread.id)}" aria-haspopup="menu" aria-expanded="false" ${messageAttributes("aria-label", "sessions.sessionOptionsForTitle", { title: thread.name || thread.preview || t("workbench.untitledSession") }, t)} ${messageAttributes("title", "sessions.sessionOptions", undefined, t)}>${codexIcon("ellipsis")}</button></div>`;
       })
       .join(
         "",
@@ -95,6 +96,7 @@ export function createWorkbenchViews({
         ),
       ),
     );
+    afterSessionListRender();
   }
   const projectDirectory = createProjectDirectory({ root: content, t, catalog, isProjectPinned, identityKey });
   const renderProjects = projectDirectory.render;
@@ -120,6 +122,7 @@ export function createWorkbenchViews({
         project.id,
       ),
     );
+    afterSessionListRender();
   }
   /** @param {string} value */
   function searchProjectSessions(value) {

@@ -79,16 +79,12 @@ try {
       for (const attribute of ["title", "aria-label"])
         assert.equal(await page.locator("#modelButton").getAttribute(attribute), modelHint);
       await openComposerSettings(page, "model");
-      assert.equal(
-        await page.locator('#sessionSettingEfforts input[type="range"]').getAttribute("aria-valuetext"),
-        await page.evaluate(
-          (key) => globalThis.__pandaForceI18n.t(key),
-          locale === "zh-HK" ? "common.medium" : "common.extraHigh",
-        ),
-      );
+      await page.locator('[name="session-runtime-model"] option[value="gpt-fixture"]').waitFor({ state: "attached" });
+      assert.equal(await page.locator('[name="session-runtime-model"]').inputValue(), "gpt-fixture");
+      assert.equal(await page.locator('[name="session-runtime-effort"]').inputValue(), "medium");
       await page.screenshot({ path: `${out}/effort-${locale}-${width}.png` });
       if (locale === "zh-TW") {
-        await page.locator('#sessionSettingEfforts input[type="range"]').press("Home");
+        await page.locator('[name="session-runtime-effort"]').selectOption("low");
         await page.locator('#sessionSettingsForm [type="submit"]').click();
       } else await page.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
       await page.locator('.creation-discovery-card [data-skill-id="software-prd"]').click();
@@ -122,8 +118,8 @@ try {
       assert.equal(result.status(), 202, await result.text());
       assert.equal(
         (await result.json()).task.effort,
-        locale === "zh-HK" ? "medium" : locale === "zh-TW" ? "low" : "xhigh",
-        "Creation defaults to extreme effort and preserves explicit choices",
+        locale === "zh-TW" ? "low" : "medium",
+        "Creation uses the advertised model default and preserves explicit choices",
       );
       await page.waitForURL("**/creation/**");
       await page.locator(".creation-session-status .user-input-card").waitFor();

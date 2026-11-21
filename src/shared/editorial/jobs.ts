@@ -6,6 +6,8 @@ export interface EditorialProcessingProfile {
   engine: string;
   model: string;
   version: string;
+  runtimeId?: string;
+  effort?: string;
 }
 export type EditorialJobFailure =
   "interrupted" | "processorUnavailable" | "invalidOutput" | "timeout" | "processingFailed";

@@ -963,6 +963,21 @@
 .session-drawer-search {
   display: none;
 }
+.sidebar .session-drawer-search {
+  display: flex;
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: var(--pf-sidebar);
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 12px;
+  color: var(--pf-muted);
+  font-size: var(--pf-text-body);
+  text-align: start;
+}
 .session-layout :is(#businessProjectContext, #conversationProjectPicker, #sessionStatus, #contextUsage) {
   display: none !important;
 }
@@ -1199,17 +1214,6 @@
   .session-layout .sidebar {
     top: 60px;
     bottom: 0;
-  }
-  .session-layout .session-drawer-search {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 44px;
-    width: 100%;
-    padding: 10px 12px;
-    color: var(--pf-muted);
-    font-size: 12px;
-    text-align: start;
   }
   .session-layout .composer-dock {
     padding-block: 0 max(9px, env(safe-area-inset-bottom));

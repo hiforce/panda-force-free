@@ -1,3 +1,5 @@
+import { SQLiteHarnessMetadata } from "../../harness/storage/sqlite.js";
+import { harnessMigrationTables, migrateHarnessSnapshot } from "../../harness/storage/migrate.js";
 import { GadgetStore } from "../../gadget/store.js";
 import { gadgetMySQLModels } from "../modules/gadgets.js";
 import { migrateGadgetSnapshot } from "../../gadget/migrate.js";
@@ -113,6 +115,7 @@ export interface LegacySQLiteSourcePaths {
   skills?: string;
   skillWorkspace?: string;
   gadgets?: string;
+  harness?: string;
   cliAuth?: string;
   plugins?: string;
   portableTemplates?: string;
@@ -252,6 +255,9 @@ export async function createLegacySQLiteMigrationSources(options: LegacySQLiteMi
   addSource("skill-workspace", "skillWorkspace", join(stateRoot, "data", "skill-workspace.sqlite"), (path) =>
     new SkillWorkspaceStore(path).close(),
   );
+  addSource("harness", "harness", join(stateRoot, "data", "harness.sqlite"), (path) =>
+    new SQLiteHarnessMetadata(path).close(),
+  );
   addSource("gadgets", "gadgets", join(stateRoot, "data", "gadgets.sqlite"), (path) => new GadgetStore(path).close());
   addSource("cli-auth", "cliAuth", join(stateRoot, "data", "cli-auth.sqlite"), (path) =>
     openCliCredentialStore(path).close(),
@@ -339,6 +345,7 @@ export async function createLegacySQLiteMigrationSources(options: LegacySQLiteMi
     models(gadgetMySQLModels, ["panda_force_gadget_workspace_controls"]),
     migrateGadgetSnapshot,
   );
+  addUnit("harness", "harness", "harness", targets(harnessMigrationTables), migrateHarnessSnapshot);
   addUnit("plugins", "plugins", "plugins", targets(pluginsMigrationTables), migratePluginsSnapshot);
   addUnit(
     "portable-templates",

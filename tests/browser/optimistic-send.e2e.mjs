@@ -1,3 +1,4 @@
+import { fillComposer } from "../support/composer-settings.mjs";
 import { createBrowserFixture } from "../support/browser-runtime.mjs";
 import assert from "node:assert/strict";
 import { launchOptions } from "../support/browser-runtime.mjs";
@@ -13,8 +14,9 @@ try {
   const page = await context.newPage(),
     errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(base, { waitUntil: "networkidle" });
+  await page.goto(base + "/new", { waitUntil: "networkidle" });
   await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === "ready");
+  await page.waitForFunction(() => !document.body.classList.contains("workspace-booting"));
   await page.evaluate(() => {
     const api = globalThis.__pandaForceDebug;
     if (api.state.ws) api.state.ws.onmessage = null;
@@ -60,7 +62,7 @@ try {
     window.__sendHolds.add("thread/start");
     window.__sendHolds.add("turn/start");
   });
-  await page.locator("#prompt").fill("Immediate first message");
+  await fillComposer(page, "Immediate first message");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await page.waitForFunction(() => window.__sendDelayed.has("thread/start"));
   assert.equal(await page.locator(".user-message").textContent(), "Immediate first message");
@@ -79,11 +81,11 @@ try {
   );
   await page.waitForFunction(() => window.__sendDelayed.has("turn/start"));
   assert.equal(await page.locator(".user-message").textContent(), "Immediate first message");
-  await page.locator("#prompt").fill("Duplicate during creation");
+  await fillComposer(page, "Duplicate during creation");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   assert.equal(await page.evaluate(() => window.__sendCalls.filter((call) => call.method === "turn/start").length), 1);
   assert.equal(await page.locator(".user-message").count(), 1);
-  await page.locator("#prompt").fill("");
+  await fillComposer(page, "");
   // Receiving the echoed message releases the composer even before the RPC ack.
   await page.evaluate(() => {
     const api = globalThis.__pandaForceDebug;
@@ -95,17 +97,17 @@ try {
     });
     window.__sendHolds.add("turn/steer");
   });
-  await page.locator("#prompt").fill("Steer after early echo");
+  await fillComposer(page, "Steer after early echo");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await page.waitForFunction(() => window.__sendDelayed.has("turn/steer"));
   await page.evaluate(() => {
     window.__sendHolds.delete("turn/start");
     window.__sendDelayed.get("turn/start").resolve({ turn: { id: "accepted-turn" } });
   });
-  await page.locator("#prompt").fill("Duplicate during steer");
+  await fillComposer(page, "Duplicate during steer");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   assert.equal(await page.evaluate(() => window.__sendCalls.filter((call) => call.method === "turn/steer").length), 1);
-  await page.locator("#prompt").fill("");
+  await fillComposer(page, "");
   await page.evaluate(() => {
     window.__sendHolds.clear();
     window.__sendDelayed.get("turn/steer").resolve({ turnId: "accepted-turn" });
@@ -124,7 +126,7 @@ try {
     window.__sendHolds.add("turn/start");
     window.__existingSendCallStart = window.__sendCalls.length;
   });
-  await page.locator("#prompt").fill("Slow message");
+  await fillComposer(page, "Slow message");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await page.waitForFunction(() => window.__sendDelayed.has("turn/start"));
   assert.deepEqual(
@@ -164,7 +166,7 @@ try {
     window.__sendHolds.add("turn/start");
     window.__sendDelayed.clear();
   });
-  await page.locator("#prompt").fill("Acknowledgement lost");
+  await fillComposer(page, "Acknowledgement lost");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await page.waitForFunction(() => window.__sendDelayed.has("turn/start"));
   const before = await page.evaluate(() => window.__sendCalls.filter((call) => call.method === "turn/start").length);
@@ -195,7 +197,7 @@ try {
     window.__sendHolds.add("turn/start");
     window.__sendDelayed.clear();
   });
-  await page.locator("#prompt").fill("Daemon acknowledgement timed out");
+  await fillComposer(page, "Daemon acknowledgement timed out");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await page.waitForFunction(() => window.__sendDelayed.has("turn/start"));
   const timeoutBefore = await page.evaluate(
@@ -214,7 +216,7 @@ try {
   await page.evaluate(() => {
     window.__sendReject = true;
   });
-  await page.locator("#prompt").fill("Rejected message");
+  await fillComposer(page, "Rejected message");
   await page.locator("#composer").evaluate((form) => form.requestSubmit());
   await page.waitForFunction(() => document.querySelector(".user-turn[data-delivery=failed]"));
   assert.equal(await page.locator("#prompt").inputValue(), "Rejected message");

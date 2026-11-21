@@ -113,6 +113,7 @@ export interface InterfaceElements {
   "#goalDialogStatus": HTMLElementTagNameMap["span"];
   "#goalDialogTitle": HTMLElementTagNameMap["strong"];
   "#goalStatus": HTMLElementTagNameMap["div"];
+  "#harnessButton": HTMLElementTagNameMap["button"];
   "#imageViewer": HTMLElementTagNameMap["dialog"];
   "#imageViewerDownload": HTMLElementTagNameMap["a"];
   "#imageViewerError": HTMLElementTagNameMap["div"];
@@ -282,9 +283,14 @@ export interface InterfaceElements {
   "#sidebarHelpMenu": HTMLElementTagNameMap["div"];
   "#sidebarHelpSettings": HTMLElementTagNameMap["button"];
   "#sidebarHelpShortcuts": HTMLElementTagNameMap["button"];
+  "#sidebarMenuPanel": HTMLElementTagNameMap["div"];
+  "#sidebarMenuTab": HTMLElementTagNameMap["button"];
   "#sidebarSearchButton": HTMLElementTagNameMap["button"];
   "#sidebarSearchClose": HTMLElementTagNameMap["button"];
   "#sidebarSearchPanel": HTMLElementTagNameMap["div"];
+  "#sidebarSectionTabs": HTMLElementTagNameMap["div"];
+  "#sidebarSessionsPanel": HTMLElementTagNameMap["div"];
+  "#sidebarSessionsTab": HTMLElementTagNameMap["button"];
   "#sidePanel": HTMLElementTagNameMap["aside"];
   "#sidePanelLauncher": HTMLElementTagNameMap["section"];
   "#sidePanelTitle": HTMLElementTagNameMap["span"];

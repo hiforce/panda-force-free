@@ -11,6 +11,7 @@ export function assembleNotices({ mutations, $, state, t }) {
   /** @type {{label: string; project?: string; run: () => unknown} | null} */
   let toastAction = null;
   let toastEvents = createLifecycle();
+  const toastElement = $("#toast");
   function renderPersistentErrors() {
     const root = $("#persistentErrors");
     if (!root) return;
@@ -81,20 +82,25 @@ export function assembleNotices({ mutations, $, state, t }) {
     clearTimeout(toastTimer);
     toastAction = null;
     toastEvents.dispose();
-    const e = $("#toast");
+    const e = toastElement;
     e.classList.remove("show", "has-action");
     e.replaceChildren();
   }
   /** @param {string} text @param {number} duration @param {{label: string; project?: string; run: () => unknown} | null} action */
   function toast(text, duration = 2200, action = null) {
-    const e = $("#toast");
+    const e = toastElement;
     // Native dialogs form a top layer; feedback must belong to the active dialog to remain visible.
-    (Array.from(document.querySelectorAll("dialog:modal")).at(-1) || document.body).append(e);
+    const owner = Array.from(document.querySelectorAll("dialog:modal")).at(-1);
+    (owner || document.body).append(e);
     setOpaqueText(e, text);
     e.classList.toggle("has-action", Boolean(action));
     toastAction = action;
     toastEvents.dispose();
     toastEvents = createLifecycle();
+    if (owner)
+      toastEvents.on(owner, "close", () => {
+        if (e.parentElement === owner || !e.isConnected) document.body.append(e);
+      });
     const expire = () => {
       clearTimeout(toastTimer);
       toastTimer = setTimeout(dismissToast, duration);

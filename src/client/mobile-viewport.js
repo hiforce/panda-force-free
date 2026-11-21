@@ -1,4 +1,4 @@
-import { workbenchRouteSurface } from "./workbench-route.js";
+import { workbenchRouteSurface, isBotConversationRoute } from "./workbench-route.js";
 
 export function trackMobileViewport() {
   const root = document.documentElement;
@@ -27,7 +27,7 @@ export function trackMobileViewport() {
     if (!(input instanceof HTMLTextAreaElement)) return;
     const composer = input.closest(".composer, .message-composer"),
       scroller = input.closest(".workbench-view, .creation-entry-layout .conversation");
-    if (!composer || !scroller) return;
+    if (!composer || !scroller || composer.closest(".conversation-workspace-view")) return;
     const bounds = composer.getBoundingClientRect(),
       visible = scroller.getBoundingClientRect();
     // The home composer is inline; session composers already own their bottom dock.
@@ -40,7 +40,7 @@ export function trackMobileViewport() {
     const mobile = root.classList.contains("mobile-device") || matchMedia("(max-width:767px)").matches;
     // Keep native pinch zoom: only adapt the keyboard/browser-chrome viewport at normal scale.
     const active = mobile && viewport && Math.abs(viewport.scale - 1) < 0.02 && viewport.height > 0;
-    const conversation = workbenchRouteSurface() === "conversation",
+    const conversation = workbenchRouteSurface() === "conversation" || isBotConversationRoute(),
       pinned = active && (editing() || conversation);
     root.classList.toggle("soft-keyboard-open", Boolean(pinned && innerHeight - viewport.height > 110));
     root.classList.toggle("visual-viewport-active", Boolean(active));

@@ -15,6 +15,7 @@ import { BotChatWorker } from "./chat-worker.js";
 import { botWorkspaceOverview } from "./overview.js";
 import type { BotChatContextPort } from "./chat-context.js";
 import { requestLocale } from "../../i18n/request-locale.js";
+import type { ApplicationRuntimePort } from "../../engines/application-tools/runtime-port.js";
 
 export function createBotWorkspaceFeature(options: {
   stateRoot: string;
@@ -24,22 +25,30 @@ export function createBotWorkspaceFeature(options: {
   owner(context: RouteContext): string;
   engine?: (bot: BotConfig) => ApplicationToolEngine;
   chatContext?: BotChatContextPort;
+  runtimes?: ApplicationRuntimePort;
 }) {
   const root = join(options.stateRoot, "bots", "human"),
     directory = (id: string) => join(root, id),
-    service = new BotChatService(options.store, options.chatContext),
+    service = new BotChatService(
+      options.store,
+      options.chatContext,
+      options.runtimes ? (owner, bot) => options.runtimes!.resolve(owner, bot) : undefined,
+    ),
     worker = new BotChatWorker(
       options.store,
       options.engine ??
         ((bot) =>
-          createCodexApplicationEngine({
-            connection: options.connection,
-            scratchDirectory: directory(bot.id),
-            version: options.version,
-            purpose: "bot-chat",
-            ...(bot.model ? { model: bot.model } : {}),
-            timeoutMs: 180000,
-          })),
+          options.runtimes
+            ? options.runtimes.engine(bot.owner, bot, directory(bot.id), "bot-chat")
+            : createCodexApplicationEngine({
+                connection: options.connection,
+                scratchDirectory: directory(bot.id),
+                version: options.version,
+                purpose: "bot-chat",
+                ...(bot.model ? { model: bot.model } : {}),
+                effort: bot.effort ?? "",
+                timeoutMs: 180000,
+              })),
       directory,
       options.chatContext,
     );

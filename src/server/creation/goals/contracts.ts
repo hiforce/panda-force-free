@@ -43,20 +43,21 @@ export interface CreationGoalStore {
   ): CreationResult<CreationGoalEvent>;
 }
 export function creationGoalCommand(value: unknown): CreationGoalCommand {
-  const row = creationRecord(value, ["id", "action", "objective", "model", "effort"]);
+  const row = creationRecord(value, ["id", "action", "objective", "runtimeId", "model", "effort"]);
   if (!["set", "create", "pause", "resume", "clear"].includes(String(row.action)))
     throw new CreationError("invalidInput");
   const action = row.action as CreationGoalCommand["action"];
   if (
     !["set", "create"].includes(action) &&
-    [row.objective, row.model, row.effort].some((value) => value !== undefined)
+    [row.objective, row.runtimeId, row.model, row.effort].some((value) => value !== undefined)
   )
     throw new CreationError("invalidInput");
   return {
     id: creationUuid(row.id),
     action,
+    ...(row.runtimeId === undefined ? {} : { runtimeId: creationId(row.runtimeId) }),
     ...(row.model === undefined ? {} : { model: creationText(row.model, 128) }),
-    ...(row.effort === undefined ? {} : { effort: creationId(row.effort) }),
+    ...(row.effort === undefined ? {} : { effort: creationText(row.effort, 64) }),
     ...(["set", "create"].includes(action) ? { objective: creationGoalObjective(row.objective) } : {}),
   };
 }

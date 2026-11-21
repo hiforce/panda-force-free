@@ -1,3 +1,4 @@
+import { deleteMySQLProfile } from "./profile-deletion.js";
 import { duplicateBotRecord as duplicate } from "./mysql-context.js";
 import { MySQLBotProfiles } from "./mysql-profiles.js";
 import { MySQLBotKeys } from "./mysql-keys.js";
@@ -74,6 +75,9 @@ export class MySQLBotStore implements BotRepository {
   createBot = (...args: Parameters<MySQLBotProfiles["createBot"]>) => this.profiles.createBot(...args);
   updateBot = (...args: Parameters<MySQLBotProfiles["updateBot"]>) => this.profiles.updateBot(...args);
   configureBot = (...args: Parameters<MySQLBotProfiles["configureBot"]>) => this.profiles.configureBot(...args);
+  deleteBot(owner: string, id: string) {
+    return deleteMySQLProfile(this.context, owner, id);
+  }
   keys = (...args: Parameters<MySQLBotKeys["keys"]>) => this.credentials.keys(...args);
   issue = (...args: Parameters<MySQLBotKeys["issue"]>) => this.credentials.issue(...args);
   revoke = (...args: Parameters<MySQLBotKeys["revoke"]>) => this.credentials.revoke(...args);
@@ -98,7 +102,7 @@ export class MySQLBotStore implements BotRepository {
     return this.context
       .transaction(async (sql) => {
         botText(idem, 256);
-        const current = await this.profiles.readBot(sql, bot.owner, bot.id);
+        const current = await this.profiles.readBot(sql, bot.owner, bot.id, true);
         for (const action of botTaskActions({ input }))
           if (action.callback && !current.callbackHosts.includes(new URL(action.callback.url).hostname))
             throw new BotError("callbackHostDenied", 403);

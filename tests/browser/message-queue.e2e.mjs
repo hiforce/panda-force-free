@@ -1,3 +1,4 @@
+import { fillComposer } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { launchOptions } from "../support/browser-runtime.mjs";
@@ -95,24 +96,25 @@ try {
   const page = await context.newPage(),
     errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(base, { waitUntil: "networkidle" });
+  await page.goto(base + "/task/A", { waitUntil: "networkidle" });
   await page.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === "ready");
+  await page.waitForFunction(() => !document.body.classList.contains("workspace-booting"));
   await fixture(page);
   assert.equal(await page.locator("[data-composer-control=dictation]").count(), 0);
   await page.evaluate(() => (window.__queueHold = true));
-  await page.locator("#prompt").fill("Same text");
+  await fillComposer(page, "Same text");
   await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => Boolean(window.__queueRelease));
   assert.equal(await page.locator(".message-queue-row[data-status=sending]").textContent(), "Same textQueueing…");
   assert.equal(await page.locator("#prompt").inputValue(), "");
-  await page.locator("#prompt").fill("Blocked duplicate");
+  await fillComposer(page, "Blocked duplicate");
   assert.equal(await page.locator("#queueButton").isDisabled(), true);
   await page.locator("#prompt").press("Tab");
   assert.equal(
     await page.evaluate(() => window.__queueCalls.filter((call) => call.method === "thread/queue/add").length),
     1,
   );
-  await page.locator("#prompt").fill("");
+  await fillComposer(page, "");
   await page.evaluate(() => {
     window.__queueHold = false;
     window.__queueRelease();
@@ -125,7 +127,7 @@ try {
   // A new browser reads the native queue, rather than relying on the first page's memory.
   const saved = await page.evaluate(() => window.__queueEntries);
   const second = await context.newPage();
-  await second.goto(base, { waitUntil: "networkidle" });
+  await second.goto(base + "/task/A", { waitUntil: "networkidle" });
   await second.waitForFunction(() => globalThis.__pandaForceDebug?.state.modelLoadStatus === "ready");
   await fixture(second, saved);
   await second.waitForFunction(() => document.querySelector(".message-queue-row[data-status=queued]"));
@@ -150,7 +152,7 @@ try {
   assert.equal(await page.locator("#messageQueue").isVisible(), false);
   assert.equal(await page.locator(".user-message").count(), 2);
   // Tab queues, but composition confirmation and Shift+Tab do not.
-  await page.locator("#prompt").fill("Tab message");
+  await fillComposer(page, "Tab message");
   await page.locator("#prompt").evaluate((input) => {
     input.dispatchEvent(new CompositionEvent("compositionstart"));
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
@@ -169,7 +171,7 @@ try {
   await page.waitForFunction(() => document.querySelector("#messageQueue").hidden);
   // Rejections restore the draft; lost acks reconcile using the server snapshot, without retrying add.
   await page.evaluate(() => (window.__queueReject = true));
-  await page.locator("#prompt").fill("Rejected draft");
+  await fillComposer(page, "Rejected draft");
   await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => document.querySelector(".message-queue-row[data-status=failed]"));
   assert.equal(await page.locator("#prompt").inputValue(), "Rejected draft");
@@ -178,7 +180,7 @@ try {
     window.__queueReject = false;
     window.__queueLost = true;
   });
-  await page.locator("#prompt").fill("Lost ack");
+  await fillComposer(page, "Lost ack");
   await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => document.querySelector(".message-queue-row[data-status=queued]"));
   assert.equal(
@@ -197,7 +199,7 @@ try {
     window.__createHold = true;
     globalThis.__pandaForceDebug.startNewTask();
   });
-  await page.locator("#prompt").fill("New session queue");
+  await fillComposer(page, "New session queue");
   await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => Boolean(window.__createRelease));
   assert.equal(await page.locator(".message-queue-text").textContent(), "New session queue");
@@ -215,7 +217,7 @@ try {
     await page.locator("#composerSettingsButton").evaluate((node) => node.getBoundingClientRect().right <= innerWidth),
   );
   await page.evaluate(() => globalThis.__pandaForceI18n.setPreference("zh-CN"));
-  await page.locator("#prompt").fill("Queue");
+  await fillComposer(page, "Queue");
   await page.locator("#prompt").press("Tab");
   await page.waitForFunction(() => document.querySelectorAll(".message-queue-row[data-status=queued]").length === 2);
   assert.equal(await page.locator(".message-queue-text").last().textContent(), "Queue");

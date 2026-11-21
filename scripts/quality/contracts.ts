@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { auditInterfaceStyles } from "./interface-styles.mjs";
 import { spawnSync } from "node:child_process";
+import { clientStyles } from "../client-styles.mjs";
 
 /** Contracts stay portable and explicit; runtime implementations satisfy them in composition. */
 export function inspectContracts(directory?: string) {
@@ -41,6 +42,7 @@ if (import.meta.main) {
   const i18n = spawnSync(process.execPath, ["scripts/i18n/validate.mjs"], { encoding: "utf8" });
   if (i18n.status !== 0) result.failures.push("Internationalization: " + (i18n.stderr || i18n.stdout || i18n.error));
   result.failures.push(...interfaceStyles.failures);
+  result.failures.push(...clientStyles().failures);
   console.log(JSON.stringify({ ...result, interfaceStyles, i18n: i18n.stdout.trim() }));
   if (result.failures.length) process.exitCode = 1;
 }

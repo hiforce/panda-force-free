@@ -38,5 +38,6 @@
   "directoryLoadFailed": "Could not load folders. You can still search for sessions.",
   "recentTab": "Recent",
   "foldersTab": "Folders",
-  "browseByFolder": "Browse sessions by working folder"
+  "browseByFolder": "Browse sessions by working folder",
+  "deleteHarnessMessage": "Delete “{title}”? You will no longer be able to open or continue this conversation in PandaForce. Project files are preserved."
 }

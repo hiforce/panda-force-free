@@ -106,7 +106,7 @@ try {
       page.on("pageerror", (error) => errors.push(error.message));
       page.setDefaultTimeout(20000);
       await page.goto(app.base + "/bots/" + bot.id + "/chat");
-      await page.locator("[data-clear]:enabled").waitFor();
+      await page.locator("[data-clear]:enabled").waitFor({ state: "attached" });
       const form = page.locator(".bot-chat-composer"),
         plus = form.locator("[data-composer-control=add]"),
         input = form.locator("[data-message]"),
@@ -177,10 +177,11 @@ try {
       await page.waitForFunction(
         () => document.querySelectorAll('.bot-chat-composer .composer-attachment[data-status="ready"]').length === 3,
       );
-      await page.locator(`a[href="/bots/${bot.id}/tasks"]`).click();
+      await page.locator("[data-chat-options]").click();
+      await page.locator(`.bot-chat-menu [data-route="/bots/${bot.id}/tasks"]`).click();
       await page.locator("[data-bot-task-rows]").waitFor();
       await page.goBack();
-      await page.locator("[data-clear]:enabled").waitFor();
+      await page.locator("[data-clear]:enabled").waitFor({ state: "attached" });
       assert.equal(await input.inputValue(), "Create a document using the selected references and skill.");
       assert.equal(await form.locator(".composer-attachment").count(), 3);
       assert.equal(await form.locator("[data-selected-skill]").count(), 1);

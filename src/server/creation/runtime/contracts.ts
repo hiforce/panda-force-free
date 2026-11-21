@@ -19,7 +19,7 @@ export interface CreationRunTasks extends CreationExecutionTasks {
   heartbeat(lease: CreationLease, now: number, leaseMs: number): CreationResult<void>;
 }
 export interface CreationEngines {
-  select(profile: CreationEngineProfile): ApplicationToolEngine;
+  select(profile: CreationEngineProfile, owner?: string): ApplicationToolEngine;
 }
 export interface CreationRunPermit {
   suspend(): void;

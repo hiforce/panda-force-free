@@ -27,13 +27,26 @@ export async function forgetCodexApplicationSession(
         try {
           current = await transport.request("thread/read", { threadId: sessionId, includeTurns: false });
         } catch (error) {
-          if (error instanceof Error && /(?:thread|conversation).*(?:not found|does not exist)/i.test(error.message))
-            return;
-          throw error;
+          const missing = (value: unknown) =>
+            value instanceof Error &&
+            /(?:(?:thread|conversation).*(?:not found|does not exist)|no rollout found for thread)/i.test(
+              value.message,
+            );
+          if (missing(error)) return;
+          if (!(error instanceof Error) || !/thread not loaded/i.test(error.message)) throw error;
+          // An unloaded thread may still have a saved rollout. Resolve it without starting a turn;
+          // only a confirmed absent rollout makes cleanup an idempotent success.
+          try {
+            current = await transport.request("thread/resume", { threadId: sessionId });
+          } catch (resumeError) {
+            if (missing(resumeError)) return;
+            throw resumeError;
+          }
         }
         if (
           !isRecord(current) ||
           !isRecord(current.thread) ||
+          current.thread.id !== sessionId ||
           typeof current.thread.cwd !== "string" ||
           resolve(current.thread.cwd) !== resolve(options.scratchDirectory)
         )

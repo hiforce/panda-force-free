@@ -16,7 +16,7 @@
     "test:e2e": "bun scripts/testing/run.mjs browser",
     "test:browser:failure-paths": "bun scripts/testing/run.mjs failure-paths",
     "build:client": "bun scripts/build-client.mjs",
-    "build:server": "bun build src/server/main.ts --target=bun --external=ssh2 --outfile=dist/server.js && bun build src/server/terminal/worker.js --target=node --external=node-pty --outfile=dist/worker.js && bun build scripts/start.ts --target=bun --outfile=dist/start.js && bun build src/server/cluster/gateway.ts --target=bun --outfile=dist/gateway.js",
+    "build:server": "bun build src/server/main.ts --target=bun --external=ssh2 --outfile=dist/server.js && bun build src/server/terminal/worker.js --target=node --external=node-pty --outfile=dist/worker.js && bun build scripts/start.ts --target=bun --outfile=dist/start.js && bun build src/server/cluster/gateway.ts --target=bun --outfile=dist/gateway.js && bun build src/server/harness/history-cli.ts --target=bun --outfile=dist/harness-history.js",
     "test:browser:runtime": "bun scripts/testing/run.mjs runtime",
     "test:architecture": "bun test tests/unit/client-architecture.test.ts",
     "test:browser:i1": "bun scripts/testing/run.mjs workbench",

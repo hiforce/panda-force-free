@@ -598,5 +598,7 @@
   "pageLoadFailed": "页面暂时无法加载，请重试。",
   "pageReloadRequired": "请刷新页面后继续。",
   "openSourceAttribution": "开源团队署名",
-  "openSourceLicense": "MIT 开源许可"
+  "openSourceLicense": "MIT 开源许可",
+  "sidebarMenu": "菜单",
+  "sidebarSections": "侧栏内容切换"
 }

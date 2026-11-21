@@ -85,7 +85,7 @@ try {
     };
     window.__startupLoad = api.loadInitial();
   });
-  await page.waitForSelector('.thread-item[data-id="fast-session"]');
+  await page.waitForSelector('.thread-item[data-id="fast-session"]', { state: "attached" });
   await page.waitForFunction(
     () => window.__startupPending.has("model/list") && window.__startupPending.has("permissionProfile/list"),
   );
@@ -107,7 +107,7 @@ try {
     for (const resolve of window.__startupPending.values()) resolve();
     await window.__startupLoad;
   });
-  await page.waitForSelector('.thread-item[data-id="fast-session"]');
+  await page.waitForSelector('.thread-item[data-id="fast-session"]', { state: "attached" });
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({

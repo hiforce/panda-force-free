@@ -31,7 +31,10 @@ try {
       const initialProviderCount = providerRequests.length;
       await app.signIn(context);
       const api = async (path, data, method = data ? "post" : "get") => {
-        const response = await context.request[method](app.base + path, { data });
+        const response = await context.request[method](app.base + path, {
+          data,
+          headers: { ...app.headers, Origin: app.base },
+        });
         assert.ok(response.ok(), path + ": " + (await response.text()));
         return response.json();
       };

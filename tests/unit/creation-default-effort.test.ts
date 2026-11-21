@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 import { defaultCreationEffort } from "../../src/shared/creation/effort.js";
 import { CreationProfiles } from "../../src/server/creation/integration/profiles.js";
 
-test("creation uses the strongest advertised effort instead of the model default", async () => {
-  expect(defaultCreationEffort(["low", "medium", "high", "xhigh"], "low")).toBe("xhigh");
-  expect(defaultCreationEffort(["medium", "high"], "medium")).toBe("high");
+test("creation uses the advertised model default consistently with other runtime selections", async () => {
+  expect(defaultCreationEffort(["low", "medium", "high", "xhigh"], "low")).toBe("low");
+  expect(defaultCreationEffort(["medium", "high"], "medium")).toBe("medium");
   expect(defaultCreationEffort(["medium"], "medium")).toBe("medium");
   let reads = 0;
   const catalog = {
@@ -28,11 +28,11 @@ test("creation uses the strongest advertised effort instead of the model default
       return catalog;
     },
   );
-  expect((await profiles.resolve("writer")).effort).toBe("xhigh");
+  expect((await profiles.resolve("writer")).effort).toBe("low");
   expect(reads).toBe(1);
   expect((await profiles.resolve("writer", { model: "writer", effort: "medium" })).effort).toBe("medium");
   catalog.data[0]!.supportedReasoningEfforts.pop();
-  expect((await profiles.resolve("writer")).effort).toBe("high");
+  expect((await profiles.resolve("writer")).effort).toBe("low");
   await expect(profiles.resolve("writer", { model: "writer", effort: "xhigh" })).rejects.toThrow();
 });
 

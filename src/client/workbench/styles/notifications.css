@@ -1,0 +1,57 @@
+/* PandaForce product tokens. Semantic aliases preserve the native conversation tools. */
+.activity-group[hidden],
+.activity-item[hidden],
+.activity-output[hidden] {
+  display: none !important;
+}
+.panda-session-notice[hidden] {
+  display: none;
+}
+.panda-session-notice {
+  position: fixed;
+  z-index: 1200;
+  top: 76px;
+  inset-inline-end: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: min(480px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius);
+  background: var(--pf-card);
+  color: var(--pf-ink);
+  box-shadow: 0 8px 28px #0002;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.panda-session-message {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.panda-session-notice button {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--pf-line);
+  border-radius: 8px;
+  background: var(--pf-soft);
+  color: var(--pf-ink);
+  cursor: pointer;
+  font: inherit;
+}
+.panda-session-notice button:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .panda-session-notice {
+    top: 68px;
+    inset-inline-end: 12px;
+    width: calc(100vw - 24px);
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+}

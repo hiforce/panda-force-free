@@ -1,3 +1,5 @@
+import { applicationDefaultModel, applicationDefaultEffort } from "../../engines/application-tools/default-model.js";
+import type { ApplicationRuntimePort } from "../../engines/application-tools/runtime-port.js";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { CreationEngineProfile } from "../../../shared/creation/contracts.js";
@@ -58,11 +60,31 @@ export class CreationProfiles {
     private readonly engines: ReadonlySet<string>,
     private readonly defaultModel: (engineId: string, catalog?: unknown) => Promise<string>,
     private readonly models?: () => Promise<unknown>,
+    private readonly runtimes?: ApplicationRuntimePort,
   ) {}
-  async resolve(id: string, selection?: { model?: string; effort?: string }) {
+  async resolve(id: string, selection?: { runtimeId?: string; model?: string; effort?: string }, owner?: string) {
     const configured = this.settings.profiles.find((profile) => profile.id === id);
     if (!this.settings.enabled || !configured || !this.engines.has(configured.engineId))
       throw new CreationError("unavailable");
+    if (this.runtimes && selection?.runtimeId && owner) {
+      try {
+        const selected = await this.runtimes.resolve(owner, selection);
+        const mediaCatalog =
+          selected.runtimeId !== "codex" && this.models ? await this.models().catch(() => null) : null;
+        const mediaModel = mediaCatalog ? applicationDefaultModel(mediaCatalog) : null;
+        const mediaEffort = mediaModel ? applicationDefaultEffort(mediaCatalog, mediaModel) : null;
+        return {
+          ...configured,
+          runtimeId: selected.runtimeId,
+          model: selected.model,
+          effort: selected.effort || undefined,
+          ...(mediaModel ? { media: { model: mediaModel, ...(mediaEffort ? { effort: mediaEffort } : {}) } } : {}),
+          engineId: selected.runtimeId === "codex" ? "codex" : `harness-${selected.runtimeId}`,
+        };
+      } catch {
+        throw new CreationError("unavailable");
+      }
+    }
     const validate = Boolean(selection?.model || selection?.effort),
       catalog = this.models && (validate || !configured.effort) ? await this.models() : undefined;
     const result = {
@@ -101,6 +123,12 @@ export class CreationProfiles {
         state: this.settings.invalid ? ("unavailable" as const) : ("unconfigured" as const),
         profiles: [],
         defaultProfileId: null,
+      };
+    if (this.runtimes && this.settings.profiles.every((profile) => this.engines.has(profile.engineId)))
+      return {
+        state: "ready" as const,
+        profiles: this.settings.profiles.map((profile) => ({ ...profile })),
+        defaultProfileId: this.settings.defaultProfileId,
       };
     try {
       const profiles = await Promise.all(this.settings.profiles.map((profile) => this.resolve(profile.id)));

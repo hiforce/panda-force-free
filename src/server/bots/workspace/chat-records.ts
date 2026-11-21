@@ -7,13 +7,14 @@ export interface BotChatState {
   generation: number;
   sequence: number;
   sessionId: string | null;
+  runtimeId?: string;
   toolset?: "materials-v1";
   updatedAt: number;
   pending: null | {
     requestId: string;
     userId: string;
     assistantId: string;
-    bot: Pick<BotConfig, "name" | "model" | "instructions" | "persona">;
+    bot: Pick<BotConfig, "name" | "runtimeId" | "model" | "effort" | "instructions" | "persona">;
     lease: string | null;
     runId?: string;
     context?: BotChatContext;
@@ -27,7 +28,8 @@ export interface BotChatReceipt {
   userId?: string;
 }
 export type BotChatCleanup = (
-  { type: "engine"; sessionId: string; model: string } | { type: "records"; throughGeneration: number }
+  | { type: "engine"; sessionId: string; model: string; runtimeId?: string }
+  | { type: "records"; throughGeneration: number }
 ) & { lease?: string; attempts?: number; failure?: "cleanupUnavailable" | "providerDeletionUnavailable" };
 
 export const chatPrefix = (botId: string, generation: number) =>

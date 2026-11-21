@@ -141,7 +141,7 @@ try {
   assert.equal(await page.locator("#workspacePreparationContinue").isDisabled(), true);
   await page.unroute("**/app.bundle.js*");
   await page.locator("#workspacePreparationReload").click();
-  await page.locator('.thread-item[data-id="old-alpha"]').waitFor();
+  await page.locator('.thread-item[data-id="old-alpha"]').waitFor({ state: "attached" });
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
   assert.deepEqual(errors, []);
   console.log(

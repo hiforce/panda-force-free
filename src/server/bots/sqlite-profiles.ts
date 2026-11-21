@@ -24,6 +24,8 @@ export class SQLiteBotProfiles {
     return JSON.parse(r.data);
   }
   saveBot(bot: BotConfig) {
+    if (this.db.query("SELECT 1 FROM bot_schema_meta WHERE id=?").get("deleted-profile:" + bot.owner + ":" + bot.id))
+      throw new BotError("notFound", 404);
     if (bot.avatar?.type === "image") this.avatars.read(bot.owner, bot.avatar.id);
     try {
       this.db
@@ -72,7 +74,14 @@ export class SQLiteBotProfiles {
       })
       .immediate();
   }
-  setSession(owner: string, id: string, sessionId: string) {
-    return this.db.transaction(() => this.saveBot({ ...this.bot(owner, id), sessionId })).immediate();
+  setSession(owner: string, id: string, sessionId: string, runtimeId?: string) {
+    return this.db
+      .transaction(() => {
+        const current = this.bot(owner, id);
+        return runtimeId && (current.runtimeId ?? "codex") !== runtimeId
+          ? current
+          : this.saveBot({ ...current, sessionId });
+      })
+      .immediate();
   }
 }

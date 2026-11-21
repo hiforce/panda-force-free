@@ -1,3 +1,4 @@
+import { supportedEffort } from "../shared/engine/runtime-selection.js";
 import { readAsyncQuestions, retireAnsweredAsyncQuestions } from "../shared/engine/async-questions.js";
 import { canonicalAttachmentUrl } from "../shared/attachment-urls.js";
 
@@ -113,12 +114,10 @@ export function selectModelState(models, requestedModel) {
   const catalog = Array.isArray(models) ? models : [];
   const selected = catalog.find((item) => item.model === requestedModel) ||
     catalog.find((item) => item.isDefault) ||
-    catalog[0] || { model: "", defaultReasoningEffort: "medium", supportedReasoningEfforts: [] };
+    catalog[0] || { model: "", defaultReasoningEffort: "", supportedReasoningEfforts: [] };
   const efforts = (selected.supportedReasoningEfforts || []).map((item) => item.reasoningEffort).filter(Boolean);
-  const effort = efforts.includes(selected.defaultReasoningEffort)
-    ? selected.defaultReasoningEffort
-    : efforts[0] || selected.defaultReasoningEffort || "medium";
-  return { model: selected.model, effort, efforts: efforts.length ? efforts : [effort] };
+  const effort = supportedEffort(efforts, "", selected.defaultReasoningEffort || "");
+  return { model: selected.model, effort, efforts };
 }
 
 export function filterAppModels(models) {

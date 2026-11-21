@@ -8,6 +8,7 @@ import { botReplyParts, botReplyHtml, bindBotReplyContent, bindBotCopy } from ".
 import { createBotComposerContext, type BotComposerDraft } from "./chat-composer-context.js";
 import { codexIcon } from "../codex-icons.js";
 import { localizedText } from "../../shared/presentation/localized.js";
+import { createConversationViewport } from "../conversation-viewport.js";
 
 export interface BotChatDraft extends BotComposerDraft {
   text: string;
@@ -23,8 +24,9 @@ export function createBotHumanChat(
   botName: string,
   draft: BotChatDraft,
   identity: string,
+  actionsHost: HTMLElement,
 ) {
-  const { h, button, iconButton, attributes } = botUi(context.t),
+  const { h, button, attributes } = botUi(context.t),
     base = "/" + botId + "/chat";
   let alive = true,
     generation = 0,
@@ -44,7 +46,7 @@ export function createBotHumanChat(
     elements = new Map<string, HTMLElement>();
   setMessageHtml(
     host,
-    `<section class="bot-human-chat"><div class="bot-chat-tools">${iconButton("bots.loadEarlier", "chevronsUp", "data-earlier disabled")}<div>${iconButton("bots.copyConversation", "copy", "data-copy-conversation disabled")}${iconButton("bots.clearChat", "trash", "data-clear disabled")}</div></div><div class="bot-chat-cleanup" data-cleanup role="status" hidden></div><div class="bot-chat-history" role="log" aria-live="polite" aria-relevant="additions" data-history></div><form class="bot-chat-composer message-composer"><div class="message-composer-body"><div class="composer-attachments" hidden></div><div class="creative-selected-skills"></div><label><span class="sr-only">${h("bots.messageLabel")}</span><textarea class="message-composer-input" data-message rows="3" maxlength="32000" enterkeyhint="send" ${attributes("placeholder", "bots.messagePlaceholder")} required></textarea></label><input type="file" data-chat-files hidden multiple><div class="message-composer-footer"><button type="button" class="add-control" data-composer-control="add">${codexIcon("plus")}</button><div class="composer-right"><p data-reply-status role="status"></p>${button("bots.resolvePreviousSend", "data-send-recovery hidden")}<button class="send-button" type="submit" ${attributes("aria-label", "bots.send")} disabled>${codexIcon("arrowUp")}</button></div></div></div></form></section>`,
+    `<section class="bot-human-chat"><div data-chat-actions>${button("bots.copyConversation", "data-copy-conversation disabled", false, "copy")}${button("bots.clearChat", "data-clear disabled", false, "trash")}</div><div class="bot-chat-cleanup" data-cleanup role="status" hidden></div><div class="bot-chat-viewport"><div class="bot-chat-history conversation-scroll-region" role="log" aria-live="polite" aria-relevant="additions" tabindex="0" ${attributes("aria-label", "bots.chat")} data-history></div><button type="button" class="conversation-scroll-bottom bot-chat-jump" data-chat-latest ${attributes("aria-label", "common.jumpToLatestMessages")} ${attributes("title", "common.jumpToLatestMessages")} hidden>${codexIcon("chevronsDown")}</button></div><div class="bot-chat-dock"><form class="bot-chat-composer message-composer"><div class="message-composer-body"><div class="composer-attachments" hidden></div><div class="creative-selected-skills"></div><label><span class="sr-only">${h("bots.messageLabel")}</span><textarea class="message-composer-input" data-message rows="3" maxlength="32000" enterkeyhint="send" ${attributes("placeholder", "bots.messagePlaceholder")} required></textarea></label><input type="file" data-chat-files hidden multiple><div class="message-composer-footer"><button type="button" class="add-control" data-composer-control="add">${codexIcon("plus")}</button><div class="composer-right"><p data-reply-status role="status"></p>${button("bots.resolvePreviousSend", "data-send-recovery hidden")}<button class="send-button" type="submit" ${attributes("aria-label", "bots.send")} disabled>${codexIcon("arrowUp")}</button></div></div></div></form></div></section>`,
   );
   const copyFeedback = document.createElement("span");
   copyFeedback.className = "sr-only";
@@ -59,11 +61,19 @@ export function createBotHumanChat(
     submit = host.querySelector<HTMLButtonElement>("[type=submit]")!,
     clear = host.querySelector<HTMLButtonElement>("[data-clear]")!,
     copyConversation = host.querySelector<HTMLButtonElement>("[data-copy-conversation]")!,
-    earlier = host.querySelector<HTMLButtonElement>("[data-earlier]")!,
     history = host.querySelector<HTMLElement>("[data-history]")!,
     status = host.querySelector<HTMLElement>("[data-reply-status]")!,
     cleanupElement = host.querySelector<HTMLElement>("[data-cleanup]")!,
     form = host.querySelector<HTMLFormElement>("form")!;
+  const viewport = createConversationViewport(history, host.querySelector<HTMLButtonElement>("[data-chat-latest]"));
+  const actions = host.querySelector<HTMLElement>("[data-chat-actions]")!,
+    earlierRow = document.createElement("div");
+  earlierRow.className = "bot-chat-earlier";
+  setMessageHtml(earlierRow, button("bots.loadEarlier", "data-earlier hidden disabled", false, "chevronsUp"));
+  const earlier = earlierRow.querySelector<HTMLButtonElement>("button")!;
+  history.prepend(earlierRow);
+  actionsHost.append(actions);
+  viewport.bind();
   input.value = draft.text;
   const channel = typeof BroadcastChannel === "function" ? new BroadcastChannel("panda-bot-human-chat") : null;
   let composerContext: ReturnType<typeof createBotComposerContext> | undefined;
@@ -74,6 +84,8 @@ export function createBotHumanChat(
     clear.disabled = !generation;
     copyConversation.disabled = !generation || !messages.size || copyConversation.getAttribute("aria-busy") === "true";
     earlier.disabled = !hasMore || paging;
+    earlierRow.hidden = !hasMore;
+    earlier.hidden = !hasMore;
     host.querySelector<HTMLButtonElement>("[data-send-recovery]")!.hidden = !draft.uncertain || sending;
     status.textContent = sending ? context.t("bots.sending") : busy ? context.t("bots.replying") : "";
   }
@@ -90,6 +102,7 @@ export function createBotHumanChat(
     elements.clear();
     cursor = "";
     history.replaceChildren();
+    viewport.resetAutoScroll();
     oldest = 0;
     hasMore = false;
     if (draft.generation && draft.generation !== next) {
@@ -100,8 +113,8 @@ export function createBotHumanChat(
     draft.generation = next;
   }
   function draw() {
-    const atEnd = history.getBoundingClientRect().bottom < innerHeight + 160,
-      ordered = [...messages.values()].sort((a, b) => a.sequence - b.sequence);
+    if (history.firstElementChild !== earlierRow) history.prepend(earlierRow);
+    const ordered = [...messages.values()].sort((a, b) => a.sequence - b.sequence);
     history.querySelector("[data-chat-empty]")?.remove();
     if (!ordered.length)
       setMessageHtml(history, `<p class="bot-chat-empty" data-chat-empty>${h("bots.chatEmpty")}</p>`);
@@ -151,11 +164,13 @@ export function createBotHumanChat(
       });
       fingerprints.set(message.id, fingerprint);
     }
-    if (atEnd && ordered.length) history.lastElementChild?.scrollIntoView({ block: "nearest", behavior: "instant" });
     for (const retry of history.querySelectorAll<HTMLButtonElement>("[data-retry-reply]"))
       retry.disabled = sending || busy;
   }
   function accept(snapshot: BotChatSnapshot, older = false) {
+    viewport.preserveReadingPosition(() => renderSnapshot(snapshot, older), { follow: !older });
+  }
+  function renderSnapshot(snapshot: BotChatSnapshot, older: boolean) {
     if (!alive || snapshot.generation < generation) return;
     if (generation !== snapshot.generation) reset(snapshot.generation);
     if (!older && snapshot.replace) {
@@ -250,6 +265,7 @@ export function createBotHumanChat(
       busy = true;
       context.notice("");
       await reload();
+      if (alive && version === current) viewport.scrollBottom({ force: true });
     } catch (error) {
       if (alive && version === current) {
         const code = error instanceof Error ? error.message : "";
@@ -340,15 +356,12 @@ export function createBotHumanChat(
     if (paging || !hasMore) return;
     paging = true;
     controls();
-    const current = version,
-      before = history.firstElementChild?.getBoundingClientRect().top ?? 0;
+    const current = version;
     void context.execute(async () => {
       try {
         const snapshot = await context.api<BotChatSnapshot>(base + "?before=" + oldest);
         if (alive && current === version && snapshot.generation === generation) {
-          const anchor = history.firstElementChild;
           accept(snapshot, true);
-          if (anchor) window.scrollBy(0, anchor.getBoundingClientRect().top - before);
         }
       } finally {
         paging = false;
@@ -417,6 +430,8 @@ export function createBotHumanChat(
       draft.text = input.value;
       channel?.close();
       composerContext?.dispose();
+      viewport.dispose();
+      actions.remove();
     },
   };
 }

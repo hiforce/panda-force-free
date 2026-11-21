@@ -1,3 +1,4 @@
+import { createHarnessSettings } from "../harness/settings.js";
 import { createStorageSettings } from "../original-storage/composed.js";
 import { createDatabaseSettings } from "../database/settings.js";
 import { createBotSettings } from "../bots/settings.js";
@@ -8,6 +9,7 @@ import { createUsersSettings } from "../users/settings.js";
 
 /** Administrative page factories remain independent from the workspace entry and hold no mounted state. */
 export const settingsPageFactories = {
+  harness: createHarnessSettings,
   bots: createBotSettings,
   botWorkspace: createBotWorkspace,
   clients: createCliSettings,

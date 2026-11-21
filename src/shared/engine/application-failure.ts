@@ -8,8 +8,12 @@ export function applicationRunFailure(value: unknown): ApplicationRunFailure {
   const code = typeof raw === "string" ? raw.replace(/[^a-z]/gi, "").toLowerCase() : "";
   if (["ratelimitexceeded", "usagelimitexceeded", "insufficientquota"].includes(code) || value.status === 429)
     return "rateLimited";
-  if (["unauthorized", "authenticationfailed", "invalidapikey"].includes(code) || value.status === 401)
+  if (
+    ["unauthorized", "authenticationfailed", "authentication", "invalidapikey"].includes(code) ||
+    value.status === 401
+  )
     return "authentication";
-  if (["httpconnectionfailed", "streamconnectionfailed", "serveroverloaded"].includes(code)) return "unavailable";
+  if (["httpconnectionfailed", "streamconnectionfailed", "serveroverloaded", "unavailable", "timeout"].includes(code))
+    return "unavailable";
   return "failed";
 }

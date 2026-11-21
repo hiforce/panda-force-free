@@ -1,3 +1,7 @@
+import { createHarnessFeature } from "./harness/feature.js";
+import { applicationRuntimes } from "./harness/application.js";
+import { applicationRuntimeRoutes } from "./engines/application-tools/runtime-routes.js";
+import { createCodexApplicationEngine } from "./engines/application-tools/codex.js";
 import { createOriginalStorageFeature } from "./object-storage/feature.js";
 import { EngineImages } from "./workspace/engine-images.js";
 import { engineImageRoutes } from "./http/engine-image-routes.js";
@@ -212,7 +216,7 @@ const documents = await createApplicationDocuments(
 const { documentFeature, fileDocuments, contentAccess, projectWorkspaces, scopedDocuments, requireDocumentProject } =
   documents;
 const { editorialFeature, publishingFeature, siteBuildFeature, sitePublicationFeature, startDelivery } =
-  await createApplicationPublication(config, projects, documents, extensions, resolveOwner);
+  await createApplicationPublication(config, projects, documents, extensions, resolveOwner, () => applicationRuntime);
 const browserWire = createBrowserWire();
 const clients = new Set<WebSocket>();
 const sseClients = new Set<ServerResponse>();
@@ -244,6 +248,41 @@ const {
   recovery: autoContinueRecovery,
   recoverQueue: recoverMessageQueue,
 } = installedEngine;
+const harnessFeature = await createHarnessFeature({
+  stateRoot: config.stateRoot,
+  defaultCwd,
+  browseRoots,
+  driver: engineDriver,
+  nativeHistory: threadHub,
+  metadata: runtimeStores?.harness,
+  materials: () => conversationMaterials,
+  remoteMaterial: attachmentStorage ? (url) => attachmentStorage.readOriginalUrl(url) : undefined,
+  directoryPolicy,
+  owner: resolveOwner,
+  project: async (owner, project) => {
+    await contentAccess.require(owner, project, "contribute");
+    return projectWorkspaces.ensure(project);
+  },
+  authorizeProject: async (owner, project) => {
+    await contentAccess.require(owner, project, "read");
+  },
+});
+const applicationRuntime = applicationRuntimes({
+  registry: harnessFeature.registry,
+  scratchRoot: join(config.stateRoot, "harness", "catalog"),
+  principal: (owner) =>
+    localAccountFeature?.accounts.runtimePrincipal(owner) ?? Promise.resolve({ owner, administrator: true }),
+  codex: (selection, directory, purpose) =>
+    createCodexApplicationEngine({
+      connection: appServerConnection,
+      scratchDirectory: directory,
+      version: config.version,
+      purpose,
+      model: selection.model || undefined,
+      effort: selection.effort ?? "",
+      timeoutMs: purpose === "creation" ? 600000 : 180000,
+    }),
+});
 const {
   creationFeature,
   personalContent,
@@ -252,6 +291,7 @@ const {
   searchFeature,
   closeMaterialText,
   chatContext,
+  conversationMaterials,
 } = await createApplicationContent(
   config,
   runtimeStores,
@@ -266,6 +306,7 @@ const {
     (!!authState.administrator || allowlist.includes(publicationOwner(authState, context))),
   (project, owner) => searchChanged(project, owner),
   () => (authState.administrator ? publicationOwner(authState, {}) : null),
+  applicationRuntime,
 );
 const authorizeCliProject = async (owner: string, project: string) => {
   if (owner !== publicationOwner(authState, {})) throw new DocumentError("notFound", 404);
@@ -277,6 +318,7 @@ const botOptions = {
   connection: appServerConnection,
   owner: resolveOwner,
   chatContext,
+  runtimes: applicationRuntime,
 };
 const botFeature = runtimeStores
   ? {
@@ -514,6 +556,8 @@ const mime: Record<string, string> = {
 };
 
 const dispatchApiRoute = createRouter([
+  ...harnessFeature.routes,
+  ...applicationRuntimeRoutes(applicationRuntime, resolveOwner),
   ...(localAccountFeature?.routes ?? []),
   ...gadgetFeature.routes,
   ...contentAccess.routes,
@@ -594,6 +638,7 @@ const dispatchApiRoute = createRouter([
   ...siteBuildFeature.routes,
   ...sitePublicationFeature.routes,
   ...bridgeRoutes({
+    projectSessions: harnessFeature.projectSessions,
     projectOwner: (context) => (authState.administrator ? publicationOwner(authState, context) : undefined),
     browserWire,
     projectless,
@@ -862,6 +907,7 @@ function shutdown() {
   siteBuildFeature.stop();
   pluginFeature.stop();
   shuttingDown = true;
+  const harnessDrain = harnessFeature.close();
   // Drain registered-client operations before closing the domain ports they use.
   void drainApplicationBackground({
     cli: cliFeature,
@@ -882,6 +928,7 @@ function shutdown() {
     slides: nativeSlidesFeature,
     sources: packageSourceFeature,
   })
+    .then(() => harnessDrain)
     .then(() => {
       backgroundStopped = true;
       maybeFinishShutdown();

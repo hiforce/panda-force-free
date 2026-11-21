@@ -19,6 +19,7 @@ import { randomUUID } from "node:crypto";
 import { creationInteractionTools } from "./interaction-tools.js";
 import { FILE_DIRECTORY_TOOL, type CreationFileDirectories } from "../file-directories.js";
 import { DOCUMENT_DESTINATIONS_TOOL, type CreationDocumentDestinations } from "../document-destinations.js";
+import { creationToolActivity } from "./activity.js";
 
 /** One leased execution joins immutable input, scoped tools and an engine; durable state owns the outcome. */
 export class CreationWorker {
@@ -121,10 +122,11 @@ export class CreationWorker {
     try {
       signal.throwIfAborted();
       await this.authorize(lease.owner, claim.task.spec.projectId);
+      await record("preparing");
       const input = await this.inputs.read(claim.task.spec),
         directory = await this.workspaces?.open(claim.task.spec),
         history = await this.questions.history(lease.owner, lease.taskId),
-        engine = this.engines.select(input.profile),
+        engine = this.engines.select(input.profile, lease.owner),
         tools = documentCreationTools(
           lease,
           this.tasks,
@@ -257,14 +259,24 @@ export class CreationWorker {
           call: async (call) => {
             await this.authorize(lease.owner, claim.task.spec.projectId);
             signal.throwIfAborted();
-            if (media?.definitions.some((tool) => tool.name === call.name)) {
-              if (call.name === "panda_artifacts_save") await record("saving");
-              return media.call(call);
-            }
-            if ([DOCUMENT_DESTINATIONS_TOOL, FILE_DIRECTORY_TOOL].includes(call.name)) return tools.call(call);
-            if (call.name !== CREATE_DOCUMENT_TOOL) return interaction.call(call);
-            await record("saving");
-            return tools.call(call);
+            boundExecution(call);
+            return creationToolActivity(
+              this.progress,
+              lease,
+              call.name,
+              async () => {
+                if (media?.definitions.some((tool) => tool.name === call.name)) {
+                  if (call.name === "panda_artifacts_save") await record("saving");
+                  return media.call(call);
+                }
+                if ([DOCUMENT_DESTINATIONS_TOOL, FILE_DIRECTORY_TOOL].includes(call.name)) return tools.call(call);
+                if (call.name !== CREATE_DOCUMENT_TOOL) return interaction.call(call);
+                await record("saving");
+                return tools.call(call);
+              },
+              this.now,
+              this.diagnostic,
+            );
           },
           question: async (scope, values) => {
             const bound = execution;

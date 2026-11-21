@@ -106,7 +106,7 @@ async function checkVisibilityFailure() {
     assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.modelLoadStatus), "ready");
     await page.unroute("**/api/projects/visibility");
     await page.evaluate(() => globalThis.__pandaForceDebug.loadInitial());
-    await page.locator('.thread-item[data-id="old-alpha"]').waitFor();
+    await page.locator('.thread-item[data-id="old-alpha"]').waitFor({ state: "attached" });
     assert.deepEqual(errors, []);
   } finally {
     await context.close();

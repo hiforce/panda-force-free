@@ -391,7 +391,7 @@
 .message-composer .composer-setting-button {
   min-width: 0;
   flex: 0 1 auto;
-  margin-inline-start: auto;
+  margin-inline-start: 0;
   padding-inline: var(--pf-space-3);
   gap: var(--pf-space-2);
   font: inherit;
@@ -714,4 +714,130 @@
 }
 .composer-history-status[hidden] {
   display: none;
+}
+/* Harness selection reuses the shared composer controls and sheet geometry. */
+.harness-menu {
+  width: 344px;
+}
+.harness-menu[hidden],
+.harness-trigger[hidden] {
+  display: none;
+}
+.harness-label {
+  min-width: 0;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.harness-hint {
+  margin: var(--pf-space-3) var(--pf-space-2);
+  color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+  line-height: 1.6;
+}
+.harness-interactions {
+  display: grid;
+  gap: var(--pf-space-2);
+  max-block-size: min(320px, 44dvh);
+  overflow: auto;
+  margin-block-end: var(--pf-space-2);
+}
+.harness-interactions:empty {
+  display: none;
+}
+.harness-interactions > .wb-button {
+  justify-self: start;
+  max-inline-size: 100%;
+  white-space: normal;
+}
+.harness-permission {
+  min-width: 0;
+  margin: 0;
+  padding: var(--pf-space-3);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-card);
+  box-shadow: none;
+}
+.harness-permission-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-space-2);
+  font-size: var(--pf-text-body);
+}
+.harness-permission-heading > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--pf-muted);
+}
+.harness-permission-heading > [role="status"] {
+  margin-inline-start: auto;
+  color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+}
+.harness-permission-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin: var(--pf-space-2) 0;
+  color: var(--pf-muted);
+  font:
+    var(--pf-text-meta)/1.5 ui-monospace,
+    monospace;
+}
+.harness-permission-actions {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  padding: var(--pf-space-1) 0;
+  background: var(--pf-card);
+}
+.harness-permission-details {
+  margin-block-start: var(--pf-space-1);
+}
+.harness-permission-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pf-space-2);
+  min-height: var(--pf-touch-target);
+  color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+  cursor: pointer;
+  list-style: none;
+}
+.harness-permission-details > summary::-webkit-details-marker {
+  display: none;
+}
+.harness-permission-details > summary > svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.harness-permission-details[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.harness-permission-details > pre {
+  max-block-size: min(160px, 24dvh);
+  margin: var(--pf-space-1) 0 0;
+  padding: var(--pf-space-2);
+  overflow: auto;
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius-sm);
+  background: var(--pf-soft);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    var(--pf-text-meta)/1.6 ui-monospace,
+    monospace;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .harness-label,
+  .harness-trigger > :last-child {
+    display: none;
+  }
 }

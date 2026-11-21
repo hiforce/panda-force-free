@@ -62,6 +62,7 @@ try {
   assert.equal(await page.evaluate(() => globalThis.notificationTest.requests), 0);
 
   const dialog = page.getByRole("alertdialog");
+  await page.locator("#sidebarSessionsTab").click();
   const options = page.locator('.thread-item[data-id="old-beta"] .thread-options');
   const openDelete = async () => {
     await options.click();
@@ -171,6 +172,7 @@ try {
   await page.waitForFunction(() => document.querySelector("#toggleSidebar").getAttribute("aria-expanded") === "false");
   await page.locator("#workspaceNavigationToggle").click();
   await page.waitForFunction(() => Math.abs(document.querySelector("#sidebar").getBoundingClientRect().left) < 1);
+  await page.locator("#sidebarSessionsTab").click();
   await page.locator('.thread-item[data-id="old-alpha"] .thread-options').click();
   await page.getByRole("menuitem", { name: "删除会话", exact: true }).click();
   await dialog.waitFor();

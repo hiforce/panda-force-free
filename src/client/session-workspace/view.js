@@ -91,6 +91,6 @@ export function createSessionWorkspaceView(t) {
   search.type = "button";
   search.className = "session-drawer-search";
   setMessageHtml(search, `${codexIcon("search")}<span>${label("common.searchAnything")}</span>`);
-  requireElement(".sidebar-top").append(search);
+  requireElement(".sidebar-scroll").prepend(search);
   return { inspector, info, actions, summary };
 }

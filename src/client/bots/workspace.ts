@@ -1,7 +1,8 @@
+import { deleteAssistant } from "./delete-assistant.js";
 import type { Translate, MessageId } from "../../shared/i18n/messages.js";
 import type { BotConfig, BotQueueSnapshot } from "../../shared/bots/contracts.js";
 import type { BotWorkspaceOverview } from "../../shared/bots/workspace.js";
-import type { SettingsModelCatalog, SettingsPageMount } from "../settings-pages/contracts.js";
+import type { SettingsPageMount } from "../settings-pages/contracts.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { request } from "../http-client.js";
 import { setMessageHtml } from "../i18n.js";
@@ -13,6 +14,7 @@ import { createBotWorkspace as createTaskWorkspace } from "./settings.js";
 import { createBotHumanChat, type BotChatDraft } from "./human-chat.js";
 import { createBotIntegrations } from "./integrations.js";
 import { botHomeList } from "./home-view.js";
+import { botChatHeading, bindBotChatHeading } from "./chat-heading.js";
 
 export function botRoute(label: string, route: string, primary = false) {
   return `<a class="wb-button${primary ? " primary" : ""}" href="${e(route)}" data-wb="route" data-route="${e(route)}">${label}</a>`;
@@ -24,7 +26,7 @@ function botIconRoute(t: Translate, id: MessageId, route: string, name: string, 
 }
 
 /** Home cards, private human chat and task operations have independent lifecycles. */
-export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) {
+export function createBotWorkspace(t: Translate) {
   let host: HTMLElement | null = null,
     controller = new AbortController(),
     epoch = 0,
@@ -40,6 +42,7 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
     { h, button, iconButton } = botUi(t);
   let queue = createTaskWorkspace(t);
   let integrationView: ReturnType<typeof createBotIntegrations> | undefined;
+  let chatHeading: ReturnType<typeof bindBotChatHeading> | undefined;
   let tasks: ReturnType<typeof createBotTaskList> | undefined, chat: ReturnType<typeof createBotHumanChat> | undefined;
   const context: BotContext = {
     t,
@@ -74,6 +77,7 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
         if (current !== epoch || controller.signal.aborted) return;
         const code = error instanceof Error ? error.message : "";
         const errors: Record<string, MessageId> = {
+          botBusy: "cli.botAssistantBusy",
           chatBusy: "bots.chatBusy",
           chatContextUnavailable: "bots.chatContextUnavailable",
           staleConversation: "bots.staleConversation",
@@ -124,6 +128,8 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
     queue.hide();
     chat?.hide();
     chat = undefined;
+    chatHeading?.dispose();
+    chatHeading = undefined;
     integrationView?.hide();
     integrationView = undefined;
     tasks?.hide();
@@ -144,13 +150,14 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
         currentBot = value.bot;
         const heading = host!.querySelector<HTMLElement>("[data-bot-title]")!;
         heading.textContent = currentBot.name;
+        heading.title = currentBot.name;
         host!.querySelector<HTMLElement>("[data-bot-profile]")!.innerHTML = botAvatarHtml(currentBot);
       }
       if (match[2] === "chat") {
         if (!chat) {
           const draft = drafts.get(match[1]!) ?? { text: "", generation: 0 };
           drafts.set(match[1]!, draft);
-          chat = createBotHumanChat(context, target, match[1]!, currentBot.name, draft, identity);
+          chat = createBotHumanChat(context, target, match[1]!, currentBot.name, draft, identity, chatHeading!.actions);
         }
         await chat.reload();
       } else if (match[2] === "tasks") {
@@ -174,6 +181,12 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
       const active = target.querySelector<HTMLElement>(":focus"),
         oldKey = active?.dataset.cardAction;
       setMessageHtml(target, botHomeList(overview.cards, search, t));
+      target.querySelectorAll<HTMLButtonElement>("[data-delete-assistant]").forEach((b) => {
+        b.onclick = () => {
+          const card = overview.cards.find((c) => c.bot.id === b.dataset.deleteAssistant);
+          if (card) deleteAssistant(host!, context, card.bot);
+        };
+      });
       target.querySelectorAll<HTMLButtonElement>("[data-edit]").forEach(
         (b) =>
           (b.onclick = () => {
@@ -181,7 +194,7 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
               b.disabled = true;
               try {
                 const { bot } = await context.api<{ bot: BotConfig }>("/" + b.dataset.edit);
-                if (current === epoch) openBotEditor(host!, context, models, bot);
+                if (current === epoch) openBotEditor(host!, context, bot);
               } finally {
                 b.disabled = false;
               }
@@ -190,7 +203,7 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
       );
       target
         .querySelector<HTMLButtonElement>("[data-new-bot]")
-        ?.addEventListener("click", () => openBotEditor(host!, context, models));
+        ?.addEventListener("click", () => openBotEditor(host!, context));
       if (oldKey)
         target.querySelector<HTMLElement>(`[data-card-action="${CSS.escape(oldKey)}"]`)?.focus({ preventScroll: true });
     }
@@ -220,11 +233,12 @@ export function createBotWorkspace(t: Translate, models?: SettingsModelCatalog) 
       host.setAttribute("aria-busy", "true");
       setMessageHtml(
         host,
-        `<header class="bot-home-heading"><div>${home ? "" : botRoute(h("bots.homeTitle"), "/bots")}<div class="bot-title-row"><span data-bot-profile ${home ? "hidden" : ""}></span><h1 data-bot-title>${h(home ? "bots.homeTitle" : route === "/bots/tasks" || match?.[2] === "tasks" ? "bots.tasks" : match?.[2] === "chat" ? "bots.chat" : "bots.integrations")}</h1></div><p>${h(home ? "bots.homeHint" : match?.[2] === "chat" ? "bots.chatHint" : match?.[2] === "integrations" ? "bots.integrationHint" : "bots.retainedHint")}</p></div><div class="bot-record-actions">${home ? button("cli.botRefresh", "data-refresh") : iconButton("cli.botRefresh", "refreshCw", "data-refresh")}${home ? botRoute(h("cli.botAllTasks"), "/bots/tasks") + button("cli.botCreate", "data-new-bot", true) : match ? ["chat", "tasks", "integrations"].map((s) => botIconRoute(t, ("bots." + s) as MessageId, `/bots/${match[1]}/${s}`, ({ chat: "messageSquare", tasks: "list", integrations: "plug" } as Record<string, string>)[s]!, s === match[2])).join("") : ""}</div></header><p class="bot-notice" data-bot-notice role="status" hidden></p>${home ? `<dl class="bot-home-summary">${(["bots", "running", "attention", "integrations"] as const).map((key) => `<div><dt>${h(({ bots: "bots.summaryBots", running: "bots.summaryRunning", attention: "bots.summaryAttention", integrations: "bots.summaryIntegrations" } as const)[key])}</dt><dd data-summary="${key}">—</dd></div>`).join("")}</dl><div class="wb-form bot-home-search"><label class="wb-field"><span>${h("bots.searchLabel")}</span><input type="search" data-bot-search maxlength="160"></label></div>` : ""}<div data-bot-content><p role="status">${h("settings.pageLoading")}</p></div>`,
+        `${match?.[2] === "chat" ? botChatHeading(t, match[1]!) : `<header class="bot-home-heading"><div>${home ? "" : botRoute(h("bots.homeTitle"), "/bots")}<div class="bot-title-row"><span data-bot-profile ${home ? "hidden" : ""}></span><h1 data-bot-title>${h(home ? "bots.homeTitle" : route === "/bots/tasks" || match?.[2] === "tasks" ? "bots.tasks" : match?.[2] === "chat" ? "bots.chat" : "bots.integrations")}</h1></div><p>${h(home ? "bots.homeHint" : match?.[2] === "chat" ? "bots.chatHint" : match?.[2] === "integrations" ? "bots.integrationHint" : "bots.retainedHint")}</p></div><div class="bot-record-actions">${home ? button("cli.botRefresh", "data-refresh") : iconButton("cli.botRefresh", "refreshCw", "data-refresh")}${home ? botRoute(h("cli.botAllTasks"), "/bots/tasks") + button("cli.botCreate", "data-new-bot", true) : match ? ["chat", "tasks", "integrations"].map((s) => botIconRoute(t, ("bots." + s) as MessageId, `/bots/${match[1]}/${s}`, ({ chat: "messageSquare", tasks: "list", integrations: "plug" } as Record<string, string>)[s]!, s === match[2])).join("") : ""}</div></header>`}<p class="bot-notice" data-bot-notice role="status" hidden></p>${home ? `<dl class="bot-home-summary">${(["bots", "running", "attention", "integrations"] as const).map((key) => `<div><dt>${h(({ bots: "bots.summaryBots", running: "bots.summaryRunning", attention: "bots.summaryAttention", integrations: "bots.summaryIntegrations" } as const)[key])}</dt><dd data-summary="${key}">—</dd></div>`).join("")}</dl><div class="wb-form bot-home-search"><label class="wb-field"><span>${h("bots.searchLabel")}</span><input type="search" data-bot-search maxlength="160"></label></div>` : ""}<div data-bot-content><p role="status">${h("settings.pageLoading")}</p></div>`,
       );
+      if (match?.[2] === "chat") chatHeading = bindBotChatHeading(host);
       host
         .querySelector<HTMLButtonElement>("[data-new-bot]")
-        ?.addEventListener("click", () => openBotEditor(host!, context, models));
+        ?.addEventListener("click", () => openBotEditor(host!, context));
       host.querySelector<HTMLButtonElement>("[data-refresh]")!.onclick = () => {
         void context.execute(context.reload);
       };

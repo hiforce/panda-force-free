@@ -180,6 +180,12 @@ export interface ApprovalsPort {
 }
 
 export interface ModelsPort {
+  setModelPicker(open: () => void): void;
+  applyRuntimeModel(
+    sessionId: string,
+    selection: import("../../shared/engine/runtime-selection.js").RuntimeSelection,
+    runtime: import("../../shared/harness/contracts.js").HarnessRuntimeView,
+  ): Promise<void>;
   sessionControlView: () => SessionControlView;
   applyModelSelection: (sessionId: string, model: string, effort: string) => void;
   applyPermissionSelection: (sessionId: string, mode: string) => void;
@@ -358,6 +364,13 @@ export interface TimelinePort {
 }
 
 export interface TransportPort {
+  attachHarness: (boundary: import("./harness.js").HarnessBrowserBoundary) => void;
+  harnessControls: (view: SessionControlView) => SessionControlView;
+  applyHarnessPermission: (sessionId: string, mode: string) => Promise<boolean>;
+  applyHarnessRuntime: (sessionId: string, runtimeId: string) => Promise<string>;
+  harnessAvailable: () => boolean;
+  harnessManaged: () => boolean;
+  harnessContext: () => string;
   connect: () => void;
   rpc: ClientRpc;
   postBridge: (path: string, payload: unknown, signal?: AbortSignal) => Promise<unknown>;
@@ -616,6 +629,8 @@ export interface ProjectsPort {
 }
 
 export interface SidebarPort {
+  openSessionMenu(id: string, trigger: HTMLElement): void;
+  refreshSessionMenu(): void;
   dispose: () => void;
   bind: () => void;
   setProjectHidden: (project: string, hidden: boolean, expectedHiddenAt?: number | null) => Promise<ProjectVisibility>;

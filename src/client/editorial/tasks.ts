@@ -14,6 +14,7 @@ export function createEditorialTasks(
     ready: boolean;
     loadError: boolean;
     configurationInvalid: boolean;
+    runtimeSelection: boolean;
     profiles: EditorialProcessingProfile[];
     jobs: EditorialJob[];
     current: EditorialJob | null;
@@ -22,6 +23,7 @@ export function createEditorialTasks(
     ready: false,
     loadError: false,
     configurationInvalid: false,
+    runtimeSelection: false,
     profiles: [],
     jobs: [],
     current: null,
@@ -106,6 +108,7 @@ export function createEditorialTasks(
       if (!open || generation !== epoch) return;
       state.profiles = profiles.profiles;
       state.configurationInvalid = profiles.configurationInvalid;
+      state.runtimeSelection = profiles.runtimeSelection === true;
       state.jobs = jobs.jobs;
       state.ready = true;
       const recovered = jobs.jobs.find((job) => job.id === submission?.id);
@@ -121,8 +124,19 @@ export function createEditorialTasks(
       changed();
       schedule();
     },
-    submit(mode: "proofread" | "rewrite", profileId: string) {
-      submission ??= { id: crypto.randomUUID(), documentId: record.id, revisionId: record.revisionId, mode, profileId };
+    submit(
+      mode: "proofread" | "rewrite",
+      profileId: string,
+      selection?: import("../../shared/engine/runtime-selection.js").RuntimeSelection,
+    ) {
+      submission ??= {
+        id: crypto.randomUUID(),
+        documentId: record.id,
+        revisionId: record.revisionId,
+        mode,
+        profileId,
+        ...selection,
+      };
       return operation(
         () => api.submitJob(submission!),
         () => {

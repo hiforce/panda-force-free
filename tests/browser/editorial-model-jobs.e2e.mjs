@@ -138,7 +138,10 @@ try {
         await page.locator('[data-doc-action="publishing"]').click();
         await manager.locator('[data-placement-action="spacing"]:not([disabled])').click();
         await review.locator('[data-editorial-action="prepare"]:not([disabled])').waitFor();
-        if (waitForModels) await review.locator("#editorialProcessor option").waitFor({ state: "attached" });
+        if (waitForModels) {
+          await review.locator('#editorialProcessor option[value="review"]').waitFor({ state: "attached" });
+          await review.locator("#editorialProcessor").selectOption("review");
+        }
       };
       await page.goto(app.base + "/documents?project=" + project.id + "&document=" + source.document.id);
       await page.locator("#workspacePreparation").waitFor({ state: "hidden" });

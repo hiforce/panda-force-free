@@ -1,3 +1,4 @@
+import { createRuntimeModelField } from "../harness/model-field.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import type { DocumentRecord } from "../../shared/documents/contracts.js";
 import type { EditorialDetail, EditorialReceipt, EditorialSummary } from "../../shared/editorial/contracts.js";
@@ -27,6 +28,7 @@ interface ReviewSession {
   taskMarkup: string;
   taskHistoryMarkup: string;
   profilesMarkup: string;
+  runtimeFields?: ReturnType<typeof createRuntimeModelField>;
 }
 /** Each opening owns its requests and result. A hidden in-flight commit still returns its authorized receipt. */
 export function createEditorialWorkspace(t: Translate) {
@@ -43,6 +45,7 @@ export function createEditorialWorkspace(t: Translate) {
     dialog.close();
     if (!current) return;
     current.tasks.close();
+    current.runtimeFields?.close();
     if (force || !current.applying || receipt) current.resolve(receipt);
     if (current.previous instanceof HTMLElement && current.previous.isConnected)
       current.previous.focus({ preventScroll: true });
@@ -56,23 +59,31 @@ export function createEditorialWorkspace(t: Translate) {
     if (session !== current) return;
     const { state } = current.tasks;
     if (state.ready) {
-      const options = state.profiles
-        .map((profile) => `<option value="${e(profile.id)}">${e(profile.id)} · ${e(profile.model)}</option>`)
-        .join("");
+      const options =
+        (state.runtimeSelection ? `<option value="__harness_runtime__">${e(t("harness.title"))}</option>` : "") +
+        state.profiles
+          .map((profile) => `<option value="${e(profile.id)}">${e(profile.id)} · ${e(profile.model)}</option>`)
+          .join("");
       if (options !== current.profilesMarkup) {
         const select = get<HTMLSelectElement>("#editorialProcessor"),
           selected = select.value;
         setMessageHtml(select, options);
-        if (state.profiles.some((profile) => profile.id === selected)) select.value = selected;
+        if (
+          (state.runtimeSelection && selected === "__harness_runtime__") ||
+          state.profiles.some((profile) => profile.id === selected)
+        )
+          select.value = selected;
         current.profilesMarkup = options;
       }
       localizeText(
         get("#editorialProcessorHint"),
-        state.configurationInvalid
-          ? "editorial.invalidProcessorConfiguration"
-          : state.profiles.length
-            ? "editorial.providerScope"
-            : "editorial.noProcessors",
+        state.runtimeSelection && get<HTMLSelectElement>("#editorialProcessor").value === "__harness_runtime__"
+          ? "harness.selectionHint"
+          : state.configurationInvalid
+            ? "editorial.invalidProcessorConfiguration"
+            : state.profiles.length
+              ? "editorial.providerScope"
+              : "editorial.noProcessors",
         undefined,
         t,
       );
@@ -83,6 +94,15 @@ export function createEditorialWorkspace(t: Translate) {
         undefined,
         t,
       );
+    const runtimeHost = get<HTMLElement>("[data-editorial-runtime]");
+    if (state.ready && state.runtimeSelection && !current.runtimeFields) {
+      const fields = createRuntimeModelField(t, "editorial", () => {
+        if (session === current) taskControls(current);
+      });
+      current.runtimeFields = fields;
+      setMessageHtml(runtimeHost, fields.html());
+      fields.mount(runtimeHost);
+    }
     const card = taskView(t, current.tasks),
       history = taskHistory(t, current.tasks);
     if (!current.taskMarkup && state.current && ["queued", "running"].includes(state.current.state))
@@ -103,14 +123,23 @@ export function createEditorialWorkspace(t: Translate) {
     get<HTMLButtonElement>('[data-editorial-action="model-submit"]').disabled =
       blocked ||
       !state.ready ||
-      !state.profiles.length ||
+      (!state.runtimeSelection && !state.profiles.length) ||
+      (get<HTMLSelectElement>("#editorialProcessor").value === "__harness_runtime__" &&
+        !current.runtimeFields?.ready()) ||
       (!!state.current && ["queued", "running"].includes(state.current.state));
     for (const id of ["#editorialMode", "#editorialProcessor", "#editorialTaskHistory"])
       get<HTMLSelectElement>(id).disabled =
         blocked ||
         !state.ready ||
         current.tasks.uncertainSubmission ||
-        (id === "#editorialProcessor" && !state.profiles.length);
+        (id === "#editorialProcessor" && !state.runtimeSelection && !state.profiles.length);
+    const runtimeSelected = get<HTMLSelectElement>("#editorialProcessor").value === "__harness_runtime__";
+    get<HTMLElement>("[data-editorial-runtime]").hidden = !runtimeSelected;
+    current.runtimeFields?.setLocked(
+      blocked ||
+        current.tasks.uncertainSubmission ||
+        (!!state.current && ["queued", "running"].includes(state.current.state)),
+    );
     for (const action of ["model-cancel", "model-retry", "model-view"]) {
       const button = dialog.querySelector<HTMLButtonElement>(`[data-editorial-action="${action}"]`);
       if (button) button.disabled = blocked || (action === "model-view" && !state.current?.proposalId);
@@ -247,6 +276,9 @@ export function createEditorialWorkspace(t: Translate) {
         await current.tasks.submit(
           get<HTMLSelectElement>("#editorialMode").value as "proofread" | "rewrite",
           get<HTMLSelectElement>("#editorialProcessor").value,
+          get<HTMLSelectElement>("#editorialProcessor").value === "__harness_runtime__"
+            ? current.runtimeFields?.read()
+            : undefined,
         );
       else if (action === "model-reload") await current.tasks.load();
       else if (action === "model-cancel") await current.tasks.cancel();
@@ -343,6 +375,7 @@ export function createEditorialWorkspace(t: Translate) {
         session = current;
         setMessageHtml(dialog, editorialFrame(t, record.title));
         setMessageHtml(get("#editorialTaskWorkspace"), modelControls(t));
+        get<HTMLSelectElement>("#editorialProcessor").addEventListener("change", () => taskControls(current));
         dialog.showModal();
         void loadHistory(current).catch((error) => {
           if (session === current)

@@ -102,8 +102,16 @@ export class BotWorker {
           imageVerificationBlocked = false;
         delete task.imageEvidence;
         let result: Decision | null = null;
-        const sessionId = task.reviewHistory?.length && task.sessionId ? task.sessionId : bot.sessionId;
-        const completed = await this.engine(bot).run(
+        const selectedEngine = this.engine(bot),
+          sessionId =
+            selectedEngine.persistentSession === false
+              ? null
+              : task.reviewHistory?.length &&
+                  task.sessionId &&
+                  (task.sessionRuntimeId ?? "codex") === (bot.runtimeId ?? "codex")
+                ? task.sessionId
+                : bot.sessionId;
+        const completed = await selectedEngine.run(
           {
             persistent: true,
             ...(sessionId ? { sessionId } : {}),
@@ -183,13 +191,15 @@ export class BotWorker {
             signal: controller.signal,
             session: async (sessionId) => {
               await assertLease();
-              await this.store.setSession(bot.owner, bot.id, sessionId);
+              await this.store.setSession(bot.owner, bot.id, sessionId, bot.runtimeId ?? "codex");
               task.sessionId = sessionId;
+              task.sessionRuntimeId = bot.runtimeId ?? "codex";
               await this.store.update(task, lease);
             },
             started: async (scope) => {
               await assertLease();
               task.sessionId = scope.sessionId;
+              task.sessionRuntimeId = bot.runtimeId ?? "codex";
               task.runId = scope.runId;
               await this.store.update(task, lease);
             },

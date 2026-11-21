@@ -1,3 +1,4 @@
+import { defaultRuntimeModel, supportedEffort } from "../../shared/engine/runtime-selection.js";
 import { createAnchoredMenu } from "../anchored-menu.js";
 import { createApprovals } from "../approvals.js";
 import { createGoalController } from "../goal-controller.js";
@@ -250,10 +251,12 @@ export function assembleModels({
   state,
   mutations,
 }) {
+  let modelPicker = /** @type {(() => void) | null} */ (null);
   const {
     sessionControlView,
     applyModelSelection,
     applyPermissionSelection,
+    confirmFullAccessSelection,
     applySessionSettings,
     closeModelMenu,
     closePermissionMenu,
@@ -290,6 +293,12 @@ export function assembleModels({
       noticesPort.addPersistentError(...args),
     state,
     mutations,
+    openModelPicker: () => {
+      if (!modelPicker) return false;
+      modelPicker();
+      return true;
+    },
+    catalogScope: () => transportPort.harnessContext(),
     onSettingsChanged: () => viewUpdates.request("sessionWorkspace"),
     onModelsLoaded: () => noticesPort.removePersistentError("model-load"),
   });
@@ -300,9 +309,40 @@ export function assembleModels({
     return workspacePreparation.track("permissions", loadPermissionProfilesRaw());
   }
   return {
-    sessionControlView,
+    sessionControlView: () => transportPort.harnessControls(sessionControlView()),
+    setModelPicker: (open) => {
+      modelPicker = open;
+    },
+    async applyRuntimeModel(sessionId, selection, runtime) {
+      if (selection.runtimeId !== runtime.id) throw new Error(t("harness.selectionError"));
+      const context = await transportPort.applyHarnessRuntime(sessionId, selection.runtimeId);
+      if (transportPort.harnessControls(sessionControlView()).sessionId !== context)
+        throw new Error(t("sessionview.sessionChanged"));
+      if (!(await loadModels({ attempts: 1 }))) throw new Error(t("errors.couldNotLoadModels"));
+      const view = transportPort.harnessControls(sessionControlView());
+      if (view.sessionId !== context || view.runtimeId !== selection.runtimeId)
+        throw new Error(t("sessionview.sessionChanged"));
+      const model = selection.model || defaultRuntimeModel(runtime);
+      const choice = view.models.find((entry) => entry.id === model);
+      if (!choice) throw new Error(t("errors.couldNotLoadModels"));
+      const effort = supportedEffort(
+        choice.efforts.map((entry) => entry.id),
+        selection.effort,
+        choice.defaultEffort,
+      );
+      applyModelSelection(context, model, effort);
+    },
     applyModelSelection,
-    applyPermissionSelection,
+    applyPermissionSelection: (sessionId, mode) => {
+      if (!transportPort.harnessManaged()) return applyPermissionSelection(sessionId, mode);
+      const apply = () => {
+        void transportPort
+          .applyHarnessPermission(sessionId, mode)
+          .catch((error) => noticesPort.addPersistentError(error));
+      };
+      if (mode === "full-access") confirmFullAccessSelection(sessionId, apply);
+      else apply();
+    },
     loadPermissionProfiles,
     renderContextUsage,
     applySessionSettings,

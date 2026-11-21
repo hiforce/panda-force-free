@@ -78,7 +78,7 @@ export function assembleActivity({
   }
   return { setApprovalWaiting, ensureActivity, activityRenderer, activityItemId, updateActivitySummary, addActivity };
 }
-/** @param {import("./ports.js").FeatureOptions<"drafts" | "viewUpdates" | "state" | "mutations" | "$" | "t", "images" | "notices" | "projects" | "workbench", "uploads">} options */
+/** @param {import("./ports.js").FeatureOptions<"drafts" | "viewUpdates" | "state" | "mutations" | "$" | "t", "images" | "notices" | "projects" | "workbench" | "transport", "uploads">} options */
 export function assembleUploads({
   viewUpdates,
   $,
@@ -87,6 +87,7 @@ export function assembleUploads({
   noticesPort,
   projectsPort,
   workbenchPort,
+  transportPort,
   state,
   mutations,
   drafts,
@@ -106,6 +107,7 @@ export function assembleUploads({
       onAttachmentUpdated: (id, patch) => drafts.updateAttachment(id, patch),
       state,
       mutations,
+      conversationMaterials: () => transportPort.harnessManaged(),
     });
   function bind() {
     createComposerAddMenu({
@@ -177,14 +179,12 @@ export function assembleSettings({ $, t, shortPath, modelsPort, panelsPort, view
     toggleAccountMenu: (force) => viewUpdates.request("accountMenu", force),
     syncPermissionSettings: () => modelsPort.syncPermissionSettings(),
     pageViews: {
+      agent: createLazySettingsPage(t, "harness"),
       users: createLazySettingsPage(t, "users"),
       "plugins-settings": createExtensionSettings(t),
       "search-settings": createLazySettingsPage(t, "search"),
       storage: createLazySettingsPage(t, "storage"),
-      bots: createLazySettingsPage(t, "bots", {
-        read: () => modelsPort.sessionControlView(),
-        load: () => modelsPort.loadModels(),
-      }),
+      bots: createLazySettingsPage(t, "bots"),
       "client-access": createLazySettingsPage(t, "clients"),
     },
     state,

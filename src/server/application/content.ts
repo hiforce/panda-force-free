@@ -36,6 +36,7 @@ export async function createApplicationContent(
   administrator: Parameters<typeof createOptionalSearchFeature>[0]["administrator"],
   changed: (project: string, owner?: string) => void,
   hostOwner?: () => string | null,
+  runtimes?: import("../engines/application-tools/runtime-port.js").ApplicationRuntimePort,
 ) {
   const {
     documentFeature,
@@ -92,6 +93,7 @@ export async function createApplicationContent(
     connection: appServerConnection,
     version: config.version,
     models,
+    runtimes,
     owner: resolveOwner,
     requireProject: requireDocumentProject,
     authorizeProject: (owner, project) => contentAccess.require(owner, project, "contribute"),
@@ -126,6 +128,7 @@ export async function createApplicationContent(
         connection: appServerConnection,
         version: config.version,
         models,
+        runtimes,
         owner: () => owner,
         requireProject: (id) => {
           if (id !== "personal") throw new DocumentError("notFound", 404);
@@ -270,5 +273,6 @@ export async function createApplicationContent(
     searchFeature,
     closeMaterialText: () => creationMaterials.close(),
     chatContext: botChatContext(creationMaterials, skillFeature.catalog),
+    conversationMaterials: creationMaterials,
   };
 }

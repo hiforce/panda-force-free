@@ -321,5 +321,13 @@
   "botAvatarRabbit": "Rabbit",
   "botAvatarBear": "Bear",
   "botAvatarTiger": "Tiger",
-  "botAvatarPenguin": "Penguin"
+  "botAvatarPenguin": "Penguin",
+  "botDeleteAssistant": "Delete assistant",
+  "botDeleteAssistantHint": "Delete this assistant, its conversations, tasks and dedicated integration settings permanently? API keys will lose access to this assistant; shared connections and access to other assistants are kept. Stop pending tasks and conversations, disable integrations and reconcile unknown deliveries first.",
+  "botAssistantDeleted": "Assistant deleted.",
+  "botAssistantBusy": "This assistant has pending or running work, an enabled integration, or unfinished delivery/cleanup. Stop the work, disable integrations and resolve uncertain results before deleting.",
+  "botEffortDefault": "Model default",
+  "botEffortHint": "Applies to the next chat message and newly started background tasks.",
+  "botEffortChooseModel": "Choose a model to see its supported reasoning levels.",
+  "botEffortUnavailable": "The saved reasoning level is unavailable in the current catalog. It will be kept unless you change it."
 }

@@ -23,11 +23,18 @@ test("owner-wide creation history retains process and same-document revisions ac
     ).toBe(400);
     const before = await f.files.call("/api/document-creations/detail?id=" + completed.id);
     expect(before.body.task.progress.map((event: any) => event.stage)).toContain("message");
+    expect(before.body.task.progress.map((event: any) => event.stage)).toContain("preparing");
+    expect(
+      before.body.task.progress.some(
+        (event: any) => event.stage === "activity" && event.operation === "panda_documents_create",
+      ),
+    ).toBe(true);
     expect(before.body.task.progress.map((event: any) => event.stage)).toContain("saving");
     const summary = await f.files.call("/api/document-creations/detail?id=" + completed.id + "&view=progress");
     expect(summary.status).toBe(200);
     expect(summary.body.task.progress.some((event: any) => event.stage === "message")).toBe(false);
     expect(summary.body.task.clarifications).toEqual([]);
+    expect(summary.body.task.progress.some((event: any) => event.operation === "panda_documents_create")).toBe(true);
     expect(summary.body.task.artifact).toEqual(completed.artifact);
     expect((await f.files.call("/api/document-creations/detail?id=" + completed.id + "&view=unknown")).status).toBe(
       400,

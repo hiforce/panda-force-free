@@ -123,7 +123,43 @@ export function renderImagePreview(source, { cwd = "", title = "", className = "
       : thumbnail && reference
         ? localImageUrl(reference.path, cwd, { thumbnail: true })
         : src;
-  return `<button type="button" class="message-image-button${className ? ` ${escapeHtml(className)}` : ""}" data-image-src="${escapeHtml(src)}" data-image-title="${escapeHtml(label)}"${reference ? ` data-image-path="${escapeHtml(reference.path)}"` : ""} aria-label="View image: ${escapeHtml(label)}"><img class="message-image" src="${escapeHtml(displaySrc)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async"></button>`;
+  return `<button type="button" class="message-image-button${className ? ` ${escapeHtml(className)}` : ""}" data-image-src="${escapeHtml(src)}" data-image-title="${escapeHtml(label)}"${reference ? ` data-image-path="${escapeHtml(reference.path)}"` : ""} aria-label="${escapeHtml(label)}"><img class="message-image" src="${escapeHtml(displaySrc)}" alt="${escapeHtml(label)}" loading="lazy" decoding="async"></button>`;
+}
+
+/** Older agent replies may deliver a shared output image as an inline-code path instead of Markdown. */
+function renderAttachmentImagePaths(html, cwd) {
+  if (!/attachments(?:\/|%2f)/i.test(html)) return html;
+  const document = globalThis.window.document;
+  const content = document.createRange().createContextualFragment(html);
+  const seen = new Set();
+  for (const code of content.querySelectorAll("code")) {
+    if (code.closest("pre, a, button")) continue;
+    const reference = parseFileReference(code.textContent);
+    if (!reference || reference.lineStart != null || !isImageReference(reference.path)) continue;
+    let path;
+    try {
+      path = decodeURIComponent(reference.path).replaceAll("\\", "/");
+    } catch {
+      continue;
+    }
+    if (
+      !/^(?:\/|[A-Za-z]:\/)(?:.*\/)?attachments\/(?:output|work)\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\/.+/i.test(
+        path,
+      ) ||
+      path.split("/").some((part) => part === "." || part === "..") ||
+      /[\r\n\0]/.test(path)
+    )
+      continue;
+    // The existing authenticated image route remains the authority for roots, symlinks and actual bytes.
+    const markup = seen.has(path)
+      ? renderFileReference(reference, escapeHtml(imageTitle(path)), cwd)
+      : renderImagePreview(reference.path, { cwd, title: imageTitle(path), thumbnail: true });
+    seen.add(path);
+    code.replaceWith(document.createRange().createContextualFragment(markup));
+  }
+  const container = document.createElement("div");
+  container.append(content);
+  return container.innerHTML;
 }
 
 function attributeValue(attributes, name) {
@@ -257,7 +293,7 @@ export function renderAssistantMarkdown(source = "", { cwd = "" } = {}) {
     new RegExp(protectedBlocks.marker + "(\\d+)END", "g"),
     (_, index) => protectedBlocks.blocks[Number(index)] || "",
   );
-  return sanitizeRichText(html, { allowStyles: true, allowImageButtons: true });
+  return sanitizeRichText(renderAttachmentImagePaths(html, cwd), { allowStyles: true, allowImageButtons: true });
 }
 
 export { escapeHtml };

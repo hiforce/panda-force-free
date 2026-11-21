@@ -350,3 +350,50 @@ test.skipIf(!enabled)(
   },
   60000,
 );
+
+test.skipIf(!enabled)(
+  "shared creation facets roll back messages, goals and progress with their task",
+  async () => {
+    const f = await isolatedMySQLDatabase("creation");
+    try {
+      await new DatabaseRegistry().register(mysqlCreationModule).upgrade(new MySQLSchemaConnection(f.sql));
+      const ledger = new MySQLCreationLedger(f.sql, "shared-facet-rollback"),
+        s = spec(),
+        messageId = randomUUID();
+      await expect(
+        ledger.transaction(async () => {
+          await ledger.create(s, 10000);
+          await ledger.goals.command(
+            s.owner,
+            s.id,
+            { id: randomUUID(), action: "create", objective: "Atomic goal" },
+            10000,
+          );
+          const lease = await ledger.claim(s.owner, s.id, 10001, 30000);
+          await ledger.messages.accept({
+            id: messageId,
+            taskId: s.id,
+            owner: s.owner,
+            generation: lease.generation,
+            requestDigest: "b".repeat(64),
+            payloadDigest: "c".repeat(64),
+            state: "received",
+            dispatchGeneration: null,
+            createdAt: 10002,
+            updatedAt: 10002,
+          });
+          await ledger.progress.record(lease, { generation: lease.generation, at: 10002, stage: "started" });
+          throw Error("rollback-all-facets");
+        }),
+      ).rejects.toThrow("rollback-all-facets");
+      expect(await ledger.find(s.owner, s.id)).toBeNull();
+      expect(await ledger.messages.find(s.owner, messageId)).toBeNull();
+      await ledger.create(s, 10003);
+      expect(await ledger.goals.read(s.owner, s.id)).toBeNull();
+      expect(await ledger.progress.list(s.owner, s.id)).toEqual([]);
+    } finally {
+      await f.close();
+    }
+  },
+  60000,
+);

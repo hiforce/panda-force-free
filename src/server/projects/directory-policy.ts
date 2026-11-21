@@ -2,6 +2,7 @@ import { realpathSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { isRecord } from "../../shared/records.js";
+import { harnessId } from "../../shared/harness/presentation.js";
 import { ProjectError } from "./catalog.js";
 import type { ProjectSnapshot, ProjectVisibility } from "../../shared/engine/types.js";
 
@@ -108,7 +109,11 @@ export class ProjectDirectoryPolicy {
     return { ...value, data };
   }
   snapshot(value: ProjectSnapshot): ProjectSnapshot {
-    if (this.allowExternal) return value;
+    const native = value.assignments.filter((session) => !harnessId(session.id));
+    if (this.allowExternal)
+      return native.length === value.assignments.length
+        ? value
+        : { ...value, assignments: native, reloadRequired: true };
     return {
       ...value,
       projects: value.projects.map((project) => {
@@ -117,7 +122,8 @@ export class ProjectDirectoryPolicy {
         void workspace;
         return safe;
       }),
-      assignments: value.assignments.filter((session) => this.allowsPath(session.cwd)),
+      assignments: native.filter((session) => this.allowsPath(session.cwd)),
+      ...(native.length !== value.assignments.length ? { reloadRequired: true } : {}),
     };
   }
   visibility(value: ProjectVisibility): ProjectVisibility {
@@ -164,6 +170,8 @@ export class ProjectDirectoryPolicy {
       if (typeof input.threadId === "string" && this.protectedSession(input.threadId)) return null;
       if (input.type === "engine/notification" && isRecord(input.payload) && !this.envelope(input.payload)) return null;
     }
+    if (isRecord(input) && input.type === "project-catalog/changed")
+      return { ...input, ...this.snapshot(input as unknown as ProjectSnapshot) };
     if (this.allowExternal || !isRecord(input)) return input;
     // The local goal reader emits outside the native notification pipeline.
     if (
@@ -174,8 +182,6 @@ export class ProjectDirectoryPolicy {
       const params = input.payload.params;
       if (!isRecord(params) || typeof params.threadId !== "string" || !this.sessions.has(params.threadId)) return null;
     }
-    if (input.type === "project-catalog/changed")
-      return { ...input, ...this.snapshot(input as unknown as ProjectSnapshot) };
     if (typeof input.threadId === "string" && !this.sessions.has(input.threadId)) return null;
     if (input.type === "projects/visibility" && isRecord(input.hiddenProjects))
       return { ...input, ...this.visibility(input as unknown as ProjectVisibility) };

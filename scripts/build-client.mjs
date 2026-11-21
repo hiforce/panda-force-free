@@ -5,6 +5,9 @@ import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { SUPPORTED_LOCALES } from "../src/shared/i18n/locale-policy.js";
 import { assertPublishedCatalogs } from "./i18n/published-catalogs.mjs";
+import { clientStyles } from "./client-styles.mjs";
+
+clientStyles(true);
 
 rmSync("dist/cdn-public", { recursive: true, force: true });
 syncCatalogModules();

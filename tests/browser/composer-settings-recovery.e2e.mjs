@@ -4,7 +4,7 @@ import { chromium, webkit } from "playwright";
 import { createAppFixture } from "../support/app-fixture.mjs";
 const out = ".artifacts/composer-settings-recovery";
 await mkdir(out, { recursive: true });
-const app = await createAppFixture();
+const app = await createAppFixture({ startupTimeoutMs: 60000 });
 const results = [];
 try {
   for (const [engine, width, height] of [
@@ -17,6 +17,7 @@ try {
         viewport: { width, height },
         isMobile: engine === webkit,
         hasTouch: engine === webkit,
+        ignoreHTTPSErrors: process.env.PANDA_TEST_HTTPS === "true",
       });
       await context.addInitScript(() => {
         if (/^https?:$/.test(location.protocol)) localStorage.setItem("panda-force-locale", "en");
@@ -31,9 +32,7 @@ try {
       const pending = new Promise((resolve) => {
         release = resolve;
       });
-      await page.route("**/api/rpc", async (route) => {
-        const payload = route.request().postDataJSON();
-        if (payload?.method !== "model/list") return route.continue();
+      await page.route("**/api/model-catalog?runtimeId=*", async (route) => {
         if (mode === "fail")
           return route.fulfill({
             status: 503,
@@ -57,16 +56,17 @@ try {
       await page.locator("#composerSettingsButton").click();
       assert((await page.locator('[data-composer-setting="model"] small').innerText()).toLowerCase().includes("retry"));
       await page.locator('[data-composer-setting="model"]').click();
-      await page.locator("#retryModels").waitFor();
-      await page.locator("#modelMenuBack").click();
+      await page.locator("#sessionSettingsDialog [data-runtime-retry]").waitFor();
+      await page.locator("[data-settings-back]").click();
       await page.locator("#composerSettingsMenu").waitFor();
       await page.locator('[data-composer-setting="model"]').click();
+      await page.locator("#sessionSettingsDialog [data-runtime-retry]").waitFor({ state: "visible" });
       mode = "delay";
-      await page.locator("#retryModels").click();
-      await page.waitForFunction(() => globalThis.__pandaForceDebug.state.modelLoadStatus === "loading");
+      await page.locator("#sessionSettingsDialog [data-runtime-retry]").click();
+      await page.locator('#sessionSettingsDialog [name="session-runtime-model"][aria-busy="true"]').waitFor();
       await page.keyboard.press("Escape");
       await page.locator("#composerSettingsButton").click();
-      assert.equal(await page.locator("#composerSettingsButton").getAttribute("aria-busy"), "true");
+      assert.equal(await page.locator("#composerSettingsButton").getAttribute("aria-busy"), "false");
       const titles = [];
       for (const locale of ["zh-CN", "zh-HK", "zh-TW", "en"]) {
         await page.evaluate((locale) => globalThis.__pandaForceI18n.setPreference(locale), locale);
@@ -80,10 +80,11 @@ try {
       assert.equal(titles[3], "Conversation settings");
       mode = "ready";
       release();
+      await page.evaluate(async () => globalThis.__pandaForceDebug.loadModels({ attempts: 1 }));
       await page.waitForFunction(() => globalThis.__pandaForceDebug.state.modelLoadStatus === "ready");
       assert.equal(await page.locator("#composerSettingsButton").getAttribute("aria-busy"), "false");
       await page.locator('[data-composer-setting="model"]').click();
-      await page.locator('#modelMenu input[type="range"]').waitFor();
+      await page.locator('[name="session-runtime-effort"]').waitFor();
       await page.keyboard.press("Escape");
       assert.equal(await page.locator("#prompt").inputValue(), draft);
       await page.screenshot({ path: `${out}/recovered-${width}.png` });

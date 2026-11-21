@@ -1,3 +1,4 @@
+import { SettingsPageLifetime } from "../settings-pages/lifetime.js";
 import type { Translate, MessageId } from "../../shared/i18n/messages.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { getBrowserI18n, messageHtml as h, setMessageHtml } from "../i18n.js";
@@ -38,17 +39,16 @@ interface Mail {
 
 /** Settings retain draft fields and scroll position; only the owned member list is refreshed in the background. */
 export function createUsersSettings(t: Translate) {
+  const page = new SettingsPageLifetime();
   let host: HTMLElement | null = null,
     self: Self | null = null,
     mail: Mail | null = null,
     members: Member[] = [],
-    closing = new AbortController(),
     timer: ReturnType<typeof setInterval> | undefined,
     busy = false,
     rendered = false,
     refreshing: Promise<void> | null = null,
-    reading: AbortController | null = null,
-    epoch = 0;
+    reading: AbortController | null = null;
   let inviteOperation = crypto.randomUUID(),
     bindOperation = crypto.randomUUID();
   const get = <T extends HTMLElement>(selector: string) => host?.querySelector<T>(selector) ?? null;
@@ -67,7 +67,7 @@ export function createUsersSettings(t: Translate) {
       "/api/local-users" + path,
       method,
       body,
-      AbortSignal.any([closing.signal, signal ?? AbortSignal.timeout(method === "GET" ? 10000 : 35000)]),
+      AbortSignal.any([page.signal, signal ?? AbortSignal.timeout(method === "GET" ? 10000 : 35000)]),
     );
   function controls() {
     host?.setAttribute("aria-busy", String(busy || (!rendered && Boolean(refreshing))));
@@ -107,7 +107,7 @@ export function createUsersSettings(t: Translate) {
   }
   function refresh() {
     if (refreshing) return refreshing;
-    if (!host || closing.signal.aborted) return Promise.resolve();
+    if (!host || page.signal.aborted) return Promise.resolve();
     const controller = new AbortController();
     reading = controller;
     const work = load(controller).finally(() => {
@@ -123,18 +123,18 @@ export function createUsersSettings(t: Translate) {
     return work;
   }
   async function load(controller: AbortController) {
-    const current = epoch;
-    const signal = AbortSignal.any([controller.signal, closing.signal, AbortSignal.timeout(10000)]);
+    const current = page.epoch;
+    const signal = AbortSignal.any([controller.signal, page.signal, AbortSignal.timeout(10000)]);
     if (!rendered) notice(t("common.loading"), true);
     try {
       const next = await api<Self>("/self", "GET", undefined, signal);
-      if (current !== epoch || signal.aborted) return;
+      if (current !== page.epoch || signal.aborted) return;
       if (next.role === "admin") {
         const [settings, list] = await Promise.all([
           rendered ? Promise.resolve(mail) : api<Mail>("/mail", "GET", undefined, signal),
           api<{ users: Member[] }>("", "GET", undefined, signal),
         ]);
-        if (current !== epoch || signal.aborted) return;
+        if (current !== page.epoch || signal.aborted) return;
         if (!rendered) mail = settings;
         members = list.users;
       }
@@ -148,13 +148,13 @@ export function createUsersSettings(t: Translate) {
       }
       notice("");
     } catch (error) {
-      if (current === epoch && !controller.signal.aborted && !closing.signal.aborted)
+      if (current === page.epoch && !controller.signal.aborted && !page.signal.aborted)
         notice(signal.aborted || !(error instanceof Error) ? t("users.unavailable") : error.message, true);
     }
   }
   async function execute(work: () => Promise<void>, success?: MessageId) {
     if (busy || !host) return;
-    const current = epoch;
+    const current = page.epoch;
     busy = true;
     controls();
     notice("");
@@ -162,14 +162,14 @@ export function createUsersSettings(t: Translate) {
       reading?.abort();
       await refreshing;
       await work();
-      if (current !== epoch) return;
+      if (current !== page.epoch) return;
       await refresh();
       if (success) notice(t(success));
     } catch (error) {
-      if (current === epoch && !closing.signal.aborted)
+      if (current === page.epoch && !page.signal.aborted)
         notice(error instanceof Error ? error.message : t("users.unavailable"));
     } finally {
-      if (current === epoch) {
+      if (current === page.epoch) {
         busy = false;
         controls();
       }
@@ -200,7 +200,7 @@ export function createUsersSettings(t: Translate) {
           form.reset();
         }, "users.inviteQueued");
       },
-      { signal: closing.signal },
+      { signal: page.signal },
     );
     get<HTMLFormElement>("[data-users-bind]")?.addEventListener(
       "submit",
@@ -212,7 +212,7 @@ export function createUsersSettings(t: Translate) {
           bindOperation = crypto.randomUUID();
         }, "users.bindQueued");
       },
-      { signal: closing.signal },
+      { signal: page.signal },
     );
     get<HTMLFormElement>("[data-users-mail]")?.addEventListener(
       "submit",
@@ -229,10 +229,10 @@ export function createUsersSettings(t: Translate) {
           form.querySelector<HTMLInputElement>('input[name="password"]')!.value = "";
         }, "users.smtpSaved");
       },
-      { signal: closing.signal },
+      { signal: page.signal },
     );
     get("[data-users-reset]")?.addEventListener("click", () => beginPasswordRecovery(self!.username, true), {
-      signal: closing.signal,
+      signal: page.signal,
     });
     get("[data-users-list]")?.addEventListener(
       "click",
@@ -253,7 +253,7 @@ export function createUsersSettings(t: Translate) {
           else await api("/update", "POST", { id: member.id, revision: member.revision, enabled: !member.enabled });
         });
       },
-      { signal: closing.signal },
+      { signal: page.signal },
     );
     get("[data-users-list]")?.addEventListener(
       "change",
@@ -265,18 +265,18 @@ export function createUsersSettings(t: Translate) {
             await api("/update", "POST", { id: member.id, revision: member.revision, role: select.value });
           });
       },
-      { signal: closing.signal },
+      { signal: page.signal },
     );
   }
   function hide() {
-    epoch++;
-    closing.abort();
+    page.invalidate();
+
     reading?.abort();
     reading = null;
     refreshing = null;
     rendered = false;
     busy = false;
-    closing = new AbortController();
+    page.renew();
     if (timer) clearInterval(timer);
     for (const password of host?.querySelectorAll<HTMLInputElement>('input[type="password"]') ?? [])
       password.value = "";
@@ -294,10 +294,10 @@ export function createUsersSettings(t: Translate) {
       (event) => {
         if ((event.target as Element).closest("[data-users-retry]")) void refresh();
       },
-      { signal: closing.signal },
+      { signal: page.signal },
     );
     void refresh();
-    timer = setInterval(() => {
+    timer = page.interval(() => {
       if (!busy) void refresh();
     }, 5000);
   }

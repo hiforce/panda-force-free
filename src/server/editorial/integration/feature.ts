@@ -15,7 +15,11 @@ import { editorialJobRoutes } from "./job-routes.js";
 export function createEditorialFeature(
   db: Database,
   sources: EditorialSources,
-  options: { models?: ReadonlyMap<string, EditorialModel>; configurationInvalid?: boolean } = {},
+  options: {
+    models?: ReadonlyMap<string, EditorialModel>;
+    configurationInvalid?: boolean;
+    runtimes?: import("../model/runtime.js").EditorialRuntimePort;
+  } = {},
 ) {
   const models = options.models || new Map<string, EditorialModel>();
   const service = new EditorialService(
@@ -24,8 +28,10 @@ export function createEditorialFeature(
     new Map([["spacing", richSpacingProcessor]]),
   );
   const repository = new EditorialJobRepository(db),
-    jobs = new EditorialJobs(repository, sources, models),
-    runner = editorialRunner(new EditorialWorker(repository, service, sources, models));
+    jobs = new EditorialJobs(repository, sources, models, Date.now, options.runtimes),
+    runner = editorialRunner(
+      new EditorialWorker(repository, service, sources, models, Date.now, 120000, options.runtimes),
+    );
   return {
     service,
     jobs,
@@ -33,7 +39,7 @@ export function createEditorialFeature(
     stop: runner.stop,
     routes: [
       ...editorialRoutes(service),
-      ...editorialJobRoutes(jobs, models, runner.wake, !!options.configurationInvalid),
+      ...editorialJobRoutes(jobs, models, runner.wake, !!options.configurationInvalid, !!options.runtimes),
     ],
   };
 }

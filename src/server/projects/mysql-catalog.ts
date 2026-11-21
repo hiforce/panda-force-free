@@ -1,4 +1,5 @@
 import type { SQL } from "bun";
+import { validSessionReference } from "../../shared/engine/session-reference.js";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID, createHash } from "node:crypto";
 import { join } from "node:path";
@@ -131,7 +132,7 @@ export class MySQLProjectCatalog {
       !Array.isArray(sessions) ||
       !sessions.length ||
       sessions.length > 100 ||
-      sessions.some((s) => typeof s?.id !== "string" || !/^[a-z0-9_-]{1,128}$/i.test(s.id)) ||
+      sessions.some((s) => !validSessionReference(s?.id)) ||
       new Set(sessions.map((s) => s.id)).size !== sessions.length
     )
       throw new ProjectError(400, "projects.errorInvalidSessionSelection");

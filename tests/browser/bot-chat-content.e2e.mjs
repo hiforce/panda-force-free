@@ -62,9 +62,10 @@ try {
         if (request.method() === "POST" && new URL(request.url()).pathname === `/api/bots/${bot.id}/chat`) sends++;
       });
       await page.goto(app.base + `/bots/${bot.id}/chat`);
-      await page.locator("[data-clear]:enabled").waitFor();
+      await page.locator("[data-clear]:enabled").waitFor({ state: "attached" });
       const input = page.locator("[data-message]"),
         placeholder = await input.getAttribute("placeholder");
+      await input.waitFor({ state: "visible" });
       assert(placeholder.includes("Enter") && placeholder.includes("Shift + Enter"));
       const attribution = page.locator(".workspace-attribution");
       assert.equal(await attribution.isVisible(), width >= 768);
@@ -76,11 +77,12 @@ try {
         assert(Math.abs(footer.y + footer.height - page.viewportSize().height) < 2);
       } else {
         assert.equal(footer, null);
-        const navigation = await page.locator(".workbench-mobile-nav").boundingBox();
-        assert(Math.abs(navigation.y + navigation.height - page.viewportSize().height) < 2);
+        assert.equal(await page.locator(".workbench-mobile-nav").isVisible(), false);
+        const dock = await page.locator(".bot-chat-dock").boundingBox();
+        assert(Math.abs(dock.y + dock.height - page.viewportSize().height) < 2);
       }
 
-      const tools = await page.locator(".bot-home .bot-icon-button").evaluateAll((buttons) =>
+      const tools = await page.locator(".bot-chat-heading .bot-icon-button").evaluateAll((buttons) =>
         buttons.map((button) => ({
           label: button.getAttribute("aria-label"),
           title: button.getAttribute("title"),
@@ -89,17 +91,14 @@ try {
           height: button.getBoundingClientRect().height,
         })),
       );
-      assert.equal(tools.length, 7);
+      assert.equal(tools.length, 3);
       for (const tool of tools) {
         assert(tool.label && tool.title === tool.label);
         assert.equal(tool.icons, 1);
         assert(Math.abs(tool.width - tool.height) < 1);
         assert(tool.width >= (width < 768 ? 44 : 40));
       }
-      assert.equal(
-        await page.locator('.bot-home-heading [aria-current="page"]').getAttribute("href"),
-        `/bots/${bot.id}/chat`,
-      );
+      assert.equal(await page.locator("[data-bot-title]").innerText(), bot.name);
       await input.press("Enter");
       assert.equal(sends, 0);
       await input.fill("帮我准备入职清单");
@@ -141,6 +140,7 @@ try {
       await assistant.locator("[data-copy-message]").click();
       await page.waitForFunction((text) => globalThis.__botCopied.at(-1) === text, reply);
       await input.fill("保留下一条消息草稿");
+      await page.locator("[data-chat-options]").click();
       await page.locator("[data-copy-conversation]").click();
       await page.waitForFunction(
         (text) => globalThis.__botCopied.at(-1)?.includes(text) && globalThis.__botCopied.at(-1)?.startsWith("## "),
@@ -197,7 +197,9 @@ try {
       }
       await page.setViewportSize(originalSize);
       await page.evaluate(() => (document.documentElement.dataset.workbenchWidth = "comfortable"));
-      await page.locator(".bot-chat-tools").evaluate((element) => element.scrollIntoView({ block: "start" }));
+      await page.locator(".bot-chat-history").evaluate((element) => {
+        element.scrollTop = 0;
+      });
       await page.screenshot({ path: `${out}/content-${locale}-${width}.png` });
       await card.locator('[data-content-view="source"]').click();
       await page.screenshot({ path: `${out}/source-${locale}-${width}.png` });
@@ -234,6 +236,7 @@ try {
         await page.reload();
         await page.locator("[data-earlier]:enabled").waitFor();
         assert.equal(await page.locator(".bot-chat-message").count(), 100);
+        await page.locator("[data-chat-options]").click();
         await page.locator("[data-copy-conversation]").click();
         await page.waitForFunction(() => globalThis.__botCopied.at(-1)?.includes("record-0001"));
         assert.equal(copiedPages, 1);
@@ -242,6 +245,7 @@ try {
         assert(transcript.indexOf("record-0001") < transcript.indexOf("record-0103"));
         const count = await page.evaluate(() => globalThis.__botCopied.length);
         wrongGeneration = true;
+        await page.locator("[data-chat-options]").click();
         await page.locator("[data-copy-conversation]:not([aria-busy])").click();
         await page.waitForFunction(() =>
           document.querySelector("[data-bot-notice]")?.textContent.includes("This conversation was cleared"),

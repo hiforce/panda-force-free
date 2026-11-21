@@ -89,3 +89,8 @@ export function workbenchRouteSurface(url = new URL(location.href), route = pars
     return "conversation";
   return "workspace";
 }
+
+/** Bot conversations retain their own workspace while using a docked reading surface. */
+export function isBotConversationRoute(url = new URL(location.href)) {
+  return /^\/bots\/[a-f0-9-]{36}\/chat$/.test(url.pathname);
+}

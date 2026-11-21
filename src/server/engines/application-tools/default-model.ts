@@ -10,3 +10,15 @@ export function applicationDefaultModel(value: unknown): string {
     throw new Error("Application model unavailable");
   return model;
 }
+
+/** Resolve an explicit reset on every run so a resumed thread cannot retain its previous effort. */
+export function applicationDefaultEffort(value: unknown, selected?: string): string | null {
+  const model = selected || applicationDefaultModel(value);
+  if (!isRecord(value) || !Array.isArray(value.data)) throw new Error("Application model unavailable");
+  const entry = value.data.find((item) => isRecord(item) && (item.model ?? item.id) === model);
+  if (!isRecord(entry)) throw new Error("Application model unavailable");
+  const effort = entry.defaultReasoningEffort;
+  if (effort === null || effort === undefined) return null;
+  if (typeof effort !== "string" || !effort || effort.length > 64) throw new Error("Application model unavailable");
+  return effort;
+}

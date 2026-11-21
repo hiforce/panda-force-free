@@ -20,25 +20,26 @@ import m0_17 from "./locales/zh-CN/errors.json";
 import m0_18 from "./locales/zh-CN/files.json";
 import m0_19 from "./locales/zh-CN/gadget.json";
 import m0_20 from "./locales/zh-CN/goals.json";
-import m0_21 from "./locales/zh-CN/knowledge.json";
-import m0_22 from "./locales/zh-CN/plugins.json";
-import m0_23 from "./locales/zh-CN/previews.json";
-import m0_24 from "./locales/zh-CN/projects.json";
-import m0_25 from "./locales/zh-CN/publishing.json";
-import m0_26 from "./locales/zh-CN/search.json";
-import m0_27 from "./locales/zh-CN/sessions.json";
-import m0_28 from "./locales/zh-CN/sessionview.json";
-import m0_29 from "./locales/zh-CN/settings.json";
-import m0_30 from "./locales/zh-CN/shell.json";
-import m0_31 from "./locales/zh-CN/skillWorkspace.json";
-import m0_32 from "./locales/zh-CN/skills.json";
-import m0_33 from "./locales/zh-CN/social.json";
-import m0_34 from "./locales/zh-CN/sources.json";
-import m0_35 from "./locales/zh-CN/storage.json";
-import m0_36 from "./locales/zh-CN/templates.json";
-import m0_37 from "./locales/zh-CN/usage.json";
-import m0_38 from "./locales/zh-CN/users.json";
-import m0_39 from "./locales/zh-CN/workbench.json";
+import m0_21 from "./locales/zh-CN/harness.json";
+import m0_22 from "./locales/zh-CN/knowledge.json";
+import m0_23 from "./locales/zh-CN/plugins.json";
+import m0_24 from "./locales/zh-CN/previews.json";
+import m0_25 from "./locales/zh-CN/projects.json";
+import m0_26 from "./locales/zh-CN/publishing.json";
+import m0_27 from "./locales/zh-CN/search.json";
+import m0_28 from "./locales/zh-CN/sessions.json";
+import m0_29 from "./locales/zh-CN/sessionview.json";
+import m0_30 from "./locales/zh-CN/settings.json";
+import m0_31 from "./locales/zh-CN/shell.json";
+import m0_32 from "./locales/zh-CN/skillWorkspace.json";
+import m0_33 from "./locales/zh-CN/skills.json";
+import m0_34 from "./locales/zh-CN/social.json";
+import m0_35 from "./locales/zh-CN/sources.json";
+import m0_36 from "./locales/zh-CN/storage.json";
+import m0_37 from "./locales/zh-CN/templates.json";
+import m0_38 from "./locales/zh-CN/usage.json";
+import m0_39 from "./locales/zh-CN/users.json";
+import m0_40 from "./locales/zh-CN/workbench.json";
 import m1_0 from "./locales/zh-HK/accounts.json";
 import m1_1 from "./locales/zh-HK/approvals.json";
 import m1_2 from "./locales/zh-HK/auth.json";
@@ -60,25 +61,26 @@ import m1_17 from "./locales/zh-HK/errors.json";
 import m1_18 from "./locales/zh-HK/files.json";
 import m1_19 from "./locales/zh-HK/gadget.json";
 import m1_20 from "./locales/zh-HK/goals.json";
-import m1_21 from "./locales/zh-HK/knowledge.json";
-import m1_22 from "./locales/zh-HK/plugins.json";
-import m1_23 from "./locales/zh-HK/previews.json";
-import m1_24 from "./locales/zh-HK/projects.json";
-import m1_25 from "./locales/zh-HK/publishing.json";
-import m1_26 from "./locales/zh-HK/search.json";
-import m1_27 from "./locales/zh-HK/sessions.json";
-import m1_28 from "./locales/zh-HK/sessionview.json";
-import m1_29 from "./locales/zh-HK/settings.json";
-import m1_30 from "./locales/zh-HK/shell.json";
-import m1_31 from "./locales/zh-HK/skillWorkspace.json";
-import m1_32 from "./locales/zh-HK/skills.json";
-import m1_33 from "./locales/zh-HK/social.json";
-import m1_34 from "./locales/zh-HK/sources.json";
-import m1_35 from "./locales/zh-HK/storage.json";
-import m1_36 from "./locales/zh-HK/templates.json";
-import m1_37 from "./locales/zh-HK/usage.json";
-import m1_38 from "./locales/zh-HK/users.json";
-import m1_39 from "./locales/zh-HK/workbench.json";
+import m1_21 from "./locales/zh-HK/harness.json";
+import m1_22 from "./locales/zh-HK/knowledge.json";
+import m1_23 from "./locales/zh-HK/plugins.json";
+import m1_24 from "./locales/zh-HK/previews.json";
+import m1_25 from "./locales/zh-HK/projects.json";
+import m1_26 from "./locales/zh-HK/publishing.json";
+import m1_27 from "./locales/zh-HK/search.json";
+import m1_28 from "./locales/zh-HK/sessions.json";
+import m1_29 from "./locales/zh-HK/sessionview.json";
+import m1_30 from "./locales/zh-HK/settings.json";
+import m1_31 from "./locales/zh-HK/shell.json";
+import m1_32 from "./locales/zh-HK/skillWorkspace.json";
+import m1_33 from "./locales/zh-HK/skills.json";
+import m1_34 from "./locales/zh-HK/social.json";
+import m1_35 from "./locales/zh-HK/sources.json";
+import m1_36 from "./locales/zh-HK/storage.json";
+import m1_37 from "./locales/zh-HK/templates.json";
+import m1_38 from "./locales/zh-HK/usage.json";
+import m1_39 from "./locales/zh-HK/users.json";
+import m1_40 from "./locales/zh-HK/workbench.json";
 import m2_0 from "./locales/zh-TW/accounts.json";
 import m2_1 from "./locales/zh-TW/approvals.json";
 import m2_2 from "./locales/zh-TW/auth.json";
@@ -100,25 +102,26 @@ import m2_17 from "./locales/zh-TW/errors.json";
 import m2_18 from "./locales/zh-TW/files.json";
 import m2_19 from "./locales/zh-TW/gadget.json";
 import m2_20 from "./locales/zh-TW/goals.json";
-import m2_21 from "./locales/zh-TW/knowledge.json";
-import m2_22 from "./locales/zh-TW/plugins.json";
-import m2_23 from "./locales/zh-TW/previews.json";
-import m2_24 from "./locales/zh-TW/projects.json";
-import m2_25 from "./locales/zh-TW/publishing.json";
-import m2_26 from "./locales/zh-TW/search.json";
-import m2_27 from "./locales/zh-TW/sessions.json";
-import m2_28 from "./locales/zh-TW/sessionview.json";
-import m2_29 from "./locales/zh-TW/settings.json";
-import m2_30 from "./locales/zh-TW/shell.json";
-import m2_31 from "./locales/zh-TW/skillWorkspace.json";
-import m2_32 from "./locales/zh-TW/skills.json";
-import m2_33 from "./locales/zh-TW/social.json";
-import m2_34 from "./locales/zh-TW/sources.json";
-import m2_35 from "./locales/zh-TW/storage.json";
-import m2_36 from "./locales/zh-TW/templates.json";
-import m2_37 from "./locales/zh-TW/usage.json";
-import m2_38 from "./locales/zh-TW/users.json";
-import m2_39 from "./locales/zh-TW/workbench.json";
+import m2_21 from "./locales/zh-TW/harness.json";
+import m2_22 from "./locales/zh-TW/knowledge.json";
+import m2_23 from "./locales/zh-TW/plugins.json";
+import m2_24 from "./locales/zh-TW/previews.json";
+import m2_25 from "./locales/zh-TW/projects.json";
+import m2_26 from "./locales/zh-TW/publishing.json";
+import m2_27 from "./locales/zh-TW/search.json";
+import m2_28 from "./locales/zh-TW/sessions.json";
+import m2_29 from "./locales/zh-TW/sessionview.json";
+import m2_30 from "./locales/zh-TW/settings.json";
+import m2_31 from "./locales/zh-TW/shell.json";
+import m2_32 from "./locales/zh-TW/skillWorkspace.json";
+import m2_33 from "./locales/zh-TW/skills.json";
+import m2_34 from "./locales/zh-TW/social.json";
+import m2_35 from "./locales/zh-TW/sources.json";
+import m2_36 from "./locales/zh-TW/storage.json";
+import m2_37 from "./locales/zh-TW/templates.json";
+import m2_38 from "./locales/zh-TW/usage.json";
+import m2_39 from "./locales/zh-TW/users.json";
+import m2_40 from "./locales/zh-TW/workbench.json";
 export const serverMessages = {
   "zh-CN": {
     "accounts": m0_0,
@@ -142,25 +145,26 @@ export const serverMessages = {
     "files": m0_18,
     "gadget": m0_19,
     "goals": m0_20,
-    "knowledge": m0_21,
-    "plugins": m0_22,
-    "previews": m0_23,
-    "projects": m0_24,
-    "publishing": m0_25,
-    "search": m0_26,
-    "sessions": m0_27,
-    "sessionview": m0_28,
-    "settings": m0_29,
-    "shell": m0_30,
-    "skillWorkspace": m0_31,
-    "skills": m0_32,
-    "social": m0_33,
-    "sources": m0_34,
-    "storage": m0_35,
-    "templates": m0_36,
-    "usage": m0_37,
-    "users": m0_38,
-    "workbench": m0_39,
+    "harness": m0_21,
+    "knowledge": m0_22,
+    "plugins": m0_23,
+    "previews": m0_24,
+    "projects": m0_25,
+    "publishing": m0_26,
+    "search": m0_27,
+    "sessions": m0_28,
+    "sessionview": m0_29,
+    "settings": m0_30,
+    "shell": m0_31,
+    "skillWorkspace": m0_32,
+    "skills": m0_33,
+    "social": m0_34,
+    "sources": m0_35,
+    "storage": m0_36,
+    "templates": m0_37,
+    "usage": m0_38,
+    "users": m0_39,
+    "workbench": m0_40,
   },
   "zh-HK": {
     "accounts": m1_0,
@@ -184,25 +188,26 @@ export const serverMessages = {
     "files": m1_18,
     "gadget": m1_19,
     "goals": m1_20,
-    "knowledge": m1_21,
-    "plugins": m1_22,
-    "previews": m1_23,
-    "projects": m1_24,
-    "publishing": m1_25,
-    "search": m1_26,
-    "sessions": m1_27,
-    "sessionview": m1_28,
-    "settings": m1_29,
-    "shell": m1_30,
-    "skillWorkspace": m1_31,
-    "skills": m1_32,
-    "social": m1_33,
-    "sources": m1_34,
-    "storage": m1_35,
-    "templates": m1_36,
-    "usage": m1_37,
-    "users": m1_38,
-    "workbench": m1_39,
+    "harness": m1_21,
+    "knowledge": m1_22,
+    "plugins": m1_23,
+    "previews": m1_24,
+    "projects": m1_25,
+    "publishing": m1_26,
+    "search": m1_27,
+    "sessions": m1_28,
+    "sessionview": m1_29,
+    "settings": m1_30,
+    "shell": m1_31,
+    "skillWorkspace": m1_32,
+    "skills": m1_33,
+    "social": m1_34,
+    "sources": m1_35,
+    "storage": m1_36,
+    "templates": m1_37,
+    "usage": m1_38,
+    "users": m1_39,
+    "workbench": m1_40,
   },
   "zh-TW": {
     "accounts": m2_0,
@@ -226,24 +231,25 @@ export const serverMessages = {
     "files": m2_18,
     "gadget": m2_19,
     "goals": m2_20,
-    "knowledge": m2_21,
-    "plugins": m2_22,
-    "previews": m2_23,
-    "projects": m2_24,
-    "publishing": m2_25,
-    "search": m2_26,
-    "sessions": m2_27,
-    "sessionview": m2_28,
-    "settings": m2_29,
-    "shell": m2_30,
-    "skillWorkspace": m2_31,
-    "skills": m2_32,
-    "social": m2_33,
-    "sources": m2_34,
-    "storage": m2_35,
-    "templates": m2_36,
-    "usage": m2_37,
-    "users": m2_38,
-    "workbench": m2_39,
+    "harness": m2_21,
+    "knowledge": m2_22,
+    "plugins": m2_23,
+    "previews": m2_24,
+    "projects": m2_25,
+    "publishing": m2_26,
+    "search": m2_27,
+    "sessions": m2_28,
+    "sessionview": m2_29,
+    "settings": m2_30,
+    "shell": m2_31,
+    "skillWorkspace": m2_32,
+    "skills": m2_33,
+    "social": m2_34,
+    "sources": m2_35,
+    "storage": m2_36,
+    "templates": m2_37,
+    "usage": m2_38,
+    "users": m2_39,
+    "workbench": m2_40,
   },
 };

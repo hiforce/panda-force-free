@@ -203,3 +203,39 @@ test("expired chat execution is not silently replayed and retains a durable owne
     store.close();
   }
 });
+
+test("a queued human message freezes reasoning effort while later messages use the edited setting", async () => {
+  const root = await mkdtemp(join(tmpdir(), "bot-chat-effort-")),
+    store = new BotStore(":memory:"),
+    service = new BotChatService(store),
+    selected: string[] = [];
+  const worker = new BotChatWorker(
+    store,
+    (bot) => ({
+      id: "fixture",
+      async run(_input, callbacks) {
+        selected.push(bot.effort ?? "");
+        const scope = { sessionId: "effort-chat", runId: "effort-" + selected.length };
+        await callbacks.started(scope);
+        await callbacks.event?.({ kind: "message", id: "reply", text: "Done", complete: true, phase: "final_answer" });
+        return { ...scope, status: "completed" };
+      },
+    }),
+    (id) => join(root, id),
+  );
+  try {
+    const bot = store.createBot("alice", { name: "Frozen settings", code: "frozen-effort", effort: "high" });
+    await service.send("alice", bot.id, { requestId: randomUUID(), generation: 1, text: "First" });
+    store.updateBot("alice", bot.id, { effort: "low" });
+    await worker.tick();
+    await waitFor(async () => !(await service.snapshot("alice", bot.id)).busy);
+    await service.send("alice", bot.id, { requestId: randomUUID(), generation: 1, text: "Next" });
+    await worker.tick();
+    await waitFor(async () => !(await service.snapshot("alice", bot.id)).busy);
+    expect(selected).toEqual(["high", "low"]);
+  } finally {
+    await worker.close();
+    store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});

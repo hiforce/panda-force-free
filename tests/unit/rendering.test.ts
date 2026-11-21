@@ -21,6 +21,54 @@ afterAll(() => {
 });
 
 describe("assistant Markdown and LaTeX rendering", () => {
+  test("previews legacy inline shared output images through the existing authenticated image route", () => {
+    const path = "/home/panda/attachments/output/11111111-2222-4333-8444-555555555555/中国 历史漫画.png";
+    const html = renderAssistantMarkdown("下载路径：`" + path + "`", { cwd: "/home/panda" });
+    const fragment = dom.window.document.createRange().createContextualFragment(html);
+    const preview = fragment.querySelector("button[data-image-src]")!;
+    const src = new URL(preview.querySelector("img")!.getAttribute("src")!, "http://fixture");
+    expect(src.pathname).toBe("/api/images/local");
+    expect(src.searchParams.get("path")).toBe(path);
+    expect(src.searchParams.get("cwd")).toBe("/home/panda");
+    expect(src.searchParams.get("thumbnail")).toBe("1");
+    expect(preview.getAttribute("data-image-path")).toBe(path);
+    expect(preview.getAttribute("aria-label")).toBe("中国 历史漫画.png");
+    expect(preview.getAttribute("data-image-src")).not.toContain("thumbnail");
+  });
+
+  test("keeps code examples and linked labels literal and avoids duplicate inline thumbnails", () => {
+    const path = "/attachments/output/11111111-2222-4333-8444-555555555555/图.png";
+    const html = renderAssistantMarkdown(
+      "```text\n" + path + "\n```\n\n[`" + path + "`](https://example.com)\n\n`" + path + "`\n\n`" + path + "`",
+    );
+    const fragment = dom.window.document.createRange().createContextualFragment(html);
+    expect(fragment.querySelector("pre code")!.textContent).toBe(path);
+    expect(fragment.querySelector("a code")!.textContent).toBe(path);
+    expect(fragment.querySelectorAll("button.message-image-button").length).toBe(1);
+    expect(fragment.querySelectorAll("a.image-citation").length).toBe(1);
+  });
+
+  test("does not promote unrelated, incomplete, traversing or malformed paths into attachment previews", () => {
+    const root = "/home/panda/attachments/output/11111111-2222-4333-8444-555555555555/";
+    for (const path of [
+      "/etc/private.png",
+      root + "../private.png",
+      root + "%2e%2e/private.png",
+      root + "%00.png",
+      root + "not-finished.pn",
+      root + "report.pdf",
+      root + "bad%xx.png",
+    ]) {
+      const html = renderAssistantMarkdown("`" + path + "`");
+      expect(html).not.toContain("message-image-button");
+    }
+    const html = renderAssistantMarkdown("`" + root + '"<img src=x onerror=alert(1)>.png`');
+    const fragment = dom.window.document.createRange().createContextualFragment(html);
+    expect(fragment.querySelectorAll("img").length).toBe(1);
+    expect(fragment.querySelector("[onerror]")).toBeNull();
+    expect(fragment.querySelector("button")!.getAttribute("data-image-path")).toContain('"<img src=x');
+  });
+
   test("fails closed when no DOM sanitizer environment is available", async () => {
     const renderer = new URL("../../src/client/rendering.js", import.meta.url).pathname;
     const child = Bun.spawn(

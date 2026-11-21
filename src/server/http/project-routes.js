@@ -1,4 +1,8 @@
 import { createSessionDiscovery } from "../conversation/discovery.js";
+import { ProjectSessionAccess } from "../projects/session-access.js";
+import { validSessionReference } from "../../shared/engine/session-reference.js";
+import { harnessId } from "../../shared/harness/presentation.js";
+import { directoryKey, sessionMatches } from "../../shared/session-discovery.js";
 import { errorCode, errorMessage, errorStatus } from "../../shared/errors.js";
 import { errorPayload } from "../i18n/error-payload.js";
 import { ProjectError } from "../projects/catalog.js";
@@ -9,6 +13,7 @@ export function projectRoutes({
   catalog,
   workspaces,
   projectOwner,
+  projectSessions,
   directoryPolicy,
   request: nativeRequest,
   getSession: nativeGetSession,
@@ -24,6 +29,7 @@ export function projectRoutes({
   const request = async (method, params) =>
     directoryPolicy.list(method, await nativeRequest(method, params), getSession);
   const candidates = new Map();
+  const access = new ProjectSessionAccess({ policy: directoryPolicy, native: getSession, managed: projectSessions });
   const discovery = createSessionDiscovery({ request, recordSessions });
   function queryCursor(url) {
     const cursor = url.searchParams.get("cursor") || null;
@@ -58,44 +64,53 @@ export function projectRoutes({
       });
     }
   };
-  const changed = (res, snapshot, status = 200) => {
-    const visible = directoryPolicy.snapshot(snapshot);
-    broadcast({ type: "project-catalog/changed", ...visible });
-    respondJson(res, status, visible);
+  const changed = async (context, snapshot, status = 200) => {
+    broadcast({ type: "project-catalog/changed", ...directoryPolicy.snapshot(snapshot) });
+    respondJson(context.res, status, await access.snapshot(context, snapshot));
   };
   return [
     {
       path: "/api/projects/workspace",
       method: "POST",
-      handler: protect(async ({ req, res }) => {
+      handler: protect(async (context) => {
+        const { req, res } = context;
         const body = await readJsonBody(req);
         if (typeof body.projectId !== "string") throw new ProjectError(400, "projects.errorInvalidProjectDetails");
         const workspace = await workspaces.ensure(body.projectId);
-        const snapshot = directoryPolicy.snapshot(await catalog.snapshot());
-        broadcast({ type: "project-catalog/changed", ...snapshot });
-        respondJson(res, 200, { ...snapshot, workspace });
+        const snapshot = await catalog.snapshot();
+        broadcast({ type: "project-catalog/changed", ...directoryPolicy.snapshot(snapshot) });
+        respondJson(res, 200, { ...(await access.snapshot(context, snapshot)), workspace });
       }),
     },
     {
       path: "/api/projects/directories",
       method: "GET",
-      handler: protect(async ({ res, url }) =>
-        respondJson(
-          res,
-          200,
-          await discovery.directories(
-            queryCursor(url),
-            new Set((await catalog.snapshot()).assignments.map((entry) => entry.id)),
-          ),
-        ),
-      ),
+      handler: protect(async (context) => {
+        const cursor = queryCursor(context.url),
+          assigned = new Set((await catalog.snapshot()).assignments.map((entry) => entry.id));
+        const result = await discovery.directories(cursor, assigned);
+        if (!cursor) {
+          const directories = new Map(result.directories.map((entry) => [entry.path, { ...entry }]));
+          for (const session of await access.managed(context)) {
+            const path = directoryKey(session.cwd || ""),
+              entry = directories.get(path) || { path, count: 0, unassignedCount: 0 };
+            entry.unassignedCount ??= entry.count;
+            entry.count++;
+            if (!assigned.has(session.id)) entry.unassignedCount++;
+            directories.set(path, entry);
+          }
+          result.directories = [...directories.values()];
+        }
+        respondJson(context.res, 200, result);
+      }),
     },
     {
       path: "/api/projects",
       method: ["GET", "POST", "PATCH"],
       handler: protect(async (context) => {
         const { req, res } = context;
-        if (req.method === "GET") return respondJson(res, 200, directoryPolicy.snapshot(await catalog.snapshot()));
+        if (req.method === "GET")
+          return respondJson(res, 200, await access.snapshot(context, await catalog.snapshot()));
         const body = await readJsonBody(req);
         if (req.method === "PATCH" && typeof body.id !== "string")
           throw new ProjectError(400, "projects.errorProjectNotFound");
@@ -105,13 +120,14 @@ export function projectRoutes({
           req.method === "POST"
             ? await workspaces.create(body, body.revision, body.operationId, projectOwner(context))
             : await catalog.save(body, body.revision);
-        changed(res, snapshot, req.method === "POST" ? 201 : 200);
+        await changed(context, snapshot, req.method === "POST" ? 201 : 200);
       }),
     },
     {
       path: "/api/projects/assign",
       method: "POST",
-      handler: protect(async ({ req, res }) => {
+      handler: protect(async (context) => {
+        const { req } = context;
         const { projectId, sessionIds, revision } = await readJsonBody(req);
         if (projectId !== null && typeof projectId !== "string")
           throw new ProjectError(400, "projects.errorProjectNotFound");
@@ -120,35 +136,48 @@ export function projectRoutes({
           !Array.isArray(sessionIds) ||
           !sessionIds.length ||
           sessionIds.length > 100 ||
-          sessionIds.some((id) => typeof id !== "string" || !/^[a-z0-9_-]{1,128}$/i.test(id))
+          sessionIds.some((id) => !validSessionReference(id))
         )
           throw new ProjectError(400, "projects.errorSelectBetween1And100Sessions");
         const sessions = [];
         for (const id of sessionIds) {
           try {
-            const session =
-              projectId === null && directoryPolicy.allowExternal
+            const session = harnessId(id)
+              ? await access.get(context, id)
+              : projectId === null && directoryPolicy.allowExternal
                 ? { id }
                 : candidates.get(id) || (await getSession(id));
-            if (!directoryPolicy.allowExternal && !directoryPolicy.remember(session))
+            if (!harnessId(id) && !directoryPolicy.allowExternal && !directoryPolicy.remember(session))
               throw new Error("Session outside project root");
             sessions.push(session);
           } catch {
             throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
           }
         }
-        changed(res, await catalog.assign(projectId, sessions, revision));
+        await changed(context, await catalog.assign(projectId, sessions, revision));
       }),
     },
     {
       path: "/api/projects/history",
       method: "GET",
-      handler: protect(async ({ res, url }) => {
+      handler: protect(async (context) => {
+        const { res, url } = context;
         const result = await discovery.history({
           cursor: queryCursor(url),
           search: (url.searchParams.get("search") || "").slice(0, 200),
           ...(url.searchParams.has("directory") ? { directory: url.searchParams.get("directory").slice(0, 4096) } : {}),
         });
+        if (!queryCursor(url)) {
+          const managed = (await access.managed(context)).filter((session) =>
+            sessionMatches(session, {
+              search: (url.searchParams.get("search") || "").slice(0, 200).trim().toLocaleLowerCase(),
+              ...(url.searchParams.has("directory")
+                ? { directory: directoryKey(url.searchParams.get("directory")) }
+                : {}),
+            }),
+          );
+          result.sessions = [...managed, ...result.sessions];
+        }
         for (const session of result.sessions) {
           candidates.delete(session.id);
           candidates.set(session.id, session);

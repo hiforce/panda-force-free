@@ -65,6 +65,10 @@ export class SQLiteBotWorkspaceStorage implements BotWorkspaceStorage {
     validateWorkspaceBatch(value);
     return this.db
       .transaction(() => {
+        for (const id of new Set((value.puts ?? []).map((item) => item.botId).filter((id) => id !== "connections"))) {
+          if (this.db.query("SELECT 1 FROM bot_schema_meta WHERE id=?").get("deleted-profile:" + owner + ":" + id))
+            return false;
+        }
         for (const id of value.activeBots ?? []) {
           if (
             !this.db

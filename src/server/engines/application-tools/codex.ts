@@ -13,6 +13,7 @@ import { ActiveRunBudget } from "../active-budget.js";
 import { rememberApplicationSession } from "./sessions.js";
 import { applicationVisibleEvents } from "../../../shared/engine/application-visible-events.js";
 import { forgetCodexApplicationSession } from "./codex-forget.js";
+import { applicationDefaultEffort, applicationDefaultModel } from "./default-model.js";
 
 function identity(value: unknown): string {
   if (typeof value !== "string" || !value || value.length > 128) throw new Error("Invalid application engine identity");
@@ -27,7 +28,7 @@ export function createCodexApplicationEngine(
     model?: string;
     effort?: string;
     timeoutMs?: number;
-    purpose?: "creation" | "knowledge" | "bots" | "bot-chat";
+    purpose?: "creation" | "knowledge" | "bots" | "bot-chat" | "editorial";
   },
   factory: CodexTransportFactory = createCodexBridge,
 ): ApplicationToolEngine {
@@ -189,7 +190,14 @@ export function createCodexApplicationEngine(
       if (callbacks.signal.aborted) abort();
       try {
         if (stopping) throw new Error("Application engine interrupted");
-        const policy = codexApplicationThread(options.scratchDirectory, input.instructions, input.tools, options.model);
+        let model = options.model,
+          effort: string | null | undefined = options.effort;
+        if (effort === "") {
+          const catalog = await transport.request("model/list", { limit: 100 });
+          model ||= applicationDefaultModel(catalog);
+          effort = applicationDefaultEffort(catalog, model);
+        }
+        const policy = codexApplicationThread(options.scratchDirectory, input.instructions, input.tools, model);
         const started = await transport.request(
           input.sessionId ? "thread/resume" : "thread/start",
           input.sessionId
@@ -212,7 +220,7 @@ export function createCodexApplicationEngine(
         const running = await transport.request("turn/start", {
           threadId: scope.sessionId,
           input: [{ type: "text", text: input.prompt }],
-          ...(options.effort ? { effort: options.effort } : {}),
+          ...(effort !== undefined ? { effort } : {}),
         });
         if (!isRecord(running) || !isRecord(running.turn)) throw new Error("Invalid application engine run");
         scope = { ...scope, runId: identity(running.turn.id) };

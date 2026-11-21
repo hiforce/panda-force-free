@@ -8,7 +8,9 @@ const input = {
   instructions: "Use only the declared application tool.",
   tools: [{ name: "panda_documents_create", description: "Save the document", inputSchema: { type: "object" } }],
 };
-function fixture(overrides: { timeoutMs?: number; purpose?: "creation" | "knowledge" | "bots" } = {}) {
+function fixture(
+  overrides: { timeoutMs?: number; purpose?: "creation" | "knowledge" | "bots"; model?: string; effort?: string } = {},
+) {
   let wire!: CodexTransportOptions,
     closed = false,
     turns = 0;
@@ -31,6 +33,13 @@ function fixture(overrides: { timeoutMs?: number; purpose?: "creation" | "knowle
         async request(method, params) {
           if (wire.isShuttingDown()) throw new Error("Transport already closed");
           requests.push({ method, params });
+          if (method === "model/list")
+            return {
+              data: [
+                { model: "default-model", isDefault: true, defaultReasoningEffort: "medium" },
+                { model: "other-model", defaultReasoningEffort: "low" },
+              ],
+            };
           if (method === "thread/start" || method === "thread/resume") return { thread: { id: "owned-session" } };
           if (method === "turn/start") {
             turns++;
@@ -347,4 +356,20 @@ test("an exhausted active deadline has a typed failure and interrupts only its o
     { method: "turn/interrupt", params: { threadId: "owned-session", turnId: "owned-run" } },
   ]);
   expect(f.closed()).toBe(true);
+});
+
+test("application runs pass the chosen effort and resolve model defaults on resumed turns", async () => {
+  for (const [model, selected, expectedModel, expectedEffort] of [
+    ["other-model", "high", "other-model", "high"],
+    ["other-model", "", "other-model", "low"],
+    [undefined, "", "default-model", "medium"],
+  ] as const) {
+    const f = fixture({ ...(model ? { model } : {}), effort: selected });
+    const running = f.engine.run({ ...input, persistent: true, sessionId: "owned-session" }, f.callbacks);
+    await until(() => f.requests.some((r) => r.method === "turn/start"));
+    expect(f.requests.find((r) => r.method === "thread/resume")?.params?.model).toBe(expectedModel);
+    expect(f.requests.find((r) => r.method === "turn/start")?.params?.effort).toBe(expectedEffort);
+    f.complete();
+    expect((await running).status).toBe("completed");
+  }
 });

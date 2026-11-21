@@ -1,0 +1,144 @@
+import { HarnessMaterials } from "./materials.js";
+import { harnessSummary } from "../../shared/harness/presentation.js";
+import { errorCode } from "../../shared/errors.js";
+import type { CreationMaterialPort } from "../creation/materials.js";
+import { existsSync } from "node:fs";
+import { dirname } from "node:path";
+import { join } from "node:path";
+import { realpath, stat, mkdtemp, rm } from "node:fs/promises";
+import { HarnessError } from "../../shared/harness/contracts.js";
+import { isRecord } from "../../shared/records.js";
+import type { HarnessMetadata } from "./ports.js";
+import type { EngineDriver } from "../../shared/engine/contracts.js";
+import type { SessionHistory } from "../engines/runtime-contract.js";
+import type { ProjectDirectoryPolicy } from "../projects/directory-policy.js";
+import type { RouteContext } from "../http/router.js";
+import { sharedWorkspaceAllowed } from "../auth/users/access.js";
+import { SQLiteHarnessMetadata } from "./storage/sqlite.js";
+import { JsonlHarnessHistory } from "./storage/history.js";
+import { HarnessRegistry, type HarnessPrincipal } from "./registry.js";
+import { HarnessConversations } from "./conversations.js";
+import { HarnessDiagnostics } from "./diagnostics.js";
+import { harnessProfiles } from "./profiles.js";
+import { harnessRoutes } from "./routes.js";
+import { readHarnessSourcePage } from "./source-history.js";
+import { ensureAttachmentWorkspace } from "../workspace/attachment-workspace.js";
+import { attachmentWorkspaceContext } from "../../shared/attachment-workspace.js";
+export async function createHarnessFeature(options: {
+  stateRoot: string;
+  defaultCwd: string;
+  browseRoots: readonly string[];
+  driver: EngineDriver;
+  nativeHistory: SessionHistory;
+  metadata?: HarnessMetadata;
+  materials(): CreationMaterialPort;
+  remoteMaterial?(url: string): Promise<{ bytes: Uint8Array; canonicalUrl: string }>;
+  directoryPolicy: ProjectDirectoryPolicy;
+  owner(context: RouteContext): string;
+  project(owner: string, project: string): Promise<{ path: string }>;
+  authorizeProject(owner: string, project: string): Promise<void>;
+}) {
+  const metadata = options.metadata ?? new SQLiteHarnessMetadata(join(options.stateRoot, "data", "harness.sqlite"));
+  const registry = new HarnessRegistry(metadata, harnessProfiles(options.stateRoot, options.driver));
+  await registry.initialize();
+  const principal = (context: RouteContext): HarnessPrincipal => ({
+    owner: options.owner(context),
+    administrator: sharedWorkspaceAllowed(context.req),
+  });
+  // Native execution IDs remain hidden after a restart as well as while the process that created them is alive.
+  const { rememberApplicationSession } = await import("../engines/application-tools/sessions.js");
+  for (const row of await metadata.list("conversation")) {
+    const value: unknown = JSON.parse(row.data);
+    if (isRecord(value) && Array.isArray(value.bindings))
+      for (const binding of value.bindings)
+        if (isRecord(binding) && typeof binding.nativeSessionId === "string")
+          rememberApplicationSession(binding.nativeSessionId);
+  }
+  const materials = new HarnessMaterials({
+    roots: options.browseRoots,
+    allows: (path) => options.directoryPolicy.allowsPath(path),
+    materials: options.materials,
+    remote: options.remoteMaterial,
+  });
+  const conversations = new HarnessConversations({
+    metadata,
+    history: new JsonlHarnessHistory(join(options.stateRoot, "harness", "conversations")),
+    registry,
+    sourcePage: async (principal, id, cursor) => {
+      if (!principal.administrator) throw new HarnessError("forbidden", 403);
+      const native = await options.nativeHistory.getThreadMetadata(id);
+      const cwd = native.cwd || options.defaultCwd;
+      if (!options.directoryPolicy.remember(native) || !options.directoryPolicy.allowsPath(cwd))
+        throw new HarnessError("forbidden", 403);
+      return readHarnessSourcePage(options.nativeHistory, id, cwd, cursor);
+    },
+    historyCommand: [
+      process.execPath,
+      existsSync(join(import.meta.dir, "history-cli.ts"))
+        ? join(import.meta.dir, "history-cli.ts")
+        : join(dirname(process.argv[1] || process.execPath), "harness-history.js"),
+    ],
+    workspace: async (principal, input) => {
+      if (!principal.administrator) throw new HarnessError("forbidden", 403);
+      let path = input.cwd || options.defaultCwd;
+      if (input.projectId) path = (await options.project(principal.owner, input.projectId)).path;
+      if (!options.directoryPolicy.allowsPath(path) || !(await stat(path)).isDirectory())
+        throw new HarnessError("workspaceUnavailable", 409);
+      return realpath(path);
+    },
+    authorize: async (principal, conversation) => {
+      if (!principal.administrator || !options.directoryPolicy.allowsPath(conversation.cwd))
+        throw new HarnessError("forbidden", 403);
+      if (conversation.projectId) await options.authorizeProject(principal.owner, conversation.projectId);
+    },
+    attachments: (principal, ids, conversation) => materials.resolve(principal, ids, conversation),
+    instructions: (conversation) =>
+      `${attachmentWorkspaceContext(ensureAttachmentWorkspace(conversation.cwd, options.browseRoots, conversation.id))}\n\n`,
+  });
+  const diagnostics = new HarnessDiagnostics(registry, async () => {
+    if (!options.directoryPolicy.allowsPath(options.defaultCwd)) throw new HarnessError("forbidden", 403);
+    const cwd = await mkdtemp(join(options.defaultCwd, ".panda-harness-ping-"));
+    return { cwd, cleanup: () => rm(cwd, { recursive: true, force: true }) };
+  });
+  const routes = harnessRoutes({
+    registry,
+    conversations,
+    diagnostics,
+    principal,
+    defaultCwd: options.defaultCwd,
+    importSession: async (principal, id) => {
+      if (!/^[a-zA-Z0-9-]{1,128}$/.test(id)) throw new HarnessError("invalidInput");
+      const native = await options.nativeHistory.getThreadMetadata(id);
+      if (!options.directoryPolicy.remember(native)) throw new HarnessError("notFound", 404);
+      const live = await options.nativeHistory.readLiveThread(id);
+      if (isRecord(live) && live.active === true) throw new HarnessError("busy", 409);
+      const cwd = native.cwd || options.defaultCwd;
+      if (!options.directoryPolicy.allowsPath(cwd)) throw new HarnessError("forbidden", 403);
+      return readHarnessSourcePage(options.nativeHistory, id, cwd);
+    },
+  });
+  return {
+    registry,
+    conversations,
+    projectSessions: {
+      get: (context: RouteContext, id: string) => conversations.summary(principal(context), id),
+      list: async (context: RouteContext) => {
+        let identity: HarnessPrincipal;
+        try {
+          identity = principal(context);
+        } catch (error) {
+          // Legacy service-only installations have native projects but no personal conversation owner yet.
+          if (errorCode(error) === "identityRequired") return [];
+          throw error;
+        }
+        return (await conversations.list(identity)).map(harnessSummary);
+      },
+    },
+    routes,
+    async close() {
+      await diagnostics.close();
+      await conversations.close();
+      await metadata.close();
+    },
+  };
+}

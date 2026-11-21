@@ -152,7 +152,7 @@ export class BotChatWorker {
         return;
       }
       const bot = await this.store.bot(row.owner, row.botId),
-        engine = this.engine({ ...bot, model: row.data.model });
+        engine = this.engine({ ...bot, model: row.data.model, runtimeId: row.data.runtimeId ?? "codex" });
       if (!engine.forget) {
         await this.store.workspace.batch(row.owner, {
           checks: [{ kind: row.kind, id: row.id, version: row.version }],

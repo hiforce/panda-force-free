@@ -43,10 +43,18 @@ export function assembleSessionWorkspace({
         panel.refresh();
       } else modelsPort.applyModelSelection(id, model, effort);
     },
+    applyRuntimeModel: (id, selection, runtime) => {
+      const domain = creation();
+      if (!domain) return modelsPort.applyRuntimeModel(id, selection, runtime);
+      if (domain.key !== id) throw new Error(t("sessionview.sessionChanged"));
+      domain.applyRuntimeSelection(selection, runtime);
+      panel.refresh();
+    },
     applyPermission: (...args) => modelsPort.applyPermissionSelection(...args),
     reloadModels: () => modelsPort.loadModels(),
     onError: (message) => noticesPort.addPersistentError(message),
   });
+  modelsPort.setModelPicker(() => settings.open("model"));
   const composerSettings = createComposerSettingsMenu({
     t,
     read: () => creation()?.controls() || modelsPort.sessionControlView(),
@@ -56,8 +64,13 @@ export function assembleSessionWorkspace({
       modelsPort.closePermissionMenu();
     },
     openDetail: (kind, navigation) => {
-      if (creation() || (isSessionPage() && state.active?.id)) settings.open(kind, navigation);
-      else if (kind === "model") modelsPort.openModelMenu("main", navigation.back);
+      if (
+        kind === "model" ||
+        creation() ||
+        (isSessionPage() && state.active?.id) ||
+        (kind === "permissions" && modelsPort.sessionControlView().permissionOwner === "harness")
+      )
+        settings.open(kind, navigation);
       else modelsPort.openPermissionMenu(navigation.back);
     },
   });
@@ -217,7 +230,7 @@ export function assembleSessionWorkspace({
     },
     toast: (message) => noticesPort.toast(message),
     search: () => {
-      sidebarLayoutPort.setSidebarOpen(false);
+      if (sidebarLayoutPort.mobileSidebarEnabled()) sidebarLayoutPort.setSidebarOpen(false);
       workbenchPort.workbench?.openSearch();
     },
     layoutChanged: () => sidebarLayoutPort.syncSidebarLayout(),
@@ -232,7 +245,7 @@ export function assembleSessionWorkspace({
     openSettings: (kind) => settings.open(kind),
     refresh() {
       settings.sync();
-      if (!isSessionPage()) settings.close();
+      if (!isSessionPage() && parseWorkbenchRoute().page !== "new") settings.close();
       panel.refresh();
       composerSettings.sync();
     },

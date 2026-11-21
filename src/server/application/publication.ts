@@ -1,6 +1,8 @@
 import { mysqlPublicationSources } from "../delivery/integration/mysql-sources.js";
 import { mysqlSocialSources } from "../delivery/integration/mysql-social-sources.js";
 import { routeMySQLSocialSources } from "../delivery/integration/mysql-social-source-routing.js";
+import { join } from "node:path";
+import { harnessEditorialModels } from "../editorial/integration/harness.js";
 import { createMySQLEditorialFeature } from "../editorial/integration/mysql-feature.js";
 import { mysqlDocumentEditorialSources } from "../editorial/integration/mysql-document-source.js";
 import { fileDocumentAsyncEditorialSources } from "../editorial/integration/async-file-document-source.js";
@@ -12,7 +14,6 @@ import { routeSocialSources } from "../delivery/integration/social-source-routin
 import { PublicationVariantFiles } from "../publishing/variant-files.js";
 import { routePublicationSources } from "../publishing/integration/source-routing.js";
 import { filePublicationSources } from "../publishing/integration/file-document-source.js";
-import { join } from "node:path";
 import { nativeBuildThemes } from "../templates/integration/native-build-themes.js";
 import { createPublishingFeature } from "../publishing/integration/feature.js";
 import { createSiteBuildFeature } from "../builds/integration/feature.js";
@@ -43,6 +44,7 @@ export async function createApplicationPublication(
   documents: ApplicationDocuments,
   plugins: Awaited<ReturnType<typeof createApplicationExtensions>>,
   resolveOwner: ApplicationOwnerResolver,
+  runtimePort?: () => import("../engines/application-tools/runtime-port.js").ApplicationRuntimePort,
 ) {
   const { backend, documentFeature, fileDocuments, requireDocumentProject, requireFileDocumentProject } = documents;
   const { pluginFeature, nativeThemeFeature, packageSourceFeature } = plugins;
@@ -55,6 +57,23 @@ export async function createApplicationPublication(
       requireProject: requireFileDocumentProject,
     }),
   );
+  const runtimeEditorial = runtimePort
+    ? harnessEditorialModels(
+        {
+          catalog: (...args) => runtimePort().catalog(...args),
+          discover: (...args) => runtimePort().discover(...args),
+          resolve: (...args) => runtimePort().resolve(...args),
+          engine: (...args) => runtimePort().engine(...args),
+        },
+        {
+          connection: { mode: "isolated" },
+          scratchRoot: join(config.stateRoot, "editorial", "runtime"),
+          version: config.version,
+          engineId: config.engineId,
+          purpose: "editorial",
+        },
+      )
+    : undefined;
   const editorialFeature =
     backend.driver === "mysql"
       ? createMySQLEditorialFeature(
@@ -68,7 +87,7 @@ export async function createApplicationPublication(
                 requireProject: requireFileDocumentProject,
               }),
             ),
-          editorialModelSettings(config.stateRoot),
+          { ...editorialModelSettings(config.stateRoot), runtimes: runtimeEditorial },
         )
       : createEditorialFeature(
           backend.feature.persistence,
@@ -80,7 +99,7 @@ export async function createApplicationPublication(
               requireProject: requireFileDocumentProject,
             }),
           ),
-          editorialModelSettings(config.stateRoot),
+          { ...editorialModelSettings(config.stateRoot), runtimes: runtimeEditorial },
         );
   const siteBuildFeature = createSiteBuildFeature({
     db: backend.driver === "sqlite" ? backend.feature.persistence : null,

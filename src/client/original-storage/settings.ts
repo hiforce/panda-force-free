@@ -1,3 +1,4 @@
+import { SettingsPageLifetime } from "../settings-pages/lifetime.js";
 import type { Translate, MessageId } from "../../shared/i18n/messages.js";
 import type {
   OriginalStorageSettings,
@@ -28,14 +29,13 @@ function recovery() {
 }
 /** Only operation identity survives navigation; credentials remain in memory and are cleared when the page closes. */
 export function createOriginalStorageSettings(t: Translate) {
+  const page = new SettingsPageLifetime();
   let host: HTMLElement | null = null,
     settings: OriginalStorageSettings | null = null,
     form = emptyOriginalStorageForm(),
     pending = recovery(),
     previous: OriginalStorageMutation | null = null,
     notice: MessageId | null = null,
-    lifetime = new AbortController(),
-    epoch = 0,
     busy = false,
     formRevision = 0,
     lastAction: "configure" | "credentials" | null = null;
@@ -123,15 +123,15 @@ export function createOriginalStorageSettings(t: Translate) {
   }
   async function refresh(adoptForm = true, clearPending = false) {
     if (!host || busy) return;
-    const current = epoch;
+    const current = page.epoch;
     busy = true;
     lastAction = null;
     notice = "storage.loading";
     paintNotice();
     controls();
     try {
-      const value = await originalStorageRequest<OriginalStorageSettings>("", undefined, lifetime.signal);
-      if (current !== epoch) return;
+      const value = await originalStorageRequest<OriginalStorageSettings>("", undefined, page.signal);
+      if (current !== page.epoch) return;
       if (adoptForm) adopt(value);
       else settings = value;
       if (clearPending) {
@@ -142,9 +142,9 @@ export function createOriginalStorageSettings(t: Translate) {
       notice = pending ? "storage.unknownSave" : value.revision !== formRevision ? "storage.errorConflict" : null;
       render(false);
     } catch (error) {
-      if (current === epoch) showError(error);
+      if (current === page.epoch) showError(error);
     } finally {
-      if (current === epoch) {
+      if (current === page.epoch) {
         busy = false;
         controls();
       }
@@ -227,16 +227,16 @@ export function createOriginalStorageSettings(t: Translate) {
     previous = input;
     pending = { id: input.operationId, revision: input.revision };
     remember();
-    const current = epoch;
+    const current = page.epoch;
     busy = true;
     render(false);
     try {
       const result = await originalStorageRequest<{ savedRevision: number; settings: OriginalStorageSettings }>(
         "",
         input,
-        lifetime.signal,
+        page.signal,
       );
-      if (current !== epoch) return;
+      if (current !== page.epoch) return;
       adopt(result.settings);
       pending = null;
       previous = null;
@@ -244,7 +244,7 @@ export function createOriginalStorageSettings(t: Translate) {
       notice = "storage.saved";
       render(false);
     } catch (error) {
-      if (current !== epoch) return;
+      if (current !== page.epoch) return;
       if (error instanceof OriginalStorageRequestError && [400, 401, 403, 409, 413].includes(error.status)) {
         pending = null;
         previous = null;
@@ -253,7 +253,7 @@ export function createOriginalStorageSettings(t: Translate) {
       } else notice = "storage.unknownSave";
       render(false);
     } finally {
-      if (current === epoch) {
+      if (current === page.epoch) {
         busy = false;
         controls();
         revealFeedback();
@@ -262,19 +262,19 @@ export function createOriginalStorageSettings(t: Translate) {
   }
   async function checkSave() {
     if (!host || busy || !pending) return;
-    const current = epoch;
+    const current = page.epoch;
     busy = true;
     controls();
     try {
       const result = await originalStorageRequest<OriginalStorageOperation | null>(
         "/operations/" + pending.id,
         undefined,
-        lifetime.signal,
+        page.signal,
       );
-      if (current !== epoch) return;
+      if (current !== page.epoch) return;
       if (result?.state === "saved") {
-        const value = await originalStorageRequest<OriginalStorageSettings>("", undefined, lifetime.signal);
-        if (current !== epoch) return;
+        const value = await originalStorageRequest<OriginalStorageSettings>("", undefined, page.signal);
+        if (current !== page.epoch) return;
         adopt(value);
         pending = null;
         previous = null;
@@ -285,15 +285,15 @@ export function createOriginalStorageSettings(t: Translate) {
         previous = null;
         remember();
         notice = "storage.notSaved";
-        const latest = await originalStorageRequest<OriginalStorageSettings>("", undefined, lifetime.signal);
-        if (current !== epoch) return;
+        const latest = await originalStorageRequest<OriginalStorageSettings>("", undefined, page.signal);
+        if (current !== page.epoch) return;
         settings = latest;
       } else notice = "storage.pendingSave";
       render(false);
     } catch (error) {
-      if (current === epoch) showError(error);
+      if (current === page.epoch) showError(error);
     } finally {
-      if (current === epoch) {
+      if (current === page.epoch) {
         busy = false;
         controls();
         revealFeedback();
@@ -301,8 +301,8 @@ export function createOriginalStorageSettings(t: Translate) {
     }
   }
   function hide() {
-    epoch++;
-    lifetime.abort();
+    page.invalidate();
+
     if (host) {
       form = readOriginalStorageForm(host, form);
       host.replaceChildren();
@@ -318,7 +318,7 @@ export function createOriginalStorageSettings(t: Translate) {
     if (host === element) return;
     hide();
     host = element;
-    lifetime = new AbortController();
+    page.renew();
     pending = recovery();
     render(false);
     element.addEventListener(
@@ -326,7 +326,7 @@ export function createOriginalStorageSettings(t: Translate) {
       () => {
         form = readOriginalStorageForm(element, form);
       },
-      { signal: lifetime.signal },
+      { signal: page.signal },
     );
     element.addEventListener(
       "change",
@@ -345,7 +345,7 @@ export function createOriginalStorageSettings(t: Translate) {
           render(false);
         }
       },
-      { signal: lifetime.signal },
+      { signal: page.signal },
     );
     element.addEventListener(
       "submit",
@@ -355,7 +355,7 @@ export function createOriginalStorageSettings(t: Translate) {
         event.preventDefault();
         void submit(form.dataset.storageForm === "credentials" ? "credentials" : "configure");
       },
-      { signal: lifetime.signal },
+      { signal: page.signal },
     );
     element.addEventListener(
       "click",
@@ -366,7 +366,7 @@ export function createOriginalStorageSettings(t: Translate) {
         else if (action === "check") void checkSave();
         else if (action === "retry") void submit("configure", true);
       },
-      { signal: lifetime.signal },
+      { signal: page.signal },
     );
     void refresh(!settings);
   }

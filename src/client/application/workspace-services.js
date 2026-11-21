@@ -45,6 +45,8 @@ export function assembleSidebar({
   const {
     dispose,
     renderThreads,
+    openSessionMenu,
+    refreshSessionMenu,
     applyProjectVisibility,
     loadProjectVisibility: loadProjectVisibilityRaw,
     setProjectHidden,
@@ -73,7 +75,7 @@ export function assembleSidebar({
     shortPath: (path) => shortPath(path),
     titleOf: (thread) => titleOf(thread),
     openThread: (id) => navigationPort.openThread(id),
-    startNewTask: () => navigationPort.startNewTask(),
+    startNewTask: (options) => navigationPort.startNewTask(options),
     setWorkspace: (path) => workspacePort.setWorkspace(path),
     setProjectless: () => workspacePort.setProjectless(),
     chooseProject: (path) => workspacePort.selectWorkbenchProject(path),
@@ -85,7 +87,9 @@ export function assembleSidebar({
     toast: /** @param {Parameters<typeof noticesPort.toast>} args */ (...args) => noticesPort.toast(...args),
     toastProject: () => noticesPort.getToastProject(),
     dismissToast: () => noticesPort.dismissToast(),
-    addPersistentError: (message) => noticesPort.addPersistentError(message),
+    addPersistentError: /** @param {Parameters<typeof noticesPort.addPersistentError>} args */ (...args) =>
+      noticesPort.addPersistentError(...args),
+    removePersistentError: (key) => noticesPort.removePersistentError(key),
     refreshThreadList: () => synchronizationPort.refreshThreadList(),
     cleanupDeletedThread: (threadId) => {
       repositoriesPort.evictConversationMemory(threadId);
@@ -117,6 +121,8 @@ export function assembleSidebar({
     toggleProjectPinned,
     isProjectPinned,
     renderThreads,
+    openSessionMenu,
+    refreshSessionMenu,
     loadProjectVisibility,
     loadProjectVisibilityRaw,
     applyProjectVisibility,
@@ -149,7 +155,6 @@ export function assembleWorkbench({
 }) {
   let workbench;
   workbench = createWorkbench({
-    botModels: { read: () => modelsPort.sessionControlView(), load: () => modelsPort.loadModels() },
     creationBridge: {
       controls: () => modelsPort.sessionControlView(),
       openGoal: (draft) => goalsPort.openGoalDialog(undefined, draft),
@@ -209,6 +214,8 @@ export function assembleWorkbench({
     hideSettings: () => settingsPort.hideSettings(),
     showSettings: /** @param {Parameters<typeof settingsPort.openSettings>} args */ (...args) =>
       settingsPort.openSettings(...args),
+    openSessionMenu: (id, trigger) => sidebarPort.openSessionMenu(id, trigger),
+    refreshSessionMenu: () => sidebarPort.refreshSessionMenu(),
     catalog: projectsPort.businessProjects,
     setProjectHidden: /** @param {Parameters<typeof sidebarPort.setProjectHidden>} args */ (...args) =>
       sidebarPort.setProjectHidden(...args),

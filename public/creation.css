@@ -590,6 +590,24 @@
   color: var(--pf-muted);
   line-height: 1.7;
 }
+.creation-progress-list {
+  display: grid;
+  gap: var(--pf-space-2);
+  max-height: 18rem;
+  overflow: auto;
+  padding: var(--pf-space-2) 0;
+  list-style: none;
+}
+.creation-progress-list li {
+  display: grid;
+  gap: var(--pf-space-1);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.creation-progress-list time {
+  color: var(--pf-muted);
+  font-size: 11px;
+}
 .creation-artifact {
   display: grid;
   gap: var(--pf-space-2);

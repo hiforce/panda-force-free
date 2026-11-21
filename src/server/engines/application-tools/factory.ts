@@ -6,6 +6,7 @@ import { trackApplicationDirectory, registerApplicationRoot } from "./sessions.j
 
 export interface ApplicationEngineProfile {
   engineId: string;
+  runtimeId?: string;
   model?: string;
   effort?: string;
   activeTimeoutMs?: number;
@@ -19,7 +20,8 @@ export function isolatedApplicationEngines(
     workspaceRoot?: string;
     version: string;
     engineId: string;
-    purpose: "creation" | "knowledge";
+    purpose: "creation" | "knowledge" | "editorial";
+    runtimes?: import("./runtime-port.js").ApplicationRuntimePort;
   },
   factory?: CodexTransportFactory,
 ) {
@@ -31,11 +33,14 @@ export function isolatedApplicationEngines(
     registerApplicationRoot(options.workspaceRoot);
   }
   return {
-    select(profile: ApplicationEngineProfile) {
-      if (profile.engineId !== "codex" || options.engineId !== "codex")
+    select(profile: ApplicationEngineProfile, owner?: string) {
+      if (
+        !(profile.runtimeId && options.runtimes && owner) &&
+        (profile.engineId !== "codex" || options.engineId !== "codex")
+      )
         throw new Error("Application engine unavailable");
       return {
-        id: "codex",
+        id: profile.engineId,
         async run(...args: Parameters<ReturnType<typeof createCodexApplicationEngine>["run"]>) {
           const [input, callbacks] = args;
           callbacks.signal.throwIfAborted();
@@ -67,6 +72,8 @@ export function isolatedApplicationEngines(
           const untrack = trackApplicationDirectory(scratch);
           try {
             callbacks.signal.throwIfAborted();
+            if (profile.runtimeId && options.runtimes && owner)
+              return await options.runtimes.engine(owner, profile, scratch, options.purpose).run(input, callbacks);
             return await createCodexApplicationEngine(
               {
                 connection: options.connection,

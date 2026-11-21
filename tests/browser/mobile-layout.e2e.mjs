@@ -56,6 +56,7 @@ const sidebarVisibility = await page.evaluate(() => {
 });
 await page.screenshot({ path: artifact("mobile-sidebar-open.png"), fullPage: false });
 const sidebarRows = await page.locator(".sidebar .thread-item").count();
+await page.locator("#sidebarSessionsTab").click();
 await page.locator(".sidebar .thread-item").first().click();
 const sidebarClosedAfterSelection = await page
   .waitForFunction(() => document.querySelector(".sidebar").getBoundingClientRect().x < 0, { timeout: 3000 })

@@ -57,6 +57,15 @@ export class LocalAccounts {
     if (value && !isStoredPassword(value)) throw new AccountError("unavailable", 503);
     return value;
   }
+  async runtimePrincipal(owner: string) {
+    for (const user of await this.repository.list()) {
+      if (identity(user).owner !== owner) continue;
+      if (!user.enabled) throw new AccountError("forbidden", 403);
+      return { owner, administrator: user.role === "admin" };
+    }
+    // Installation and authenticated federation identities retain their existing host-workspace policy.
+    return { owner, administrator: true };
+  }
   async passwordResetAvailable() {
     return Boolean((await this.repository.settings()).smtp);
   }

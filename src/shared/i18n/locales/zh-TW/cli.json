@@ -321,5 +321,13 @@
   "botAvatarRabbit": "小兔子",
   "botAvatarBear": "小熊",
   "botAvatarTiger": "小老虎",
-  "botAvatarPenguin": "企鵝"
+  "botAvatarPenguin": "企鵝",
+  "botDeleteAssistant": "刪除助理",
+  "botDeleteAssistantHint": "確定永久刪除此助理及其對話、任務和專屬整合設定？API Key 將移除對此助理的授權，共用連線及對其他助理的授權保留。請先停止待執行的任務和對話、停用整合，並處理結果未知的傳送或回呼。",
+  "botAssistantDeleted": "助理已刪除。",
+  "botAssistantBusy": "此助理有待執行或執行中的工作、已啟用的整合，或尚未完成的傳送或清理。請先停止工作、停用整合並核對結果未知的操作，再刪除助理。",
+  "botEffortDefault": "使用模型預設強度",
+  "botEffortHint": "用於下一則對話訊息及之後開始執行的背景工作。",
+  "botEffortChooseModel": "選擇模型後，可設定該模型支援的思考強度。",
+  "botEffortUnavailable": "目前模型清單沒有已儲存的強度；未修改時會保留原設定。"
 }

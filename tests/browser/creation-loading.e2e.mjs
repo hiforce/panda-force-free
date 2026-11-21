@@ -114,6 +114,7 @@ for (const [engine, width, locale] of [
       await route.continue();
     });
     await page.goto(app.base + "/creation/" + id + "?creationScope=personal");
+    await page.waitForFunction(() => !document.body.classList.contains("workspace-booting"));
     await page.locator('.creation-session-notice[data-phase="loading"]').waitFor({ timeout: 1000 });
     await page.screenshot({ path: `${out}/initial-indicator-${width}-${locale}.png` });
     releaseRead();
@@ -123,6 +124,7 @@ for (const [engine, width, locale] of [
     await page.locator("#prompt").fill("保留等待网络恢复时的新输入");
     held = new Promise((resolve) => (releaseRead = resolve));
     await page.reload();
+    await page.waitForFunction(() => !document.body.classList.contains("workspace-booting"));
     await message.waitFor({ timeout: 1000 });
     await page.locator('.creation-session-notice[data-phase="refreshing"]').waitFor({ timeout: 1000 });
     assert.equal(await page.locator("#prompt").inputValue(), "保留等待网络恢复时的新输入");
@@ -222,7 +224,7 @@ for (const [engine, width, locale] of [
     await context.close();
   } finally {
     await browser.close();
-    await app.stop();
+    await app.dispose();
   }
 }
 await writeFile(`${out}/verification.json`, JSON.stringify({ passed: true, records }, null, 2));

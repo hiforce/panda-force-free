@@ -39,6 +39,7 @@ export class EditorialWorker {
     private models: ReadonlyMap<string, EditorialModel>,
     private now: () => number = Date.now,
     private timeoutMs = 120000,
+    private readonly runtimes?: import("../model/runtime.js").EditorialRuntimePort,
   ) {}
   async runOne(stopping?: AbortSignal): Promise<boolean> {
     if (this.running || stopping?.aborted) return false;
@@ -69,7 +70,10 @@ export class EditorialWorker {
     let failure: EditorialJobFailure = "processingFailed";
     try {
       const { spec } = claim,
-        model = this.models.get(spec.profile.id);
+        model =
+          spec.profile.runtimeId && this.runtimes
+            ? this.runtimes.model(claim.row.owner, spec.profile)
+            : this.models.get(spec.profile.id);
       await this.sources.current(spec.source.ref.documentId, spec.source.ref.projectId);
       const source = await this.sources.revision(
         spec.source.ref.documentId,

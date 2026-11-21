@@ -33,6 +33,7 @@ export function createNativeCreationFeature(
     connection: CodexConnection;
     version: string;
     models(): Promise<unknown>;
+    runtimes?: import("../../engines/application-tools/runtime-port.js").ApplicationRuntimePort;
     owner(context: RouteContext): string;
     requireProject(projectId: string): unknown;
     authorizeProject?(owner: string, projectId: string): void | Promise<void>;
@@ -99,6 +100,7 @@ export function createNativeCreationFeature(
         new Set(options.engineId === "codex" ? ["codex"] : []),
         async (_engineId, catalog) => creationDefaultModel(catalog ?? (await options.models())),
         options.models,
+        options.runtimes,
       ),
       engines: creationEngines({
         ...options,

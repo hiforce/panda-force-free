@@ -47,6 +47,7 @@
     "composerSkills": "composer"
   },
   "features": {
+    "harness": { "read": ["active", "newSessionProjectId"], "write": [] },
     "sessionWorkspace": {
       "read": ["active", "goals", "items", "tokenUsage", "turnTimings", "newSessionProjectId"],
       "write": []

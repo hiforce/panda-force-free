@@ -1,0 +1,29 @@
+# Refresh CLI engines separately from the locked application dependency and media layers.
+ARG BUILD_BASE=hiforceai/panda-force-build-base:media-44d133985283bf79@sha256:5655382c2f98ab3ef0db16d03e88ef07df95c3923c98fd5062af71a877ebae1c
+ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base:media-44d133985283bf79@sha256:5077d3c86f32589861c7928746aae60d7b1ee837f491ee61cfa5cd223776c123
+FROM ${RUNTIME_BASE} AS engines
+USER root
+ARG NPM_REGISTRY=https://registry.npmjs.org
+COPY harness-engines.mjs harness-engines.lock.json codex.tgz grok grok-LICENSE /tmp/harness-inputs/
+RUN node /tmp/harness-inputs/harness-engines.mjs verify --output /tmp/harness-inputs \
+    && npm install -g --prefix /opt/panda-harness --registry="${NPM_REGISTRY}" --ignore-scripts --no-audit --no-fund /tmp/harness-inputs/codex.tgz \
+    && install -m 0755 /tmp/harness-inputs/grok /opt/panda-harness/bin/grok \
+    && mkdir -p /opt/panda-harness/licenses \
+    && cp /tmp/harness-inputs/grok-LICENSE /opt/panda-harness/licenses/grok-LICENSE \
+    && cp /tmp/harness-inputs/harness-engines.lock.json /opt/panda-harness/engines.json \
+    && CODEX_HOME=/tmp/codex-version-check /opt/panda-harness/bin/codex --version \
+    && GROK_HOME=/tmp/grok-version-check /opt/panda-harness/bin/grok --no-auto-update --version
+
+FROM ${BUILD_BASE} AS build-base
+USER root
+COPY --from=engines /opt/panda-harness /opt/panda-harness
+RUN ln -sf /opt/panda-harness/bin/codex /usr/local/bin/codex \
+    && ln -sf /opt/panda-harness/bin/grok /usr/local/bin/grok
+LABEL org.pandaforce.base.layer="harness-engines-build"
+
+FROM ${RUNTIME_BASE} AS runtime-base
+USER root
+COPY --from=engines /opt/panda-harness /opt/panda-harness
+RUN ln -sf /opt/panda-harness/bin/codex /usr/local/bin/codex \
+    && ln -sf /opt/panda-harness/bin/grok /usr/local/bin/grok
+LABEL org.pandaforce.base.layer="harness-engines-runtime"

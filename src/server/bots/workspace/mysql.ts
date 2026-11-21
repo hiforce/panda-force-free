@@ -50,6 +50,12 @@ export class MySQLBotWorkspaceStorage implements BotWorkspaceStorage {
     validateWorkspaceBatch(value);
     return this.context.transaction(async (sql: SQL) => {
       await this.context.lock(sql, "workspace:" + owner);
+      for (const id of [
+        ...new Set((value.puts ?? []).map((item) => item.botId).filter((id) => id !== "connections")),
+      ].sort()) {
+        if ((await sql`SELECT name FROM panda_force_bot_control WHERE name=${"deleted-profile:" + id}`).length)
+          return false;
+      }
       for (const id of value.activeBots ?? []) {
         const rows = await sql`SELECT data FROM panda_force_bots WHERE owner=${owner} AND id=${id} FOR UPDATE`;
         if (!rows.length || !JSON.parse(String(rows[0].data)).active) return false;

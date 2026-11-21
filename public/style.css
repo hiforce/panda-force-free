@@ -814,7 +814,7 @@ body.sidebar-hidden .sidebar>div{opacity:0}
 .sidebar-project-options:hover,.sidebar-project-options:focus-visible,.sidebar-project-options[aria-expanded=true]{background:var(--app-hover);color:var(--app-text)}
 .sidebar-project-options .icon-slot,.sidebar-project-options .icon-slot svg{width:14px;height:14px;min-width:14px}
 .sidebar-project-menu{position:fixed;z-index:90;min-width:160px;padding:4px;border:1px solid var(--app-border-default);border-radius:10px;background:var(--app-panel);box-shadow:var(--app-elevation-shadow)}
-.sidebar-project-menu button{display:block;width:100%;padding:8px 12px;border-radius:6px;color:var(--app-text);font-size:13px;text-align:left}
+.sidebar-project-menu button{display:block;width:100%;min-height:44px;padding:8px 12px;border-radius:6px;color:var(--app-text);font-size:13px;text-align:left}
 .sidebar-project-menu button:hover,.sidebar-project-menu button:focus-visible{background:var(--app-hover)}
 .toast.has-action.show{pointer-events:auto;display:flex;align-items:center;gap:14px;max-width:calc(100vw - 24px)}
 .toast-action{flex-shrink:0;color:var(--app-text);font-weight:600;text-decoration:underline;text-underline-offset:3px}

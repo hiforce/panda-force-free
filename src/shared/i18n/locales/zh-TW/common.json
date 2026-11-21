@@ -598,5 +598,7 @@
   "pageLoadFailed": "頁面暫時無法載入，請重試。",
   "pageReloadRequired": "請重新整理頁面後繼續。",
   "openSourceAttribution": "開源團隊署名",
-  "openSourceLicense": "MIT 開源授權"
+  "openSourceLicense": "MIT 開源授權",
+  "sidebarMenu": "選單",
+  "sidebarSections": "側欄內容分頁"
 }

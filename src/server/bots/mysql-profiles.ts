@@ -37,6 +37,8 @@ export class MySQLBotProfiles {
     return rows[0].bytes;
   }
   async put(sql: SQL, bot: BotConfig) {
+    if ((await sql`SELECT name FROM panda_force_bot_control WHERE name=${"deleted-profile:" + bot.id}`).length)
+      throw new BotError("notFound", 404);
     if (bot.avatar?.type === "image") await this.avatar(sql, bot.owner, bot.avatar.id);
     const prior = await sql`SELECT owner,code FROM panda_force_bots WHERE id=${bot.id} FOR UPDATE`;
     if (prior.length) {
@@ -92,9 +94,10 @@ export class MySQLBotProfiles {
       return this.put(sql, current);
     });
   }
-  async setSession(owner: string, id: string, sessionId: string) {
+  async setSession(owner: string, id: string, sessionId: string, runtimeId?: string) {
     const result = await this.context.transaction(async (sql) => {
       const current = await this.readBot(sql, owner, id, true);
+      if (runtimeId && (current.runtimeId ?? "codex") !== runtimeId) return current;
       current.sessionId = sessionId;
       return this.put(sql, current);
     });

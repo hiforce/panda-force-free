@@ -1,3 +1,28 @@
+.panda-workspace .sidebar-section-tabs:not([hidden]) {
+  display: flex;
+  margin: var(--pf-space-3) var(--pf-space-3) 0;
+}
+.panda-workspace .sidebar-section-tabs button {
+  min-block-size: var(--pf-touch-target);
+  font-size: var(--pf-text-body);
+}
+.panda-workspace .sidebar-top {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block-end: var(--pf-space-4);
+}
+.panda-workspace .sidebar-scroll {
+  overscroll-behavior: contain;
+  padding-block-start: 0;
+}
+.panda-workspace .sidebar :is(#sidebarMenuPanel, #sidebarSessionsPanel)[hidden],
+.panda-workspace .sidebar[data-sidebar-tab="menu"] #sidebarSessionsPanel,
+.panda-workspace .sidebar[data-sidebar-tab="sessions"] #sidebarMenuPanel {
+  display: none;
+}
+
 /* Width preferences frame the application and its content rails together. */
 :root {
   --workspace-frame-max: 1480px;
@@ -290,7 +315,7 @@
 .panda-workspace .session-inspector {
   width: var(--session-inspector-width);
 }
-.panda-workspace .conversation-scroll-bottom {
+.panda-workspace .conversation-viewport > .conversation-scroll-bottom {
   right: max(var(--session-content-gutter), calc((100cqw - var(--session-content-width)) / 2));
 }
 .panda-workspace .workbench-view {
@@ -450,8 +475,11 @@
   .panda-workspace {
     --pf-mobile-nav-height: calc(60px + env(safe-area-inset-bottom, 0px));
   }
-  .panda-workspace.session-layout:not(.creation-entry-layout) {
+  .panda-workspace:is(.session-layout:not(.creation-entry-layout), .conversation-workspace-layout) {
     --pf-mobile-nav-height: 0px;
+  }
+  .panda-workspace.conversation-workspace-layout .workbench-mobile-nav {
+    display: none;
   }
   .panda-workspace .workbench-mobile-nav {
     padding-block-end: calc(4px + env(safe-area-inset-bottom, 0px));

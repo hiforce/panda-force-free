@@ -1,3 +1,4 @@
+import { createRuntimeModelField } from "../harness/model-field.js";
 import { syncComposerPanelViewport } from "../session-controls/menu.js";
 import { escapeHtml } from "../../shared/html.js";
 import { codexIcon } from "../codex-icons.js";
@@ -8,7 +9,15 @@ import { mountReasoningSlider } from "../session-controls/reasoning-slider.js";
 
 /** An edit buffer lives only for the open dialog; Cancel never writes engine settings. */
 /** @param {import('../contracts/session-workspace.js').SessionSettingsDialogOptions} options */
-export function createSessionSettingsDialog({ t, read, applyModel, applyPermission, reloadModels, onError }) {
+export function createSessionSettingsDialog({
+  t,
+  read,
+  applyModel,
+  applyPermission,
+  reloadModels,
+  onError,
+  applyRuntimeModel,
+}) {
   const dialog = document.createElement("dialog");
   dialog.id = "sessionSettingsDialog";
   dialog.className = "session-dialog session-settings-dialog composer-panel";
@@ -23,6 +32,9 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
   let navigation = /** @type {import('./composer-settings.js').ComposerSettingsNavigation | null} */ (null);
   let draftFlow = -1;
   let catalogSignature = "";
+  let saving = false;
+  let runtimeDraft = /** @type {import("../../shared/engine/runtime-selection.js").RuntimeSelection | null} */ (null);
+  let runtimeField = /** @type {ReturnType<typeof createRuntimeModelField> | null} */ (null);
   const label = (key) => messageHtml(key, undefined, t);
   function renderEfforts() {
     const selected = read().models.find((item) => item.id === model);
@@ -50,9 +62,22 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
       kind === "model"
         ? snapshot.models.length > 0
         : snapshot.permissions.some((item) => item.id === permission && item.allowed);
+    const applicationSelection = kind === "model" && !!snapshot.runtimeId && !!applyRuntimeModel;
+    runtimeField?.close();
+    runtimeField = applicationSelection
+      ? createRuntimeModelField(t, "session-runtime", () => {
+          if (dialog.open && runtimeField)
+            requireElement('#sessionSettingsForm button[type="submit"]').disabled = !runtimeField.ready();
+        })
+      : null;
     const fields =
       kind === "model"
-        ? `${navigation ? `<div class="composer-settings-models" role="group" aria-label="${escapeHtml(t("common.selectModel"))}">${snapshot.models.map((item) => `<button type="button" class="composer-settings-row" data-settings-model="${escapeHtml(item.id)}" aria-pressed="${item.id === model}">${codexIcon("sparkles")}<span><strong>${escapeHtml(item.label)}</strong></span>${item.id === model ? codexIcon("check") : ""}</button>`).join("")}</div><div class="session-effort-fieldset" id="sessionSettingEfforts"></div>` : sessionModelFields(snapshot.models, { model, effort }, t)}
+        ? runtimeField
+          ? runtimeField.html() +
+            (snapshot.permissionOwner === "creation"
+              ? `<p class="session-caption">${label("harness.mediaHint")}</p>`
+              : "")
+          : `${navigation ? `<div class="composer-settings-models" role="group" aria-label="${escapeHtml(t("common.selectModel"))}">${snapshot.models.map((item) => `<button type="button" class="composer-settings-row" data-settings-model="${escapeHtml(item.id)}" aria-pressed="${item.id === model}">${codexIcon("sparkles")}<span><strong>${escapeHtml(item.label)}</strong></span>${item.id === model ? codexIcon("check") : ""}</button>`).join("")}</div><div class="session-effort-fieldset" id="sessionSettingEfforts"></div>` : sessionModelFields(snapshot.models, { model, effort }, t)}
           ${snapshot.models.length ? "" : `<button type="button" class="session-button" id="sessionReloadModels">${label("sessions.retryLoadingModels")}</button>`}
           `
         : `<fieldset class="session-permission-fieldset">
@@ -70,11 +95,16 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
         <div class="session-dialog-body"><p class="session-caption">${label(snapshot.settingsHint || "sessionview.nextInstruction")}</p>${fields}</div>
         <footer class="session-dialog-actions">
           <button type="button" class="session-button" data-settings-dismiss>${label("common.cancel")}</button>
-          <button type="submit" class="session-button primary" ${canSave ? "" : "disabled"}>${label("sessionview.saveSettings")}</button>
+          <button type="submit" class="session-button primary" ${canSave || applicationSelection ? "" : "disabled"}>${label("sessionview.saveSettings")}</button>
         </footer>
       </form>`,
     );
-    if (kind === "model") renderEfforts();
+    if (runtimeField) {
+      requireElement('#sessionSettingsForm button[type="submit"]').disabled = true;
+      void runtimeField.mount(dialog, {
+        ...(runtimeDraft || { runtimeId: snapshot.runtimeId || undefined, model, effort }),
+      });
+    } else if (kind === "model") renderEfforts();
   }
   function close() {
     if (dialog.open) dialog.close();
@@ -92,6 +122,7 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
     sessionId = snapshot.sessionId;
     kind = nextKind;
     if (!preserve) {
+      runtimeDraft = null;
       model = snapshot.model;
       effort = snapshot.effort;
       permission = snapshot.permission;
@@ -106,7 +137,10 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
     if (!dialog.open) return;
     const snapshot = read();
     if (snapshot.sessionId !== sessionId) close();
-    else if (JSON.stringify(kind === "model" ? snapshot.models : snapshot.permissions) !== catalogSignature) {
+    else if (
+      !runtimeField &&
+      JSON.stringify(kind === "model" ? snapshot.models : snapshot.permissions) !== catalogSignature
+    ) {
       const focused = dialog.contains(document.activeElement) ? document.activeElement : null;
       const selector = focused?.id
         ? `#${CSS.escape(focused.id)}`
@@ -163,8 +197,9 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
       );
     }
   });
-  dialog.addEventListener("submit", (event) => {
+  dialog.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (saving) return;
     if (read().sessionId !== sessionId) {
       close();
       onError(t("sessionview.sessionChanged"));
@@ -172,14 +207,32 @@ export function createSessionSettingsDialog({ t, read, applyModel, applyPermissi
     }
     try {
       // Close before the existing full-access confirmation is allowed to open.
+      if (runtimeField) {
+        const runtime = runtimeField.runtime();
+        if (!runtimeField.ready() || !runtime || !applyRuntimeModel) throw new Error(t("harness.selectionError"));
+        saving = true;
+        runtimeField.setLocked(true);
+        requireElement('#sessionSettingsForm button[type="submit"]').disabled = true;
+        await applyRuntimeModel(sessionId, runtimeField.read(), runtime);
+        close();
+        return;
+      }
       close();
       if (kind === "model") applyModel(sessionId, model, effort);
       else applyPermission(sessionId, permission);
     } catch (error) {
       onError(error instanceof Error ? error.message : String(error));
+    } finally {
+      saving = false;
+      runtimeField?.setLocked(false);
+      if (dialog.open && runtimeField)
+        requireElement('#sessionSettingsForm button[type="submit"]').disabled = !runtimeField.ready();
     }
   });
   dialog.addEventListener("close", () => {
+    if (runtimeField) runtimeDraft = runtimeField.read();
+    runtimeField?.close();
+    runtimeField = null;
     returnFocus?.setAttribute("aria-expanded", "false");
     if (returnFocus?.isConnected && returnFocus.getClientRects().length) returnFocus.focus({ preventScroll: true });
   });

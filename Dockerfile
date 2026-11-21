@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-ARG BUILD_BASE=hiforceai/panda-force-build-base:media-44d133985283bf79@sha256:5655382c2f98ab3ef0db16d03e88ef07df95c3923c98fd5062af71a877ebae1c
-ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base:media-44d133985283bf79@sha256:5077d3c86f32589861c7928746aae60d7b1ee837f491ee61cfa5cd223776c123
+ARG BUILD_BASE=hiforceai/panda-force-build-base@sha256:66696cf2668c2b2e017d9f106533bdd016ac2a5d5a4c0f593ee59e8f36b75e5e
+ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base@sha256:d55e7cb61e32fe11750903d32a3d16bd0433be6881e84254772f30312cd4b9c5
 FROM ${BUILD_BASE} AS build
 USER root
 WORKDIR /app
@@ -56,6 +56,7 @@ RUN node /opt/panda-force-dependencies.mjs verify /app /tmp/panda-force-base-dep
     && rm /tmp/panda-force-base-dependencies.json
 COPY --from=build /app/public ./public
 COPY --from=build /app/.build-info/ ./
+RUN node -e 'const fs=require("node:fs"),c=require("node:crypto"),i=JSON.parse(fs.readFileSync("build-info.json"));if(i.bases.engineLockSha256&&c.createHash("sha256").update(fs.readFileSync("/opt/panda-harness/engines.json")).digest("hex")!==i.bases.engineLockSha256)throw Error("Runtime base Harness versions differ from the reviewed lock");'
 COPY src ./src
 COPY scripts/start.ts ./scripts/start.ts
 COPY LICENSE THIRD_PARTY_NOTICES.md ./

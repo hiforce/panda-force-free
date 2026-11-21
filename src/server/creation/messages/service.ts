@@ -10,7 +10,7 @@ import type {
 import type { CreationMaterialPort } from "../materials.js";
 import { CreationError } from "../contracts.js";
 import { creationRequest, creationRequestDigest } from "../requests.js";
-import { creationRecord, creationUuid } from "../validation.js";
+import { creationId, creationRecord, creationUuid } from "../validation.js";
 
 /** Accepted commands are durable before dispatch; uncertain native acknowledgements are never replayed automatically. */
 export class CreationMessages {
@@ -31,7 +31,16 @@ export class CreationMessages {
     const task = await this.tasks.get(owner, creationUuid(taskId));
     await this.authorize(owner, task.spec.projectId);
     const source = await this.inputs.read(task.spec),
-      row = creationRecord(value, ["id", "prompt", "selections", "attachments", "model", "effort", "outputType"]);
+      row = creationRecord(value, [
+        "id",
+        "prompt",
+        "selections",
+        "attachments",
+        "runtimeId",
+        "model",
+        "effort",
+        "outputType",
+      ]);
     const request = creationRequest({
       id: row.id,
       projectId: task.spec.projectId,
@@ -45,6 +54,7 @@ export class CreationMessages {
         : { outputType: row.outputType ?? source.outputType }),
       selections: row.selections ?? [],
       attachments: row.attachments ?? [],
+      ...(row.runtimeId === undefined ? {} : { runtimeId: creationId(row.runtimeId) }),
       ...(row.model === undefined ? {} : { model: row.model }),
       ...(row.effort === undefined ? {} : { effort: row.effort }),
     });
@@ -55,6 +65,8 @@ export class CreationMessages {
       return prior;
     }
     if (replayOnly) return null;
+    if (request.runtimeId && request.runtimeId !== (source.profile.runtimeId ?? "codex"))
+      throw new CreationError("conflict");
     if (request.outputType !== source.outputType) throw new CreationError("conflict");
     if (!["queued", "running"].includes(task.state) || task.outputDigest || task.cancelRequested)
       throw new CreationError("conflict");

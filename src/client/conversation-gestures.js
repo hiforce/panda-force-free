@@ -6,6 +6,7 @@ export function createConversationGestures(root, { onDirection, onIdle }) {
     direction = 0,
     timer = 0;
   let releaseTouchTarget = () => {};
+  const events = new AbortController();
   const active = () => touchY !== null || pointer !== null || timer !== 0;
   function settle() {
     clearTimeout(timer);
@@ -42,21 +43,21 @@ export function createConversationGestures(root, { onDirection, onIdle }) {
     settle();
   }
   function bind() {
-    root.addEventListener("wheel", (event) => input(event, event.deltaY), { passive: true });
+    root.addEventListener("wheel", (event) => input(event, event.deltaY), { passive: true, signal: events.signal });
     root.addEventListener(
       "pointerdown",
       (event) => {
         pointer = event.pointerId;
       },
-      { passive: true },
+      { passive: true, signal: events.signal },
     );
     const endPointer = (event) => {
       if (pointer !== event.pointerId) return;
       pointer = null;
       settle();
     };
-    window.addEventListener("pointerup", endPointer, true);
-    window.addEventListener("pointercancel", endPointer, true);
+    window.addEventListener("pointerup", endPointer, { capture: true, signal: events.signal });
+    window.addEventListener("pointercancel", endPointer, { capture: true, signal: events.signal });
     const endTouch = (event) => {
       if (touchY === null || (event.type === "touchend" && event.touches.length)) return;
       touchY = null;
@@ -80,7 +81,7 @@ export function createConversationGestures(root, { onDirection, onIdle }) {
           releaseTouchTarget = () => {};
         };
       },
-      { passive: true },
+      { passive: true, signal: events.signal },
     );
     root.addEventListener(
       "touchmove",
@@ -93,24 +94,37 @@ export function createConversationGestures(root, { onDirection, onIdle }) {
           touchY = next;
         }
       },
-      { passive: true },
+      { passive: true, signal: events.signal },
     );
-    window.addEventListener("touchend", endTouch, { capture: true, passive: true });
-    window.addEventListener("touchcancel", endTouch, { capture: true, passive: true });
-    root.addEventListener("keydown", (event) => {
-      if (event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable=true]"))
-        return;
-      if (["ArrowUp", "PageUp", "Home"].includes(event.key) || (event.key === " " && event.shiftKey)) input(event, -1);
-      else if (["ArrowDown", "PageDown", "End", " "].includes(event.key)) input(event, 1);
-    });
-    window.addEventListener("blur", () => {
-      reset();
-      onIdle();
-    });
+    window.addEventListener("touchend", endTouch, { capture: true, passive: true, signal: events.signal });
+    window.addEventListener("touchcancel", endTouch, { capture: true, passive: true, signal: events.signal });
+    root.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.target instanceof Element && event.target.closest("input, textarea, select, [contenteditable=true]"))
+          return;
+        if (["ArrowUp", "PageUp", "Home"].includes(event.key) || (event.key === " " && event.shiftKey))
+          input(event, -1);
+        else if (["ArrowDown", "PageDown", "End", " "].includes(event.key)) input(event, 1);
+      },
+      { signal: events.signal },
+    );
+    window.addEventListener(
+      "blur",
+      () => {
+        reset();
+        onIdle();
+      },
+      { signal: events.signal },
+    );
   }
   return {
     bind,
     reset,
+    dispose() {
+      reset();
+      events.abort();
+    },
     get active() {
       return active();
     },

@@ -41,7 +41,8 @@ export function createComposerSettingsMenu(options: {
         model?.label || t(view.modelLoadStatus === "error" ? "common.modelLoadFailedRetry" : "common.loadingModels"),
       effort: model?.efforts.find((item) => item.id === view.effort)?.label || "",
       permission:
-        view.permissions.find((item) => item.id === view.permission)?.label || t("composer.managedPermissions"),
+        view.permissions.find((item) => item.id === view.permission)?.label ||
+        t(view.permissionHint || "sessionview.permissionUnavailable"),
     };
   }
   function render() {

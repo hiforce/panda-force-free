@@ -34,6 +34,7 @@ export async function createAppFixture({
   sharedApprovals = false,
   usageRollout = false,
   nativeInputHistory = false,
+  completedTurnNotifications = false,
   unnamedSessions = false,
   sessionPresentation = /** @type {{titles: string[]; timestamp: number} | null} */ (null),
   models = null,
@@ -358,6 +359,7 @@ const handleLine=line=>{
       const run=result.turn.id, id='question-'+run; applicationCalls.set(id,{kind:'question',thread:p.threadId,run});
       setTimeout(()=>send({id,method:'item/tool/requestUserInput',params:{threadId:p.threadId,turnId:run,questions:[{id:'audience',header:'Audience',isOther:true,question:'Who should this document help?',options:[{label:'New users',description:'A short practical introduction.'},{label:'Maintainers',description:'Implementation and operational detail.'}]}]}}),20);
     }
+    if(${completedTurnNotifications}&&result.turn.status==='completed')setTimeout(()=>send({method:'turn/completed',params:{threadId:p.threadId,turn:result.turn}}),20);
     send({method:'thread/status/changed',params:{threadId:p.threadId,status:{type:'idle'}}});
   }else if(m.method==='thread/queue/add'){
     const queuedSubmission={id:'queue-'+(++count),clientUserMessageId:p.clientUserMessageId,input:p.input};

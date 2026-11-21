@@ -1,3 +1,5 @@
+import { reasoningLabel as runtimeReasoningLabel } from "./harness/reasoning-label.js";
+import { supportedEffort } from "../shared/engine/runtime-selection.js";
 import { createSessionPermissionControls } from "./session-controls/permissions.js";
 import { mountReasoningSlider } from "./session-controls/reasoning-slider.js";
 import { focusMenuSelection, bindMenuDismiss, mountSessionMenu, restoreSessionMenu } from "./session-controls/menu.js";
@@ -28,6 +30,8 @@ export function createSessionControls({
   mutations,
   onSettingsChanged = () => {},
   onModelsLoaded = () => {},
+  catalogScope = () => "codex",
+  openModelPicker = () => false,
 }) {
   const { syncTaskNotifySettings, setTaskNotifyEnabled, maybeNotifyTaskCompleted } = createTaskCompletionNotifications({
     $,
@@ -35,12 +39,18 @@ export function createSessionControls({
     threads: () => state.threads,
     toast,
   });
+  const cacheKey = (id) => (!id || catalogScope() === "codex" ? id : JSON.stringify([catalogScope(), id]));
+  const preferenceKey = (key) => (catalogScope() === "codex" ? key : `${key}:${catalogScope()}`);
+  const scopedSettings = (id) => {
+    const value = id && state.sessionSettings.get(id);
+    return value && (value.runtimeContext || "codex") === catalogScope() ? value : undefined;
+  };
   const localModelCache = createSessionModelCache(storage);
   let modelMenuBack = /** @type {(() => void) | null} */ (null);
   let modelMenuTrigger = $("#modelButton");
-  const readLocalSessionModelSettings = (threadId = state.active?.id) => localModelCache.read(threadId);
-  const writeLocalSessionModelSettings = (threadId, settings) => localModelCache.write(threadId, settings);
-  const clearLocalSessionModelSettings = (threadId = state.active?.id) => localModelCache.clear(threadId);
+  const readLocalSessionModelSettings = (threadId = state.active?.id) => localModelCache.read(cacheKey(threadId));
+  const writeLocalSessionModelSettings = (threadId, settings) => localModelCache.write(cacheKey(threadId), settings);
+  const clearLocalSessionModelSettings = (threadId = state.active?.id) => localModelCache.clear(cacheKey(threadId));
   function commitSessionModelSettings(threadId) {
     if (!threadId) return;
     const current = state.sessionSettings.get(threadId) || {};
@@ -48,29 +58,23 @@ export function createSessionControls({
       ...current,
       model: state.selectedModel,
       effort: $("#effortSelect").value,
+      runtimeContext: catalogScope(),
       source: "remote",
     });
     clearLocalSessionModelSettings(threadId);
   }
-  const reasoningLabels = {
-    none: "common.none",
-    minimal: "common.minimal",
-    low: "common.low",
-    medium: "common.medium",
-    high: "common.high",
-    xhigh: "common.extraHigh",
-    max: "common.max",
-    ultra: "common.ultra",
-  };
-  function reasoningLabel(value) {
-    return t(reasoningLabels[value] || String(value || "common.medium"));
-  }
+  const reasoningLabel = (value) => runtimeReasoningLabel(value, t);
   function updateModelLoadUi() {
     syncModelLabel();
     $("#modelButton").setAttribute("aria-busy", String(state.modelLoadStatus === "loading" && !state.models.length));
     if (!$("#modelMenu").hidden) renderModelMenuMain();
   }
   const loadModels = createModelCatalogLoader({
+    context: catalogScope,
+    contextChanged: () => {
+      mutations.set("models", []);
+      mutations.set("selectedModel", "");
+    },
     request: (signal) =>
       postBridge(
         "/api/rpc",
@@ -103,9 +107,9 @@ export function createSessionControls({
   function renderModels() {
     mutations.set("modelLoadStatus", "ready");
     $("#modelButton").setAttribute("aria-busy", "false");
-    const session = state.active?.id && state.sessionSettings.get(state.active.id),
+    const session = scopedSettings(state.active?.id),
       local = readLocalSessionModelSettings(),
-      saved = local?.model || session?.model || storage.get(STORAGE_KEYS.model),
+      saved = local?.model || session?.model || storage.get(preferenceKey(STORAGE_KEYS.model)),
       selection = selectModelState(state.models, saved);
     mutations.set("selectedModel", selection.model);
     updateEfforts(
@@ -115,7 +119,7 @@ export function createSessionControls({
     syncModelLabel();
     renderModelMenuMain();
   }
-  /** @param {string} threadId @param {{model?: string; reasoningEffort?: string; effort?: string; threadSettings?: {model?: string; effort?: string; reasoningEffort?: string}}} settings */
+  /** @param {string} threadId @param {{model?: string; reasoningEffort?: string; effort?: string; runtimeContext?: string; threadSettings?: {runtimeContext?: string; model?: string; effort?: string; reasoningEffort?: string}}} settings */
   function applySessionSettings(threadId, settings = {}) {
     if (!threadId || !settings || typeof settings !== "object") return;
     const model = settings.model || settings.threadSettings?.model,
@@ -128,11 +132,12 @@ export function createSessionControls({
     const current = state.sessionSettings.get(threadId) || {};
     mutations.collection("sessionSettings").set(threadId, {
       ...current,
+      runtimeContext: settings.runtimeContext || settings.threadSettings?.runtimeContext || "codex",
       ...(model ? { model } : {}),
       ...(effort ? { effort } : {}),
       source: "session",
     });
-    if (state.active?.id === threadId && state.models.length) {
+    if (state.active?.id === threadId && state.models.length && scopedSettings(threadId)) {
       const session = state.sessionSettings.get(threadId),
         local = readLocalSessionModelSettings(threadId);
       if (
@@ -148,12 +153,13 @@ export function createSessionControls({
   function chooseModel(model, keepOpen = false) {
     const previous = $("#effortSelect").value;
     mutations.set("selectedModel", model);
-    storage.set(STORAGE_KEYS.model, model);
+    storage.set(preferenceKey(STORAGE_KEYS.model), model);
     if (state.active?.id) {
       mutations.collection("sessionSettings").set(state.active.id, {
         ...(state.sessionSettings.get(state.active.id) || {}),
         model,
         effort: previous,
+        runtimeContext: catalogScope(),
         source: "user",
       });
       writeLocalSessionModelSettings(state.active.id, { model, effort: previous });
@@ -190,19 +196,18 @@ export function createSessionControls({
     const model = selectedModel(),
       effort = $("#effortSelect");
     setMessageHtml(effort, "");
-    const supported = model?.supportedReasoningEfforts || [{ reasoningEffort: "medium" }],
+    const supported = model?.supportedReasoningEfforts || [],
       values = supported.map((item) => item.reasoningEffort).filter(Boolean),
       local = readLocalSessionModelSettings(),
       saved =
-        local?.model === state.selectedModel ? local?.effort : storage.get(STORAGE_KEYS.effortFor(state.selectedModel)),
-      selected =
-        [
-          ...(preferPreferred ? [preferred, saved] : [saved, preferred]),
-          model?.defaultReasoningEffort,
-          values[0],
-          "medium",
-        ].find((value) => values.includes(value)) || "medium";
-    for (const value of values.length ? values : ["medium"]) {
+        local?.model === state.selectedModel
+          ? local?.effort
+          : storage.get(preferenceKey(STORAGE_KEYS.effortFor(state.selectedModel))),
+      preferredValue = (preferPreferred ? [preferred, saved] : [saved, preferred]).find((value) =>
+        values.includes(value),
+      ),
+      selected = supportedEffort(values, preferredValue, model?.defaultReasoningEffort || "");
+    for (const value of values) {
       const option = document.createElement("option");
       option.value = value;
       setOpaqueText(option, value);
@@ -319,12 +324,13 @@ export function createSessionControls({
     effort.value = value;
     setOpaqueText($("#effortLabel"), reasoningLabel(value));
     syncModelDescription();
-    storage.set(STORAGE_KEYS.effortFor(state.selectedModel), value);
+    storage.set(preferenceKey(STORAGE_KEYS.effortFor(state.selectedModel)), value);
     if (state.active?.id) {
       mutations.collection("sessionSettings").set(state.active.id, {
         ...(state.sessionSettings.get(state.active.id) || {}),
         model: state.selectedModel,
         effort: value,
+        runtimeContext: catalogScope(),
         source: "user",
       });
       writeLocalSessionModelSettings(state.active.id, { model: state.selectedModel, effort: value });
@@ -337,6 +343,7 @@ export function createSessionControls({
   /** @param {string} [view] @param {(() => void) | null} [back] */
   function openModelMenu(view = "main", back = null) {
     closePermissionMenu();
+    if (openModelPicker()) return;
     modelMenuBack = back;
     modelMenuTrigger = $("#modelButton").getClientRects().length ? $("#modelButton") : $("#composerSettingsButton");
     if (view === "models") renderModelSubmenu();
@@ -373,6 +380,7 @@ export function createSessionControls({
     syncPermissionControl,
     syncPermissionSettings,
     applyPermissionSelection,
+    confirmFullAccessSelection,
     permissionsView,
     openPermissionMenu,
   } = createSessionPermissionControls({
@@ -391,7 +399,7 @@ export function createSessionControls({
   $("#settingsTaskNotifyToggle").onchange = (event) => setTaskNotifyEnabled(event.currentTarget.checked);
   function sessionControlView() {
     return {
-      sessionId: state.active?.id || "",
+      sessionId: state.active?.id || `new:${state.newSessionProjectId || "personal"}`,
       modelLoadStatus: state.modelLoadStatus,
       model: state.selectedModel,
       effort: $("#effortSelect").value,
@@ -399,8 +407,8 @@ export function createSessionControls({
       models: state.models.map((model) => ({
         id: model.model,
         label: modelDisplay(model),
-        defaultEffort: model.defaultReasoningEffort || "medium",
-        efforts: (model.supportedReasoningEfforts || [{ reasoningEffort: "medium" }]).map((item) => ({
+        defaultEffort: model.defaultReasoningEffort || "",
+        efforts: (model.supportedReasoningEfforts || []).map((item) => ({
           id: item.reasoningEffort,
           label: reasoningLabel(item.reasoningEffort),
         })),
@@ -412,7 +420,7 @@ export function createSessionControls({
     const view = sessionControlView();
     if (!sessionId || view.sessionId !== sessionId) throw new Error(t("sessionview.sessionChanged"));
     const selected = view.models.find((item) => item.id === model);
-    if (!selected || !selected.efforts.some((item) => item.id === effort))
+    if (!selected || (effort && !selected.efforts.some((item) => item.id === effort)))
       throw new Error(t("errors.couldNotLoadModels"));
     chooseModel(model, true);
     chooseEffort(effort);
@@ -422,6 +430,7 @@ export function createSessionControls({
     sessionControlView,
     applyModelSelection,
     applyPermissionSelection,
+    confirmFullAccessSelection,
     applySessionSettings,
     closeModelMenu,
     closePermissionMenu,

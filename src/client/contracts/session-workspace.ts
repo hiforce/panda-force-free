@@ -39,6 +39,10 @@ export interface CreationSessionDomain {
   read(): SessionWorkspaceView;
   controls(): SessionControlView;
   applyModel(model: string, effort: string): void;
+  applyRuntimeSelection(
+    selection: import("../../shared/engine/runtime-selection.js").RuntimeSelection,
+    runtime: import("../../shared/harness/contracts.js").HarnessRuntimeView,
+  ): void;
   goal(): import("../../shared/engine/types.js").Goal | null;
   goalCommand(
     command: Pick<import("../../shared/creation/contracts.js").CreationGoalCommand, "action" | "objective">,
@@ -104,7 +108,10 @@ export interface SessionWorkspaceOptions {
 }
 
 export interface SessionControlView {
+  runtimeId?: string;
   settingsHint?: MessageId;
+  permissionHint?: MessageId;
+  permissionOwner?: "native" | "harness" | "creation";
   modelLoadStatus?: string;
   sessionId: string;
   model: string;
@@ -118,6 +125,11 @@ export interface SessionSettingsDialogOptions {
   t: Translate;
   read: () => SessionControlView;
   applyModel: (sessionId: string, model: string, effort: string) => void;
+  applyRuntimeModel?: (
+    sessionId: string,
+    selection: import("../../shared/engine/runtime-selection.js").RuntimeSelection,
+    runtime: import("../../shared/harness/contracts.js").HarnessRuntimeView,
+  ) => void | Promise<void>;
   applyPermission: (sessionId: string, mode: string) => void;
   reloadModels: () => Promise<boolean>;
   onError: (message: string) => void;

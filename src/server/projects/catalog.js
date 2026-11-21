@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { validSessionReference } from "../../shared/engine/session-reference.js";
 import { randomUUID } from "node:crypto";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
@@ -136,7 +137,7 @@ export class ProjectCatalog {
       throw new ProjectError(400, "projects.errorSelectBetween1And100Sessions");
     const seen = new Set();
     for (const session of sessions) {
-      if (typeof session?.id !== "string" || !/^[a-z0-9_-]{1,128}$/i.test(session.id) || seen.has(session.id))
+      if (!validSessionReference(session?.id) || seen.has(session.id))
         throw new ProjectError(400, "projects.errorInvalidSessionSelection");
       seen.add(session.id);
     }

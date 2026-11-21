@@ -9,9 +9,13 @@
     "browser/authored-assets.e2e.mjs",
     "browser/bot-lifecycle.e2e.mjs",
     "browser/bot-model-picker.e2e.mjs",
+    "browser/runtime-model-selection.e2e.mjs",
+    "browser/harness-switch-latency.e2e.mjs",
+    "browser/harness-project-association.e2e.mjs",
     "browser/bot-queue-compact.e2e.mjs",
     "browser/bot-task-actions.e2e.mjs",
     "browser/bot-workspace.e2e.mjs",
+    "browser/bot-chat-viewport.e2e.mjs",
     "browser/browser-panel.e2e.mjs",
     "browser/browser-site-compat.e2e.mjs",
     "browser/builtin-skills.e2e.mjs",
@@ -121,6 +125,7 @@
     "browser/search-progress.e2e.mjs",
     "browser/search-project-policy.e2e.mjs",
     "browser/session-dialogs.e2e.mjs",
+    "browser/session-list-delete.e2e.mjs",
     "browser/session-discovery.e2e.mjs",
     "browser/session-list-activity.e2e.mjs",
     "browser/session-metadata.e2e.mjs",
@@ -179,12 +184,20 @@
     "browser/project-overview-loading.e2e.mjs",
     "browser/project-space-ai.e2e.mjs",
     "browser/creation-loading.e2e.mjs",
+    "browser/creation-progress.e2e.mjs",
     "browser/creation-discovery-recovery.e2e.mjs",
     "browser/engine-images.e2e.mjs",
     "browser/h5-creation-recovery.e2e.mjs",
     "browser/composer-menu-overlay.e2e.mjs",
     "browser/reasoning-slider.e2e.mjs",
-    "browser/workbench-return.e2e.mjs"
+    "browser/workbench-return.e2e.mjs",
+    "browser/harness-diagnostics.e2e.mjs",
+    "browser/harness-permission-layout.e2e.mjs",
+    "browser/harness-image-output.e2e.mjs",
+    "browser/harness-permission-settings.e2e.mjs",
+    "browser/harness-cold-restore.e2e.mjs",
+    "browser/sidebar-mobile-tabs.e2e.mjs",
+    "browser/original-storage-lifecycle.e2e.mjs"
   ],
   "groups": {
     "runtime": [
@@ -195,9 +208,7 @@
       "browser/message-queue.e2e.mjs",
       "browser/composer-click-refresh.e2e.mjs"
     ],
-    "failure-paths": [
-      "browser/refactor-failure-paths.e2e.mjs"
-    ],
+    "failure-paths": ["browser/refactor-failure-paths.e2e.mjs"],
     "workbench": [
       "browser/panda-workbench.e2e.mjs",
       "browser/native-dialogs.e2e.mjs",
@@ -222,6 +233,7 @@
       "browser/session-workspace.e2e.mjs",
       "browser/session-workspace-layout.e2e.mjs",
       "browser/session-dialogs.e2e.mjs",
+      "browser/session-list-delete.e2e.mjs",
       "browser/session-usage.e2e.mjs",
       "browser/async-questions.e2e.mjs",
       "browser/approval-menu.e2e.mjs",

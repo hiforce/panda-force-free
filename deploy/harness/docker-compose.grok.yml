@@ -1,0 +1,13 @@
+# Combine with the regular source-build overlay; standard bases already contain both CLI engines.
+services:
+  panda-force:
+    image: ${PANDA_FORCE_HARNESS_IMAGE:-${PANDA_FORCE_IMAGE:-panda-force:local}}
+    environment:
+      PANDA_FORCE_HARNESS_PROFILES: >-
+        [{"id":"grok-build","name":"Grok Build","command":"/usr/local/bin/grok","accountHome":"/run/panda-grok-account","deployment":"local"}]
+    volumes:
+      # Bind the account directory so atomic token replacement remains visible to new sessions.
+      - type: bind
+        source: ${PANDA_FORCE_GROK_ACCOUNT_HOME_HOST:?Set the operator-owned Grok account directory}
+        target: /run/panda-grok-account
+        read_only: true

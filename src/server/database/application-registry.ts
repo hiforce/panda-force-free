@@ -1,3 +1,4 @@
+import { mysqlHarnessModule } from "./modules/harness.js";
 import { mysqlGadgetModule } from "./modules/gadgets.js";
 import { DatabaseRegistry, type DatabaseModule } from "./registry.js";
 import { mysqlBotModule } from "./modules/bots.js";
@@ -47,6 +48,7 @@ export const applicationDatabaseModules = [
   "cli-auth",
   "settings",
   "bots",
+  "harness",
 ] as const;
 /** Engine history and goals remain read-only engine state; application-owned links are registered under projects and bots. */
 export const externalPersistenceOwners = [
@@ -60,6 +62,7 @@ export const externalPersistenceOwners = [
 export function createApplicationDatabaseRegistry(implementations: readonly DatabaseModule[] = []) {
   const known = new Map<string, DatabaseModule>([
     [mysqlBotModule.id, mysqlBotModule],
+    [mysqlHarnessModule.id, mysqlHarnessModule],
     [mysqlDataMigrationModule.id, mysqlDataMigrationModule],
     [mysqlCliAuthModule.id, mysqlCliAuthModule],
     [mysqlSkillWorkspaceModule.id, mysqlSkillWorkspaceModule],

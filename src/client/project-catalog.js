@@ -7,7 +7,13 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
   let projects = new Map(),
     assignments = new Map();
   const pendingAssignments = new Map();
+  let invalidatedRevision = -1;
   function apply(value) {
+    if (value?.reloadRequired === true && Number.isSafeInteger(value.revision)) {
+      invalidatedRevision = Math.max(invalidatedRevision, value.revision);
+      void load().catch(() => {});
+      return;
+    }
     if (
       !Number.isSafeInteger(value?.revision) ||
       value.revision < snapshot.revision ||
@@ -36,10 +42,15 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
   }
   /** @returns {Promise<void>} */
   function load() {
+    let succeeded = false;
     return (loading ||= read("/api/projects")
-      .then(apply)
+      .then((value) => {
+        apply(value);
+        succeeded = true;
+      })
       .finally(() => {
         loading = null;
+        if (succeeded && snapshot.revision < invalidatedRevision) void load().catch(() => {});
       }));
   }
   function sessions() {

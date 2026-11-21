@@ -6,6 +6,7 @@
   "summaryAttention": "Needs attention",
   "summaryIntegrations": "Active integrations",
   "chat": "Talk",
+  "chatOptions": "Conversation options",
   "tasks": "Tasks",
   "integrations": "Integrations",
   "emptyTitle": "Your first Bot is waiting",
@@ -161,5 +162,6 @@
   "copyTooLarge": "This conversation is too large to copy at once. Copy individual replies instead.",
   "chatContextUnavailable": "An attachment or skill is no longer available for this conversation. Check your selection and try again.",
   "downloadContent": "Download",
-  "chatDeliveryHint": "Generated documents are not archived to projects."
+  "chatDeliveryHint": "Generated documents are not archived to projects.",
+  "runtimeSelectionUnavailable": "This runtime, model or reasoning level is unavailable. Check your selection and retry."
 }

@@ -38,5 +38,6 @@
   "directoryLoadFailed": "目录暂时无法加载，仍可搜索会话。",
   "recentTab": "最近",
   "foldersTab": "目录",
-  "browseByFolder": "按工作目录浏览会话"
+  "browseByFolder": "按工作目录浏览会话",
+  "deleteHarnessMessage": "删除“{title}”后，将无法在 PandaForce 中打开或继续此会话。项目文件不会被删除。"
 }

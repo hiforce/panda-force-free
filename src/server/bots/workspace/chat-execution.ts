@@ -22,7 +22,12 @@ export async function executeBotChat(
   context?: BotChatContextPort,
 ) {
   const pending = row.data.pending!,
-    bot = { ...(await store.bot(row.owner, row.botId)), ...pending.bot },
+    bot = {
+      ...(await store.bot(row.owner, row.botId)),
+      ...pending.bot,
+      runtimeId: pending.bot.runtimeId ?? "codex",
+      effort: pending.bot.effort ?? "",
+    },
     lease = new BotChatLease(store.workspace, row.owner, row.botId, row.data.generation, pending.lease!),
     heartbeat = setInterval(() => {
       void lease
@@ -42,7 +47,13 @@ export async function executeBotChat(
     const user = await store.workspace.get<BotChatMessage>(row.owner, { kind: "chat-message", id: pending.userId });
     if (!user) throw new Error("Bot input missing");
     // Native dynamic tools belong to their original thread. Rebuild legacy text-only threads from owned history.
-    const sessionId = context && row.data.toolset !== "materials-v1" ? null : row.data.sessionId;
+    const selectedEngine = engine(bot),
+      sessionId =
+        selectedEngine.persistentSession === false ||
+        (row.data.runtimeId ?? "codex") !== bot.runtimeId ||
+        (context && row.data.toolset !== "materials-v1")
+          ? null
+          : row.data.sessionId;
     const materials = new Map<string, CreationMaterial>();
     const history = (
       await store.workspace.list<BotChatMessage>(row.owner, "chat-message", {
@@ -77,7 +88,7 @@ export async function executeBotChat(
         conversationMaterials: [...materials.values()].map(({ id, name, kind }) => ({ id, name, kind })),
         selectedSkillGuidance: guidance,
       });
-    const result = await engine(bot).run(
+    const result = await selectedEngine.run(
       {
         persistent: true,
         ...(sessionId ? { sessionId } : {}),
@@ -113,9 +124,16 @@ export async function executeBotChat(
       },
       {
         signal: controller.signal,
-        session: (sessionId) => lease.bind(sessionId, bot.model, undefined, context ? "materials-v1" : undefined),
+        session: (sessionId) =>
+          lease.bind(sessionId, bot.model, undefined, context ? "materials-v1" : undefined, bot.runtimeId),
         started: async (value) => {
-          await lease.bind(value.sessionId, bot.model, value.runId, context ? "materials-v1" : undefined);
+          await lease.bind(
+            value.sessionId,
+            bot.model,
+            value.runId,
+            context ? "materials-v1" : undefined,
+            bot.runtimeId,
+          );
           scope = value;
         },
         event: async (event) => {

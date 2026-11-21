@@ -6,6 +6,7 @@
   "summaryAttention": "需要关注",
   "summaryIntegrations": "已启用集成",
   "chat": "对话",
+  "chatOptions": "对话选项",
   "tasks": "任务管理",
   "integrations": "外部集成",
   "emptyTitle": "创建第一位 Bot 助理",
@@ -161,5 +162,6 @@
   "copyTooLarge": "对话过长，无法一次复制。请分别复制需要的回复。",
   "chatContextUnavailable": "附件或技能已不可用于此对话，请检查所选内容后重试。",
   "downloadContent": "下载",
-  "chatDeliveryHint": "生成的文档不会归档到项目中。"
+  "chatDeliveryHint": "生成的文档不会归档到项目中。",
+  "runtimeSelectionUnavailable": "该运行实例、模型或思考强度不可用，请检查选择后重试。"
 }

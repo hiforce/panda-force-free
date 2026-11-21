@@ -43,7 +43,7 @@ try {
   );
   await bundle.continue();
   await page.unroute("**/app.bundle.js*");
-  await page.locator('.thread-item[data-id="old-alpha"]').waitFor();
+  await page.locator('.thread-item[data-id="old-alpha"]').waitFor({ state: "attached" });
   assert.equal(
     await page.evaluate(() =>
       performance
@@ -55,12 +55,14 @@ try {
   const catalog = await (await context.request.get(fixture.base + "/api/projects")).json();
   const created = await (
     await context.request.post(fixture.base + "/api/projects", {
+      headers: { Origin: fixture.base },
       data: { name: "Beta product", code: "beta-cache", revision: catalog.revision },
     })
   ).json();
   const betaProject = created.projects.find((project) => project.code === "beta-cache"),
     betaKey = "project:" + betaProject.id;
   await context.request.post(fixture.base + "/api/projects/assign", {
+    headers: { Origin: fixture.base },
     data: { projectId: betaProject.id, sessionIds: ["old-beta"], revision: created.revision },
   });
   await fixture.visibility({ project: betaKey, hidden: true });

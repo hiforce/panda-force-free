@@ -2,10 +2,26 @@ import { filterAppModels } from "../ui-core.js";
 import { createBridgeError } from "../../shared/bridge-errors.js";
 
 /** One catalog request owns its retries; concurrent views join the same promise. */
-export function createModelCatalogLoader({ request, setStatus, changed, accept, failed }) {
-  let pending = null;
+export function createModelCatalogLoader({
+  request,
+  setStatus,
+  changed,
+  accept,
+  failed,
+  context = () => "",
+  contextChanged = () => {},
+}) {
+  let pending = null,
+    pendingContext = "",
+    generation = 0,
+    activeController = null;
   return function loadModels({ timeoutMs = 8000, attempts = 3, retryDelayMs = 500 } = {}) {
-    if (pending) return pending;
+    const scope = context();
+    if (pending && pendingContext === scope) return pending;
+    if (scope !== pendingContext) contextChanged();
+    activeController?.abort();
+    const current = ++generation;
+    pendingContext = scope;
     setStatus("loading");
     changed();
     pending = (async () => {
@@ -13,8 +29,10 @@ export function createModelCatalogLoader({ request, setStatus, changed, accept, 
       for (let attempt = 0; attempt < attempts; attempt++) {
         const controller = new AbortController(),
           timer = setTimeout(() => controller.abort(), timeoutMs);
+        activeController = controller;
         try {
           const message = await request(controller.signal);
+          if (current !== generation || context() !== scope) return false;
           if (message.type !== "rpc/result")
             throw createBridgeError(message.error || "Could not load models", message.code);
           const models = filterAppModels(message.result?.data || []);
@@ -22,6 +40,7 @@ export function createModelCatalogLoader({ request, setStatus, changed, accept, 
           accept(models);
           return true;
         } catch (error) {
+          if (current !== generation || context() !== scope) return false;
           lastError = controller.signal.aborted
             ? Object.assign(new Error("Model catalog request timed out", { cause: error }), {
                 code: "model_catalog_timeout",
@@ -37,7 +56,10 @@ export function createModelCatalogLoader({ request, setStatus, changed, accept, 
       failed(lastError);
       return false;
     })().finally(() => {
-      pending = null;
+      if (current === generation) {
+        pending = null;
+        activeController = null;
+      }
     });
     return pending;
   };

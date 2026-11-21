@@ -1,3 +1,4 @@
+import { SettingsPageLifetime } from "../settings-pages/lifetime.js";
 import { captureDatabaseFocus, restoreDatabaseFocus } from "./focus.js";
 import type {
   DatabaseOverview,
@@ -21,14 +22,13 @@ import { databaseIssueMessage } from "./messages.js";
 
 /** A page lifetime owns reads and password memory. A persisted capability owns uncertain submissions across restarts. */
 export function createDatabaseSettings(t: Translate) {
+  const page = new SettingsPageLifetime();
   let host: HTMLElement | null = null,
     overview: DatabaseOverview | null = null,
     operation: DatabaseOperation | null = null,
     plan: DatabaseMigrationPlan | null = null,
     form = emptyDatabaseForm(),
     recovery: DatabaseRecovery | null = null,
-    closing = new AbortController(),
-    epoch = 0,
     busy = false,
     uncertainAction = false,
     poll: ReturnType<typeof setTimeout> | undefined,
@@ -99,7 +99,7 @@ export function createDatabaseSettings(t: Translate) {
     if (fields) fields.hidden = !!plan;
     clearTimeout(expiry);
     if (plan)
-      expiry = setTimeout(
+      expiry = page.timeout(
         () => {
           notice("database.migrationPlanExpired");
           controls();
@@ -124,7 +124,7 @@ export function createDatabaseSettings(t: Translate) {
   }
   function schedule(work: () => Promise<void>, delay = 2000) {
     clearTimeout(poll);
-    if (host) poll = setTimeout(() => void work(), delay);
+    if (host) poll = page.timeout(() => void work(), delay);
   }
   function error(value: unknown) {
     const code = value instanceof DatabaseRequestError ? value.code : "databaseUnavailable";
@@ -140,17 +140,17 @@ export function createDatabaseSettings(t: Translate) {
   }
   async function recover() {
     if (!host || !recovery || busy) return;
-    const ticket = epoch,
+    const ticket = page.epoch,
       ctx = recovery;
     try {
       const result = await databaseRequest<DatabaseOperation>(
         "/operations/" + encodeURIComponent(ctx.id),
         "GET",
         undefined,
-        closing.signal,
+        page.signal,
         ctx.statusToken,
       );
-      if (!host || epoch !== ticket) return;
+      if (!host || page.epoch !== ticket) return;
       operation = result;
       uncertainAction = false;
       notice(null);
@@ -158,7 +158,7 @@ export function createDatabaseSettings(t: Translate) {
       if (result.status === "running" || result.status === "waiting-restart") schedule(recover);
       else if (result.status === "complete") void refresh(false);
     } catch (value) {
-      if (!host || epoch !== ticket || closing.signal.aborted) return;
+      if (!host || page.epoch !== ticket || page.signal.aborted) return;
       if (value instanceof DatabaseRequestError && [401, 403].includes(value.status)) {
         uncertainAction = true;
         error(value);
@@ -175,10 +175,10 @@ export function createDatabaseSettings(t: Translate) {
   }
   async function refresh(recoverSaved = true) {
     if (!host || busy) return;
-    const ticket = epoch;
+    const ticket = page.epoch;
     try {
-      const result = await databaseRequest<DatabaseOverview>("", "GET", undefined, closing.signal);
-      if (!host || ticket !== epoch) return;
+      const result = await databaseRequest<DatabaseOverview>("", "GET", undefined, page.signal);
+      if (!host || ticket !== page.epoch) return;
       overview = result;
       const candidate = result.operation?.id === dismissed ? null : result.operation;
       operation = candidate ?? operation;
@@ -189,21 +189,21 @@ export function createDatabaseSettings(t: Translate) {
       if (recoverSaved && recovery) await recover();
       else if (operation && ["running", "waiting-restart"].includes(operation.status)) schedule(() => refresh(false));
     } catch (value) {
-      if (host && ticket === epoch && !closing.signal.aborted) error(value);
+      if (host && ticket === page.epoch && !page.signal.aborted) error(value);
     }
   }
   async function run(id: MessageId, work: () => Promise<void>) {
     if (!host || busy) return;
     busy = true;
-    const ticket = epoch;
+    const ticket = page.epoch;
     notice(id);
     controls();
     try {
       await work();
     } catch (value) {
-      if (host && ticket === epoch && !closing.signal.aborted) error(value);
+      if (host && ticket === page.epoch && !page.signal.aborted) error(value);
     } finally {
-      if (host && ticket === epoch) {
+      if (host && ticket === page.epoch) {
         busy = false;
         controls();
       }
@@ -212,11 +212,11 @@ export function createDatabaseSettings(t: Translate) {
   async function submitConnection(action: string) {
     form = readDatabaseForm(host!, form);
     const input = databaseConnectionInput(form),
-      ticket = epoch;
+      ticket = page.epoch;
     await run(action === "test" ? "database.testing" : "database.planning", async () => {
       if (action === "test") {
-        const result = await databaseRequest<DatabaseConnectionTest>("/test", "POST", input, closing.signal);
-        if (ticket !== epoch) return;
+        const result = await databaseRequest<DatabaseConnectionTest>("/test", "POST", input, page.signal);
+        if (ticket !== page.epoch) return;
         if (result.ok) notice("database.testPassed");
         else {
           notice(null);
@@ -224,8 +224,8 @@ export function createDatabaseSettings(t: Translate) {
           paintNotice();
         }
       } else {
-        const result = await databaseRequest<DatabaseMigrationPlan>("/plan", "POST", input, closing.signal);
-        if (ticket !== epoch) return;
+        const result = await databaseRequest<DatabaseMigrationPlan>("/plan", "POST", input, page.signal);
+        if (ticket !== page.epoch) return;
         plan = result;
         notice(null);
         renderPlan();
@@ -245,7 +245,7 @@ export function createDatabaseSettings(t: Translate) {
     )
       return;
     const accepted = plan,
-      ticket = epoch;
+      ticket = page.epoch;
     await run("database.starting", async () => {
       try {
         recovery = rememberDatabaseRecovery();
@@ -263,9 +263,9 @@ export function createDatabaseSettings(t: Translate) {
           "/migrate",
           "POST",
           { planId: accepted.id, requestId: ctx.id, statusToken: ctx.statusToken },
-          closing.signal,
+          page.signal,
         );
-        if (ticket !== epoch) return;
+        if (ticket !== page.epoch) return;
         operation = result;
         plan = null;
         notice(null);
@@ -274,7 +274,7 @@ export function createDatabaseSettings(t: Translate) {
         get<HTMLElement>("[data-database-operation-title]")?.focus({ preventScroll: true });
         schedule(recover, 1000);
       } catch (value) {
-        if (ticket !== epoch) return;
+        if (ticket !== page.epoch) return;
         if (
           value instanceof DatabaseRequestError &&
           value.status >= 400 &&
@@ -290,8 +290,8 @@ export function createDatabaseSettings(t: Translate) {
           ].includes(value.code)
         ) {
           try {
-            const fresh = await databaseRequest<DatabaseOverview>("", "GET", undefined, closing.signal);
-            if (ticket !== epoch) return;
+            const fresh = await databaseRequest<DatabaseOverview>("", "GET", undefined, page.signal);
+            if (ticket !== page.epoch) return;
             overview = fresh;
             if (fresh.operation?.id === ctx.id) {
               operation = fresh.operation;
@@ -323,7 +323,7 @@ export function createDatabaseSettings(t: Translate) {
     )
       return;
     const ctx = recovery,
-      ticket = epoch;
+      ticket = page.epoch;
     uncertainAction = true;
     await run("database.updating", async () => {
       try {
@@ -331,27 +331,27 @@ export function createDatabaseSettings(t: Translate) {
           "/operations/" + encodeURIComponent(ctx.id) + "/" + action,
           "POST",
           {},
-          closing.signal,
+          page.signal,
           ctx.statusToken,
         );
-        if (ticket !== epoch) return;
+        if (ticket !== page.epoch) return;
         operation = result;
         uncertainAction = false;
         notice(null);
         renderOperation();
         if (result.status === "running" || result.status === "waiting-restart") schedule(recover, 1000);
       } catch (value) {
-        if (ticket !== epoch) return;
+        if (ticket !== page.epoch) return;
         notice("database.unknown");
         schedule(recover, 0);
       }
     });
   }
   function hide() {
-    epoch++;
+    page.invalidate();
     clearTimeout(poll);
     clearTimeout(expiry);
-    closing.abort();
+
     if (host) {
       scrollPosition = host.closest<HTMLElement>(".settings-content")?.scrollTop ?? 0;
       form = readDatabaseForm(host, form);
@@ -365,7 +365,7 @@ export function createDatabaseSettings(t: Translate) {
   function show(element: HTMLElement) {
     if (host === element) return;
     hide();
-    closing = new AbortController();
+    page.renew();
     host = element;
     recovery = readDatabaseRecovery();
     uncertainAction = !!recovery;
@@ -384,7 +384,7 @@ export function createDatabaseSettings(t: Translate) {
         const button = (event as SubmitEvent).submitter as HTMLButtonElement | null;
         if (!busy) void submitConnection(button?.value === "plan" ? "plan" : "test");
       },
-      { signal: closing.signal },
+      { signal: page.signal },
     );
     element.addEventListener(
       "input",
@@ -395,7 +395,7 @@ export function createDatabaseSettings(t: Translate) {
           renderPlan();
         }
       },
-      { signal: closing.signal },
+      { signal: page.signal },
     );
     element.addEventListener(
       "click",
@@ -420,7 +420,7 @@ export function createDatabaseSettings(t: Translate) {
           void refresh(false);
         }
       },
-      { signal: closing.signal },
+      { signal: page.signal },
     );
     void refresh();
   }

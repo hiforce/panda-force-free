@@ -1,4 +1,10 @@
-import type { CreationTaskView, CreationFailure, CreationArtifact } from "../../shared/creation/contracts.js";
+import type {
+  CreationTaskView,
+  CreationTaskDetail,
+  CreationFailure,
+  CreationArtifact,
+} from "../../shared/creation/contracts.js";
+import { creationProgressText } from "../../shared/creation/progress.js";
 import type { MessageId, Translate } from "../../shared/i18n/messages.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { setMessageHtml, errorText, messageHtml } from "../i18n.js";
@@ -29,14 +35,14 @@ export class CreationCards {
     private readonly open: (artifact: CreationArtifact) => void,
     private readonly report: (reason: unknown) => void,
     private readonly api: typeof creationApi = creationApi,
-    private readonly options: { brief?: boolean; openAction?: boolean } = {},
+    private readonly options: { brief?: boolean; openAction?: boolean; progressDetails?: boolean } = {},
   ) {}
   dispose() {
     for (const cleanup of this.artifacts.values()) cleanup();
     this.artifacts.clear();
     this.cards.clear();
   }
-  render(tasks: readonly CreationTaskView[]) {
+  render(tasks: readonly (CreationTaskView & Partial<Pick<CreationTaskDetail, "progress">>)[]) {
     for (const [id, card] of this.cards)
       if (!tasks.some((task) => task.id === id)) {
         this.artifacts.get(card.node)?.();
@@ -60,6 +66,9 @@ export class CreationCards {
           task.generation,
         ]),
         previous = this.cards.get(task.id);
+      const oldDetails = previous?.node.querySelector<HTMLDetailsElement>("[data-creation-progress] details"),
+        oldOpen = oldDetails?.open,
+        oldScroll = oldDetails?.querySelector("ol")?.scrollTop;
       let node = previous?.node;
       if (!node || previous?.key !== key) {
         if (node) {
@@ -73,6 +82,54 @@ export class CreationCards {
       }
       const before = this.host.children[index] ?? null;
       if (before !== node) this.host.insertBefore(node, before);
+      const progress = node.querySelector<HTMLElement>("[data-creation-progress]")!;
+      if (task.progress?.length && this.options.progressDetails !== false) {
+        let details = progress.querySelector<HTMLDetailsElement>("details");
+        if (!details) {
+          setMessageHtml(
+            progress,
+            `<details open><summary>${messageHtml("creation.progressDetails", {}, this.t)}</summary><ol class="creation-progress-list" tabindex="0"></ol></details>`,
+          );
+          details = progress.querySelector("details")!;
+        }
+        const list = details.querySelector<HTMLOListElement>("ol")!,
+          rows = task.progress
+            .filter((entry) => entry.stage !== "usage")
+            .map((entry) => ({
+              at: entry.at,
+              text:
+                entry.stage === "message"
+                  ? entry.text
+                  : creationProgressText(
+                      entry,
+                      this.t,
+                      !task.failure && ["queued", "running", "committing"].includes(task.state),
+                    ),
+            }))
+            .filter((entry) => entry.text);
+        const signature = JSON.stringify(rows);
+        if (list.dataset.signature !== signature) {
+          const scroll = list.scrollTop;
+          list.replaceChildren(
+            ...rows.map((entry) => {
+              const li = document.createElement("li"),
+                time = document.createElement("time"),
+                text = document.createElement("span");
+              time.dateTime = new Date(entry.at).toISOString();
+              time.textContent = new Intl.DateTimeFormat(document.documentElement.lang || "en", {
+                timeStyle: "medium",
+              }).format(entry.at);
+              text.textContent = entry.text!;
+              li.append(time, text);
+              return li;
+            }),
+          );
+          list.dataset.signature = signature;
+          list.scrollTop = scroll;
+        }
+        if (oldOpen !== undefined) details.open = oldOpen;
+        if (oldScroll !== undefined && previous?.node !== node) list.scrollTop = oldScroll;
+      }
       node.querySelector("header small")!.textContent = new Intl.DateTimeFormat(document.documentElement.lang || "en", {
         dateStyle: "short",
         timeStyle: "short",
@@ -89,7 +146,7 @@ export class CreationCards {
         `<button type="button" class="wb-button ${extra}" data-creation-action="${action}">${messageHtml(label, {}, t)}</button>`;
     setMessageHtml(
       node,
-      `<header><strong data-creation-state>${messageHtml(creationStateMessage(task), {}, t)}</strong><small>${e(new Intl.DateTimeFormat(document.documentElement.lang || "en", { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</small></header>${this.options.brief === false ? "" : `<p class="creation-task-brief">${e(task.prompt)}</p>`}${task.failure ? `<p class="creation-task-failure">${messageHtml(failures[task.failure], {}, t)}</p>` : ""}<div data-creation-question></div><footer>${task.artifact && this.options.openAction !== false ? button(task.artifact.kind === "document" ? "creation.openDocument" : "creative.open", "open", "primary") : ""}${["queued", "running", "committing"].includes(task.state) && !task.cancelRequested ? button("creation.cancel", "cancel", "danger") : ""}${!task.artifact && (["failed", "cancelled"].includes(task.state) || (task.state === "committing" && task.failure)) ? button(task.goal?.status === "paused" ? "common.resumeGoal" : task.failure === "targetChanged" && (task.document || task.previousTaskId) ? "creation.retryLatest" : "creation.retry", "retry") : ""}<p data-task-error role="alert" hidden></p></footer>`,
+      `<header><strong data-creation-state>${messageHtml(creationStateMessage(task), {}, t)}</strong><small>${e(new Intl.DateTimeFormat(document.documentElement.lang || "en", { dateStyle: "short", timeStyle: "short" }).format(task.createdAt))}</small></header>${this.options.brief === false ? "" : `<p class="creation-task-brief">${e(task.prompt)}</p>`}${task.failure ? `<p class="creation-task-failure">${messageHtml(failures[task.failure], {}, t)}</p>` : ""}<div data-creation-question></div><div data-creation-progress class="wb-form"></div><footer>${task.artifact && this.options.openAction !== false ? button(task.artifact.kind === "document" ? "creation.openDocument" : "creative.open", "open", "primary") : ""}${["queued", "running", "committing"].includes(task.state) && !task.cancelRequested ? button("creation.cancel", "cancel", "danger") : ""}${!task.artifact && (["failed", "cancelled"].includes(task.state) || (task.state === "committing" && task.failure)) ? button(task.goal?.status === "paused" ? "common.resumeGoal" : task.failure === "targetChanged" && (task.document || task.previousTaskId) ? "creation.retryLatest" : "creation.retry", "retry") : ""}<p data-task-error role="alert" hidden></p></footer>`,
     );
     node.onclick = (event) => {
       const trigger = (event.target as Element).closest<HTMLButtonElement>("[data-creation-action]");

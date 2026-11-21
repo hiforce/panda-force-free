@@ -1,21 +1,15 @@
+import { respondPrivateDocumentAsset } from "./private-response.js";
 import { documentRouteProtection } from "./protection.js";
 import { readJsonBody } from "../http/body.js";
 import { respondJson, respondReadJson } from "../http/respond.js";
 import type { Route } from "../http/router.js";
 import { DocumentError } from "./errors.js";
-import type { DocumentService } from "./service.js";
+import type { DocumentApplicationPort } from "./application-port.js";
 import { readRequestBytes } from "../request-bytes.js";
-import { MAX_ASSET_BYTES, type DocumentAssets } from "./assets.js";
-import type { DocumentLanguages } from "./languages.js";
+import { MAX_ASSET_BYTES } from "./image-decoder.js";
 import { text, expectedVersion } from "./validation.js";
-import type { DocumentSourceProfiles } from "./source-profile/service.js";
-
-export function documentRoutes(
-  service: DocumentService,
-  assets: DocumentAssets,
-  languages: DocumentLanguages,
-  profiles?: DocumentSourceProfiles,
-): Route[] {
+export function documentRoutes(application: DocumentApplicationPort): Route[] {
+  const { queries, commands, assets, languages, profiles } = application;
   const protect = documentRouteProtection;
   const id = (url: URL) => text(url.searchParams.get("id"), 128);
   return [
@@ -27,9 +21,12 @@ export function documentRoutes(
             handler: protect(async ({ req, res, url }) => {
               const spaceId = id(url);
               if (req.method === "GET")
-                return respondJson(res, 200, { space: service.space(spaceId), profile: profiles.get(spaceId) });
+                return respondJson(res, 200, {
+                  space: await queries.space(spaceId),
+                  profile: await profiles.get(spaceId),
+                });
               const input = await readJsonBody(req, 128 * 1024);
-              respondJson(res, 200, { space: profiles.save(spaceId, input.profile, input.version) });
+              respondJson(res, 200, { space: await profiles.save(spaceId, input.profile, input.version) });
             }),
           },
           {
@@ -66,7 +63,7 @@ export function documentRoutes(
       path: "/api/document-spaces/detail",
       method: "GET",
       handler: protect(async ({ res, url }) => {
-        respondJson(res, 200, { space: service.space(id(url)) });
+        respondJson(res, 200, { space: await queries.space(id(url)) });
       }),
     },
     {
@@ -75,13 +72,7 @@ export function documentRoutes(
       handler: protect(async ({ res, url }) => {
         const engine = url.searchParams.get("engine") || "markdown";
         if (!["markdown", "hexo", "docusaurus"].includes(engine)) throw new DocumentError("invalidInput");
-        respondJson(res, 200, {
-          themes: service.themes.list(engine as import("../../shared/documents/contracts.js").DocumentEngine),
-          defaults: {
-            hexo: `${service.themes.resolve("default", "hexo").id}@${service.themes.resolve("default", "hexo").version}`,
-            docusaurus: `${service.themes.resolve("default", "docusaurus").id}@${service.themes.resolve("default", "docusaurus").version}`,
-          },
-        });
+        respondJson(res, 200, await queries.themes(engine as import("../../shared/documents/contracts.js").DocumentEngine));
       }),
     },
     {
@@ -89,7 +80,7 @@ export function documentRoutes(
       method: "PUT",
       handler: protect(async ({ req, res }) => {
         const input = await readJsonBody(req, 4096);
-        respondJson(res, 200, { space: service.updateTheme(text(input.id, 128), input) });
+        respondJson(res, 200, { space: await commands.updateTheme(text(input.id, 128), input) });
       }),
     },
     {
@@ -100,7 +91,7 @@ export function documentRoutes(
         respondJson(
           res,
           200,
-          await service.ingestion.importImages(text(input.id, 128), expectedVersion(input.revision)),
+          await commands.importImages(text(input.id, 128), expectedVersion(input.revision)),
         );
       }),
     },
@@ -109,15 +100,7 @@ export function documentRoutes(
       method: "GET",
       handler: protect(async ({ res, url }) => {
         const { asset, bytes } = await assets.content(id(url));
-        res.writeHead(200, {
-          "content-type": asset.mime,
-          "content-length": String(bytes.length),
-          "cache-control": "private, no-store",
-          "x-content-type-options": "nosniff",
-          "content-security-policy": "default-src 'none'",
-          "content-disposition": "inline; filename*=UTF-8''" + encodeURIComponent(asset.name),
-        });
-        res.end(bytes);
+        respondPrivateDocumentAsset(res, asset, bytes);
       }),
     },
     {
@@ -125,7 +108,7 @@ export function documentRoutes(
       method: ["GET", "POST"],
       handler: protect(async ({ req, res, url }) => {
         const documentId = text(url.searchParams.get("document"), 128);
-        if (req.method === "GET") return respondJson(res, 200, { assets: assets.list(documentId) });
+        if (req.method === "GET") return respondJson(res, 200, { assets: await assets.list(documentId) });
         respondJson(res, 201, {
           asset: await assets.upload(
             documentId,
@@ -142,10 +125,10 @@ export function documentRoutes(
         const documentId = id(url);
         const documents =
           req.method === "GET"
-            ? languages.list(documentId)
+            ? await languages.list(documentId)
             : req.method === "DELETE"
-              ? languages.unlink(documentId)
-              : languages.link(documentId, text((await readJsonBody(req)).otherId, 128));
+              ? await languages.unlink(documentId)
+              : await languages.link(documentId, text((await readJsonBody(req)).otherId, 128));
         respondJson(res, 200, { documents });
       }),
     },
@@ -153,14 +136,14 @@ export function documentRoutes(
       path: "/api/document-spaces/inspect",
       method: "POST",
       handler: protect(async ({ req, res }) =>
-        respondJson(res, 200, await service.sources.inspect(text((await readJsonBody(req)).path, 4096))),
+        respondJson(res, 200, await queries.inspectSource(text((await readJsonBody(req)).path, 4096))),
       ),
     },
     {
       path: "/api/document-spaces/import",
       method: "POST",
       handler: protect(async ({ req, res }) =>
-        respondJson(res, 200, await service.importSource(text((await readJsonBody(req)).spaceId, 128))),
+        respondJson(res, 200, await commands.importSource(text((await readJsonBody(req)).spaceId, 128))),
       ),
     },
     {
@@ -168,23 +151,18 @@ export function documentRoutes(
       method: ["GET", "POST"],
       handler: protect(async ({ req, res, url }) => {
         if (req.method === "GET")
-          return respondJson(res, 200, { spaces: service.listSpaces(text(url.searchParams.get("project"), 128)) });
-        respondJson(res, 201, { space: await service.createSpace(await readJsonBody(req)) });
+          return respondJson(res, 200, {
+            spaces: await queries.listSpaces(text(url.searchParams.get("project"), 128)),
+          });
+        respondJson(res, 201, { space: await commands.createSpace(await readJsonBody(req)) });
       }),
     },
     {
       path: "/api/documents/revisions",
       method: "GET",
-      handler: protect(({ res, url }) => {
+      handler: protect(async ({ res, url }) => {
         const documentId = id(url);
-        service.detail(documentId);
-        respondJson(
-          res,
-          200,
-          url.searchParams.has("revision")
-            ? { revision: service.documents.revision(documentId, text(url.searchParams.get("revision"), 128)) }
-            : { revisions: service.documents.revisions(documentId) },
-        );
+        respondJson(res, 200, await queries.history(documentId, url.searchParams.has("revision") ? url.searchParams.get("revision") : undefined));
       }),
     },
     {
@@ -192,9 +170,9 @@ export function documentRoutes(
       method: ["GET", "PUT"],
       handler: protect(async ({ req, res, url }) => {
         const documentId = id(url);
-        if (req.method === "GET") return respondReadJson(req, res, 200, service.detail(documentId));
+        if (req.method === "GET") return respondReadJson(req, res, 200, await queries.detail(documentId));
         const input = await readJsonBody(req, 6 * 1024 * 1024);
-        respondJson(res, 200, service.saveDocument(documentId, input));
+        respondJson(res, 200, await commands.saveDocument(documentId, input));
       }),
     },
     {
@@ -205,13 +183,13 @@ export function documentRoutes(
           return respondJson(
             res,
             200,
-            service.listDocuments(
+            await queries.listDocuments(
               text(url.searchParams.get("space"), 128),
               url.searchParams.get("search") || "",
               Number(url.searchParams.get("offset") || 0),
             ),
           );
-        respondJson(res, 201, service.createDocument(await readJsonBody(req, 6 * 1024 * 1024)));
+        respondJson(res, 201, await commands.createDocument(await readJsonBody(req, 6 * 1024 * 1024)));
       }),
     },
   ];

@@ -12,11 +12,23 @@ export class MySQLEditorialJobs {
     private sources: AsyncEditorialSources,
     private models: ReadonlyMap<string, EditorialModel>,
     private now: () => number = Date.now,
+    private readonly runtimes?: import("../model/runtime.js").EditorialRuntimePort,
   ) {}
   async submit(owner: string, input: Record<string, unknown>) {
     if (
       Object.keys(input).some(
-        (key) => !["id", "documentId", "revisionId", "profileId", "mode", "projectId"].includes(key),
+        (key) =>
+          ![
+            "id",
+            "documentId",
+            "revisionId",
+            "profileId",
+            "mode",
+            "projectId",
+            "runtimeId",
+            "model",
+            "effort",
+          ].includes(key),
       )
     )
       throw new EditorialError("invalidInput");
@@ -34,6 +46,9 @@ export class MySQLEditorialJobs {
         revisionId,
         profileId,
         mode,
+        ...(input.runtimeId === undefined
+          ? {}
+          : { runtimeId: input.runtimeId, model: input.model, effort: input.effort }),
         ...(projectId === undefined ? {} : { projectId }),
       });
     const existing = await this.repository.existing(owner, id, request);
@@ -41,7 +56,16 @@ export class MySQLEditorialJobs {
       await assertCurrent();
       return existing.job;
     }
-    const model = this.models.get(profileId);
+    const model =
+      input.runtimeId !== undefined && this.runtimes
+        ? {
+            profile: await this.runtimes.resolve(owner, {
+              runtimeId: field(input.runtimeId, 64),
+              model: input.model === undefined || input.model === "" ? "" : field(input.model, 128),
+              effort: input.effort === undefined || input.effort === "" ? "" : field(input.effort, 64),
+            }),
+          }
+        : this.models.get(profileId);
     if (!model || model.profile.id !== profileId) throw new EditorialError("unavailable", 503);
     const source = await this.sources.revision(documentId, revisionId, projectId);
     if (stableJson(await this.sources.current(documentId, projectId)) !== stableJson(source.ref))
@@ -106,7 +130,10 @@ export class MySQLEditorialJobs {
       await assertCurrent();
       return (await this.repository.get(owner, id)).job;
     }
-    const model = this.models.get(job.profile.id);
+    const model =
+      job.profile.runtimeId && this.runtimes
+        ? this.runtimes.model(owner, job.profile)
+        : this.models.get(job.profile.id);
     if (!model || stableJson(model.profile) !== stableJson(job.profile)) throw new EditorialError("unavailable", 503);
     if (stableJson(await this.sources.current(ref.documentId, ref.projectId)) !== stableJson(ref))
       throw new EditorialError("staleSource", 409);

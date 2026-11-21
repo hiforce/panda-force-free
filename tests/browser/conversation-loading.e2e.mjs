@@ -396,6 +396,7 @@ try {
   await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
   page.on("dialog", (dialog) => dialog.accept());
   await page.evaluate(() => globalThis.__pandaForceDebug.setSidebarOpen(true));
+  await page.locator("#sidebarSessionsTab").click();
   await page.locator('.thread-item[data-id="paged"] .thread-options').click();
   // A background list refresh must retain the open menu and its keyboard focus.
   const refreshedMenu = await page.evaluate(() => {
