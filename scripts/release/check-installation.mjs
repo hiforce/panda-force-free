@@ -11,6 +11,7 @@ export function checkInstallation(root = process.cwd()) {
   const json = (path) => JSON.parse(text(path));
   const version = json("release/community/edition.json").version;
   const image = `hiforceai/panda-force:${version}`;
+  const installClone = "git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git";
   const bases = json("scripts/build/base-images.json");
   const require = (value, message) => {
     if (!value) throw Error(message);
@@ -60,7 +61,7 @@ export function checkInstallation(root = process.cwd()) {
           require(container.image === image, `${mode}: application/init image differs from release`);
     }
   for (const path of ["README.md", "README-zh.md", "release/community/README.md", "release/community/README-zh.md"])
-    require(text(path).includes(`v${version}`) &&
+    require(text(path).includes(installClone) &&
       text(path).includes(image) &&
       text(path).includes("Grok Build"), `${path}: incomplete release instructions`);
   for (const name of ["README.md", "README-zh.md"])
@@ -78,6 +79,8 @@ export function checkInstallation(root = process.cwd()) {
         require(match[1] === version, `${path}: outdated application image in the documentation`);
       if (["installation.md", "harness-runtimes.md", "storage.md"].includes(name))
         require(!text(path).includes("panda-force:local"), `${path}: end-user instructions must use the release image`);
+      if (["installation.md", "harness-runtimes.md"].includes(name))
+        require(text(path).includes(installClone), `${path}: ordinary installation must clone the main branch`);
     }
   require(createHash("sha256").update(text("scripts/build/harness-engines.lock.json")).digest("hex") ===
     bases.engineLockSha256, "Harness lock differs from base metadata");

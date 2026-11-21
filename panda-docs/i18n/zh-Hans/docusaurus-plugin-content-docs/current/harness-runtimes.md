@@ -6,10 +6,10 @@ PandaForce 0.1.2 支持**多个 Harness Runtime**。运行实例决定原生引�
 
 ## 安装配套发行版
 
-使用 `v0.1.2` 源码与 `hiforceai/panda-force:0.1.2` 镜像：
+从 `main` 分支获取安装配置，运行已发布的 `hiforceai/panda-force:0.1.2` 镜像：
 
 ```bash
-git clone --branch v0.1.2 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build

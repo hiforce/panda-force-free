@@ -137,14 +137,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 17010,
-      "sha256": "13c48368c33bcc67df74cd00fefca276a5f19985f5331043269dd543ad50cc54",
+      "bytes": 17041,
+      "sha256": "22b608328eb80aa8eca30ea68e17fc8cf40cfdcf8733c2bc49548fe0af4a6c61",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 17651,
-      "sha256": "e365f97aca1f7777880910f0df0f520d43cb5b3981d4206c0a46d40fe5ea8484",
+      "bytes": 17681,
+      "sha256": "78166e3c207bed1f397c4fc7cb437d4f6163a0ddf57803cfadebc04c70870dbb",
       "mode": "100644"
     },
     {
@@ -425,14 +425,14 @@
     },
     {
       "path": "panda-docs/docs/harness-runtimes.md",
-      "bytes": 6721,
-      "sha256": "187d2767cdac6bae6bd1015cb39fe8ef212d56ecdf60d12505fbf4cc4466f24c",
+      "bytes": 6760,
+      "sha256": "0e39218a21eb7ba42b7e44d4d3680914071c8adc8f2c65340d9e2aaf0730d8ec",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/installation.md",
-      "bytes": 12005,
-      "sha256": "5ac440ca8ac96a90658f379ee3c0be76b599833b9277ebd625b01f2620c2572d",
+      "bytes": 12070,
+      "sha256": "0abdbc8d26db3550b320b0141538a25a9a4051c439c63ba9f5a1b3f151cc47f1",
       "mode": "100644"
     },
     {
@@ -551,14 +551,14 @@
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md",
-      "bytes": 5830,
-      "sha256": "055d3f3df97c594fbd9b0b7ae53ef532acc4b5e4ba5ffa780b67818e898ca48a",
+      "bytes": 5859,
+      "sha256": "ce3a63f8ef0156dccb6fff0dd77966ba9ce39ce5e1e59403883a344bf5a07864",
       "mode": "100644"
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/installation.md",
-      "bytes": 4677,
-      "sha256": "12ce329ef3a766c3deb3ca21b4676787bdf2545861e92f0f900da1616a4a7f5c",
+      "bytes": 4675,
+      "sha256": "0b7c476b1b70388a18c48026b70cd02fbab3b1aef1060251e6baffe0d5f81cfe",
       "mode": "100644"
     },
     {
@@ -1535,14 +1535,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 17010,
-      "sha256": "13c48368c33bcc67df74cd00fefca276a5f19985f5331043269dd543ad50cc54",
+      "bytes": 17041,
+      "sha256": "22b608328eb80aa8eca30ea68e17fc8cf40cfdcf8733c2bc49548fe0af4a6c61",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 17651,
-      "sha256": "e365f97aca1f7777880910f0df0f520d43cb5b3981d4206c0a46d40fe5ea8484",
+      "bytes": 17681,
+      "sha256": "78166e3c207bed1f397c4fc7cb437d4f6163a0ddf57803cfadebc04c70870dbb",
       "mode": "100644"
     },
     {
@@ -1871,8 +1871,8 @@
     },
     {
       "path": "scripts/release/check-installation.mjs",
-      "bytes": 5689,
-      "sha256": "5b938e33c070a1449b7a98b81d94c0238aab213fe17cc4f037ce57dfa3722a2c",
+      "bytes": 5978,
+      "sha256": "62b65be12e1d19b7ccd95283e85876284e1b21eab22179162f2e4d3cf0705521",
       "mode": "100644"
     },
     {
@@ -23332,5 +23332,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "ab7576e06fcaf9e516f19aba55141e8da56447b55d95678da1586e9c05bc4dcc"
+  "contentSha256": "997c4656b84b33f3bbd2e7b4b8c579053fba0f28bf3bd4a1065ed04576720c25"
 }

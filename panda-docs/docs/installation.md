@@ -23,9 +23,11 @@ A Unix socket is a local communication endpoint between processes, represented b
 
 The current container release is **hiforceai/panda-force:0.1.2**, currently for Linux amd64. The Rocky Linux 9 image contains Bun, Node.js, Codex CLI 0.171.0, Grok Build 1.0.89 and the reviewed creative tools. You do not need to install those tools on the host. Use the matching 0.1.2 Compose files; check an existing `.env` for an old image override.
 
-From a checkout of the release tag (`git clone --branch v0.1.2 --depth 1 https://github.com/hiforce/panda-force-free.git`):
+Clone the `main` branch and enter its directory to use the installation configuration:
 
 ```bash
+git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
+cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
 docker compose logs panda-force

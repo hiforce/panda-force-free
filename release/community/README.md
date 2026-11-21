@@ -146,10 +146,10 @@ Codex starts through the application's app-server connection. Grok uses on-deman
 
 ## Install 0.1.2
 
-Use **`hiforceai/panda-force:0.1.2`** for **Linux amd64** with the matching release checkout. The image uses **Rocky Linux 9** and includes both Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
+Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.1.2`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes both Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
 
 ```bash
-git clone --branch v0.1.2 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build

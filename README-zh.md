@@ -146,10 +146,10 @@ Codex 使用应用的 app-server 连接，Grok 使用按需启动的 ACP 进程�
 
 ## 安装 0.1.2
 
-使用配套发行源码与 **`hiforceai/panda-force:0.1.2`**，平台为 **Linux amd64**。镜像采用 **Rocky Linux 9**，包含两种 Harness CLI、Bun、Node.js、Python、Office、PDF/OCR、字体、图像/研究/写作库、Chromium 和 FFmpeg。宿主机准备 Git、Docker 和 Compose 即可。[基础镜像的内容与用途 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)
+从 **`main` 分支**获取安装配置，运行正式镜像 **`hiforceai/panda-force:0.1.2`**，平台为 **Linux amd64**。镜像采用 **Rocky Linux 9**，包含两种 Harness CLI、Bun、Node.js、Python、Office、PDF/OCR、字体、图像/研究/写作库、Chromium 和 FFmpeg。宿主机准备 Git、Docker 和 Compose 即可。[基础镜像的内容与用途 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)
 
 ```bash
-git clone --branch v0.1.2 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build

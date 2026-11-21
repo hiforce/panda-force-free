@@ -6,10 +6,10 @@ PandaForce 0.1.2 supports **multiple Harness Runtimes**. A runtime selects the n
 
 ## Install the matching release
 
-Use the `v0.1.2` checkout and `hiforceai/panda-force:0.1.2` image together:
+Get the installation configuration from the `main` branch and run the published `hiforceai/panda-force:0.1.2` image:
 
 ```bash
-git clone --branch v0.1.2 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build

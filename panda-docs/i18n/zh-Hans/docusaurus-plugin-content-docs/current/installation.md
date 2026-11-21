@@ -13,7 +13,7 @@ Codex 可使用容器内独立服务，或通过共享模式连接指定宿主�
 版本 `0.1.2` 发布为 `hiforceai/panda-force:0.1.2`，平台为 Linux amd64。Rocky Linux 9 镜像包含 Bun、Node.js、Codex CLI 0.171.0、Grok Build 1.0.89 和创作工具链，宿主机只需 Docker、Compose 和 Git。其他架构需要 amd64 模拟或自行构建兼容镜像。
 
 ```bash
-git clone --branch v0.1.2 --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
