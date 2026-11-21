@@ -16,7 +16,7 @@ The file browser, terminal and shared Codex conversations are administrator-only
 
 ## Find your work
 
-The main navigation contains Workspace, Bots, Sessions, Create, Projects, Skills and Publish. The home board combines a creation composer with configurable Gadgets for recent work, frequent projects and skills. Personal creation content can be copied into projects as independent work. See the [feature catalog](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/features.md) for document, knowledge and publishing capabilities and prerequisites.
+The main navigation contains Workspace, Bots, Sessions, Create, Projects, Skills and Publish. The home board combines a creation composer with configurable Gadgets for recent work, frequent projects and skills. Personal creation content can be copied into projects as independent work. See the [feature catalog](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/docs/features.md) for document, knowledge and publishing capabilities and prerequisites.
 
 ## Customize your workspace
 

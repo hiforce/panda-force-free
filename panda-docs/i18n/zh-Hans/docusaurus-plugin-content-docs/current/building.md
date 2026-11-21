@@ -4,11 +4,27 @@ title: 编译源码与基础镜像
 
 0.1.2 默认使用已公开、配套的 **Rocky 创作构建/运行基础镜像**，平台为 Linux amd64。两种镜像均包含 Codex CLI、Grok Build 与完整的 Office/PDF/OCR、字体、图像、研究、写作、浏览器和视频工具；构建镜像增加应用开发/原生编译依赖，运行镜像保留生产依赖。[基础镜像内容与用途](base-images.md)说明清单、目的和锁定输入。
 
-普通安装拉取 `hiforceai/panda-force:0.1.2`。需要源码构建时，在配套发行版中运行：
+## Development container
+
+需要定制应用时，自行指定开发镜像标签，再构建当前源码。下面的构建命令在你的机器上生成该标签，不会将其发布到仓库：
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+export PANDA_FORCE_IMAGE=panda-force:source
+docker compose -f docker-compose.yml -f docker-compose.build.yml build panda-force
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --no-build
 ```
+
+后续命令保持同一 `PANDA_FORCE_IMAGE`。为自建镜像加入 Grok 账户续期时，使用全部三个 Compose 文件，使应用及账户辅助服务使用同一镜像：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml \
+  -f deploy/harness/docker-compose.grok.yml up -d --no-build
+docker compose -f docker-compose.yml -f docker-compose.build.yml \
+  -f deploy/harness/docker-compose.grok.yml \
+  run --rm grok-auth grok --no-auto-update login --device-auth
+```
+
+重建时保留账户与工作区卷。镜像打包默认执行编译及启动检查，源码及受影响行为检查独立运行。直接在主机运行源码的工具前提与命令见[英文开发指南](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/docs/building.md#run-from-source)。
 
 Dockerfile、Compose 构建叠加文件与 `scripts/build/base-images.json` 固定实际公开的配套摘要。首次下载较大，之后复用已安装层。自有仓库请同时覆盖 `PANDA_FORCE_BUILD_BASE` 与 `PANDA_FORCE_RUNTIME_BASE`；直接 Docker 构建分别使用 `BUILD_BASE`、`RUNTIME_BASE`。仓库凭据与拉取策略独立管理，普通安装无需 CDN，启用 CDN 时使用自己的存储配置。
 

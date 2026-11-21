@@ -16,7 +16,7 @@ Exactly one owner runs the isolated engine. It owns the persistent workspace, mo
 
 PostgreSQL holds the workspace owner and monotonically increasing generation, an event journal and durable command identities. Completed command results are retained for seven days, then reduced to uncertain tombstones. An uncertain command is never automatically executed again. Events are retained for one day; reconnecting clients refresh authoritative session state when they cannot replay their previous generation. Local browser caches are not the persistence boundary.
 
-This scales the **web entry points**. It does not distribute a single workspace's CLI execution across owners, migrate SQLite to PostgreSQL, automatically take over unfinished tasks, or provide a ready-made Claude adapter. The current registered conversation engine is Codex. An unavailable owner makes its workspace temporarily unavailable.
+This scales the **web entry points**. It does not distribute a single workspace's CLI execution across owners, migrate SQLite to PostgreSQL, automatically take over unfinished tasks, or provide a ready-made Claude adapter. These cluster templates configure the Codex owner topology. See the separate [Harness Runtime guide](harness-runtimes.md) for Grok Build account services and runtime selection. An unavailable owner makes its workspace temporarily unavailable.
 
 The application database selected after first administrator creation (SQLite or MySQL) is separate from PostgreSQL cluster coordination. A MySQL-backed installation must also back up that application database; account identity and password hashes use its selected backend.
 

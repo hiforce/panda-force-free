@@ -72,15 +72,6 @@ docker compose exec panda-force panda-tools doctor
 
 已有会话在当前轮完成后切换 Harness。PandaForce 交接选定上下文，文件保留在工作目录，不会把整个 JSONL 归档塞给下一个模型；历史含时间戳，便于定向回溯。运行实例/账户访问范围与执行权限继续生效。
 
-## 自行构建本版
+## 源码开发
 
-源码 Dockerfile 固定配套的公开 Rocky 创作**构建**与**运行**基础镜像，普通应用改动复用这些层。使用本地应用镜像及 Grok 叠加配置时，明确设置本地镜像，让辅助服务使用同一份镜像：
-
-```bash
-export PANDA_FORCE_IMAGE=panda-force:local
-docker compose -f docker-compose.yml -f docker-compose.build.yml build panda-force
-docker compose -f docker-compose.yml -f docker-compose.build.yml \
-  -f deploy/harness/docker-compose.grok.yml up -d --no-build
-```
-
-Grok 设备登录沿用上面的命令，并带相同 Compose 文件。[基础镜像维护](base-images.md#每月刷新)包括插件依赖、锁定输入和月度更新；凭据与可变账户目录保存在镜像层之外。
+需要定制应用的开发者请参阅[容器构建指南](building.md#development-container)，其中包含 Grok 叠加配置。本文的安装与账户命令使用已发布的 `hiforceai/panda-force:0.1.2` 镜像。

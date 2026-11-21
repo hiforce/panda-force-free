@@ -117,28 +117,9 @@ This is why a Kubernetes container can connect to a host Codex service: the depl
 
 The default Compose setup instead starts its own Codex service inside the container. Do not copy host-service configuration into that setup unless you intend to connect to an existing service.
 
-## Build from source
+## Source development
 
-Install Bun 1.4.2, Node.js 22, Git, Python 3 and a C++ build toolchain. The tested CLI is 0.171.0.
-
-```bash
-bun install --frozen-lockfile
-npm rebuild node-pty --build-from-source
-npm install -g @openai/codex@0.171.0
-codex
-bun run start
-```
-
-## Build a local container for development
-
-Use the build overlay. It tags the local result as `panda-force:local`, separately from the published release tag.
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up --build -d
-docker compose logs panda-force
-```
-
-The community Dockerfile automatically pulls the matched public, digest-pinned Rocky creative build/runtime bases. Both Harness CLIs and the Office/PDF/OCR, font, image, research, writing, browser and video tools are preinstalled; no manual base build or import is needed. The first download is cached for later application builds. See [container base images](./building.md#container-base-images) and [build your own bases](./building.md#build-your-own-base-images) for the two images, verification scope and private-registry overrides. This source build is optional; normal installation pulls the released application image.
+Use the [development guide](building.md#run-from-source) to run a checkout directly or [build your own application image](building.md#development-container). Container installation uses the published `hiforceai/panda-force:0.1.2` image and the commands above.
 
 ## Install on your phone
 

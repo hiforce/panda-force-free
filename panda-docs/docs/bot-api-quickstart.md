@@ -4,11 +4,11 @@ title: Bot API quickstart
 
 # Create a Bot and integrate its tasks
 
-This guide describes the current **develop source**. It uses fictional product data and no external callback. Run examples from the repository root in Bash with `curl` and `jq` installed, against your own installation. Use HTTPS for remote access.
+This guide targets **PandaForce 0.1.2**. It uses fictional product data and no external callback. Run examples from the repository root in Bash with `curl` and `jq` installed, against your own installation. Use HTTPS for remote access.
 
 ## 1. Create and configure
 
-The easiest route is **Settings → Bot settings**: create `catalog-panda`, choose a model, set an avatar/personality and issue an expiring key scoped to that Bot. The [English Bot definition](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/quickstart/bot.json) and [Chinese definition](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/quickstart/bot.zh-CN.json) are also valid management API request bodies.
+The easiest route is **Settings → Bot settings**: create `catalog-panda`, choose its Harness Runtime, model and reasoning level, set an avatar/personality and issue an expiring key scoped to that Bot. The [English Bot definition](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/quickstart/bot.json) and [Chinese definition](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/quickstart/bot.zh-CN.json) are also valid management API request bodies.
 
 For automation, sign in with a configured local account, keep its cookie in a temporary file, then create the Bot and issue a key:
 
@@ -63,7 +63,7 @@ These management endpoints require a signed-in application session; mutations al
 
 ## 2. Submit
 
-Set `BOT_KEY` from the issued secret. The sample [task.json](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/quickstart/task.json) declares a `draft_ready` business result without a callback, so no external service is invoked.
+Set `BOT_KEY` from the issued secret. The sample [task.json](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/quickstart/task.json) declares a `draft_ready` business result without a callback, so no external service is invoked.
 
 ```bash
 export BOT_CODE="catalog-panda"

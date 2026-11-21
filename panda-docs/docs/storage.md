@@ -4,7 +4,7 @@ title: State, files and backups
 
 PandaForce source installs use `$HOME/.panda-force`; containers use `/var/lib/panda-force`. Configuration, logs and the project database are separate from the workspace. The model engine retains its own account and session state.
 
-Local uploads from the composer are stored under the selected working directory. Uploads from older clients that do not supply a working directory retain their persistent staging location, defaulting to `$CODEX_HOME/panda-force-uploads`, or `PANDA_FORCE_ATTACHMENT_ROOT` when configured. Existing attachment links are preserved. Project association metadata is `data/projects.sqlite` under the application state root.
+Local uploads from the composer are stored under the selected working directory. Uploads from older clients that do not supply a working directory retain their persistent staging location, defaulting to `$CODEX_HOME/panda-force-uploads`, or `PANDA_FORCE_ATTACHMENT_ROOT` when configured. Existing attachment links are preserved. With SQLite selected, project association metadata is `data/projects.sqlite` under the application state root. With MySQL selected, business records use that database; workspace files and model state still need separate backups.
 
 ## Attachment working directories
 
@@ -27,7 +27,7 @@ Container-private directories, host-only `/mnt/data` and `/tmp` are not delivery
 
 Legacy local attachments and configured OSS uploads remain readable through their existing routes. OSS input storage does not make engine-generated output files available automatically: those outputs still belong in the shared workspace. No automatic search, basename guessing or copying from arbitrary host paths is performed when a link fails.
 
-## S3-compatible storage for saved originals (develop source)
+## S3-compatible storage for saved originals
 
 In **Settings → Storage**, an installation administrator can choose local storage or an S3-compatible connection for new images, videos, presentations, web pages and other creative files. Select the file types to route, then provide the bucket, region, optional object prefix and access credentials. Advanced options include a custom root endpoint and path-style addressing. An empty endpoint uses the regional AWS S3 endpoint. The provider must support the standard conditional-write, metadata, exact-version and byte-range operations used by the application.
 
@@ -41,7 +41,7 @@ Moving a file to Trash preserves its originals and resources for restoration. **
 
 This configuration is separate from static CDN credentials and from conversation attachment storage. It covers saved creative originals and their resources; native engine history and private renderer recovery caches keep their existing storage. Keep the application metadata and project content in backups alongside the S3 objects so saved locations and cleanup receipts remain available. No shared engine state is automatically removed when an original is deleted.
 
-Configuration, independent credential records and cleanup journals live in the private `original-storage` directory under the application state root, which the standard Compose state volume already persists. Administrators needing a different parent may set `PANDA_FORCE_ORIGINAL_STORAGE_PARENT` in the service environment and mount that parent on persistent storage; the application still uses its dedicated `original-storage` child. These settings require a build from the current develop source and are not a claim that an older published image includes this feature.
+Configuration, independent credential records and cleanup journals live in the private `original-storage` directory under the application state root, which the standard Compose state volume already persists. Administrators needing a different parent may set `PANDA_FORCE_ORIGINAL_STORAGE_PARENT` in the service environment and mount that parent on persistent storage; the application still uses its dedicated `original-storage` child. These settings are included in the published 0.1.2 application image.
 
 ## Managed project folders (0.0.15+)
 
@@ -58,7 +58,7 @@ For example, mount your own host `/srv/panda-projects` at `/srv/panda-projects` 
 
 With external directories disabled, browser directory/file roots and native history access are restricted, and refresh uses a new cache scope. Restart and refresh after changing this setting. This is a browser visibility policy; native command access is still governed by the engine's permissions. Application-owned attachments remain available through their authorized routes. Native session records stay in the engine's own state directory rather than moving into project folders.
 
-The Compose service is `panda-force`; its default release image is `hiforceai/panda-force:0.0.15`; the development overlay uses `panda-force:local`. Volumes are `panda-force-state`, `panda-force-model-state` and `panda-force-workspace`, with a Compose project prefix.
+The Compose service is `panda-force`; its release image is `hiforceai/panda-force:0.1.2`. Volumes are `panda-force-state`, `panda-force-model-state` and `panda-force-workspace`, with a Compose project prefix. The Grok overlay adds separate account and socket volumes. The account service owns the account volume; the socket volume holds communication state and does not replace an account backup.
 
 For existing volumes, set `PANDA_FORCE_STATE_VOLUME_NAME`, `PANDA_FORCE_MODEL_VOLUME_NAME` and `PANDA_FORCE_WORKSPACE_VOLUME_NAME` to their actual Docker names before recreating the service. For absolute host-directory mounts, use `PANDA_FORCE_HOME_HOST`, `PANDA_FORCE_MODEL_HOME_HOST` and `PANDA_FORCE_WORKSPACE_HOST`. Renaming defaults does not migrate or delete old data.
 

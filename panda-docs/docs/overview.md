@@ -7,11 +7,11 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 PandaForce is a browser workspace for natural-language work: organize projects, run conversations, review requests and inspect results.
 
-The current engine is Codex app-server. Other CLI engines are not integrated yet. A PandaForce administrator account is independent of the model-provider account.
+PandaForce 0.1.2 supports multiple Harness Runtimes, including Codex and Grok Build. Choose a runtime, then its model and reasoning level. Switch an existing conversation after the current turn finishes; its history and workspace files remain available while selected context is handed over. Application sign-in and model-provider sign-in are separate. See [Harness setup](harness-runtimes.md).
 
-Browse the [complete feature catalog](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/features.md) for the current develop source, optional services and current limits.
+Browse the [feature catalog](features.md) for the 0.1.2 release, optional services and current limits.
 
-Start with <a href={useBaseUrl('/installation/')}>installation</a>, then learn the [workspace](./workspace.md). This documentation is newly authored for PandaForce. No legacy upstream help is included.
+Start with <a href={useBaseUrl('/installation/')}>installation</a>, then learn the [workspace](./workspace.md). The standard installation uses the published Docker image; source development is covered separately in the [development guide](building.md).
 
 This free edition uses the MIT license. Personal, student, research and commercial use, modifications and forks are free under that license. Hosting, models and storage can have separate costs. Maintenance is best effort without an SLA or a guaranteed response/fix deadline.
 

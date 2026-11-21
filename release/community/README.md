@@ -62,7 +62,7 @@ Screenshots below are freshly captured from the current source with fictional de
 
 Save originals locally, or configure **your own S3-compatible bucket** and select which content types use it—for example, generated images and videos. Thumbnails work without setting up image-processing rules in your bucket.
 
-Private S3 originals use authenticated application authorization followed by **direct browser delivery through a temporary signed URL**. The file bytes travel from object storage to the browser. “Get image link” provides a reusable link with an expiry notice, valid for up to 24 hours; someone you share that link with can use it until expiry. Trash remains recoverable; permanent deletion cleans up the owned remote originals. [Storage guide →](./panda-docs/docs/storage.md#s3-compatible-storage-for-saved-originals-develop-source)
+Private S3 originals use authenticated application authorization followed by **direct browser delivery through a temporary signed URL**. The file bytes travel from object storage to the browser. “Get image link” provides a reusable link with an expiry notice, valid for up to 24 hours; someone you share that link with can use it until expiry. Trash remains recoverable; permanent deletion cleans up the owned remote originals. [Storage guide →](./panda-docs/docs/storage.md#s3-compatible-storage-for-saved-originals)
 
 ## Meet your Bot
 
@@ -178,17 +178,9 @@ Open **Settings → Harness Runtimes**, check Grok Build, and select its model/e
 
 State, Codex login, Grok account and workspace files persist in separate Docker volumes. Keep the same Compose project/volume names when upgrading and check `.env` for an old `PANDA_FORCE_IMAGE` override. `docker compose down` preserves named volumes. The default port binds to localhost; configure your own HTTPS entry for remote access. [Storage and backups →](./panda-docs/docs/storage.md)
 
-## Build from source with cached bases
+## Developer documentation
 
-From the matching checkout:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-```
-
-The local image is `panda-force:local`. Docker automatically pulls the matched, digest-pinned public **Rocky creative build/runtime bases**; later application builds reuse their installed tools. Override both references for your own registry. When adding the Grok overlay to a local build, set `PANDA_FORCE_IMAGE=panda-force:local` so its helpers use that same image. [Complete source/base build and monthly maintenance →](./panda-docs/docs/base-images.md)
-
-Packaging defaults to compilation/startup checks (`VERIFICATION_PROFILE=none`); source and affected behavior checks run separately. Use `v0.1.2` for this release's exact source. `main` tracks the stable release and `develop` continues development.
+For source contributions and custom images, use the [development guide](./panda-docs/docs/building.md). The [base image guide](./panda-docs/docs/base-images.md) covers tool contents, dependency maintenance and custom registries.
 
 ## Optional services and configuration
 

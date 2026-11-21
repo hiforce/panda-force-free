@@ -105,8 +105,8 @@ To change the domain, bucket or prefix, rebuild the image with the new settings,
 To return to local resources, build without `PANDA_FORCE_CDN_BASE_URL` and deploy that image:
 
 ```bash
-docker build --build-arg VERIFICATION_PROFILE=cdn -t panda-force:local .
-PANDA_FORCE_IMAGE=panda-force:local docker compose up -d
+docker build --build-arg VERIFICATION_PROFILE=cdn -t panda-force:origin .
+PANDA_FORCE_IMAGE=panda-force:origin docker compose up -d
 ```
 
 This does not delete existing CDN objects or persistent application data.

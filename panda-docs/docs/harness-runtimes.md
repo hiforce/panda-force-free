@@ -72,15 +72,6 @@ For the 0.1.2 release, the reviewed engines are Codex CLI **0.171.0** and Grok B
 
 Switch an existing conversation after the current turn finishes. PandaForce hands over selected context and keeps files in the working directory; it does not load the entire JSONL archive into the next model. Histories retain timestamps for targeted retrieval. Runtime/account access and execution permissions continue to apply.
 
-## Build this release yourself
+## Source development
 
-The source Dockerfile pins the matching public Rocky creative **build** and **runtime** bases. Normal application changes reuse them. For a local application with the Grok overlay, make the local image selection explicit so the helpers use it too:
-
-```bash
-export PANDA_FORCE_IMAGE=panda-force:local
-docker compose -f docker-compose.yml -f docker-compose.build.yml build panda-force
-docker compose -f docker-compose.yml -f docker-compose.build.yml \
-  -f deploy/harness/docker-compose.grok.yml up -d --no-build
-```
-
-Use the same Compose files for the Grok device-login command above. [Base image maintenance](base-images.md#monthly-refresh) covers plugin dependencies, pinned inputs and monthly refresh. Credentials and mutable account directories remain outside image layers.
+Developers customizing the application can follow the [container build guide](building.md#development-container), including its Grok overlay instructions. The installation and account commands on this page use the published `hiforceai/panda-force:0.1.2` image.

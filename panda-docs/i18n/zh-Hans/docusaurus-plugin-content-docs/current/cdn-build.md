@@ -105,8 +105,8 @@ HTML 和网页应用清单保留在应用域名，以保持正确的导航和主
 恢复本地资源时，不传入 `PANDA_FORCE_CDN_BASE_URL`，重新构建并部署：
 
 ```bash
-docker build --build-arg VERIFICATION_PROFILE=cdn -t panda-force:local .
-PANDA_FORCE_IMAGE=panda-force:local docker compose up -d
+docker build --build-arg VERIFICATION_PROFILE=cdn -t panda-force:origin .
+PANDA_FORCE_IMAGE=panda-force:origin docker compose up -d
 ```
 
 此操作不会删除已有 CDN 对象，也不会删除应用持久化数据。

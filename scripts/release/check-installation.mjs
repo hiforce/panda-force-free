@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -65,6 +65,20 @@ export function checkInstallation(root = process.cwd()) {
       text(path).includes("Grok Build"), `${path}: incomplete release instructions`);
   for (const name of ["README.md", "README-zh.md"])
     require(text(name) === text("release/community/" + name), `${name}: public template differs`);
+  for (const path of ["README.md", "README-zh.md", "release/community/README.md", "release/community/README-zh.md"])
+    require(!/panda-force:local|docker-compose\.build\.yml|VERIFICATION_PROFILE/.test(
+      text(path),
+    ), `${path}: installation must link to developer build instructions instead of mixing them into the release flow`);
+  for (const directory of ["panda-docs/docs", "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current"])
+    for (const name of readdirSync(resolve(root, directory)).filter(
+      (name) => name.endsWith(".md") && name !== "releases.md",
+    )) {
+      const path = `${directory}/${name}`;
+      for (const match of text(path).matchAll(/hiforceai\/panda-force:(\d+\.\d+\.\d+)/g))
+        require(match[1] === version, `${path}: outdated application image in the documentation`);
+      if (["installation.md", "harness-runtimes.md", "storage.md"].includes(name))
+        require(!text(path).includes("panda-force:local"), `${path}: end-user instructions must use the release image`);
+    }
   require(createHash("sha256").update(text("scripts/build/harness-engines.lock.json")).digest("hex") ===
     bases.engineLockSha256, "Harness lock differs from base metadata");
   return {

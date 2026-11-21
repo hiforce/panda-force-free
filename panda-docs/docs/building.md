@@ -41,15 +41,45 @@ Use Node.js 22 or newer for the help build. Generated HTML is in `panda-docs/bui
 
 The documentation build currently inherits a low-severity [deepmerge advisory](https://github.com/advisories/GHSA-gcqx-w48m-w2h4) for which no upstream patched version is listed. Build this separate help toolchain from trusted, reviewed configuration and content. Application dependencies are audited separately; a successful HTML build is not a claim that the help toolchain has no advisories.
 
+## Run from source
+
+For source development, install Bun 1.4.2, Node.js 22, Git, Python 3 and a C++ build toolchain. The release uses Codex CLI 0.171.0. Keep model accounts and application state outside the checkout:
+
+```bash
+bun install --frozen-lockfile
+npm rebuild node-pty --build-from-source
+npm install -g @openai/codex@0.171.0
+codex login --device-auth
+bun run start
+```
+
+## Development container
+
+For a custom image, choose your own development tag and build the checkout. The following tag is created on your machine by the build command; the command does not publish it to a registry:
+
+```bash
+export PANDA_FORCE_IMAGE=panda-force:source
+docker compose -f docker-compose.yml -f docker-compose.build.yml build panda-force
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --no-build
+```
+
+Keep `PANDA_FORCE_IMAGE` set to the same image for all commands. To add Grok account renewal to this custom build, use all three Compose files so the application and account helpers use your chosen image:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml \
+  -f deploy/harness/docker-compose.grok.yml up -d --no-build
+docker compose -f docker-compose.yml -f docker-compose.build.yml \
+  -f deploy/harness/docker-compose.grok.yml \
+  run --rm grok-auth grok --no-auto-update login --device-auth
+```
+
+Keep account and workspace volumes when rebuilding. The release Dockerfile reuses the public bases described below. Packaging runs compilation/startup checks by default; execute source and affected behavior checks independently.
+
 ## Container base images
 
 The 0.1.2 source defaults to the public **Rocky creative build/runtime pair** for Linux amd64. Both include Codex CLI and Grok Build plus the reviewed Office/PDF/OCR, font, image, research, writing, browser and video tools. The build image adds the application development/native compilation dependencies; the runtime image carries production dependencies. [Contents, purpose, exact inputs and self-build workflow](base-images.md) explains the pair.
 
-The Dockerfile, both Compose build overlays and `scripts/build/base-images.json` use the same actual public digests. Normal installation pulls `hiforceai/panda-force:0.1.2`; source developers can use:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-```
+The Dockerfile, both Compose build overlays and `scripts/build/base-images.json` use the same actual public digests. The [development container commands](#development-container) build your checkout using that pair.
 
 The first pull can be large. Later application builds reuse these installed layers. Ordinary assets are served by the application; an optional CDN requires your own settings. For a private registry, mirror both bases and set `PANDA_FORCE_BUILD_BASE` / `PANDA_FORCE_RUNTIME_BASE`, or use direct Docker build arguments `BUILD_BASE` / `RUNTIME_BASE`. Registry credentials and pull policies remain administrator-managed outside source and image layers.
 

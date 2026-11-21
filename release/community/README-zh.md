@@ -62,7 +62,7 @@ _这是为本 README 全新生成的中文插画示例，点击可看原始 PNG�
 
 原件可以保存在本地，也可以配置**你自己的 S3 兼容存储**，勾选要存到对象存储的内容，例如生成的图片和视频。缩略图开箱可用，不用另外去 bucket 配置图片处理规则。
 
-私有 S3 原件先经过应用授权，再由**浏览器通过临时签名链接直接读取**，文件流量从对象存储到浏览器。“获取图片链接”会提供可复用链接并提示到期时间，最长有效 24 小时；你分享出去的人也能在有效期内访问。移入回收站可以恢复，彻底删除时清理自有远端原件。[查看存储说明 →](./panda-docs/docs/storage.md#s3-compatible-storage-for-saved-originals-develop-source)
+私有 S3 原件先经过应用授权，再由**浏览器通过临时签名链接直接读取**，文件流量从对象存储到浏览器。“获取图片链接”会提供可复用链接并提示到期时间，最长有效 24 小时；你分享出去的人也能在有效期内访问。移入回收站可以恢复，彻底删除时清理自有远端原件。[查看存储说明 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/storage.md)
 
 ## 认识你的 Bot
 
@@ -176,26 +176,18 @@ docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
 
 打开 **设置 → Harness Runtime** 检查 Grok Build，然后选择模型与强度。明确的 **hi** 测试会使用你的模型账户发送一次真实小型请求。应用与 Grok 辅助服务默认使用同一份 0.1.2 镜像。[完整配置与账户卷说明 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
-应用状态、Codex 登录、Grok 账户和工作文件保存在独立 Docker 卷中。升级保留原 Compose 项目/卷名，并检查 `.env` 是否仍用 `PANDA_FORCE_IMAGE` 覆盖旧版；`docker compose down` 保留命名卷。默认端口只绑定本机，远程访问请配置自己的 HTTPS 入口。[存储与备份 →](./panda-docs/docs/storage.md)
+应用状态、Codex 登录、Grok 账户和工作文件保存在独立 Docker 卷中。升级保留原 Compose 项目/卷名，并检查 `.env` 是否仍用 `PANDA_FORCE_IMAGE` 覆盖旧版；`docker compose down` 保留命名卷。默认端口只绑定本机，远程访问请配置自己的 HTTPS 入口。[存储与备份 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/storage.md)
 
-## 从源码复用基础层构建
+## 开发文档
 
-在配套发行源码目录中运行：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-```
-
-本地镜像为 `panda-force:local`。Docker 自动拉取按摘要固定、配套的公开 **Rocky 创作构建/运行基础镜像**，后续应用更新复用预装工具。两种基础镜像均支持覆盖为自有仓库。本地构建加入 Grok 叠加配置时，设置 `PANDA_FORCE_IMAGE=panda-force:local`，让辅助服务使用同一镜像。[完整源码/基础镜像构建与月度维护 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)
-
-镜像打包默认进行编译与启动检查（`VERIFICATION_PROFILE=none`），源码及受影响行为独立验证。需要本版准确源码时使用 `v0.1.2`；`main` 跟踪稳定发行版，`develop` 继续开发。
+源码贡献与镜像定制请参阅[开发指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md)。[基础镜像指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)说明工具内容、依赖维护与自有仓库配置。
 
 ## 可选服务与配置
 
 | 需求                     | 入口                                                                                                                                                                                                                       |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 使用宿主机已有的 Codex   | [共享模式安装](./panda-docs/docs/installation.md#use-codex-already-installed-on-the-host)；挂载服务 socket 与工作目录，仅挂载认证文件不能共享会话。                                                                        |
-| 持久项目目录             | [存储指南](./panda-docs/docs/storage.md)；`PANDA_FORCE_PROJECTS_ROOT` 设置根目录，`PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES=false` 把目录及会话浏览限制在该根目录。                                                          |
+| 持久项目目录             | [存储指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/storage.md)；`PANDA_FORCE_PROJECTS_ROOT` 设置根目录，`PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES=false` 把目录及会话浏览限制在该根目录。           |
 | 网站构建、文档预览或搜索 | 按需使用 `docker-compose.documents.yml`、`docker-compose.previews.yml`、`docker-compose.search.yml`，并配置对应服务。                                                                                                      |
 | 使用自己的镜像仓库       | 可覆盖镜像和拉取策略；需要时通过 `docker-compose.documents.registry.yml` 接入独立管理的仓库凭据。                                                                                                                          |
 | 使用自己的 S3 兼容 CDN   | [CDN 构建指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/cdn-build.md)；使用自有 bucket、前缀、区域、可选 endpoint、访问 URL 和独立凭据文件。默认静态资源来自本站，启用 CDN 后 API 和认证仍在本站。 |

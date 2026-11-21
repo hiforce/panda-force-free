@@ -4,11 +4,11 @@ title: 完整功能清单
 
 # 完整功能清单
 
-本清单描述当前 `develop` 源码，不代表旧版已发布 Docker 标签已包含这些功能。更新于 2026-11-16。截图内容为虚构演示数据。
+本清单对应 PandaForce 0.1.2，请使用配套发行镜像与配置文件。截图内容为虚构演示数据。
 
-[English](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/features.md) · [README](https://github.com/hiforce/panda-force-free/blob/develop/README-zh.md) · [安装指南](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/installation.md)
+[English](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/docs/features.md) · [README](https://github.com/hiforce/panda-force-free/blob/main/README-zh.md) · [安装指南](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/docs/installation.md)
 
-多数工作台与文档能力为内置功能。AI 操作需要已配置的 Codex 引擎；邮件需要 SMTP；网站构建、截图和可选搜索需要相应服务。下文明确说明覆盖不完整或尚未实现的部分。
+多数工作台与文档能力为内置功能。AI 操作需要已配置的 Harness Runtime 及对应模型账户；邮件需要 SMTP；网站构建、截图和可选搜索需要相应服务。下文明确说明覆盖不完整或尚未实现的部分。
 
 ## 工作台与导航
 
@@ -131,7 +131,7 @@ title: 完整功能清单
 
 ## 助理与外部任务自动化
 
-参见[匿名商品发布案例](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-product-publishing.md)，了解助理配置、受限调用密钥及企业系统集成。
+参见[匿名商品发布案例](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-product-publishing.md)，了解助理配置、受限调用密钥及企业系统集成。
 
 - 创建具有指令、名称、code、头像和人设的助理，并独立启停。
 - 为外部调用方分配和撤销助理访问密钥，将助理会话与交互会话分开。
@@ -162,8 +162,8 @@ title: 完整功能清单
 
 ## 安装、构建与 CDN
 
-- 使用 Docker、Compose 安装；标准镜像包含 Codex CLI 和持久卷示例，文档镜像目标为 Linux amd64。
-- 通过 Compose 源码构建覆盖文件构建 develop 分支；已发布的版本标签不会自动包含 develop 变更。
+- 使用 Docker、Compose 与 `hiforceai/panda-force:0.1.2` 安装；Rocky Linux 9 镜像包含 Codex CLI、Grok Build 及创作工具，文档镜像目标为 Linux amd64。
+- 使用配套发行配置。源码贡献与定制构建见[开发指南](building.md)。
 - 独立配置构建、预览执行器，按需使用文档、搜索和预览服务的 Compose 覆盖文件。
 - 可覆盖镜像、仓库凭据和拉取策略，包括使用私有仓库，无需把凭据写进应用源码。
 - 默认从应用本站加载静态资源；启用 CDN 构建时使用自己的 S3 兼容 bucket、前缀、区域、可选 endpoint、访问 URL 及独立凭据文件。

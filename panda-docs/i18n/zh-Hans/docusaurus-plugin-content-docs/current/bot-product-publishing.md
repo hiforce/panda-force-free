@@ -61,7 +61,7 @@ Panda 负责 AI 任务、人工复核、判断和结果投递；企业应用负�
 
 ## 第三步：通过 API 提交带版本的任务
 
-可直接参考[中文请求示例](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/product-publishing/publish-task.zh-CN.json)和[英文请求示例](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/product-publishing/publish-task.json)。选择一个语言版本，替换占位接口和运行时单任务凭证，填入自己的真实事实及审批记录。`publish_listing` 是本次任务声明的动作，不是 Panda 内置的全局任务类型。
+可直接参考[中文请求示例](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/product-publishing/publish-task.zh-CN.json)和[英文请求示例](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/product-publishing/publish-task.json)。选择一个语言版本，替换占位接口和运行时单任务凭证，填入自己的真实事实及审批记录。`publish_listing` 是本次任务声明的动作，不是 Panda 内置的全局任务类型。
 
 ```http
 POST /api/v1/bots/product-publishing/tasks

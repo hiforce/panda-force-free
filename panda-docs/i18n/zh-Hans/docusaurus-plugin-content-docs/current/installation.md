@@ -6,7 +6,7 @@ title: 安装、登录与数据库选择
 
 ## 运行方式与引擎位置 {#understand-what-runs-where}
 
-PandaForce 提供界面和应用服务，Codex 执行任务。默认在容器内启动独立 Codex；共享模式连接指定宿主机上的已有服务。应用账号与模型服务账号分开管理，选择 SQLite 或 MySQL 管理应用数据不改变模型账号的存放位置。
+Codex 可使用容器内独立服务，或通过共享模式连接指定宿主机上的已有服务。Grok Build 使用所选 Harness Runtime 及其账户配置，详见上方的容器配置指南。应用账号与模型服务账号分开管理，选择 SQLite 或 MySQL 管理应用数据不改变模型账号的存放位置。
 
 ## 安装公开镜像
 
@@ -40,13 +40,9 @@ docker compose restart panda-force
 
 管理员在本地引导阶段创建，其身份、密码哈希、账号设置及会话撤销记录会随账号域迁入 MySQL。切换成功后的账号认证使用 MySQL。模型服务认证、附件与项目文件仍有各自的持久位置，因此备份要同时覆盖数据库和应用/模型/工作区卷。
 
-## 从源码构建
+## 源码开发
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
-```
-
-默认生成 `panda-force:local`，并自动复用之前发布的固定摘要基础镜像，减少依赖安装时间。[自行构建基础镜像及自有仓库配置](./building.md#自行构建基础镜像)。
+直接运行源码或构建自有应用镜像，请参阅[开发指南](building.md#development-container)。普通容器安装使用已发布的 `hiforceai/panda-force:0.1.2` 与上面的安装命令。
 
 ## 使用宿主机已有 Codex {#use-codex-already-installed-on-the-host}
 

@@ -106,7 +106,7 @@ Stopping PandaForce leaves the node service running. Existing tasks continue to 
 | Workspace                                                          | PVC `workspace` directory     | Explicit node workspace bind mount                          |
 | Attachments                                                        | PVC `attachments` directory   | `.panda-force-attachments` under the mounted node workspace |
 
-The shared template also keeps PandaForce's own engine metadata in the PVC's `model-state` directory; this is not a copy of the host account. Model and app storage should both be backed up. See [storage and backups](./storage.md). Removing or deleting the PVC can delete application data depending on the StorageClass reclaim policy; these instructions do not delete it.
+The shared template also keeps PandaForce's own engine metadata in the PVC's `model-state` directory; this is not a copy of the host account. Model and app storage should both be backed up. See <a href={useBaseUrl('/storage/')}>storage and backups</a>. Removing or deleting the PVC can delete application data depending on the StorageClass reclaim policy; these instructions do not delete it.
 
 ```bash
 kubectl -n panda-force get pods,pvc,service

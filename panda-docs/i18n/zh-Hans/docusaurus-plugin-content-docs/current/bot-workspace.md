@@ -49,7 +49,7 @@ Bot 对话输入框的 **+** 统一提供相机、照片、文件、技能和项
 
 ## API 集成
 
-[英文接口参考](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/bot-workspace.md#application-management-api)列出了 Bot 管理、持续对话、连接、集成、执行、频道和投递回执接口。这些接口需要应用登录会话、用户权限及同源写入验证，不能使用外部任务密钥读取对话或凭据。
+[英文接口参考](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/docs/bot-workspace.md#application-management-api)列出了 Bot 管理、持续对话、连接、集成、执行、频道和投递回执接口。这些接口需要应用登录会话、用户权限及同源写入验证，不能使用外部任务密钥读取对话或凭据。
 
 发送消息、清空对话、启动集成及确认邮件均使用 UUID 请求 ID。网络响应丢失时，复用原请求 ID 查询或重试，避免创建第二次操作。更新连接和集成需使用返回的最新 `revision`；旧版本写入不会覆盖服务器上的新设置。
 

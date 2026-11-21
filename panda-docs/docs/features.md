@@ -4,11 +4,11 @@ title: Feature catalog
 
 # Feature catalog
 
-This catalog describes the current `develop` source, not a promise about an older published Docker tag. Updated 2026-11-16. Screenshots use fictional demonstration content.
+This catalog describes PandaForce 0.1.2. Use the matching release image and configuration files. Screenshots use fictional demonstration content.
 
-[简体中文](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md) · [README](https://github.com/hiforce/panda-force-free/tree/develop#readme) · [Installation](./installation.md)
+[简体中文](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md) · [README](https://github.com/hiforce/panda-force-free/tree/main#readme) · [Installation](./installation.md)
 
-Most workspace/document capabilities are built in. AI operations need a configured Codex engine; email needs SMTP; website builds, screenshots and optional search need the corresponding services. Sections below explicitly call out partial or unimplemented coverage.
+Most workspace/document capabilities are built in. AI operations need a configured Harness Runtime and its model account; email needs SMTP; website builds, screenshots and optional search need the corresponding services. Sections below explicitly call out partial or unimplemented coverage.
 
 ## Workspace and navigation
 
@@ -131,7 +131,7 @@ Most workspace/document capabilities are built in. AI operations need a configur
 
 ## Bots and external task automation
 
-Explore the [anonymous product-publishing use case](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/bot-product-publishing.md), including Bot configuration, scoped caller keys and enterprise-system integration.
+Explore the [anonymous product-publishing use case](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/docs/bot-product-publishing.md), including Bot configuration, scoped caller keys and enterprise-system integration.
 
 - Create Bots with instructions, name/code, avatar and persona; enable or pause them independently.
 - Issue and revoke Bot access keys for external callers; keep Bot sessions distinct from interactive conversations.
@@ -156,14 +156,14 @@ Explore the [anonymous product-publishing use case](https://github.com/hiforce/p
 - Persist product state, engine state, workspaces and attachments in separately configurable locations/volumes.
 - Choose SQLite or an external MySQL database for application-owned business records during setup; inspect selected database status in settings.
 - Use registered module schema migrations, prerequisite checks, backups and controlled migration/cutover workflows. File assets and engine journals are separate from business database records.
-- Administrators can select S3-compatible storage for new creative originals by file type, independently of static CDN settings. Originals remain behind application authentication; existing files keep their saved provider. Trash retains files for recovery, while permanent deletion queues exact-version cleanup and durable retries. See [original storage](./storage.md#s3-compatible-storage-for-saved-originals-develop-source).
+- Administrators can select S3-compatible storage for new creative originals by file type, independently of static CDN settings. Originals remain behind application authentication; existing files keep their saved provider. Trash retains files for recovery, while permanent deletion queues exact-version cleanup and durable retries. See [original storage](./storage.md#s3-compatible-storage-for-saved-originals).
 - Keep credentials, encrypted connection data, application logs and administrator settings out of public source snapshots.
 - Configure supported optional search, preview, build, attachment-storage and cluster services without making Kubernetes a prerequisite for ordinary installation.
 
 ## Installation, builds and CDN
 
-- Install with Docker/Compose; the standard image includes Codex CLI and persistent-volume examples. Linux amd64 is the documented image target.
-- Build this develop branch from source with the supplied Compose build overlay. A published version tag does not automatically contain develop changes.
+- Install with Docker/Compose using `hiforceai/panda-force:0.1.2`; the Rocky Linux 9 image includes Codex CLI, Grok Build and the creative toolchain. Linux amd64 is the documented image target.
+- Use the matching release configuration. Source contributions and custom builds are covered in the [development guide](building.md).
 - Use independently configured build/preview executors and optional Compose overlays for documents, search and previews.
 - Override images, registry credentials and pull policies, including private registries, without placing credentials in application source.
 - Load static assets from the application origin by default. Enable CDN builds only with your own S3-compatible bucket/prefix, region, optional endpoint, viewer URL and separate credential file.

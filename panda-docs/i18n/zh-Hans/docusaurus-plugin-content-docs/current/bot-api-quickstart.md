@@ -4,11 +4,11 @@ title: Bot API 快速接入
 
 # 创建 Bot 并接入任务
 
-本文对应当前 **develop 源码**，示例采用虚构商品，不配置外部回调。在你自己的安装中操作，从仓库根目录运行 Bash 命令，需安装 `curl`、`jq`。远程接入使用 HTTPS。
+本文对应 **PandaForce 0.1.2**，示例采用虚构商品，不配置外部回调。在你自己的安装中操作，从仓库根目录运行 Bash 命令，需安装 `curl`、`jq`。远程接入使用 HTTPS。
 
 ## 1. 创建与配置
 
-最直接的方式是进入 **设置 → 助理管理**：创建 `catalog-panda`，选择模型、头像、人格，再签发只限这个 Bot 的到期密钥。[英文 Bot 配置](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/quickstart/bot.json)和[中文配置](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/quickstart/bot.zh-CN.json)也可作为管理 API 请求体。
+最直接的方式是进入 **设置 → 助理管理**：创建 `catalog-panda`，选择 Harness Runtime、Model、Reasoning Effort、头像、人格，再签发只限这个 Bot 的到期密钥。[英文 Bot 配置](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/quickstart/bot.json)和[中文配置](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/quickstart/bot.zh-CN.json)也可作为管理 API 请求体。
 
 需要自动化时，使用已配置的本地账号登录，将会话 Cookie 保存在临时文件，然后创建 Bot、签发 Key：
 
@@ -63,7 +63,7 @@ jq -n --arg id "$BOT_ID" \
 
 ## 2. 提交任务
 
-用已签发的密钥设置 `BOT_KEY`。[中文任务 JSON](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/quickstart/task.zh-CN.json)声明了一个不带回调的 `draft_ready` 业务结果，不调用外部业务服务。
+用已签发的密钥设置 `BOT_KEY`。[中文任务 JSON](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/quickstart/task.zh-CN.json)声明了一个不带回调的 `draft_ready` 业务结果，不调用外部业务服务。
 
 ```bash
 export BOT_CODE="catalog-panda"

@@ -3883,5 +3883,8 @@
   "tsconfig.contracts.json",
   "tsconfig.json",
   "tsconfig.strict.json",
-  "tsconfig.tooling.json"
+  "tsconfig.tooling.json",
+  "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/overview.md",
+  "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/storage.md",
+  "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/updates.md"
 ]

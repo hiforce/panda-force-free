@@ -61,7 +61,7 @@ This is enterprise-side orchestration using the existing Bot API, not a built-in
 
 ## Submit a versioned task
 
-The reusable [English request](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/product-publishing/publish-task.json) and [Chinese request](https://github.com/hiforce/panda-force-free/blob/develop/examples/bots/product-publishing/publish-task.zh-CN.json) use the current API schema. Choose one language, replace the placeholder endpoint and short-lived per-job proof, and supply your own facts and approvals. `publish_listing` is a task-defined action, not a global Panda task type.
+The reusable [English request](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/product-publishing/publish-task.json) and [Chinese request](https://github.com/hiforce/panda-force-free/blob/main/examples/bots/product-publishing/publish-task.zh-CN.json) use the current API schema. Choose one language, replace the placeholder endpoint and short-lived per-job proof, and supply your own facts and approvals. `publish_listing` is a task-defined action, not a global Panda task type.
 
 ```http
 POST /api/v1/bots/product-publishing/tasks

@@ -4,7 +4,7 @@ title: Security and maintenance
 
 Local accounts distinguish administrators from ordinary members. Administrators can access the host workspace, terminal and shared Codex sessions; ordinary members are restricted to authorized business content. Configure SMTP before verifying an email, inviting members or enabling email password recovery. Members set their own passwords.
 
-The administrator workspace and execution engine still share OS/model privileges. Do not grant administrator access to users who should not hold them. Directory filters and UI permissions do not isolate arbitrary code from the engine's credentials. Independent member coding sandboxes, a credential-hiding enterprise model gateway, member quotas and metered billing are not implemented. See the [feature catalog](https://github.com/hiforce/panda-force-free/blob/develop/panda-docs/docs/features.md#security-boundary-and-current-limits) for the current boundary.
+The administrator workspace and execution engine still share OS/model privileges. Do not grant administrator access to users who should not hold them. Directory filters and UI permissions do not isolate arbitrary code from the engine's credentials. Independent member coding sandboxes, a credential-hiding enterprise model gateway, member quotas and metered billing are not implemented. See the [feature catalog](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/docs/features.md#security-boundary-and-current-limits) for the current boundary.
 
 For remote access, use HTTPS and authentication. Initial remote/proxied setup additionally requires the installation code printed in private startup logs. Do not expose model sockets or broadly mount host directories.
 

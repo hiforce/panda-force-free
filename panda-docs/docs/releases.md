@@ -23,9 +23,25 @@ docker compose logs panda-force
 
 Review source, dependency licenses, English comments and the explicit public inventory before exporting. Verify the final clean tree, then review staged files. No internal Git history, old help, design records or agent directories belong in the public snapshot. Release changes go to the private repository for review first.
 
+## Maintainer source snapshots
+
+Keep the previous clean export and its `SNAPSHOT.json` outside the working checkout. Its file hashes identify that baseline; public Git records later community edits.
+
+For a new version or selected patch, test the reviewed result in the private development repository. Update the approved public file list only after checking ownership and license eligibility. Export the committed tree, then generate a full-index patch between the old and new clean exports.
+
+```bash
+bun scripts/release/prepare-update.mjs \
+  --base /absolute/path/to/previous-export \
+  --next /absolute/path/to/new-export \
+  --out /absolute/path/to/update.patch \
+  --repo /absolute/path/to/public-checkout --apply
+```
+
+Three-way application preserves independent public changes and stops on conflicts. The tool neither commits nor pushes. Do not merge private Git branches into the public repository. New commercial material in an existing filename still needs explicit review; a path whitelist cannot make that licensing decision.
+
 ## 0.1.2
 
-The stable `main`, `develop`, `v0.1.2` tag and `hiforceai/panda-force:0.1.2` application image identify this release. Both Codex CLI and Grok Build are included; the optional Compose account service provides native Grok credential renewal. [Install and select Harness Runtimes](harness-runtimes.md).
+The immutable `v0.1.2` tag and `hiforceai/panda-force:0.1.2` application image identify this release. Branches may receive later documentation or development updates; use the version tag for the exact release source. Both Codex CLI and Grok Build are included; the optional Compose account service provides native Grok credential renewal. [Install and select Harness Runtimes](harness-runtimes.md).
 
 - Keep active creation runs alive through activity-based budgets, while retaining inactivity, cancellation, disconnect and user-question handling.
 - Persist completion notifications atomically with saved artifacts; the inbox opens the authorized document or exact asset version and retains read state.
