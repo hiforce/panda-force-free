@@ -311,6 +311,7 @@ export function startApplication() {
     composer,
     assembleComposer({
       workbenchPort: workbench,
+      transportPort: transport,
       identity: environment.identityKey,
       drafts: environment.drafts,
       mutations: environment.stateFor("composer").mutations,

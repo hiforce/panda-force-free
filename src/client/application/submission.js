@@ -33,7 +33,7 @@ export function assembleSubmission({
   workbenchPort,
 }) {
   const domainSending = new Set();
-  /** @param {{preventDefault(): void}} event @param {{text: string; threadId: string} | null} questionAnswer */
+  /** @param {{preventDefault(): void; submitter?: HTMLElement | null}} event @param {{text: string; threadId: string} | null} questionAnswer */
   async function submitPrompt(event, questionAnswer = null) {
     event.preventDefault();
     const creation = creationSessionRoute() ? workbenchPort.workbench?.creationSession() : null;
@@ -89,6 +89,24 @@ export function assembleSubmission({
       hasContent = content.length > 0,
       turnId = composerPort.activeTurnId();
     let thread = state.active;
+    const button = $("#sendButton");
+    const managed = transportPort.harnessManaged();
+    const stopRequested = event.submitter === button && button.dataset.submitMode === "stop";
+    if (managed && stopRequested && !turnId) return;
+    if (managed && turnId && thread) {
+      if (questionAnswer) throw Error(t("harness.errorBusy"));
+      if (!stopRequested || button.dataset.turnId !== turnId) return;
+      const token = Symbol();
+      deliveryPort.lock(submissionKey, token);
+      try {
+        await transportPort.rpc("turn/interrupt", { threadId: thread.id, turnId });
+      } catch (error) {
+        if (state.active?.id === thread.id) noticesPort.addPersistentError(errorMessage(error));
+      } finally {
+        deliveryPort.releasePromptSubmission(token);
+      }
+      return;
+    }
     const goalCommand = !questionAnswer && !attachments.length ? commandsPort.parseGoalCommand(text) : null;
     if (goalCommand) {
       try {

@@ -70,6 +70,7 @@ export interface InterfaceElements {
   "#composerSettingsButton": HTMLElementTagNameMap["button"];
   "#composerSkillControl": HTMLElementTagNameMap["span"];
   "#composerSkills": HTMLElementTagNameMap["div"];
+  "#composerTurnWait": HTMLElementTagNameMap["p"];
   "#confirmFullAccess": HTMLElementTagNameMap["button"];
   "#contextUsage": HTMLElementTagNameMap["span"];
   "#conversation": HTMLElementTagNameMap["section"];

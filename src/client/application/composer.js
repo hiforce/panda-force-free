@@ -15,7 +15,7 @@ import { creationDraftAfterAcknowledgement } from "../creation/submitted-draft.j
 import { busyIndicator } from "../busy-indicator.js";
 
 // Owns drafts, IME input and submit-control projections; native delivery is delegated.
-/** @param {import("./ports.js").FeatureOptions<"drafts" | "mutations" | "state" | "$" | "t" | "viewUpdates" | "identity", "uploads" | "status" | "delivery" | "models" | "workbench", "composer">} options */
+/** @param {import("./ports.js").FeatureOptions<"drafts" | "mutations" | "state" | "$" | "t" | "viewUpdates" | "identity", "uploads" | "status" | "delivery" | "models" | "workbench" | "transport", "composer">} options */
 export function assembleComposer({
   drafts,
   mutations,
@@ -29,6 +29,7 @@ export function assembleComposer({
   modelsPort,
   identity,
   workbenchPort,
+  transportPort,
 }) {
   const {
     composerHistory,
@@ -138,10 +139,14 @@ export function assembleComposer({
     if (creation) return creation.running ? creation.key : "";
     return statusPort.sessionRuntime.activeTurnId(state.active);
   }
+  function canQueuePrompt() {
+    return Boolean(creationSessionRoute()) || !transportPort.harnessManaged();
+  }
   function syncQueueButton() {
     const queue = $("#queueButton");
     if (queue)
       queue.disabled =
+        !canQueuePrompt() ||
         (!$("#prompt").value.trim() && !state.composerAttachments.length) ||
         !uploadsPort.composerAttachmentsReady() ||
         promptComposing ||
@@ -152,19 +157,23 @@ export function assembleComposer({
     syncQueueButton();
     const button = $("#sendButton");
     if (!button) return;
-    button.dataset.turnId = activeTurnId();
+    const turnId = activeTurnId();
+    button.dataset.turnId = turnId;
     const creation = creationSessionRoute() ? workbenchPort.workbench?.creationSession() : null;
     const sending = creation?.sending ?? deliveryPort.isSending(deliveryPort.pendingMessageOwner());
-    button.disabled = sending || !uploadsPort.composerAttachmentsReady();
+    const managedActive = Boolean(turnId) && !canQueuePrompt();
+    const hasDraft = Boolean($("#prompt").value.trim() || state.composerAttachments.length);
+    const wait = $("#composerTurnWait");
+    const showWait = managedActive && hasDraft;
+    if (wait.hidden === showWait) {
+      wait.hidden = !showWait;
+      if (showWait) $("#prompt").setAttribute("aria-describedby", wait.id);
+      else $("#prompt").removeAttribute("aria-describedby");
+    }
+    button.disabled = sending || (!managedActive && !uploadsPort.composerAttachmentsReady());
     if (sending) button.setAttribute("aria-busy", "true");
     else button.removeAttribute("aria-busy");
-    const mode = sending
-        ? "sending"
-        : activeTurnId()
-          ? $("#prompt").value.trim() || state.composerAttachments.length
-            ? "steer"
-            : "stop"
-          : "send",
+    const mode = sending ? "sending" : turnId ? (!managedActive && hasDraft ? "steer" : "stop") : "send",
       label =
         mode === "sending"
           ? creation
@@ -257,6 +266,7 @@ export function assembleComposer({
     renderComposerSkills,
     setPlanMode,
     setComposing,
+    canQueuePrompt,
     syncQueueButton,
     saveComposerDraft,
     syncComposerSubmitState,

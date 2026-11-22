@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.4` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.5` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -38,6 +38,15 @@ bun scripts/release/prepare-update.mjs \
 ```
 
 Three-way application preserves independent public changes and stops on conflicts. The tool neither commits nor pushes. Do not merge private Git branches into the public repository. New commercial material in an existing filename still needs explicit review; a path whitelist cannot make that licensing decision.
+
+## 0.1.5
+
+Use Git tag `v0.1.5` and `hiforceai/panda-force:0.1.5` on Linux amd64. [Install](installation.md) or [upgrade](updates.md).
+
+- Save a runtime model in a project conversation before the first message. The first turn uses the chosen model and the composer retains the draft when settings are saved.
+- Keep follow-up drafts while managed conversation runtimes are responding. Send after the turn ends or stop the turn explicitly.
+- Refine the standalone SSH terminal header on small screens.
+- Document [named Harness Runtimes](harness-runtimes.md), including the optional Antigravity ACP adapter and its operator-built image.
 
 ## 0.1.4
 

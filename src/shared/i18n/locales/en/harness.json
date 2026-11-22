@@ -40,6 +40,7 @@
   "errorForbidden": "You do not have access to this runtime or workspace.",
   "errorConflict": "Settings changed. Refresh and try again.",
   "errorBusy": "Finish or stop the current turn, then try again.",
+  "waitToSend": "Send after this reply, or stop it now. Your draft will stay here.",
   "errorUnavailable": "Could not connect to this runtime. Your draft is preserved.",
   "errorAuthentication": "Sign in to this runtime account and check the connection again.",
   "errorCapabilityUnavailable": "This runtime does not support the requested action or attachment.",

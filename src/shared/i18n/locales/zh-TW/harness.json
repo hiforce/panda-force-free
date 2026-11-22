@@ -40,6 +40,7 @@
   "errorForbidden": "你沒有權限存取此執行個體或工作目錄。",
   "errorConflict": "設定已更新，請重新整理後再試。",
   "errorBusy": "請先完成或停止目前輪次，然後重試。",
+  "waitToSend": "等這一輪回覆結束後再傳送，也可以先停止這一輪。草稿會保留。",
   "errorUnavailable": "無法連線至此執行個體，草稿已保留。",
   "errorAuthentication": "請先登入此執行個體帳號，再檢查連線。",
   "errorCapabilityUnavailable": "此執行個體不支援這項操作或附件類型。",

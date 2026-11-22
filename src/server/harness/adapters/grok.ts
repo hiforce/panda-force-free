@@ -1,14 +1,10 @@
-import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import {
   HarnessError,
   HarnessPromptError,
   type HarnessModel,
   type HarnessPermissionMode,
 } from "../../../shared/harness/contracts.js";
-import { isRecord } from "../../../shared/records.js";
 import { tokenUsage } from "../../../shared/engine/usage.js";
 import type {
   HarnessAgent,
@@ -20,8 +16,7 @@ import type {
 } from "../ports.js";
 import { HarnessStdioTransport, type HarnessStdioOptions } from "./stdio.js";
 import type { HarnessCredentialLease } from "../auth/contracts.js";
-const record = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {});
-const text = (value: unknown) => (typeof value === "string" ? value : "");
+import { AcpTurnEvents, acpPrompt, acpRecord as record, acpText as text } from "./acp.js";
 /** ACP terminates here. It never exposes a Codex envelope or treats thought chunks as portable context. */
 export class GrokHarnessAgent implements HarnessAgent {
   private readonly transport: HarnessStdioTransport;
@@ -49,7 +44,7 @@ export class GrokHarnessAgent implements HarnessAgent {
   private session: HarnessNativeSession | null = null;
   private cancelled = false;
   private emit: ((event: HarnessAgentEvent) => Promise<void>) | null = null;
-  private readonly permissions = new Map<string, { options: Set<string>; resolve(value: unknown): void }>();
+  private readonly events = new AcpTurnEvents();
   constructor(
     options: Omit<HarnessStdioOptions, "onNotification" | "onRequest"> & {
       cleanup?: () => Promise<void>;
@@ -63,7 +58,7 @@ export class GrokHarnessAgent implements HarnessAgent {
     this.transport = new HarnessStdioTransport({
       ...options,
       onNotification: (method, params) => this.notification(method, params),
-      onRequest: (method, params) => this.clientRequest(method, params),
+      onRequest: (method, params) => this.events.request(method, params, this.session?.id, this.emit),
     });
   }
   private readonly application?: HarnessApplicationPolicy;
@@ -198,41 +193,7 @@ export class GrokHarnessAgent implements HarnessAgent {
         .filter(Boolean);
       return;
     }
-    if (!this.emit) return;
-    if (kind === "agent_thought_chunk") await this.emit({ type: "activity" });
-    else if (kind === "agent_message_chunk" && record(update.content).type === "text")
-      await this.emit({ type: "text", text: text(record(update.content).text) });
-    else if (kind === "tool_call" || kind === "tool_call_update") {
-      const status = update.status === "completed" ? "complete" : update.status === "failed" ? "error" : "running";
-      await this.emit({
-        type: "tool",
-        id: text(update.toolCallId),
-        name: text(update.title) || text(update.kind) || "tool",
-        status,
-      });
-    }
-    // Agent thought chunks remain engine-private and are deliberately excluded from transcript export.
-  }
-  private async clientRequest(method: string, params: Record<string, unknown>): Promise<unknown> {
-    if (method !== "session/request_permission") throw new HarnessError("capabilityUnavailable");
-    if (!this.emit || this.permissions.size >= 16 || params.sessionId !== this.session?.id)
-      return { outcome: { outcome: "cancelled" } };
-    const id = randomUUID();
-    const options = (Array.isArray(params.options) ? params.options : [])
-      .map((value) => record(value))
-      .filter((value) => typeof value.optionId === "string")
-      .map((value) => ({ id: text(value.optionId), name: text(value.name), kind: text(value.kind) }));
-    if (!options.length) return { outcome: { outcome: "cancelled" } };
-    const response = new Promise<unknown>((resolve) =>
-      this.permissions.set(id, { resolve, options: new Set(options.map((option) => option.id)) }),
-    );
-    try {
-      await this.emit({ type: "permission", id, title: text(record(params.toolCall).title) || "tool", options });
-    } catch (error) {
-      await this.respondPermission(id, null);
-      throw error;
-    }
-    return response;
+    if (this.emit) await this.events.update(update, this.emit);
   }
   private async preparePrompt(session: HarnessNativeSession, input: HarnessPrompt) {
     const model = input.model ? this.info.models.find((value) => value.id === input.model) : null;
@@ -260,22 +221,7 @@ export class GrokHarnessAgent implements HarnessAgent {
         configId: "reasoning_effort",
         value: input.effort,
       });
-    const prompt: Array<Record<string, unknown>> = [{ type: "text", text: input.text }];
-    for (const attachment of input.attachments) {
-      if (attachment.kind === "image" && this.info.capabilities.imageInput) {
-        if (attachment.bytes > 2 * 1024 * 1024) throw new HarnessError("invalidInput", 413);
-        const data = await readFile(attachment.path);
-        prompt.push({ type: "image", mimeType: attachment.mimeType, data: data.toString("base64") });
-      } else if (this.info.capabilities.fileInput) {
-        prompt.push({
-          type: "resource_link",
-          uri: pathToFileURL(attachment.path).href,
-          name: attachment.name,
-          mimeType: attachment.mimeType,
-        });
-      } else throw new HarnessError("capabilityUnavailable", 409);
-    }
-    return prompt;
+    return acpPrompt(input, this.info.capabilities);
   }
   async prompt(session: HarnessNativeSession, input: HarnessPrompt, emit: (event: HarnessAgentEvent) => Promise<void>) {
     if (this.emit || this.session?.id !== session.id) throw new HarnessPromptError("busy", false, 409);
@@ -324,27 +270,22 @@ export class GrokHarnessAgent implements HarnessAgent {
       throw error;
     } finally {
       this.emit = null;
-      for (const id of this.permissions.keys()) await this.respondPermission(id, null);
+      this.events.cancelPermissions();
     }
   }
   async cancel(session: HarnessNativeSession) {
     this.cancelled = true;
     if (session.id !== this.session?.id) throw new HarnessError("notFound", 404);
-    for (const id of this.permissions.keys()) await this.respondPermission(id, null);
+    this.events.cancelPermissions();
     await this.transport.notify("session/cancel", { sessionId: session.id });
   }
   async respondPermission(id: string, optionId: string | null) {
-    const pending = this.permissions.get(id);
-    if (!pending) throw new HarnessError("notFound", 404);
-    if (optionId && !pending.options.has(optionId)) throw new HarnessError("invalidInput");
-    this.permissions.delete(id);
-    pending.resolve({ outcome: optionId ? { outcome: "selected", optionId } : { outcome: "cancelled" } });
+    this.events.respond(id, optionId);
   }
   close() {
     return (this.closing ??= (async () => {
       try {
-        for (const id of [...this.permissions.keys()])
-          if (this.permissions.has(id)) await this.respondPermission(id, null);
+        this.events.cancelPermissions();
         await this.transport.close();
       } finally {
         await this.cleanup?.();

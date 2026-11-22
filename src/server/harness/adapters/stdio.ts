@@ -108,7 +108,8 @@ export class HarnessStdioTransport {
             this.fail(new HarnessTransportError("invalidProtocol", true));
             return;
           }
-          void this.reply(frame.id, frame.method, params);
+          const { id, method } = frame;
+          void this.notifications.then(() => this.reply(id, method, params));
         } else {
           const bytes = Buffer.byteLength(line);
           this.notificationBytes += bytes;
@@ -162,6 +163,7 @@ export class HarnessStdioTransport {
     );
   }
   private async reply(id: string | number, method: string, params: Record<string, unknown>) {
+    if (this.stopped || this.failure) return;
     try {
       if (!this.options.onRequest) throw new HarnessError("capabilityUnavailable");
       const result = await this.options.onRequest(method, params);

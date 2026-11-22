@@ -14,6 +14,7 @@ import { brokerCredentialSource, credentialLease } from "./auth/remote.js";
 import type { HarnessCredentialLease } from "./auth/contracts.js";
 import { createCodexDriver } from "../engines/codex.js";
 import { ZCodeHarnessAgent } from "./adapters/zcode.js";
+import { AntigravityHarnessAgent } from "./adapters/antigravity.js";
 
 function profileEntries(value: string | undefined): Record<string, unknown>[] {
   if (!value) return [];
@@ -142,6 +143,37 @@ export function harnessProfiles(
               if (/^(catalog|ping|probe)-/.test(scopeId)) await rm(home, { recursive: true, force: true });
             },
           });
+        },
+      },
+    });
+  }
+  for (const profile of profileEntries(env.PANDA_FORCE_ANTIGRAVITY_HARNESS_PROFILES)) {
+    const identity = profileIdentity(profile),
+      command = operatorPath(profile.command ?? "/usr/local/bin/agy"),
+      accountHome = resolve(operatorPath(profile.accountHome));
+    const deployment = profile.deployment ?? "local";
+    if (deployment !== "local" && deployment !== "container") throw new HarnessError("invalidInput");
+    profiles.push({
+      ...identity,
+      kind: "antigravity",
+      deployment,
+      conversationOnly: true,
+      factory: {
+        create: async (_runtime, { cwd }) => {
+          if (accountHome === resolve(homedir())) throw new HarnessError("invalidInput");
+          const nativeEnv: NodeJS.ProcessEnv = { HOME: accountHome };
+          for (const key of [
+            "PATH",
+            "LANG",
+            "LC_ALL",
+            "SSL_CERT_FILE",
+            "SSL_CERT_DIR",
+            "HTTPS_PROXY",
+            "HTTP_PROXY",
+            "NO_PROXY",
+          ])
+            if (env[key]) nativeEnv[key] = env[key];
+          return new AntigravityHarnessAgent({ command, cwd, env: nativeEnv });
         },
       },
     });

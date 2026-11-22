@@ -272,7 +272,51 @@ try {
         await success.getByText("remote-input-proof", { exact: true }).waitFor();
       }
       assert(await success.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+      const checkHeader = (mobile) =>
+        success.locator(".remote-console-header").evaluate((header, mobile) => {
+          const heading = header.querySelector("h1");
+          const status = header.querySelector('[role="status"]');
+          const buttons = [...header.querySelectorAll(".remote-console-actions button")];
+          const centerY = (element) => {
+            const { top, height } = element.getBoundingClientRect();
+            return top + height / 2;
+          };
+          return (
+            Math.abs(centerY(heading) - centerY(status)) <= 1 &&
+            heading.scrollWidth <= heading.clientWidth + 1 &&
+            status.getBoundingClientRect().left >= heading.getBoundingClientRect().right &&
+            header.scrollWidth <= header.clientWidth + 1 &&
+            (!mobile || header.getBoundingClientRect().height <= 70) &&
+            buttons.length === 2 &&
+            buttons.every((button) => {
+              const { width, height } = button.getBoundingClientRect();
+              const icon = button.querySelector(".icon-slot");
+              const label = button.querySelector(".remote-console-action-label");
+              return (
+                button.getAttribute("aria-label") === label.textContent &&
+                (getComputedStyle(icon).display !== "none") === mobile &&
+                (getComputedStyle(label).display === "none") === mobile &&
+                (mobile ? width >= 44 && height >= 44 : height >= 40)
+              );
+            })
+          );
+        }, mobile);
+      assert(await checkHeader(width < 768), "Title, status and action layout");
       await success.screenshot({ path: `${out}/remote-console-${width}.png` });
+      if (width < 768) {
+        await success.setViewportSize({ width: 320, height: 640 });
+        await success.evaluate(() => globalThis.__pandaForceI18n.setPreference("en"));
+        await success.getByRole("heading", { name: "SSH terminal", exact: true }).waitFor();
+        assert(await checkHeader(true), "Compact title bar at 320px in English");
+        await success.screenshot({ path: `${out}/remote-console-320.png` });
+        await success.evaluate(() => globalThis.__pandaForceI18n.setPreference("zh-TW"));
+        await success.setViewportSize({ width, height: 844 });
+        await success
+          .getByRole("status")
+          .filter({ hasText: /已連線/ })
+          .waitFor();
+      }
+
       assert(
         await success
           .locator("[data-remote-address]")
@@ -301,6 +345,18 @@ try {
       await success.getByText("Authorized fixture shell", { exact: true }).last().waitFor();
       for (const channel of channels) channel.close();
       await success.locator('.remote-console-status[data-state="disconnected"]').waitFor();
+      if (width < 768) {
+        await success.setViewportSize({ width: 320, height: 640 });
+        await success.evaluate(() => globalThis.__pandaForceI18n.setPreference("en"));
+        await success.getByRole("status").filter({ hasText: "Disconnected" }).waitFor();
+        assert(await checkHeader(true), "Compact disconnected status at 320px");
+        await success.evaluate(() => globalThis.__pandaForceI18n.setPreference("zh-TW"));
+        await success.setViewportSize({ width, height: 844 });
+        await success
+          .getByRole("status")
+          .filter({ hasText: /未連線/ })
+          .waitFor();
+      }
       await reconnect.click();
       await success.locator('.remote-console-status[data-state="connected"]').waitFor();
       await success
@@ -373,6 +429,7 @@ try {
         reviewedFingerprint: true,
         stableActions: true,
         terminalControls: true,
+        compactHeader: true,
       });
       await context.close();
       await waitFor(() => channels.size === 0);

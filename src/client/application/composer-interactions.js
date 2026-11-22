@@ -126,7 +126,12 @@ export function assembleComposerInteractions({
         return;
       }
     }
-    if (event.key === "Tab" && !event.shiftKey && ($("#prompt").value.trim() || state.composerAttachments.length)) {
+    if (
+      event.key === "Tab" &&
+      !event.shiftKey &&
+      composerPort.canQueuePrompt() &&
+      ($("#prompt").value.trim() || state.composerAttachments.length)
+    ) {
       event.preventDefault();
       queuePort.queuePrompt();
       return;

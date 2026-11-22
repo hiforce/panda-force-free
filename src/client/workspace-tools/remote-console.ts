@@ -5,6 +5,7 @@ import {
 } from "../../shared/workspace-tools/remote.js";
 import type { MessageId, Translate } from "../../shared/i18n/messages.js";
 import { busyIndicator } from "../busy-indicator.js";
+import { codexIcon } from "../codex-icons.js";
 import { requireElement } from "../dom.js";
 import { localizeText, messageAttributes, messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
 import { remoteApi, RemoteApiError } from "./remote-api.js";
@@ -19,12 +20,17 @@ export function mountRemoteConsole(root: HTMLElement, id: string, t: Translate) 
     <header class="remote-console-header">
       <div class="remote-console-identity">
         <span class="remote-console-marks" aria-hidden="true"><i></i><i></i><i></i></span>
-        <div><h1 id="remote-console-title">${msg("remoteTools.sshTerminal")}</h1><p data-remote-address hidden></p></div>
+        <div class="remote-console-target">
+          <div class="remote-console-title-row">
+            <h1 id="remote-console-title">${msg("remoteTools.sshTerminal")}</h1>
+            <div class="remote-console-status" role="status" data-state="connecting">${busyIndicator}<span>${msg("common.connecting")}</span></div>
+          </div>
+          <p data-remote-address hidden></p>
+        </div>
       </div>
       <div class="remote-console-actions">
-        <div class="remote-console-status" role="status" data-state="connecting">${busyIndicator}<span>${msg("remoteTools.connecting")}</span></div>
-        <button type="button" class="wb-button" data-remote-reconnect disabled>${msg("remoteTools.reconnect")}</button>
-        <button type="button" class="wb-button" data-remote-close>${msg("common.close")}</button>
+        <button type="button" class="wb-button" data-remote-reconnect disabled ${messageAttributes("aria-label", "remoteTools.reconnect", undefined, t)}>${codexIcon("refreshCw")}<span class="remote-console-action-label">${msg("remoteTools.reconnect")}</span></button>
+        <button type="button" class="wb-button" data-remote-close ${messageAttributes("aria-label", "common.close", undefined, t)}>${codexIcon("x")}<span class="remote-console-action-label">${msg("common.close")}</span></button>
       </div>
     </header>
     <div class="remote-console-screen">
@@ -71,7 +77,12 @@ export function mountRemoteConsole(root: HTMLElement, id: string, t: Translate) 
     badge.dataset.state = pending ? "connecting" : connected ? "connected" : failed ? "failed" : "disconnected";
     indicator.hidden = !pending;
     reconnect.disabled = pending;
-    localizeText(status, failed ? "remoteTools.disconnected" : key, undefined, t);
+    localizeText(
+      status,
+      pending ? "common.connecting" : connected ? "common.connected" : "common.disconnected",
+      undefined,
+      t,
+    );
     alert.hidden = !failed;
     if (failed) localizeText(alert, key, undefined, t);
   };

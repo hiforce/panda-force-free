@@ -25,7 +25,7 @@ export interface StateGrants {
   inputSessions: { read: "active" | "projectless"; write: never };
   localization: { read: "account" | "active"; write: never };
   messages: { read: "active" | "activityItems" | "changes" | "items" | "turnTimings" | "turns"; write: "changes" | "items" | "activityItems" };
-  models: { read: "account" | "active" | "config" | "connected" | "modelLoadStatus" | "models" | "permissionMode" | "permissionProfiles" | "permissionVisibility" | "planMode" | "projectless" | "rpcId" | "selectedModel" | "sessionSettings" | "threads" | "tokenUsage" | "workspaceContext"; write: "modelLoadStatus" | "models" | "permissionMode" | "permissionProfiles" | "permissionVisibility" | "rpcId" | "selectedModel" | "sessionSettings" };
+  models: { read: "account" | "active" | "config" | "connected" | "modelLoadStatus" | "models" | "newSessionProjectId" | "permissionMode" | "permissionProfiles" | "permissionVisibility" | "planMode" | "projectless" | "rpcId" | "selectedModel" | "sessionSettings" | "threads" | "tokenUsage" | "workspaceContext"; write: "modelLoadStatus" | "models" | "permissionMode" | "permissionProfiles" | "permissionVisibility" | "rpcId" | "selectedModel" | "sessionSettings" };
   navigation: { read: "active" | "changes" | "composerAttachments" | "composerMentions" | "connected" | "newSessionProjectId" | "projectless" | "sessionSettings" | "threads" | "turnWindow"; write: "changes" | "composerAttachments" | "composerMentions" | "newSessionProjectId" | "turnWindow" };
   notices: { read: "persistentErrors"; write: "persistentErrors" };
   notifications: { read: "active" | "activityItems" | "items" | "threads" | "turns"; write: "active" };

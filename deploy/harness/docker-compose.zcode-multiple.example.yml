@@ -1,0 +1,16 @@
+# Combine with docker-compose.zcode.yml, which supplies the primary account mount.
+services:
+  panda-force:
+    environment:
+      PANDA_FORCE_ZCODE_HARNESS_PROFILES: >-
+        [
+          {"id":"zcode-bigmodel","name":"ZCode Primary","command":"/usr/local/bin/zcode","builtinConfig":"/opt/panda-zcode/zcode-builtin.json","providerConfig":"/run/panda-zcode/provider.json","providerId":"panda-bigmodel-coding","model":"glm-5.3-flash","efforts":["high"],"defaultEffort":"high"},
+          {"id":"zcode-bigmodel-secondary","name":"ZCode Secondary","command":"/usr/local/bin/zcode","builtinConfig":"/opt/panda-zcode/zcode-builtin.json","providerConfig":"/run/panda-zcode/secondary.json","providerId":"panda-bigmodel-coding","model":"glm-5.3-flash","efforts":["high"],"defaultEffort":"high"}
+        ]
+    volumes:
+      - type: bind
+        source: ${PANDA_FORCE_ZCODE_SECONDARY_PROVIDER_FILE:?Set the path to the second private ZCode provider JSON}
+        target: /run/panda-zcode/secondary.json
+        read_only: true
+        bind:
+          create_host_path: false

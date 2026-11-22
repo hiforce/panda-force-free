@@ -2,11 +2,11 @@
 title: 容器中的 Codex 与 Grok Build
 ---
 
-PandaForce 0.1.4 支持**多个 Harness Runtime**。运行实例决定原生引擎和账户连接，模型清单与推理强度来自该运行实例。会话、助理/Bot 和支持的创作设置统一按 **Harness Runtime → 模型 → 推理强度**选择。公开应用镜像同时包含 Codex 和本次新增集成的 **Grok Build**。
+PandaForce 0.1.5 支持**多个 Harness Runtime**。运行实例决定原生引擎和账户连接，模型清单与推理强度来自该运行实例。会话、助理/Bot 和支持的创作设置统一按 **Harness Runtime → 模型 → 推理强度**选择。公开应用镜像同时包含 Codex 和本次新增集成的 **Grok Build**。
 
 ## 安装配套发行版
 
-从 `main` 分支获取安装配置，运行已发布的 `hiforceai/panda-force:0.1.4` 镜像：
+从 `main` 分支获取安装配置，运行已发布的 `hiforceai/panda-force:0.1.5` 镜像：
 
 ```bash
 git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
@@ -27,7 +27,7 @@ docker compose up -d --no-build
 
 </div>
 
-应用镜像已包含两种 CLI。Grok 叠加配置补充账户持有和续期，不需要另装 Grok 二进制，也不替换 Codex。
+公开镜像包含 Codex CLI、Grok Build 和 ZCode。Grok 的 Compose 叠加配置负责账户管理和续期。Antigravity 可以通过本地构建启用。
 
 ## 启用 Codex
 
@@ -55,7 +55,7 @@ docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
 
 PandaForce 按需启动 Grok ACP 进程。账户服务重新读取原生账户文件，使用原生 CLI 在访问凭据接近到期时续期。无需 SSH 后手动打开 Grok，也无需保持交互终端或 tmux 会话。续期失败会显示账户或连接错误；已发出的提示词不会自动重放。
 
-账户服务持有刷新凭据，应用只挂载私有 socket，再给隔离引擎提供仅含访问凭据的副本。命名账户卷适用于 Linux 和 Docker Desktop。Linux 运维已有账户目录时可设置 `PANDA_FORCE_GROK_ACCOUNT_HOME_HOST`，该目录须事先具有正确 UID/GID 与私有权限；初始化器不会修改这个宿主机绑定目录的所有者。[账户服务指南](https://github.com/hiforce/panda-force-free/blob/v0.1.4/deploy/harness/README.md)说明完整生命周期及宿主机服务选项。
+账户服务持有刷新凭据，应用只挂载私有 socket，再给隔离引擎提供仅含访问凭据的副本。命名账户卷适用于 Linux 和 Docker Desktop。Linux 运维已有账户目录时可设置 `PANDA_FORCE_GROK_ACCOUNT_HOME_HOST`，该目录须事先具有正确 UID/GID 与私有权限；初始化器不会修改这个宿主机绑定目录的所有者。[账户服务指南](https://github.com/hiforce/panda-force-free/blob/v0.1.5/deploy/harness/README.md)说明完整生命周期及宿主机服务选项。
 
 ## 核对镜像并保留账户
 
@@ -66,7 +66,7 @@ docker compose exec panda-force grok --no-auto-update --version
 docker compose exec panda-force panda-tools doctor
 ```
 
-0.1.4 发行版审核过的引擎为 Codex CLI **0.171.0**、Grok Build **1.0.89** 和 ZCode CLI **0.17.1**。镜像已具备 Office、PDF/OCR、字体、浏览器、图像、写作、研究和视频工具；[内容与用途](base-images.md)说明配套构建/运行基础镜像。
+0.1.5 发行版审核过的引擎为 Codex CLI **0.171.0**、Grok Build **1.0.89** 和 ZCode CLI **0.17.1**。镜像已具备 Office、PDF/OCR、字体、浏览器、图像、写作、研究和视频工具；[内容与用途](base-images.md)说明配套构建/运行基础镜像。
 
 `PANDA_FORCE_IMAGE` 可统一覆盖应用与 Grok 辅助服务镜像，支持自有仓库或摘要；请保持配套版本。`PANDA_FORCE_PULL_POLICY` 控制拉取，仓库凭据由独立仓库工具管理。升级前检查 `.env` 是否仍覆盖了旧镜像，保留原 Compose 项目名和卷名。`docker compose down` 保留命名卷；升级前备份应用、Codex、Grok 账户和工作区。socket 卷保存通信状态，不能代替账户备份。
 
@@ -74,9 +74,9 @@ docker compose exec panda-force panda-tools doctor
 
 ## ZCode
 
-0.1.4 镜像内置 ZCode CLI 0.17.1。ZCode 是实验性的会话 Harness，支持文字回复、可见的思考与工具进度、审批和会话续接。应用会根据上游返回的数据展示用量。ZCode 配置完成后在会话中使用，创作和 Bot 继续使用各自支持的 Harness。
+0.1.5 镜像内置 ZCode CLI 0.17.1。ZCode 是实验性的会话 Harness，支持文字回复、可见的思考与工具进度、审批和会话续接。应用会根据上游返回的数据展示用量。ZCode 配置完成后在会话中使用，创作和 Bot 继续使用各自支持的 Harness。
 
-1. 将 [Provider 示例](https://github.com/hiforce/panda-force-free/blob/v0.1.4/deploy/harness/zcode-provider.example.json) 复制到仓库外的私有位置，在副本中填入自己的 BigModel Coding Plan API Key。保留示例的 Provider ID 和模型 ID，或同时修改 Compose 配置与 Provider 文件。确保容器的运行用户能读取该文件。
+1. 将 [Provider 示例](https://github.com/hiforce/panda-force-free/blob/v0.1.5/deploy/harness/zcode-provider.example.json) 复制到仓库外的私有位置，在副本中填入自己的 BigModel Coding Plan API Key。保留示例的 Provider ID 和模型 ID，或同时修改 Compose 配置与 Provider 文件。确保容器的运行用户能读取该文件。
 2. 从发行版目录运行以下命令，将路径改为自己的配置文件。升级已有安装时沿用原来的 Compose 项目名和数据卷。
 
    ```sh
@@ -88,6 +88,26 @@ docker compose exec panda-force panda-tools doctor
 
 已启用 Grok Build 的安装可同时保留 Grok 的 Compose 配置。运行时只读挂载 Provider JSON，密钥保存在你自己的文件中。套餐额度以 Provider 后台显示为准。
 
+
+## 同时使用多个命名实例
+
+配置档指定引擎、可执行文件和账户连接。会话输入区显示的是有名字的运行实例。打开**设置 → Harness Runtime → 添加**，选择已安装的配置档，用容易辨认的名字保存，例如「ZCode 工作」或「Grok 研究」。按需设置可访问的用户和默认模型，检查连接后，在输入区按名字选择。项目内的新建会话可以在首条消息前保存模型。
+
+不同账户使用各自的连接。配置档 ID 在所有供应商之间都要唯一，升级期间请保留原来的 ID。修改实例显示名称时可以沿用其原有 ID。
+
+| 引擎 | 独立账户配置 |
+| --- | --- |
+| Codex | 每个额外账户使用独立的 app-server Unix socket 和账户目录 |
+| Grok Build | 每个账户使用独立的私有目录和续期服务 socket |
+| ZCode | 每个账户挂载独立的只读 Provider JSON，模型必须在该文件中声明 |
+| Antigravity | 每个 Google 登录使用独立的可写账户目录和管理员提供的 CLI |
+
+在同一条 Compose 命令中保留所有已启用的叠加配置，升级时沿用 Compose 项目名。[两个 ZCode 实例的示例](https://github.com/hiforce/panda-force-free/blob/v0.1.5/deploy/harness/README.md#run-two-zcode-profiles-alongside-codex-and-grok)可与 Codex 和 Grok 一起运行。同一份指南也列出了各引擎的配置字段和容器挂载方式。
+
+## Antigravity CLI
+
+可选的 ACP 连接通过 Google 原生 `agy acp` 进程处理会话。按[本地构建与登录指南](https://github.com/hiforce/panda-force-free/blob/v0.1.5/deploy/harness/README.md#antigravity-cli-on-rocky-9)构建锁定版本的 CLI，挂载私有账户目录，再完成 Google 登录。请核对账户适用的 [Antigravity 条款](https://antigravity.google/terms)。模型与推理强度由该 Google 账户的可用能力决定。
+
 ## 源码开发
 
-需要定制应用的开发者请参阅[容器构建指南](building.md#development-container)，其中包含 Grok 叠加配置。本文的安装与账户命令使用已发布的 `hiforceai/panda-force:0.1.4` 镜像。
+需要定制应用的开发者请参阅[容器构建指南](building.md#development-container)，其中包含 Grok 叠加配置。本文的安装与账户命令使用已发布的 `hiforceai/panda-force:0.1.5` 镜像。

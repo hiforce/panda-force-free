@@ -8,7 +8,7 @@ import { JsonlHarnessHistory } from "../../src/server/harness/storage/history.js
 import { HarnessRegistry } from "../../src/server/harness/registry.js";
 import { HarnessConversations, type HarnessConversationOptions } from "../../src/server/harness/conversations.js";
 import { HarnessStdioTransport } from "../../src/server/harness/adapters/stdio.js";
-import type { HarnessAgent, HarnessAgentInfo } from "../../src/server/harness/ports.js";
+import type { HarnessAgent, HarnessAgentEvent, HarnessAgentInfo } from "../../src/server/harness/ports.js";
 import { HarnessError, type HarnessPermissionMode } from "../../src/shared/harness/contracts.js";
 import { HarnessDiagnostics } from "../../src/server/harness/diagnostics.js";
 const directories: string[] = [];
@@ -23,6 +23,89 @@ afterEach(async () => {
   for (const directory of directories.splice(0)) await rm(directory, { recursive: true, force: true });
 });
 const administrator = { owner: "one", administrator: true };
+
+test("Antigravity profiles isolate account homes and resume approved ACP turns with measured usage", async () => {
+  const directory = await temporary();
+  const primary = join(directory, "primary");
+  const secondary = join(directory, "secondary");
+  await Promise.all([mkdir(primary), mkdir(secondary)]);
+  const { harnessProfiles } = await import("../../src/server/harness/profiles.js");
+  const metadata = new SQLiteHarnessMetadata(join(directory, "antigravity.sqlite"));
+  cleanups.push(async () => metadata.close());
+  const registry = new HarnessRegistry(
+    metadata,
+    harnessProfiles(directory, {} as Parameters<typeof harnessProfiles>[1], {
+      PATH: process.env.PATH,
+      PANDA_FORCE_ANTIGRAVITY_HARNESS_PROFILES: JSON.stringify(
+        [
+          { id: "google-primary", name: "Google Primary", accountHome: primary },
+          { id: "google-secondary", name: "Google Secondary", accountHome: secondary },
+        ].map((profile) => ({ ...profile, command: join(import.meta.dir, "../support/antigravity-acp-fixture.mjs") })),
+      ),
+    }),
+  );
+  await registry.initialize();
+  expect(registry.supportsApplication("google-primary")).toBe(false);
+  await expect(registry.require({ owner: "member", administrator: false }, "google-primary")).rejects.toMatchObject({
+    code: "notFound",
+  });
+  await expect(registry.probe(administrator, "google-primary", directory)).rejects.toMatchObject({
+    code: "authentication",
+  });
+  await writeFile(join(primary, "signed-in"), "");
+  const ready = await registry.probe(administrator, "google-primary", directory);
+  expect(ready.runtimes.find((runtime) => runtime.id === "google-primary")?.status).toBe("ready");
+  await expect(registry.probe(administrator, "google-secondary", directory)).rejects.toMatchObject({
+    code: "authentication",
+  });
+
+  const first = await registry.agent(administrator, "google-primary", "conversation", directory);
+  cleanups.push(() => first.agent.close());
+  const session = await first.agent.create(directory);
+  const input = {
+    text: "antigravity.approval",
+    attachments: [],
+    model: "gemini-fixture",
+    effort: "low",
+    operationId: "one",
+  };
+  const events: HarnessAgentEvent[] = [];
+  const complete = await first.agent.prompt(session, input, async (event) => {
+    events.push(event);
+    if (event.type === "permission") await first.agent.respondPermission(event.id, "yes");
+  });
+  expect(events.map((event) => event.type)).toEqual(["activity", "tool", "permission", "tool", "text"]);
+  expect(events.at(-1)).toEqual({ type: "text", text: "Fixture approval received." });
+  expect(complete).toEqual({
+    stopReason: "complete",
+    usage: {
+      inputTokens: 20,
+      outputTokens: 5,
+      reasoningOutputTokens: 1,
+      cachedInputTokens: 4,
+      cacheWriteInputTokens: 0,
+      totalTokens: 25,
+    },
+  });
+  await first.agent.close();
+
+  const resumed = await registry.agent(administrator, "google-primary", "conversation", directory);
+  cleanups.push(() => resumed.agent.close());
+  const same = await resumed.agent.load(session.id, directory);
+  expect(same.id).toBe(session.id);
+  expect(same.info?.models[0]?.efforts.map((effort) => effort.id)).toEqual(["low", "high"]);
+  await expect(
+    resumed.agent.prompt(same, { ...input, text: "follow-up" }, async (event) => {
+      expect(event).toEqual({ type: "text", text: "Antigravity reply (low)." });
+    }),
+  ).resolves.toMatchObject({ stopReason: "complete" });
+  await expect(
+    resumed.agent.prompt(same, { ...input, text: "antigravity.hold" }, async (event) => {
+      if (event.type === "activity") await resumed.agent.cancel(same);
+    }),
+  ).resolves.toEqual({ stopReason: "cancelled" });
+});
+
 const info: HarnessAgentInfo = {
   capabilities: {
     text: true,

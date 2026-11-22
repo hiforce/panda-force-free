@@ -1,12 +1,12 @@
 ---
-title: Codex, Grok Build and ZCode in containers
+title: Configure Harness Runtimes
 ---
 
-PandaForce 0.1.4 supports **multiple Harness Runtimes**. A runtime selects the native engine and account connection; its model list and reasoning levels come from that runtime. Choose **Harness Runtime → model → reasoning level** in conversations, assistants/Bots and supported creation settings. Codex and the newly integrated **Grok Build** are both included in the published application image.
+PandaForce 0.1.5 supports **multiple Harness Runtimes**. A runtime selects the native engine and account connection; its model list and reasoning levels come from that runtime. Choose **Harness Runtime → model → reasoning level** in conversations, assistants/Bots and supported creation settings. The published image includes Codex CLI, Grok Build and ZCode. Antigravity is available through an operator-built option.
 
 ## Install the matching release
 
-Get the installation configuration from the `main` branch and run the published `hiforceai/panda-force:0.1.4` image:
+Get the installation configuration from the `main` branch and run the published `hiforceai/panda-force:0.1.5` image:
 
 ```bash
 git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
@@ -15,7 +15,7 @@ docker compose pull panda-force
 docker compose up -d --no-build
 ```
 
-Open [http://localhost:8899](http://localhost:8899), create the application administrator and choose SQLite or configure MySQL. Application sign-in and model-provider sign-in are independent. The image uses **Rocky Linux 9**, with Node.js, Bun, Codex CLI, Grok Build and the maintained creative toolchain already installed. Docker/Compose is sufficient; no host CLI daemon or Kubernetes is required for this arrangement.
+Open [http://localhost:8899](http://localhost:8899), create the application administrator and choose SQLite or configure MySQL. Application sign-in and model-provider sign-in are independent. The image uses **Rocky Linux 9**, with Node.js, Bun, Codex CLI, Grok Build, ZCode and the maintained creative toolchain already installed. Docker/Compose is sufficient; no host CLI daemon or Kubernetes is required for this arrangement.
 
 <div className="base-image-table">
 
@@ -27,7 +27,7 @@ Open [http://localhost:8899](http://localhost:8899), create the application admi
 
 </div>
 
-Both CLI engines are already in the application image. The Grok overlay adds account ownership and renewal; it does not install another Grok binary or replace Codex.
+The Grok overlay adds account ownership and renewal for the included Grok Build CLI.
 
 ## Enable Codex
 
@@ -55,7 +55,7 @@ If an existing installation already has a saved runtime catalog without Grok, ad
 
 Grok ACP processes start when PandaForce needs them. The account service rereads the native account file and uses the native CLI to refresh near-expiry access credentials. You do not need to SSH into the server and keep an interactive Grok or tmux session open. A refresh failure is shown as an account or connection error; a dispatched prompt is not automatically replayed.
 
-The account service owns the refresh credentials. The application mounts only its private socket and gives each isolated agent an access-only snapshot. Named account volumes work on Linux and Docker Desktop. An operator-managed Linux account directory can be selected with `PANDA_FORCE_GROK_ACCOUNT_HOME_HOST`; it must already have the configured UID/GID and private permissions. The initializer does not change ownership of that host bind. Detailed lifecycle and host-service options are in [the account service guide](https://github.com/hiforce/panda-force-free/blob/v0.1.4/deploy/harness/README.md).
+The account service owns the refresh credentials. The application mounts only its private socket and gives each isolated agent an access-only snapshot. Named account volumes work on Linux and Docker Desktop. An operator-managed Linux account directory can be selected with `PANDA_FORCE_GROK_ACCOUNT_HOME_HOST`; it must already have the configured UID/GID and private permissions. The initializer does not change ownership of that host bind. Detailed lifecycle and host-service options are in [the account service guide](https://github.com/hiforce/panda-force-free/blob/v0.1.5/deploy/harness/README.md).
 
 ## Verify images and preserve accounts
 
@@ -66,7 +66,7 @@ docker compose exec panda-force grok --no-auto-update --version
 docker compose exec panda-force panda-tools doctor
 ```
 
-For the 0.1.4 release, the reviewed engines are Codex CLI **0.171.0**, Grok Build **1.0.89** and ZCode CLI **0.17.1**. The image already provides Office, PDF/OCR, fonts, browser, image, writing, research and video tools; [contents and purpose](base-images.md) explains the matched build/runtime bases.
+For the 0.1.5 release, the reviewed engines are Codex CLI **0.171.0**, Grok Build **1.0.89** and ZCode CLI **0.17.1**. The image already provides Office, PDF/OCR, fonts, browser, image, writing, research and video tools; [contents and purpose](base-images.md) explains the matched build/runtime bases.
 
 `PANDA_FORCE_IMAGE` overrides the application and Grok helpers together, including a private registry or digest. Keep their selected version compatible. `PANDA_FORCE_PULL_POLICY` controls pulls; registry credentials remain in your registry tooling. Before upgrading, check your `.env` for an old image override and preserve the existing Compose project name and volume names. `docker compose down` preserves named volumes; back up application, Codex, Grok-account and workspace storage before changing versions. The socket volume contains communication state, not the account backup.
 
@@ -74,9 +74,9 @@ Switch an existing conversation after the current turn finishes. PandaForce hand
 
 ## ZCode
 
-The 0.1.4 image includes ZCode CLI 0.17.1. The experimental conversation runtime supports text streaming, visible thinking and tool activity, approvals, and resuming sessions. Usage is shown when the runtime reports it. Creation and Bots use their own supported runtimes.
+The 0.1.5 image includes ZCode CLI 0.17.1. The experimental conversation runtime supports text streaming, visible thinking and tool activity, approvals, and resuming sessions. Usage is shown when the runtime reports it. Creation and Bots use their own supported runtimes.
 
-1. Copy the [example provider file](https://github.com/hiforce/panda-force-free/blob/v0.1.4/deploy/harness/zcode-provider.example.json) to a private location outside the checkout and enter your own BigModel Coding Plan key there. Keep the IDs used in the example, or update the Compose profile and provider file together. Give the container user read access to this file.
+1. Copy the [example provider file](https://github.com/hiforce/panda-force-free/blob/v0.1.5/deploy/harness/zcode-provider.example.json) to a private location outside the checkout and enter your own BigModel Coding Plan key there. Keep the IDs used in the example, or update the Compose profile and provider file together. Give the container user read access to this file.
 2. Run the following from the release checkout. Replace the example path with the path to your configured file. Keep your existing Compose project and volumes when upgrading.
 
    ```sh
@@ -88,6 +88,26 @@ The 0.1.4 image includes ZCode CLI 0.17.1. The experimental conversation runtime
 
 Keep the Grok Compose overlay in the command if you already use it. The ZCode provider file is mounted read-only. Check plan usage with your provider.
 
+
+## Use several named runtimes
+
+A profile identifies the engine, executable and account connection. A runtime is the named choice shown in the composer. Open **Settings → Harness Runtimes → Add**, choose an installed profile, and give it a recognizable name such as **ZCode Work** or **Grok Research**. You can assign its allowed users and supported defaults, check its connection and choose it by name when composing. In a new project conversation, save the model before sending the first message.
+
+Use an independent account connection for each separate account. Give profiles unique IDs across all providers and keep those IDs during upgrades. An existing runtime can retain its ID when renamed.
+
+| Engine | Separate account connection |
+| --- | --- |
+| Codex | A distinct app-server Unix socket and account home for each additional profile |
+| Grok Build | A distinct private account home and broker socket per account |
+| ZCode | A private read-only provider JSON file per account and a model declared in that file |
+| Antigravity | A distinct writable account home and operator-provided CLI for each Google login |
+
+Keep all enabled overlays in the same Compose command and use the same project name across upgrades. The [two-ZCode example](https://github.com/hiforce/panda-force-free/blob/v0.1.5/deploy/harness/README.md#run-two-zcode-profiles-alongside-codex-and-grok) runs alongside Codex and Grok. The same guide lists the JSON keys and container mounts for additional profiles.
+
+## Antigravity CLI
+
+The optional ACP adapter uses Google's native `agy acp` process for conversations. Use the [operator build and sign-in guide](https://github.com/hiforce/panda-force-free/blob/v0.1.5/deploy/harness/README.md#antigravity-cli-on-rocky-9) to build the pinned CLI locally, mount a private account directory and complete Google sign-in. Consult the [Antigravity terms](https://antigravity.google/terms) for your account. Google controls the models and reasoning levels visible to that account.
+
 ## Source development
 
-Developers customizing the application can follow the [container build guide](building.md#development-container), including its Grok overlay instructions. The installation and account commands on this page use the published `hiforceai/panda-force:0.1.4` image.
+Developers customizing the application can follow the [container build guide](building.md#development-container), including its Grok overlay instructions. The installation and account commands on this page use the published `hiforceai/panda-force:0.1.5` image.

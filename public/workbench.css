@@ -2807,6 +2807,7 @@
 }
 .remote-console-header,
 .remote-console-identity,
+.remote-console-title-row,
 .remote-console-actions,
 .remote-console-footer {
   display: flex;
@@ -2819,7 +2820,11 @@
   gap: var(--pf-space-3);
   padding: var(--pf-space-2) var(--pf-space-3);
 }
-.remote-console-identity > div {
+.remote-console-identity {
+  flex: 1;
+}
+.remote-console-target {
+  flex: 1;
   min-inline-size: 0;
 }
 .remote-console-marks {
@@ -2842,6 +2847,10 @@
   background: var(--pf-warning);
 }
 .remote-console-header h1 {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin: 0;
   font-size: var(--pf-touch-text);
   font-weight: 700;
@@ -2861,6 +2870,9 @@
 .remote-console-actions {
   flex: none;
 }
+.remote-console-actions .icon-slot {
+  display: none;
+}
 .remote-console-actions .wb-button,
 .remote-console-font .wb-button {
   min-block-size: var(--pf-control-height);
@@ -2868,7 +2880,10 @@
 }
 .remote-console-status {
   display: flex;
+  flex: none;
   align-items: center;
+  white-space: nowrap;
+  line-height: 1.3;
   gap: var(--pf-space-1);
   padding: var(--pf-space-1) var(--pf-space-2);
   border: 1px solid color-mix(in srgb, currentColor 40%, var(--pf-line));
@@ -2964,24 +2979,42 @@
   .remote-endpoint-fields {
     grid-template-columns: minmax(0, 1fr);
   }
-  .remote-console-header {
-    align-items: stretch;
-    flex-direction: column;
-    gap: var(--pf-space-2);
+  .remote-console-header,
+  .remote-console-title-row,
+  .remote-console-actions {
+    gap: var(--pf-space-1);
   }
-  .remote-console-marks {
+  .remote-console-header {
+    padding-inline: var(--pf-space-2);
+  }
+  .remote-console-header h1 {
+    font-size: var(--pf-control-text);
+  }
+  .remote-console-marks,
+  .remote-console-action-label {
     display: none;
   }
-  .remote-console-header p {
-    white-space: normal;
-    overflow-wrap: anywhere;
+  .remote-console-actions .icon-slot {
+    display: inline-flex;
   }
-  .remote-console-actions {
-    flex-wrap: wrap;
+  .remote-console-actions .wb-button {
+    padding-inline: 0;
   }
   .remote-console-actions .wb-button,
   .remote-console-font .wb-button {
     min-block-size: var(--pf-touch-target);
     min-inline-size: var(--pf-touch-target);
+  }
+}
+@media (max-width: 359px) {
+  .remote-console-header,
+  .remote-console-status {
+    padding-inline: var(--pf-space-1);
+  }
+  .remote-console-header h1 {
+    font-size: var(--pf-text-nav);
+  }
+  .remote-console-status::before {
+    display: none;
   }
 }

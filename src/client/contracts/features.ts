@@ -236,6 +236,7 @@ export interface ComposerPort {
   renderComposerSkills: () => void;
   setPlanMode: (active: boolean) => void;
   setComposing: (value: unknown) => void;
+  canQueuePrompt: () => boolean;
   syncQueueButton: () => void;
   saveComposerDraft: (scope?: string) => void;
   syncComposerSubmitState: () => void;
@@ -502,7 +503,7 @@ export interface SuggestionsPort {
 
 export interface SubmissionPort {
   submitPrompt: (
-    event: { preventDefault(): void },
+    event: { preventDefault(): void; submitter?: HTMLElement | null },
     questionAnswer?: { text: string; threadId: string } | null,
   ) => Promise<
     { sent: boolean; deliveryUncertain?: undefined } | { deliveryUncertain: boolean; sent?: undefined } | undefined

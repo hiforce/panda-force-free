@@ -78,7 +78,16 @@ createInterface({ input: process.stdin }).on(
         session.application = params._meta?.agentProfile ?? null;
         session.mcpServers = params.mcpServers ?? [];
         await writeFile(sessionPath(session.id), JSON.stringify(session));
-        result = { sessionId: session.id, models, _meta: { currentWorkingDirectory: session.cwd } };
+        const catalog = account.fixture?.projectModels
+          ? {
+              ...models,
+              availableModels: [
+                ...models.availableModels,
+                { ...models.availableModels[0], modelId: "grok-fixture-alt", name: "Grok Alternate Fixture" },
+              ],
+            }
+          : models;
+        result = { sessionId: session.id, models: catalog, _meta: { currentWorkingDirectory: session.cwd } };
       } else if (frame.method === "session/set_config_option") {
         if (typeof params.value !== "string") throw Error("Invalid ACP config value");
         session[params.configId] = params.value;
@@ -248,7 +257,13 @@ createInterface({ input: process.stdin }).on(
           });
           return;
         }
-        update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Grok fixture reply" } });
+        update({
+          sessionUpdate: "agent_message_chunk",
+          content: {
+            type: "text",
+            text: session.model === "grok-fixture-alt" ? "Grok alternate reply" : "Grok fixture reply",
+          },
+        });
         if (behavior.includes("harness.hold")) return;
         await new Promise((resolve) => setTimeout(resolve, 150));
         update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: " completed." } });

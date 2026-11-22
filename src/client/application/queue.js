@@ -177,6 +177,7 @@ export function assembleQueue({
     refreshMessageQueue(message.owner);
   }
   async function queuePrompt() {
+    if (!composerPort.canQueuePrompt()) return;
     if (creationSessionRoute()) {
       $("#composer").requestSubmit();
       return;

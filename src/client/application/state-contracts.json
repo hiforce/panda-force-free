@@ -159,6 +159,7 @@
         "connected",
         "modelLoadStatus",
         "models",
+        "newSessionProjectId",
         "permissionMode",
         "permissionProfiles",
         "permissionVisibility",

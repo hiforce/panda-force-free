@@ -705,14 +705,14 @@
   }
 }
 
-/* Input recall is requested explicitly and never occupies the initial composer layout. */
-.composer-history-status {
+/* Composer feedback leaves the layout when there is nothing to report. */
+:is(.composer-history-status, .composer-turn-wait) {
   margin: 0;
   padding: var(--pf-space-2) var(--composer-inset);
   color: var(--pf-muted);
   font-size: var(--pf-text-meta);
 }
-.composer-history-status[hidden] {
+:is(.composer-history-status, .composer-turn-wait)[hidden] {
   display: none;
 }
 /* Harness selection reuses the shared composer controls and sheet geometry. */

@@ -1,0 +1,11 @@
+services:
+  panda-force:
+    environment:
+      PANDA_FORCE_ANTIGRAVITY_HARNESS_PROFILES: >-
+        [{"id":"antigravity","name":"Antigravity CLI","accountHome":"/run/panda-antigravity-account","deployment":"container"}]
+    volumes:
+      - type: bind
+        source: ${PANDA_FORCE_ANTIGRAVITY_ACCOUNT_HOME_HOST:?set the Antigravity account home}
+        target: /run/panda-antigravity-account
+        bind:
+          create_host_path: false

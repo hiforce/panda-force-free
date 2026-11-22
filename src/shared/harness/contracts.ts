@@ -1,7 +1,7 @@
 import type { TokenUsage } from "../engine/types.js";
 
 /** Runtime instances are deployment identities; conversations and model choices have separate lifetimes. */
-export type HarnessKind = "codex" | "grok-build" | "zcode";
+export type HarnessKind = "codex" | "grok-build" | "zcode" | "antigravity";
 export type HarnessDeployment = "local" | "container" | "remote";
 export type HarnessStatus = "unknown" | "connecting" | "ready" | "authentication" | "unavailable";
 export type HarnessPermissionMode = "ask" | "always-approve" | "full-access";

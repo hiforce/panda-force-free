@@ -40,6 +40,7 @@
   "errorForbidden": "你无权访问该运行实例或工作目录。",
   "errorConflict": "设置已更新，请刷新后重试。",
   "errorBusy": "请先完成或停止当前轮次，然后重试。",
+  "waitToSend": "等本轮回复结束后发送，也可以先停止本轮。草稿会保留。",
   "errorUnavailable": "无法连接该运行实例，草稿已保留。",
   "errorAuthentication": "请先登录该实例账号，再检查连接。",
   "errorCapabilityUnavailable": "该实例不支持此操作或附件类型。",

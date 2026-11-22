@@ -12,6 +12,8 @@
     "browser/runtime-model-selection.e2e.mjs",
     "browser/harness-switch-latency.e2e.mjs",
     "browser/harness-project-association.e2e.mjs",
+    "browser/harness-project-model.e2e.mjs",
+    "browser/harness-active-composer.e2e.mjs",
     "browser/harness-usage.e2e.mjs",
     "browser/bot-queue-compact.e2e.mjs",
     "browser/bot-task-actions.e2e.mjs",

@@ -51,7 +51,7 @@ RUN if [ "$INSTALL_VIDEO_TOOLS" = "1" ] && ! (command -v ffmpeg > /dev/null && c
 COPY scripts/build/dependencies.mjs /opt/panda-force-dependencies.mjs
 RUN node /opt/panda-force-dependencies.mjs capture /app /tmp/panda-force-base-dependencies.json /opt/panda-force-dependencies.sha256 \
     && rm -rf patches
-COPY package.json bun.lock ./
+COPY --chmod=0644 package.json bun.lock ./
 COPY patches ./patches
 RUN node /opt/panda-force-dependencies.mjs verify /app /tmp/panda-force-base-dependencies.json \
     && rm /tmp/panda-force-base-dependencies.json

@@ -65,6 +65,27 @@ export function checkInstallation(root = process.cwd()) {
   require(provider.providerId === zcodeProfile.providerId &&
     provider.config.personalModelIds.includes(zcodeProfile.model) &&
     provider.config.access.apiKey === "", "ZCode example must match the profile and omit credentials");
+  const named = parse(text("deploy/harness/docker-compose.zcode-multiple.example.yml")).services["panda-force"];
+  const namedProfiles = JSON.parse(named.environment.PANDA_FORCE_ZCODE_HARNESS_PROFILES);
+  require(namedProfiles.length === 2 && new Set(namedProfiles.map((profile) => profile.id)).size === 2 &&
+    namedProfiles[0].id === zcodeProfile.id && namedProfiles[0].providerConfig === zcodeProfile.providerConfig &&
+    namedProfiles[1].providerConfig !== zcodeProfile.providerConfig &&
+    named.volumes.some((volume) => volume.target === namedProfiles[1].providerConfig &&
+      volume.read_only === true && volume.bind?.create_host_path === false),
+    "Second ZCode profile must have a distinct ID and private provider file");
+  const antigravity = parse(text("deploy/harness/docker-compose.antigravity.yml")).services["panda-force"];
+  const [googleProfile] = JSON.parse(antigravity.environment.PANDA_FORCE_ANTIGRAVITY_HARNESS_PROFILES);
+  require(!antigravity.image && antigravity.volumes.some(
+    (volume) => volume.target === googleProfile.accountHome && volume.read_only !== true &&
+      volume.bind?.create_host_path === false,
+  ), "Antigravity must inherit the operator image and use a dedicated writable account mount");
+  const googleLock = json("scripts/build/antigravity-runtime.lock.json");
+  require(googleLock.platform === bases.platform && /^[a-f0-9]{128}$/.test(googleLock.sha512) &&
+    googleLock.url.startsWith("https://storage.googleapis.com/antigravity-public/"),
+  "Antigravity must use a locked vendor archive for the selected platform");
+  for (const [argument, key] of [["BUILD_BASE", "buildBase"], ["RUNTIME_BASE", "runtimeBase"]])
+    require(text("scripts/build/Dockerfile.antigravity-bases").split("\n").includes(`ARG ${argument}=${bases[key]}`),
+      "Optional Antigravity base must match the public parent");
   const zcodeLock = json("scripts/build/zcode-runtime.lock.json");
   require(zcodeLock.cliVersion === bases.engineVersions.zcode &&
     createHash("sha256").update(text("scripts/build/zcode-runtime.lock.json")).digest("hex") ===

@@ -2792,6 +2792,7 @@ export interface MessageParameters {
   "harness.unavailable": {  };
   "harness.uncertain": {  };
   "harness.unknown": {  };
+  "harness.waitToSend": {  };
   "knowledge.answer": {  };
   "knowledge.approve": {  };
   "knowledge.approved": {  };
