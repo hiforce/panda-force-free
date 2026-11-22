@@ -1,6 +1,6 @@
 # Grok authentication and Harness Runtime
 
-Use the 0.1.2 release checkout and application image. Combine the normal Compose file and this overlay:
+Use the 0.1.3 release checkout and application image. Combine the normal Compose file and this overlay:
 
 ```sh
 docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml up -d
@@ -16,7 +16,7 @@ For a dedicated account, complete the official one-time device login through the
 docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml run --rm grok-auth grok --no-auto-update login --device-auth
 ```
 
-The `grok-auth` service owns the account directory. The application mounts only a named socket volume; this works with Docker Desktop as well as Linux and does not require a host daemon or Kubernetes. Private registries and explicit pull policies remain available through the normal image and pull-policy overrides. The application and both account helpers default to `hiforceai/panda-force:0.1.2`. For a local build or private registry, set `PANDA_FORCE_IMAGE` explicitly so all three services use the same selected image. When building locally, include `docker-compose.build.yml` and build `panda-force` before starting the overlay.
+The `grok-auth` service owns the account directory. The application mounts only a named socket volume; this works with Docker Desktop as well as Linux and does not require a host daemon or Kubernetes. Private registries and explicit pull policies remain available through the normal image and pull-policy overrides. The application and both account helpers default to `hiforceai/panda-force:0.1.3`. For a local build or private registry, set `PANDA_FORCE_IMAGE` explicitly so all three services use the same selected image. When building locally, include `docker-compose.build.yml` and build `panda-force` before starting the overlay.
 
 Before model discovery, connection tests and chat dispatch, the account service rereads the account file. Within five minutes of expiry it runs the installed native CLI's `models` command in an empty temporary directory, with stdin closed, automatic updates disabled and a private leader socket. This exercises native authentication without sending a model prompt. Concurrent refreshes coalesce; an account-side file lock serializes native refresh workers. The native CLI owns OAuth, its own interaction with other native CLI processes, and persistence of rotated credentials. The integration does not implement a separate OAuth client or overwrite the native account file.
 

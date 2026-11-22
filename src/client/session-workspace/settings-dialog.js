@@ -62,7 +62,8 @@ export function createSessionSettingsDialog({
       kind === "model"
         ? snapshot.models.length > 0
         : snapshot.permissions.some((item) => item.id === permission && item.allowed);
-    const applicationSelection = kind === "model" && !!snapshot.runtimeId && !!applyRuntimeModel;
+    const applicationSelection =
+      kind === "model" && (!!snapshot.runtimeId || snapshot.permissionOwner === "creation") && !!applyRuntimeModel;
     runtimeField?.close();
     runtimeField = applicationSelection
       ? createRuntimeModelField(t, "session-runtime", () => {
@@ -112,7 +113,7 @@ export function createSessionSettingsDialog({
   /** @param {string} nextKind @param {import('./composer-settings.js').ComposerSettingsNavigation | null} [nextNavigation] */
   function open(nextKind, nextNavigation = null) {
     const snapshot = read();
-    if (!snapshot.sessionId) return;
+    if (!snapshot.sessionId || (nextKind === "permissions" && snapshot.hidePermissionSetting)) return;
     returnFocus =
       nextNavigation?.trigger || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     const preserve = nextNavigation && nextNavigation.flow === draftFlow && sessionId === snapshot.sessionId;

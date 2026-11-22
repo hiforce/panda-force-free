@@ -2,11 +2,11 @@
 title: Codex and Grok Build in containers
 ---
 
-PandaForce 0.1.2 supports **multiple Harness Runtimes**. A runtime selects the native engine and account connection; its model list and reasoning levels come from that runtime. Choose **Harness Runtime → model → reasoning level** in conversations, assistants/Bots and supported creation settings. Codex and the newly integrated **Grok Build** are both included in the published application image.
+PandaForce 0.1.3 supports **multiple Harness Runtimes**. A runtime selects the native engine and account connection; its model list and reasoning levels come from that runtime. Choose **Harness Runtime → model → reasoning level** in conversations, assistants/Bots and supported creation settings. Codex and the newly integrated **Grok Build** are both included in the published application image.
 
 ## Install the matching release
 
-Get the installation configuration from the `main` branch and run the published `hiforceai/panda-force:0.1.2` image:
+Get the installation configuration from the `main` branch and run the published `hiforceai/panda-force:0.1.3` image:
 
 ```bash
 git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
@@ -55,7 +55,7 @@ If an existing installation already has a saved runtime catalog without Grok, ad
 
 Grok ACP processes start when PandaForce needs them. The account service rereads the native account file and uses the native CLI to refresh near-expiry access credentials. You do not need to SSH into the server and keep an interactive Grok or tmux session open. A refresh failure is shown as an account or connection error; a dispatched prompt is not automatically replayed.
 
-The account service owns the refresh credentials. The application mounts only its private socket and gives each isolated agent an access-only snapshot. Named account volumes work on Linux and Docker Desktop. An operator-managed Linux account directory can be selected with `PANDA_FORCE_GROK_ACCOUNT_HOME_HOST`; it must already have the configured UID/GID and private permissions. The initializer does not change ownership of that host bind. Detailed lifecycle and host-service options are in [the account service guide](https://github.com/hiforce/panda-force-free/blob/v0.1.2/deploy/harness/README.md).
+The account service owns the refresh credentials. The application mounts only its private socket and gives each isolated agent an access-only snapshot. Named account volumes work on Linux and Docker Desktop. An operator-managed Linux account directory can be selected with `PANDA_FORCE_GROK_ACCOUNT_HOME_HOST`; it must already have the configured UID/GID and private permissions. The initializer does not change ownership of that host bind. Detailed lifecycle and host-service options are in [the account service guide](https://github.com/hiforce/panda-force-free/blob/v0.1.3/deploy/harness/README.md).
 
 ## Verify images and preserve accounts
 
@@ -66,7 +66,7 @@ docker compose exec panda-force grok --no-auto-update --version
 docker compose exec panda-force panda-tools doctor
 ```
 
-For the 0.1.2 release, the reviewed engines are Codex CLI **0.171.0** and Grok Build **1.0.89**. The image already provides Office, PDF/OCR, fonts, browser, image, writing, research and video tools; [contents and purpose](base-images.md) explains the matched build/runtime bases.
+For the 0.1.3 release, the reviewed engines are Codex CLI **0.171.0** and Grok Build **1.0.89**. The image already provides Office, PDF/OCR, fonts, browser, image, writing, research and video tools; [contents and purpose](base-images.md) explains the matched build/runtime bases.
 
 `PANDA_FORCE_IMAGE` overrides the application and Grok helpers together, including a private registry or digest. Keep their selected version compatible. `PANDA_FORCE_PULL_POLICY` controls pulls; registry credentials remain in your registry tooling. Before upgrading, check your `.env` for an old image override and preserve the existing Compose project name and volume names. `docker compose down` preserves named volumes; back up application, Codex, Grok-account and workspace storage before changing versions. The socket volume contains communication state, not the account backup.
 
@@ -74,4 +74,4 @@ Switch an existing conversation after the current turn finishes. PandaForce hand
 
 ## Source development
 
-Developers customizing the application can follow the [container build guide](building.md#development-container), including its Grok overlay instructions. The installation and account commands on this page use the published `hiforceai/panda-force:0.1.2` image.
+Developers customizing the application can follow the [container build guide](building.md#development-container), including its Grok overlay instructions. The installation and account commands on this page use the published `hiforceai/panda-force:0.1.3` image.

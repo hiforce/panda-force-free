@@ -32,6 +32,7 @@ export function assembleDelivery({ selection, viewUpdates, state, $ }) {
     isSending: (owner) => promptSubmissions.has(owner),
     lock: (owner, token) => {
       promptSubmissions.set(owner, token);
+      viewUpdates.request("composerSubmit");
     },
     lockIfFree: (owner, token) => {
       if (!promptSubmissions.has(owner)) promptSubmissions.set(owner, token);

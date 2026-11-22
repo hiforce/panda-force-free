@@ -1,7 +1,8 @@
 import type { BotChatMessage, BotChatSnapshot, BotChatSubmission, BotChatRead } from "../../shared/bots/workspace.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import type { MessageId } from "../../shared/i18n/messages.js";
-import { setMessageHtml } from "../i18n.js";
+import { localizeAttribute, setMessageHtml } from "../i18n.js";
+import { busyIndicator } from "../busy-indicator.js";
 import { botDialog, dialogPending } from "./dialog.js";
 import { botUi, botDate, type BotContext } from "./ui.js";
 import { botReplyParts, botReplyHtml, bindBotReplyContent, bindBotCopy } from "./reply-content.js";
@@ -80,6 +81,12 @@ export function createBotHumanChat(
   composerContext = createBotComposerContext(form, draft, context, controls);
   function controls() {
     submit.disabled = !generation || sending || busy || !input.value.trim() || composerContext?.ready() === false;
+    if (sending !== submit.hasAttribute("aria-busy")) {
+      if (sending) submit.setAttribute("aria-busy", "true");
+      else submit.removeAttribute("aria-busy");
+      setMessageHtml(submit, sending ? busyIndicator : codexIcon("arrowUp"));
+      localizeAttribute(submit, "aria-label", sending ? "bots.sending" : "bots.send", {}, context.t);
+    }
     composerContext?.lock(sending || Boolean(draft.uncertain));
     clear.disabled = !generation;
     copyConversation.disabled = !generation || !messages.size || copyConversation.getAttribute("aria-busy") === "true";
@@ -87,6 +94,7 @@ export function createBotHumanChat(
     earlierRow.hidden = !hasMore;
     earlier.hidden = !hasMore;
     host.querySelector<HTMLButtonElement>("[data-send-recovery]")!.hidden = !draft.uncertain || sending;
+    status.classList.toggle("sr-only", sending);
     status.textContent = sending ? context.t("bots.sending") : busy ? context.t("bots.replying") : "";
   }
   function discardDraft() {

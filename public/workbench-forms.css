@@ -14,6 +14,27 @@
   --pf-checkbox-size: 18px;
   --pf-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238793a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
+.busy-indicator {
+  display: inline-block;
+  inline-size: var(--busy-indicator-size, var(--pf-space-5));
+  block-size: var(--busy-indicator-size, var(--pf-space-5));
+  flex: none;
+  background: conic-gradient(from 15deg, transparent, currentColor);
+  mask-image:
+    repeating-conic-gradient(black 0deg 12deg, transparent 12deg 30deg),
+    radial-gradient(closest-side, transparent 51%, black 53%);
+  mask-composite: intersect;
+}
+@keyframes busy-indicator-rotate {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .busy-indicator {
+    animation: busy-indicator-rotate 1s steps(12) infinite;
+  }
+}
 .wb-form {
   display: grid;
   gap: var(--pf-space-3);

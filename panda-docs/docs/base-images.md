@@ -2,7 +2,7 @@
 title: Base image contents and purpose
 ---
 
-PandaForce 0.1.2 source separates the reusable toolchain from application code. A base image installs expensive, reviewed dependencies once. Later application builds reuse those layers, compile the checked-out source and package a runnable application. This avoids downloading Office, fonts, browser binaries and language packages during every creation task.
+PandaForce 0.1.3 source separates the reusable toolchain from application code. A base image installs expensive, reviewed dependencies once. Later application builds reuse those layers, compile the checked-out source and package a runnable application. This avoids downloading Office, fonts, browser binaries and language packages during every creation task.
 
 ## Choose a base pair
 
@@ -12,12 +12,12 @@ PandaForce 0.1.2 source separates the reusable toolchain from application code. 
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Default Rocky creative build base   | Rocky Linux 9, both Harness CLIs, native compilers, locked application development dependencies and the creative inventory below | Public `hiforceai/panda-force-build-base:rocky9-creative-20261121-14a4a23a90de`, selected by immutable digest in the source Dockerfile and Compose build overlay.                                                  |
 | Default Rocky creative runtime base | Rocky Linux 9, both Harness CLIs, application production dependencies and the same creative inventory                            | Public `hiforceai/panda-force-runtime-base:rocky9-creative-20261121-14a4a23a90de`, paired by its own immutable digest. Runs tasks with expensive tools already installed.                                          |
-| Application image                   | Selected runtime, application source, compiled browser assets, CLI and startup command                                           | Runnable `hiforceai/panda-force:0.1.2`; the normal installation pulls this image.                                                                                                                                  |
-| Legacy Debian build/runtime bases   | The earlier locked application dependencies, Harness engines, FFmpeg and Noto CJK fonts                                          | The `engines-20261120-b3302dd60ade` pair remains available for explicitly selected compatible legacy builds and as the reviewed Debian Harness seed. It is not the 0.1.2 default or the complete creative toolset. |
+| Application image                   | Selected runtime, application source, compiled browser assets, CLI and startup command                                           | Runnable `hiforceai/panda-force:0.1.3`; the normal installation pulls this image.                                                                                                                                  |
+| Legacy Debian build/runtime bases   | The earlier locked application dependencies, Harness engines, FFmpeg and Noto CJK fonts                                          | The `engines-20261120-b3302dd60ade` pair remains available for explicitly selected compatible legacy builds and as the reviewed Debian Harness seed. It is not the 0.1.3 default or the complete creative toolset. |
 
 </div>
 
-The stable 0.1.2 application image and both default Rocky creative bases are public for **Linux amd64**. Use the matching `v0.1.2` source and installation files. The Dockerfile, Compose overlay and `scripts/build/base-images.json` pin the actual published build/runtime digests; the two roles use distinct image references. Their installed inventories match the reviewed creative inputs. [Codex and Grok container setup](harness-runtimes.md) covers account services and login.
+The stable 0.1.3 application image and both default Rocky creative bases are public for **Linux amd64**. Use the matching `v0.1.3` source and installation files. The Dockerfile, Compose overlay and `scripts/build/base-images.json` pin the actual published build/runtime digests; the two roles use distinct image references. Their installed inventories match the reviewed creative inputs. [Codex and Grok container setup](harness-runtimes.md) covers account services and login.
 
 The container userspace is independent of the host distribution. A Rocky host can run either pair; choose the Rocky pair when you want that userspace and the complete creative toolset. The current recipe targets **Linux amd64**.
 

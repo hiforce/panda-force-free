@@ -21,10 +21,45 @@ export interface CommandPorts {
 }
 /** Pending command identities survive failures and remain scoped to the page model. */
 export class CreationSessionCommands {
+  private destination?: {
+    epoch: number;
+    expiresAt: number;
+    read: Promise<{ profileId: string; treeVersion: number; outputType: "auto" | "document" }>;
+  };
   constructor(
     private readonly state: CreationSessionState,
     private readonly port: CommandPorts,
+    private readonly defaultRuntime: () => Promise<string> | undefined,
   ) {}
+  private readDestination() {
+    const epoch = this.state.epoch;
+    if (this.destination?.epoch === epoch && this.destination.expiresAt > Date.now()) return this.destination.read;
+    const destination = {
+      epoch,
+      expiresAt: Infinity,
+      read: Promise.all([this.port.api().options(), documentTreeApi.read("personal", AbortSignal.timeout(15000))]).then(
+        ([options, tree]) => {
+          if (!options.defaultProfileId) throw new Error(this.port.t("creation.unavailable"));
+          return {
+            profileId: options.defaultProfileId,
+            treeVersion: tree.version,
+            outputType: defaultCreationOutput(options),
+          };
+        },
+      ),
+    };
+    this.destination = destination;
+    void destination.read.then(
+      () => (destination.expiresAt = Date.now() + 15000),
+      () => {
+        if (this.destination === destination) this.destination = undefined;
+      },
+    );
+    return destination.read;
+  }
+  warmDestination() {
+    void this.readDestination();
+  }
   async submit(input: Parameters<CreationSessionDomain["submit"]>[0]) {
     const route = this.state.route,
       epoch = this.state.epoch;
@@ -41,62 +76,70 @@ export class CreationSessionCommands {
         this.port.renderPending();
         throw new Error(this.port.t("creation.pendingSubmission"));
       }
-    } else {
-      const control = this.port.controls(),
-        id = crypto.randomUUID();
-      const request = {
-        id,
-        prompt,
-        selections: [...input.selections],
-        attachments,
-        runtimeId: control.runtimeId,
-        ...(control.model ? { model: control.model } : {}),
-        ...(control.effort ? { effort: control.effort } : {}),
-      };
-      if (route.id) {
-        this.state.sending.add(route.key);
-        try {
-          const outputType =
-            this.state.task?.artifact && this.state.task.state === "succeeded"
-              ? defaultCreationOutput(await this.port.api().options())
-              : undefined;
-          if (epoch !== this.state.epoch) return;
-          this.state.pending = { id, request: { ...request, ...(outputType ? { outputType } : {}) } };
-        } finally {
-          this.state.sending.delete(route.key);
-        }
-      } else {
-        this.state.sending.add(route.key);
-        try {
-          const [options, tree] = await Promise.all([this.port.api().options(), documentTreeApi.read("personal")]);
-          if (epoch !== this.state.epoch) return;
-          if (!options.defaultProfileId) throw new Error(this.port.t("creation.unavailable"));
-          this.state.pending = {
-            id,
-            request: {
-              ...request,
-              projectId: "personal",
-              treeVersion: tree.version,
-              parentId: null,
-              locale: document.documentElement.lang,
-              profileId: options.defaultProfileId,
-              outputType: defaultCreationOutput(options),
-            },
-          };
-        } finally {
-          this.state.sending.delete(route.key);
-        }
-      }
-      this.port.persist();
     }
-    await this.dispatchPending();
+    await this.whileSending(route.key, async () => {
+      if (!this.state.pending) {
+        const control = this.port.controls(),
+          id = crypto.randomUUID(),
+          locale = document.documentElement.lang || "en";
+        const [runtimeId, target] = await Promise.all([
+          control.runtimeId || this.defaultRuntime(),
+          route.id
+            ? this.state.task?.artifact && this.state.task.state === "succeeded"
+              ? this.port
+                  .api()
+                  .options()
+                  .then((options) => ({ outputType: defaultCreationOutput(options) }))
+              : undefined
+            : this.readDestination().then((destination) => ({
+                ...destination,
+                projectId: "personal",
+                parentId: null,
+                locale,
+              })),
+        ]);
+        if (epoch !== this.state.epoch) return;
+        this.state.pending = {
+          id,
+          request: {
+            id,
+            prompt,
+            selections: [...input.selections],
+            attachments,
+            ...(runtimeId ? { runtimeId } : {}),
+            ...(control.model ? { model: control.model } : {}),
+            ...(control.effort ? { effort: control.effort } : {}),
+            ...target,
+          },
+        };
+        this.port.persist();
+      }
+      await this.dispatch();
+    });
   }
 
   async dispatchPending() {
+    const route = this.state.route;
+    if (route && this.state.pending) await this.whileSending(route.key, () => this.dispatch());
+  }
+
+  private async whileSending(key: string, work: () => Promise<void>) {
+    if (this.state.sending.has(key)) return;
+    this.state.sending.add(key);
+    try {
+      this.port.renderPending();
+      await work();
+    } finally {
+      this.state.sending.delete(key);
+      if (this.state.route?.key === key) this.port.renderPending();
+    }
+  }
+
+  private async dispatch() {
     const route = this.state.route,
       pending = this.state.pending,
       epoch = this.state.epoch;
-    if (!route || !pending || this.state.sending.has(route.key)) return;
+    if (!route || !pending) return;
     const key = this.port.preferenceKey(),
       model = this.state.model,
       effort = this.state.effort,
@@ -105,12 +148,12 @@ export class CreationSessionCommands {
       const saved = storage.getJson(key, { model, effort, pending: null });
       if (saved.pending?.id === pending.id) storage.setJson(key, { ...saved, pending: null });
     };
-    this.state.sending.add(route.key);
-    this.port.renderPending();
     try {
+      const request = { ...pending.request, id: pending.id };
+      if ("runtimeId" in request && request.runtimeId === "") Reflect.deleteProperty(request, "runtimeId");
       const result = route.id
-        ? await api.message(this.state.task?.id || route.id, { ...pending.request, id: pending.id })
-        : await api.submit(pending.request as CreationRequest);
+        ? await api.message(this.state.task?.id || route.id, request)
+        : await api.submit(request as CreationRequest);
       clearPending();
       if (epoch === this.state.epoch && this.state.pending?.id === pending.id) this.state.pending = undefined;
       const materials = (pending.request.attachments || []) as readonly { materialId: string }[];
@@ -121,8 +164,7 @@ export class CreationSessionCommands {
         materials.map((entry) => entry.materialId),
       );
       if (epoch !== this.state.epoch) return;
-      this.port.renderPending();
-      if (result.task.id === route.id) await this.port.refresh();
+      if (result.task.id === route.id) void this.port.refresh();
       else this.port.navigate("/creation/" + encodeURIComponent(result.task.id) + "?creationScope=" + route.scope);
     } catch (error) {
       if (
@@ -133,11 +175,9 @@ export class CreationSessionCommands {
       ) {
         clearPending();
         if (epoch === this.state.epoch && this.state.pending?.id === pending.id) this.state.pending = undefined;
+        if (this.destination?.epoch === epoch) this.destination = undefined;
       }
-      if (epoch === this.state.epoch) this.port.renderPending();
       throw error;
-    } finally {
-      this.state.sending.delete(route.key);
     }
   }
 }

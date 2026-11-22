@@ -12,6 +12,7 @@ import { parseWorkbenchRoute } from "../workbench-route.js";
 import { creationSessionRoute } from "../creation/session-route.js";
 import { selectCreationSkill } from "../creation/drafts.js";
 import { creationDraftAfterAcknowledgement } from "../creation/submitted-draft.js";
+import { busyIndicator } from "../busy-indicator.js";
 
 // Owns drafts, IME input and submit-control projections; native delivery is delegated.
 /** @param {import("./ports.js").FeatureOptions<"drafts" | "mutations" | "state" | "$" | "t" | "viewUpdates" | "identity", "uploads" | "status" | "delivery" | "models" | "workbench", "composer">} options */
@@ -152,16 +153,31 @@ export function assembleComposer({
     const button = $("#sendButton");
     if (!button) return;
     button.dataset.turnId = activeTurnId();
-    button.disabled = !uploadsPort.composerAttachmentsReady();
-    const mode = activeTurnId()
-        ? $("#prompt").value.trim() || state.composerAttachments.length
-          ? "steer"
-          : "stop"
-        : "send",
-      label = mode === "stop" ? "common.stop" : mode === "steer" ? "sessions.steer" : "common.sendMessage";
+    const creation = creationSessionRoute() ? workbenchPort.workbench?.creationSession() : null;
+    const sending = creation?.sending ?? deliveryPort.isSending(deliveryPort.pendingMessageOwner());
+    button.disabled = sending || !uploadsPort.composerAttachmentsReady();
+    if (sending) button.setAttribute("aria-busy", "true");
+    else button.removeAttribute("aria-busy");
+    const mode = sending
+        ? "sending"
+        : activeTurnId()
+          ? $("#prompt").value.trim() || state.composerAttachments.length
+            ? "steer"
+            : "stop"
+          : "send",
+      label =
+        mode === "sending"
+          ? creation
+            ? "creation.creating"
+            : "common.sending"
+          : mode === "stop"
+            ? "common.stop"
+            : mode === "steer"
+              ? "sessions.steer"
+              : "common.sendMessage";
     // Preserve the pressed element when polling refreshes an unchanged control.
     if (button.dataset.submitMode !== mode || !button.firstElementChild)
-      setMessageHtml(button, codexIcon(mode === "stop" ? "square" : "arrowUp"));
+      setMessageHtml(button, sending ? busyIndicator : codexIcon(mode === "stop" ? "square" : "arrowUp"));
     button.dataset.submitMode = mode;
     button.classList.toggle("stop", mode === "stop");
     button.classList.toggle("steer", mode === "steer");

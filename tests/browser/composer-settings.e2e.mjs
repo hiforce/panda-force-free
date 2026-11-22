@@ -154,7 +154,7 @@ try {
       await page.goto(app.base + "/create");
       await page.locator('.creation-skill-discovery [data-skill-id="software-prd"]:enabled').waitFor();
       await page.locator("#composerSettingsButton").click();
-      assert(await page.locator('[data-composer-setting="permissions"]').isDisabled());
+      assert.equal(await page.locator('[data-composer-setting="permissions"]').count(), 0);
       await page.locator('[data-composer-setting="model"]').click();
       await page.locator("#sessionSettingsDialog[open]").waitFor();
       await selectSessionModel(page, "gpt-5.6-sol");

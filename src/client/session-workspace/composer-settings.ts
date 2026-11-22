@@ -52,7 +52,7 @@ export function createComposerSettingsMenu(options: {
     localizeAttribute(menu, "aria-label", "composer.settings", undefined, t);
     setMessageHtml(
       menu,
-      `<header class="composer-panel-heading"><h2>${messageHtml("composer.settings", undefined, t)}</h2><button type="button" class="session-menu-close composer-panel-action" ${messageAttributes("aria-label", "common.close", undefined, t)}>${codexIcon("x")}</button></header><div class="composer-settings-choices">${row("model", messageHtml("sessionview.modelReasoning", undefined, t), [values.model, values.effort].filter(Boolean).join(" · "), "slidersHorizontal")}${row("permissions", messageHtml("composer.executionPermissions", undefined, t), values.permission, "shield", !values.view.permissions.length)}</div>`,
+      `<header class="composer-panel-heading"><h2>${messageHtml("composer.settings", undefined, t)}</h2><button type="button" class="session-menu-close composer-panel-action" ${messageAttributes("aria-label", "common.close", undefined, t)}>${codexIcon("x")}</button></header><div class="composer-settings-choices">${row("model", messageHtml("sessionview.modelReasoning", undefined, t), [values.model, values.effort].filter(Boolean).join(" · "), "slidersHorizontal")}${values.view.hidePermissionSetting ? "" : row("permissions", messageHtml("composer.executionPermissions", undefined, t), values.permission, "shield", !values.view.permissions.length)}</div>`,
     );
   }
   function close() {
@@ -106,6 +106,7 @@ export function createComposerSettingsMenu(options: {
       values.model,
       values.effort,
       values.permission,
+      values.view.hidePermissionSetting,
       values.view.permissions.length,
     ]);
     if (!menu.hidden) {

@@ -4,7 +4,7 @@ title: Feature catalog
 
 # Feature catalog
 
-This catalog describes PandaForce 0.1.2. Use the matching release image and configuration files. Screenshots use fictional demonstration content.
+This catalog describes PandaForce 0.1.3. Use the matching release image and configuration files. Screenshots use fictional demonstration content.
 
 [简体中文](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md) · [README](https://github.com/hiforce/panda-force-free/tree/main#readme) · [Installation](./installation.md)
 
@@ -162,7 +162,7 @@ Explore the [anonymous product-publishing use case](https://github.com/hiforce/p
 
 ## Installation, builds and CDN
 
-- Install with Docker/Compose using `hiforceai/panda-force:0.1.2`; the Rocky Linux 9 image includes Codex CLI, Grok Build and the creative toolchain. Linux amd64 is the documented image target.
+- Install with Docker/Compose using `hiforceai/panda-force:0.1.3`; the Rocky Linux 9 image includes Codex CLI, Grok Build and the creative toolchain. Linux amd64 is the documented image target.
 - Use the matching release configuration. Source contributions and custom builds are covered in the [development guide](building.md).
 - Use independently configured build/preview executors and optional Compose overlays for documents, search and previews.
 - Override images, registry credentials and pull policies, including private registries, without placing credentials in application source.

@@ -40,6 +40,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   private readonly state = new CreationSessionState();
   private readonly reader: CreationSessionReader;
   private readonly commands: CreationSessionCommands;
+  private defaultRuntime?: Promise<string>;
   private readonly goals: CreationSessionGoals;
   private readonly presenter: CreationSessionPresenter;
   private readonly sectionView: CreationSessionSections;
@@ -89,11 +90,14 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       persist: () => this.persist(),
       preferenceKey: () => this.preferenceKey(),
       refresh: () => this.refresh(),
-      renderPending: () => this.renderPending(),
+      renderPending: () => {
+        this.renderPending();
+        this.bridge.changed();
+      },
       navigate: this.navigate,
       bridge: this.bridge,
     };
-    this.commands = new CreationSessionCommands(this.state, commandPorts);
+    this.commands = new CreationSessionCommands(this.state, commandPorts, () => this.defaultRuntime);
     this.goals = new CreationSessionGoals(this.state, commandPorts);
     this.home.className = "creation-session-home";
     this.composerHome.className = "creation-entry-composer";
@@ -129,6 +133,9 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   get running() {
     return Boolean(this.state.task && creationActive(this.state.task));
   }
+  get sending() {
+    return this.state.sending.has(this.key);
+  }
   private get api() {
     return creationApiFor(this.state.route?.scope === "personal" ? "personal" : "");
   }
@@ -151,6 +158,12 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.state.runtimePreferenceSaved = !!this.state.runtimeId;
     this.state.runtime = undefined;
     if (route.id && !this.state.runtimeId) this.state.runtimeId = "codex";
+    this.defaultRuntime = this.state.runtimeId
+      ? undefined
+      : runtimeModelCatalog(this.t)
+          .list()
+          .then((catalog) => catalog.defaultRuntimeId)
+          .catch(() => "");
     void this.loadRuntime();
     this.state.model = typeof saved.model === "string" ? saved.model : "";
     this.state.effort = typeof saved.effort === "string" ? saved.effort : "";
@@ -159,9 +172,11 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.bridge.clear();
     this.bridge.reset(!route.id);
     root.replaceChildren(this.historyHost, this.notice);
+    this.notice.classList.remove("sr-only");
     setOpaqueText(this.notice, "");
     this.bridge.restoreDraft();
     if (!route.id) {
+      if (!this.state.pending) this.commands.warmDestination();
       const legacy = new CreationDrafts(this.identity, "personal").load();
       const migrationKey = this.preferenceKey() + ":legacy-migrated";
       if (!storage.get(migrationKey)) {
@@ -234,7 +249,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     try {
       const catalog = runtimeModelCatalog(this.t);
       let id = this.state.runtimeId;
-      if (!id) id = (await catalog.list()).defaultRuntimeId;
+      if (!id) id = (await this.defaultRuntime) || "";
+      if (!id || current !== this.state.catalogEpoch) return;
       const runtime = await catalog.discover(id);
       if (current !== this.state.catalogEpoch || !this.state.route) return;
       this.state.runtimeId = id;
@@ -257,8 +273,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       model,
       effort,
       permission: "documents",
-      permissionHint: "composer.managedPermissions",
       permissionOwner: "creation",
+      hidePermissionSetting: true,
       settingsHint: "creation.nextRoundSettings",
       permissions: [],
     };
@@ -469,6 +485,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       );
   }
   private readFailed(error: unknown) {
+    this.notice.classList.remove("sr-only");
     this.notice.dataset.phase = "error";
     this.notice.textContent = errorText(
       error instanceof CreationApiError ? error.payload : null,
@@ -608,6 +625,14 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   }
 
   private renderPending() {
+    this.notice.classList.toggle("sr-only", this.sending);
+    if (this.sending) {
+      if (this.notice.dataset.phase !== "sending") {
+        this.notice.dataset.phase = "sending";
+        localizeText(this.notice, "creation.creating", {}, this.t);
+      }
+      return;
+    }
     setOpaqueText(this.notice, "");
     this.notice.dataset.phase = this.state.pending ? "pending" : "idle";
     const task = this.state.task;

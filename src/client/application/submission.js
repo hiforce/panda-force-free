@@ -8,6 +8,7 @@ import { deliveryIsUncertain } from "./input-errors.js";
 import { steerOrStart } from "./turn-input.js";
 import { prepareSessionSkillInput } from "../session-skills-api.js";
 import { CreationApiError } from "../creation/api.js";
+import { DocumentApiError } from "../documents/api.js";
 import { errorText } from "../i18n.js";
 
 // Coordinates a single explicit input transaction while preserving draft and acknowledgement semantics.
@@ -59,9 +60,11 @@ export function assembleSubmission({
         }
       } catch (error) {
         noticesPort.addPersistentError(
-          error instanceof CreationApiError
+          error instanceof CreationApiError || error instanceof DocumentApiError
             ? errorText(error.payload, t, "creation.taskActionFailed")
-            : errorMessage(error),
+            : error instanceof TypeError || (error instanceof DOMException && error.name === "TimeoutError")
+              ? t("creation.taskActionFailed")
+              : errorMessage(error),
         );
       } finally {
         domainSending.delete(key);
@@ -248,7 +251,10 @@ export function assembleSubmission({
       deliveryPort.setPendingMessageDelivery(optimisticId || "", uncertain ? "unconfirmed" : "failed");
       if (isCurrent()) {
         if (!questionAnswer && !uncertain && !input.value && !state.composerAttachments.length) {
-          restoreComposerInput({ text, mentions, attachments }, { input, mutations, uploadsPort, suggestionsPort, viewUpdates });
+          restoreComposerInput(
+            { text, mentions, attachments },
+            { input, mutations, uploadsPort, suggestionsPort, viewUpdates },
+          );
         }
         if (!isTransportSwitch(error))
           noticesPort.addPersistentError(

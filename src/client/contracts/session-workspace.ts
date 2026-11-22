@@ -36,6 +36,7 @@ export interface SessionWorkspaceView {
 export interface CreationSessionDomain {
   readonly key: string;
   readonly running: boolean;
+  readonly sending: boolean;
   read(): SessionWorkspaceView;
   controls(): SessionControlView;
   applyModel(model: string, effort: string): void;
@@ -112,6 +113,7 @@ export interface SessionControlView {
   settingsHint?: MessageId;
   permissionHint?: MessageId;
   permissionOwner?: "native" | "harness" | "creation";
+  hidePermissionSetting?: boolean;
   modelLoadStatus?: string;
   sessionId: string;
   model: string;

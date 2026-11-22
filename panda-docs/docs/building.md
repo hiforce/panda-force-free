@@ -77,7 +77,7 @@ Keep account and workspace volumes when rebuilding. The release Dockerfile reuse
 
 ## Container base images
 
-The 0.1.2 source defaults to the public **Rocky creative build/runtime pair** for Linux amd64. Both include Codex CLI and Grok Build plus the reviewed Office/PDF/OCR, font, image, research, writing, browser and video tools. The build image adds the application development/native compilation dependencies; the runtime image carries production dependencies. [Contents, purpose, exact inputs and self-build workflow](base-images.md) explains the pair.
+The 0.1.3 source defaults to the public **Rocky creative build/runtime pair** for Linux amd64. Both include Codex CLI and Grok Build plus the reviewed Office/PDF/OCR, font, image, research, writing, browser and video tools. The build image adds the application development/native compilation dependencies; the runtime image carries production dependencies. [Contents, purpose, exact inputs and self-build workflow](base-images.md) explains the pair.
 
 The Dockerfile, both Compose build overlays and `scripts/build/base-images.json` use the same actual public digests. The [development container commands](#development-container) build your checkout using that pair.
 
