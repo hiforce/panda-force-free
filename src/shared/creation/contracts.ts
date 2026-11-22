@@ -47,6 +47,7 @@ export interface CreationRequest {
   effort?: string;
   attachments?: readonly { materialId: string }[];
   outputType?: CreationRequestedOutput;
+  dialogue?: true;
 }
 export const DOCUMENT_CREATION_CAPABILITIES = ["project.documents.create"] as const;
 export interface CreationAvailability {
@@ -57,7 +58,7 @@ export interface CreationAvailability {
   capabilities: readonly SkillCapability[];
   outputTypes?: readonly CreationOutputType[];
 }
-export type CreationTaskState = "queued" | "running" | "committing" | "succeeded" | "failed" | "cancelled";
+export type CreationTaskState = "queued" | "running" | "committing" | "succeeded" | "replied" | "failed" | "cancelled";
 export type CreationFailure =
   "interrupted" | "timedOut" | "inactive" | "invalidOutput" | "targetChanged" | "fileChanged" | "writeUnavailable";
 export interface CreationGoal {
@@ -77,7 +78,7 @@ export interface CreationGoalCommand {
 export interface CreationProgress {
   at: number;
   generation: number;
-  stage: "preparing" | "started" | "saving" | "waiting" | "answered" | "message" | "usage" | "activity";
+  stage: "preparing" | "started" | "saving" | "waiting" | "answered" | "message" | "reply" | "usage" | "activity";
   text?: string;
   id?: string;
   streaming?: boolean;

@@ -19,6 +19,17 @@ function breakdown(value: unknown): TokenCount | undefined {
   return Object.keys(result).length ? result : undefined;
 }
 
+export function addTokenCounts(previous: TokenCount | undefined, next: TokenCount): TokenCount {
+  const result: TokenCount = {};
+  for (const key of fields) {
+    const before = previous?.[key],
+      after = next[key];
+    const sum = before === undefined ? after : after === undefined ? before : before + after;
+    if (counter(sum)) result[key] = sum;
+  }
+  return result;
+}
+
 /** Validate portable provider counters; missing values remain unknown rather than zero. */
 export function tokenUsage(value: unknown): TokenUsage | undefined {
   if (!isRecord(value)) return;

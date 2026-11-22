@@ -1,0 +1,21 @@
+{
+  "title": "通知中心",
+  "empty": "目前沒有通知。",
+  "ready": "通知",
+  "unread": "{count} 則未讀通知",
+  "loadFailed": "通知暫時無法重新整理，請重試。",
+  "openDeliverable": "查看交付成果",
+  "viewAll": "查看全部",
+  "details": "通知詳細資料",
+  "page": "第 {number} 頁",
+  "previous": "上一頁",
+  "next": "下一頁",
+  "loading": "正在載入通知",
+  "new": "未讀",
+  "notice": "通知",
+  "openLink": "開啟連結",
+  "actionFailed": "無法開啟此操作，請再試一次。",
+  "identityRequired": "登入後即可檢視通知。",
+  "invalidRequest": "通知要求無效。",
+  "notFound": "這則通知已無法使用。"
+}

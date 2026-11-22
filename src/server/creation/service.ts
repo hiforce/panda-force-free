@@ -1,4 +1,10 @@
 import { creationDocumentArtifact } from "../../shared/creation/contracts.js";
+import {
+  CREATION_NOTIFICATION_PAGE_SIZE,
+  CREATION_NOTIFICATION_PREVIEW_SIZE,
+  creationNotificationCursor,
+  type CreationNotificationPosition,
+} from "../../shared/creation/notifications.js";
 import type { CreationResult } from "./ports.js";
 import type { CreationAvailability, CreationTaskView } from "../../shared/creation/contracts.js";
 import type { CreationInputs } from "./input.js";
@@ -73,17 +79,17 @@ export class CreationService {
   options() {
     return this.using(this.availability);
   }
-  notifications(owner: string) {
+  notifications(owner: string, query?: "preview" | { before?: CreationNotificationPosition }) {
     return this.using(async () => {
       const items: import("../../shared/creation/contracts.js").CreationNotification[] = [];
-      for (const record of (await this.tasks.notifications?.(owner)) ?? []) {
+      const notification = async (record: import("./ports.js").CreationNotificationRecord) => {
         const task = await this.tasks.get(owner, record.taskId);
-        if (task.state !== "succeeded" || !task.artifact) continue;
+        if (task.state !== "succeeded" || !task.artifact) return;
         try {
           await this.authorize(owner, task.spec.projectId);
           if (task.artifact.projectId !== task.spec.projectId) await this.authorize(owner, task.artifact.projectId);
         } catch {
-          continue;
+          return;
         }
         let artifact = task.artifact;
         if (artifact.kind === "document" && this.documentLocation) {
@@ -92,13 +98,36 @@ export class CreationService {
             task.spec.target.documentProjectId ?? task.spec.projectId,
             artifact.documentId,
           );
-          if (!location) continue;
-          await this.authorize(owner, location.projectId);
+          if (!location) return;
+          try {
+            await this.authorize(owner, location.projectId);
+          } catch {
+            return;
+          }
           artifact = { ...artifact, projectId: location.projectId };
         }
         items.push({ ...record, title: artifact.title ?? "", kind: artifact.kind, artifact });
+      };
+      if (query && query !== "preview") {
+        let before = query.before;
+        const limit = CREATION_NOTIFICATION_PAGE_SIZE + 1;
+        while (items.length < limit) {
+          const records = (await this.tasks.notifications?.(owner, { before, limit })) ?? [];
+          for (const record of records) {
+            await notification(record);
+            if (items.length === limit) break;
+          }
+          if (records.length < limit) break;
+          before = records.at(-1);
+        }
+        const page = items.slice(0, CREATION_NOTIFICATION_PAGE_SIZE);
+        return { items: page, nextCursor: items.length === limit ? creationNotificationCursor(page.at(-1)!) : null };
       }
-      return { items, unreadCount: items.filter((item) => item.readAt === null).length };
+      for (const record of (await this.tasks.notifications?.(owner)) ?? []) await notification(record);
+      return {
+        items: query === "preview" ? items.slice(0, CREATION_NOTIFICATION_PREVIEW_SIZE) : items,
+        unreadCount: items.filter((item) => item.readAt === null).length,
+      };
     });
   }
   readNotification(owner: string, value: unknown) {
@@ -377,7 +406,7 @@ export class CreationService {
       const task = await this.tasks.get(owner, creationUuid(id));
       await this.authorize(owner, task.spec.projectId);
       if (this.messages && (await this.messages.submit(owner, id, frozen, true))) return this.view(owner, task);
-      if (task.artifact && task.state === "succeeded") {
+      if ((task.artifact && task.state === "succeeded") || task.state === "replied") {
         const next = await this.submissions.followUp(owner, id, frozen);
         this.runtime.wake();
         return this.view(owner, next);

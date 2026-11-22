@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-ARG BUILD_BASE=hiforceai/panda-force-build-base@sha256:d7eb98ddaddf65c4247f887c9c491c76a6d43c1fa17c03fa6f1ece3eb3e2f22c
-ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base@sha256:d9ff95b034564c9d167070fd052c3ee5446509206e14471226a846342271004c
+ARG BUILD_BASE=hiforceai/panda-force-build-base@sha256:50226fbc3e63b5477e4b56326d67eee962845ad464d0aee4aa09ee5eff185668
+ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base@sha256:a8a889237d44c1bbea1f94b581d5075138b038ac07808eb666b8ccb28315d13e
 FROM ${BUILD_BASE} AS build
 USER root
 WORKDIR /app

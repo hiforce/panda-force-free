@@ -437,7 +437,7 @@ export class CreationActivity {
             (this.filter === "active"
               ? creationActive(task)
               : this.filter === "completed"
-                ? task.state === "succeeded"
+                ? task.state === "succeeded" || task.state === "replied"
                 : Boolean(task.failure) || ["failed", "cancelled"].includes(task.state))),
       ),
       limit = this.options.presentation === "cards" ? 8 : (this.options.limit ?? 4),

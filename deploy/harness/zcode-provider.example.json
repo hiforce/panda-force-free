@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "config": {
+    "providerConfigRules": {
+      "providerRules": [
+        {
+          "providerId": "panda-bigmodel-coding",
+          "providerName": "BigModel Coding Plan",
+          "enabled": true,
+          "config": {
+            "group": "standard-personal",
+            "access": { "type": "api-key", "apiKey": "" },
+            "api": {
+              "type": "openai-chat-completions",
+              "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4"
+            },
+            "personalModelIds": ["glm-5.3-flash"]
+          }
+        }
+      ]
+    },
+    "modelConfigRules": {
+      "providerModelRules": [
+        { "providerId": "panda-bigmodel-coding", "modelId": "glm-5.3-flash", "config": { "enabled": true } }
+      ],
+      "manualProviderModelRules": []
+    },
+    "defaultModelSelection": {
+      "providerId": "panda-bigmodel-coding",
+      "modelId": "glm-5.3-flash",
+      "options": { "reasoningLevel": "high" }
+    }
+  }
+}

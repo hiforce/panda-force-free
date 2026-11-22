@@ -23,7 +23,7 @@ export function mysqlCreationTaskRow(row: Row): CreationTaskRow {
     operationId: text(row.operationId),
     spec: text(row.spec),
     signature: text(row.signature),
-    state: choice(row.state, ["queued", "running", "committing", "succeeded", "failed", "cancelled"]),
+    state: choice(row.state, ["queued", "running", "committing", "succeeded", "replied", "failed", "cancelled"]),
     generation: mysqlInteger(row.generation),
     attempts: mysqlInteger(row.attempts),
     budget: mysqlInteger(row.budget),

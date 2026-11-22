@@ -1,0 +1,17 @@
+{
+  "version": "3.18.2",
+  "cliVersion": "0.17.1",
+  "platform": "linux/amd64",
+  "archive": {
+    "url": "https://cdn-zcode.z.ai/zcode/electron/releases/3.18.2/linux-x64/ZCode-3.18.2-linux-x64.AppImage",
+    "sha256": "f6b2fb39413a7efe17e3bd086c7d06a6adca0dfda099a1798ea8b351f0b70749"
+  },
+  "upstreamRevision": "fec975905a2abd4c07e35c40d51fa097a2258ec9",
+  "files": {
+    "zcode.cjs": "08726b5ef69e1e9072828baa4656713cb3aac93bb096938681278c5600312b2c",
+    "zcode-builtin.json": "2af7b0cac658e9507413f5b1f5f9754e17c18fd29745522592d8b6ae699030ab",
+    "THIRD-PARTY-NOTICES.md": "2b67f5e4994517ccd4fdaa81a7cb97367737c9b5e666ff6ab91428b168dffeda",
+    "LICENSE": "606c36baf38b973227273df12a74930e4b4137280eea835c5cd623aa4553c13b",
+    "NOTICE.md": "c946abfb46cf3920fefeb756c526620201a3ce29bf84953b540763605b33d9ea"
+  }
+}

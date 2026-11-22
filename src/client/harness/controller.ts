@@ -34,7 +34,7 @@ export function createHarnessController(options: {
 }) {
   const { t, state } = options,
     api = harnessApi(t),
-    runtimeCatalog = loadRuntimeCatalog(t),
+    runtimeCatalog = loadRuntimeCatalog(t, true),
     trigger = document.querySelector<HTMLButtonElement>("#harnessButton")!;
   const panel = document.createElement("div");
   panel.className = "harness-menu composer-panel";
@@ -313,7 +313,7 @@ export function createHarnessController(options: {
       }
       return true;
     },
-    available: () => !!current() || (!!runtime() && runtime()!.kind !== "codex" && runtime()!.status === "ready"),
+    available: () => !!current() || (!!runtime() && runtime()!.id !== "codex" && runtime()!.status === "ready"),
     async rpc(method, params, next) {
       const id = harnessId(params.threadId),
         value = runtime();
@@ -362,7 +362,12 @@ export function createHarnessController(options: {
           thread = presentation(result);
         sync();
         if (method === "host/thread/live")
-          return { thread, active: !!result.conversation.activeRunId, turn: thread.turns.at(-1) ?? null };
+          return {
+            thread,
+            active: !!result.conversation.activeRunId,
+            turn: thread.turns.at(-1) ?? null,
+            tokenUsage: thread.tokenUsage,
+          };
         if (method === "host/thread/history")
           return {
             thread,
@@ -434,6 +439,14 @@ export function createHarnessController(options: {
           lastSignature = signature;
           const thread = presentation(result),
             turn = thread.turns.at(-1);
+          if (thread.tokenUsage)
+            options.emit({
+              type: "engine/notification",
+              payload: {
+                method: "thread/tokenUsage/updated",
+                params: { threadId: thread.id, tokenUsage: thread.tokenUsage },
+              },
+            });
           if (thread.name && `${id}:${thread.name}` !== lastTitle) {
             lastTitle = `${id}:${thread.name}`;
             options.emit({
@@ -453,7 +466,10 @@ export function createHarnessController(options: {
             for (const item of turn.items)
               options.emit({
                 type: "engine/notification",
-                payload: { method: "item/started", params: { threadId: thread.id, turnId: turn.id, item } },
+                payload: {
+                  method: item.status && item.status !== "inProgress" ? "item/completed" : "item/started",
+                  params: { threadId: thread.id, turnId: turn.id, item },
+                },
               });
           sync();
         }

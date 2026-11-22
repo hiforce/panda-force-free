@@ -20,12 +20,14 @@ import { creationInteractionTools } from "./interaction-tools.js";
 import { FILE_DIRECTORY_TOOL, type CreationFileDirectories } from "../file-directories.js";
 import { DOCUMENT_DESTINATIONS_TOOL, type CreationDocumentDestinations } from "../document-destinations.js";
 import { creationToolActivity } from "./activity.js";
+import { creationDialogue } from "./dialogue.js";
+import type { EngineQuestion } from "../../../shared/engine/questions.js";
 
 /** One leased execution joins immutable input, scoped tools and an engine; durable state owns the outcome. */
 export class CreationWorker {
   constructor(
     private readonly tasks: CreationRunTasks,
-    private readonly queue: Pick<CreationScheduling, "release" | "fail">,
+    private readonly queue: Pick<CreationScheduling, "release" | "fail" | "reply">,
     private readonly inputs: CreationInputs,
     private readonly outputs: CreationOutputs,
     private readonly questions: CreationQuestions,
@@ -127,6 +129,7 @@ export class CreationWorker {
         directory = await this.workspaces?.open(claim.task.spec),
         history = await this.questions.history(lease.owner, lease.taskId),
         engine = this.engines.select(input.profile, lease.owner),
+        dialogue = creationDialogue(input.dialogue === true),
         tools = documentCreationTools(
           lease,
           this.tasks,
@@ -135,8 +138,9 @@ export class CreationWorker {
           () => interaction.version(),
           () => interaction.goalVersion(),
           () =>
-            (input.outputType === undefined && !input.recoveryFrom && !creationPreviousPaged(input)) ||
-            interaction.ready(),
+            dialogue.delivering() &&
+            ((input.outputType === undefined && !input.recoveryFrom && !creationPreviousPaged(input)) ||
+              interaction.ready()),
           this.destinations,
           this.directories,
         ),
@@ -161,6 +165,20 @@ export class CreationWorker {
           await this.tasks.assertExecution(boundExecution(call), this.now());
           signal.throwIfAborted();
         },
+        ask = async (scope: { sessionId: string; runId: string }, values: EngineQuestion[]) => {
+          const bound = execution;
+          if (!bound || scope.sessionId !== bound.sessionId || scope.runId !== bound.runId)
+            throw new CreationError("leaseLost");
+          if (!waiting++) permit.suspend();
+          try {
+            await record("waiting");
+            const answer = await this.questions.ask(bound, values, signal);
+            await record("answered");
+            return answer;
+          } finally {
+            if (!--waiting && !signal.aborted) await permit.resume(signal);
+          }
+        },
         media =
           input.outputType === undefined
             ? undefined
@@ -172,7 +190,7 @@ export class CreationWorker {
                 active,
                 assert: async (call) => {
                   await active(call);
-                  if (!interaction.ready()) throw new CreationError("conflict");
+                  if (!dialogue.delivering() || !interaction.ready()) throw new CreationError("conflict");
                   const context = await this.userMessages?.context(lease.owner, lease.taskId),
                     goal = await this.goals?.read(lease.owner, lease.taskId);
                   if (
@@ -193,7 +211,12 @@ export class CreationWorker {
       const result = await engine.run(
         {
           ...creationRunInput(input, history, Boolean(this.destinations), Boolean(this.directories)),
-          tools: [...tools.definitions, ...interaction.definitions, ...(media?.definitions ?? [])],
+          tools: [
+            ...dialogue.definitions,
+            ...tools.definitions,
+            ...interaction.definitions,
+            ...(media?.definitions ?? []),
+          ],
         },
         {
           signal,
@@ -204,11 +227,12 @@ export class CreationWorker {
           },
           message: (text) => {
             // Engines exposing snapshots already report completed messages through that channel.
-            if (snapshotMessages) return;
+            if (snapshotMessages || dialogue.answer()) return;
             messages = messages.then(() => record("message", text));
             return messages;
           },
           event: (event) => {
+            if (event.kind === "message" && dialogue.answer()) return;
             if (event.kind === "message") snapshotMessages = true;
             snapshots.set(event.kind === "message" ? event.id : "usage", structuredClone(event));
             if (event.kind === "message" && event.complete) return flushSnapshots();
@@ -260,17 +284,26 @@ export class CreationWorker {
             await this.authorize(lease.owner, claim.task.spec.projectId);
             signal.throwIfAborted();
             boundExecution(call);
+            if (dialogue.handles(call.name)) {
+              await active(call);
+              return dialogue.call(call.arguments, (question) =>
+                ask(call, [{ id: randomUUID(), question, isOther: true }]),
+              );
+            }
             return creationToolActivity(
               this.progress,
               lease,
               call.name,
               async () => {
                 if (media?.definitions.some((tool) => tool.name === call.name)) {
+                  if (call.name !== "panda_creation_original_read" && !dialogue.delivering())
+                    throw new CreationError("conflict");
                   if (call.name === "panda_artifacts_save") await record("saving");
                   return media.call(call);
                 }
                 if ([DOCUMENT_DESTINATIONS_TOOL, FILE_DIRECTORY_TOOL].includes(call.name)) return tools.call(call);
                 if (call.name !== CREATE_DOCUMENT_TOOL) return interaction.call(call);
+                if (!dialogue.delivering()) throw new CreationError("conflict");
                 await record("saving");
                 return tools.call(call);
               },
@@ -278,23 +311,17 @@ export class CreationWorker {
               this.diagnostic,
             );
           },
-          question: async (scope, values) => {
-            const bound = execution;
-            if (!bound || scope.sessionId !== bound.sessionId || scope.runId !== bound.runId)
-              throw new CreationError("leaseLost");
-            if (!waiting++) permit.suspend();
-            try {
-              await record("waiting");
-              const answer = await this.questions.ask(bound, values, signal);
-              await record("answered");
-              return answer;
-            } finally {
-              if (!--waiting && !signal.aborted) await permit.resume(signal);
-            }
-          },
+          question: ask,
         },
       );
       const current = await this.tasks.get(lease.owner, lease.taskId);
+      const reply = dialogue.answer();
+      if (reply && result.status === "completed" && !current.artifact && !current.outputDigest) {
+        signal.throwIfAborted();
+        await this.authorize(lease.owner, claim.task.spec.projectId);
+        await flushSnapshots();
+        if (await this.queue.reply(lease, reply, this.now())) return;
+      }
       if (!current.artifact && !current.outputDigest)
         await this.queue.fail(lease, result.status === "completed" ? "invalidOutput" : "interrupted", this.now());
     } catch (error) {

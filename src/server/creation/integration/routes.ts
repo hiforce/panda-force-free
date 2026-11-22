@@ -3,7 +3,7 @@ import { readJsonBody } from "../../http/body.js";
 import { respondJson } from "../../http/respond.js";
 import type { CreationService } from "../service.js";
 import { CreationError } from "../contracts.js";
-import { creationRecord, creationText } from "../validation.js";
+import { creationNotificationPosition, creationRecord, creationText } from "../validation.js";
 import { creationProtection } from "./protect.js";
 
 export function creationRoutes(
@@ -27,8 +27,21 @@ export function creationRoutes(
       path: "/api/document-creations/notifications",
       method: "GET",
       handler: protect(async ({ url, res }, actor) => {
-        if (url.search || !service.notifications) throw new CreationError("invalidInput");
-        respondJson(res, 200, await service.notifications(actor));
+        const params = url.searchParams;
+        if (
+          !service.notifications ||
+          [...params.keys()].some((key) => !["view", "cursor"].includes(key) || params.getAll(key).length !== 1)
+        )
+          throw new CreationError("invalidInput");
+        const view = params.get("view"),
+          cursor = params.get("cursor");
+        if (view === "history") {
+          const before = cursor === null ? undefined : creationNotificationPosition(cursor);
+          respondJson(res, 200, await service.notifications(actor, { before }));
+          return;
+        }
+        if ((view !== null && view !== "preview") || cursor !== null) throw new CreationError("invalidInput");
+        respondJson(res, 200, await service.notifications(actor, view ?? undefined));
       }),
     },
     {
@@ -99,6 +112,7 @@ export function creationRoutes(
           "selections",
           "attachments",
           "outputType",
+          "dialogue",
           "runtimeId",
           "model",
           "effort",

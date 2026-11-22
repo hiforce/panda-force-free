@@ -12,6 +12,37 @@ import { GrokHarnessAgent } from "./adapters/grok.js";
 import { accessCredentials } from "./auth/snapshot.js";
 import { brokerCredentialSource, credentialLease } from "./auth/remote.js";
 import type { HarnessCredentialLease } from "./auth/contracts.js";
+import { createCodexDriver } from "../engines/codex.js";
+import { ZCodeHarnessAgent } from "./adapters/zcode.js";
+
+function profileEntries(value: string | undefined): Record<string, unknown>[] {
+  if (!value) return [];
+  try {
+    const entries: unknown = JSON.parse(value);
+    if (Array.isArray(entries) && entries.length <= 32 && entries.every(isRecord)) return entries;
+  } catch {}
+  throw new HarnessError("invalidInput");
+}
+
+function profileIdentity(profile: Record<string, unknown>) {
+  if (
+    typeof profile.id !== "string" ||
+    typeof profile.name !== "string" ||
+    !profile.name.trim() ||
+    profile.name.length > 80
+  )
+    throw new HarnessError("invalidInput");
+  return { id: profile.id, name: profile.name.trim() };
+}
+
+function operatorPath(value: unknown): string {
+  if (typeof value !== "string" || !isAbsolute(value)) throw new HarnessError("invalidInput");
+  return value;
+}
+
+function runtimeHome(stateRoot: string, ...scope: string[]) {
+  return resolve(stateRoot, "harness", "native", createHash("sha256").update(scope.join("\0")).digest("hex"));
+}
 interface GrokProfileConfig {
   id: string;
   name: string;
@@ -35,6 +66,86 @@ export function harnessProfiles(
       factory: { create: async () => new CodexHarnessAgent(driver) },
     },
   ];
+  for (const profile of profileEntries(env.PANDA_FORCE_CODEX_HARNESS_PROFILES)) {
+    const identity = profileIdentity(profile),
+      socketPath = operatorPath(profile.socketPath);
+    profiles.push({
+      ...identity,
+      kind: "codex",
+      deployment: "local",
+      conversationOnly: true,
+      factory: {
+        create: async (_runtime, { cwd }) => {
+          let shuttingDown = false;
+          const isolated = createCodexDriver({
+            connection: { mode: "shared", socketPath },
+            defaultCwd: cwd,
+            version: "1",
+            isShuttingDown: () => shuttingDown,
+          });
+          return new CodexHarnessAgent(isolated, () => {
+            shuttingDown = true;
+            isolated.cancelRestart();
+            isolated.stop();
+          });
+        },
+      },
+    });
+  }
+  for (const profile of profileEntries(env.PANDA_FORCE_ZCODE_HARNESS_PROFILES)) {
+    const identity = profileIdentity(profile),
+      command = operatorPath(profile.command),
+      builtinConfig = operatorPath(profile.builtinConfig),
+      providerConfig = operatorPath(profile.providerConfig);
+    const { providerId, model, efforts, defaultEffort } = profile;
+    if (typeof providerId !== "string" || !providerId.trim() || typeof model !== "string" || !model.trim())
+      throw new HarnessError("invalidInput");
+    if (
+      (efforts !== undefined &&
+        (!Array.isArray(efforts) ||
+          efforts.length > 16 ||
+          !efforts.every((value) => typeof value === "string" && value.trim()))) ||
+      (defaultEffort !== undefined &&
+        (typeof defaultEffort !== "string" || !Array.isArray(efforts) || !efforts.includes(defaultEffort)))
+    )
+      throw new HarnessError("invalidInput");
+    profiles.push({
+      ...identity,
+      kind: "zcode",
+      deployment: "local",
+      conversationOnly: true,
+      factory: {
+        create: async (runtime, { owner, scopeId, cwd }) => {
+          const home = runtimeHome(stateRoot, "zcode", runtime.id, owner, scopeId);
+          await mkdir(home, { recursive: true, mode: 0o700 });
+          if ((await realpath(home)) !== home) throw new HarnessError("forbidden", 403);
+          await chmod(home, 0o700);
+          const nativeEnv: NodeJS.ProcessEnv = {
+            HOME: home,
+            XDG_CONFIG_HOME: join(home, "config"),
+            XDG_DATA_HOME: join(home, "data"),
+            XDG_CACHE_HOME: join(home, "cache"),
+            ZCODE_BUILTIN_PROVIDER_CONFIG_FILE: builtinConfig,
+            ZCODE_PERSONAL_PROVIDER_CONFIG_FILE: providerConfig,
+          };
+          for (const key of ["PATH", "LANG", "LC_ALL", "SSL_CERT_FILE", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"])
+            if (env[key]) nativeEnv[key] = env[key];
+          return new ZCodeHarnessAgent({
+            command,
+            cwd,
+            env: nativeEnv,
+            providerId,
+            model,
+            efforts,
+            defaultEffort,
+            cleanup: async () => {
+              if (/^(catalog|ping|probe)-/.test(scopeId)) await rm(home, { recursive: true, force: true });
+            },
+          });
+        },
+      },
+    });
+  }
   let grok: GrokProfileConfig[] = [];
   if (env.PANDA_FORCE_HARNESS_PROFILES) {
     try {
@@ -78,10 +189,7 @@ export function harnessProfiles(
       deployment: profile.deployment ?? "local",
       factory: {
         create: async (runtime, scope) => {
-          const namespace = createHash("sha256")
-            .update(`${runtime.id}\0${scope.owner}\0${scope.scopeId}`)
-            .digest("hex");
-          const home = resolve(stateRoot, "harness", "native", namespace);
+          const home = runtimeHome(stateRoot, runtime.id, scope.owner, scope.scopeId);
           await mkdir(home, { recursive: true, mode: 0o700 });
           if ((await realpath(home)) !== home) throw new HarnessError("forbidden", 403);
           await chmod(home, 0o700);

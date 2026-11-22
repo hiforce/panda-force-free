@@ -66,7 +66,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
-.workbench-navigation > button {
+.workbench-navigation > :is(button, a) {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -76,11 +76,12 @@
   color: var(--pf-muted);
   border-radius: 8px;
   font-size: 13px;
+  text-decoration: none;
 }
-.workbench-navigation > button:hover {
+.workbench-navigation > :is(button, a):hover {
   background: var(--pf-soft);
 }
-.workbench-navigation > button.active {
+.workbench-navigation > .active {
   background: var(--pf-card);
   color: var(--pf-accent);
   font-weight: 550;

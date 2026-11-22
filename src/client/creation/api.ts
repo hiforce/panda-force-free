@@ -46,7 +46,7 @@ async function cancel(prefix: string, id: string) {
     });
     if (
       latest.task.id !== id ||
-      (!latest.task.cancelRequested && !["cancelled", "succeeded", "failed"].includes(latest.task.state))
+      (!latest.task.cancelRequested && !["cancelled", "succeeded", "replied", "failed"].includes(latest.task.state))
     )
       throw error;
     window.dispatchEvent(new Event("panda-force:creation-changed"));
@@ -56,14 +56,6 @@ async function cancel(prefix: string, id: string) {
 export function creationApiFor(project = "") {
   const prefix = (project === "personal" ? "/api/personal" : "/api") + "/document-creations";
   return {
-    notifications: (signal?: AbortSignal) =>
-      json<{ items: import("../../shared/creation/contracts.js").CreationNotification[]; unreadCount: number }>(
-        prefix + "/notifications",
-        undefined,
-        signal,
-      ),
-    readNotification: (taskId: string, generation: number, signal?: AbortSignal) =>
-      json(prefix + "/notifications/read", { taskId, generation }, signal),
     clearHistory: (command: { id: string; taskId?: string; before?: number }) =>
       json<{ id: string; hidden: number }>(prefix + "/history/clear", command),
     options: () => json<CreationAvailability>(prefix + "/options"),

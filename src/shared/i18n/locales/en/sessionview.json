@@ -20,6 +20,7 @@
   "sessionUsage": "Session usage",
   "tokens": "tokens",
   "cumulative": "Cumulative across this session",
+  "recordedTotal": "Recorded usage in this session",
   "input": "Input",
   "output": "Output",
   "cachedInput": "Cached input",

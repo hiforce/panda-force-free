@@ -51,6 +51,7 @@ export function creationRequest(value: unknown): CreationRequest {
       "effort",
       "attachments",
       "outputType",
+      "dialogue",
     ]),
     locale = creationText(row.locale, 35),
     prompt = row.prompt;
@@ -61,7 +62,8 @@ export function creationRequest(value: unknown): CreationRequest {
     prompt.includes("\0") ||
     Buffer.byteLength(prompt) > 65536 ||
     !Array.isArray(row.selections) ||
-    row.selections.length > SKILL_LIMITS.selections
+    row.selections.length > SKILL_LIMITS.selections ||
+    (row.dialogue !== undefined && row.dialogue !== true)
   )
     throw new CreationError("invalidInput");
   return {
@@ -73,6 +75,7 @@ export function creationRequest(value: unknown): CreationRequest {
     prompt,
     profileId: creationId(row.profileId),
     ...(row.outputType === undefined ? {} : { outputType: creationOutputType(row.outputType) }),
+    ...(row.dialogue === true ? { dialogue: true as const } : {}),
     ...(row.runtimeId === undefined ? {} : { runtimeId: creationId(row.runtimeId) }),
     ...(row.model === undefined || row.model === "" ? {} : { model: creationText(row.model, 128) }),
     ...(row.effort === undefined || row.effort === "" ? {} : { effort: creationText(row.effort, 64) }),

@@ -29,7 +29,7 @@ export class MySQLCreationProgress {
         }
         const [count] = await this.context
           .sql`SELECT COUNT(*) n FROM panda_force_creation_progress WHERE namespace=${this.context.namespace} AND taskId=${lease.taskId} AND generation=${lease.generation}`;
-        if (mysqlInteger(count.n) >= 64) return;
+        if (mysqlInteger(count.n) >= 64 && event.stage !== "reply") return;
         await this.context
           .sql`INSERT INTO panda_force_creation_progress(namespace,id,taskId,generation,createdAt,ordinal,event) VALUES(${this.context.namespace},${event.id || randomUUID()},${lease.taskId},${lease.generation},${event.at},${mysqlInteger(count.n)},${JSON.stringify(event)})`;
       });
@@ -37,7 +37,7 @@ export class MySQLCreationProgress {
     list: async (owner: string, id: string, conversation = true): Promise<CreationProgress[]> => {
       await this.tasks.row(owner, id);
       const rows = await this.context
-        .sql`SELECT event FROM (SELECT event,generation,ordinal FROM panda_force_creation_progress WHERE namespace=${this.context.namespace} AND taskId=${id} AND (${conversation ? 1 : 0}=1 OR JSON_UNQUOTE(JSON_EXTRACT(event,'$.stage'))<>'message') ORDER BY generation DESC,ordinal DESC LIMIT 192) recent ORDER BY generation,ordinal`;
+        .sql`SELECT event FROM (SELECT event,generation,ordinal FROM panda_force_creation_progress WHERE namespace=${this.context.namespace} AND taskId=${id} AND (${conversation ? 1 : 0}=1 OR JSON_UNQUOTE(JSON_EXTRACT(event,'$.stage')) NOT IN ('message','reply')) ORDER BY generation DESC,ordinal DESC LIMIT 192) recent ORDER BY generation,ordinal`;
       return rows.map((row: { event: unknown }) => creationProgress(JSON.parse(String(row.event))));
     },
   };

@@ -19,6 +19,7 @@ import { CreationError } from "../contracts.js";
 import { creationId, creationInteger, creationUuid, creationText } from "../validation.js";
 import type { CreationTaskRepository } from "./repository.js";
 import { readCreationTask, creationTask, creationSignature, type CreationTaskRow } from "./records.js";
+import { creationReplyProgress, SQLiteCreationProgress } from "./progress.js";
 
 /** Scheduling and explicit user actions share short metadata transactions, never a model process or a Git write. */
 export class CreationQueue {
@@ -85,6 +86,26 @@ export class CreationQueue {
         this.db
           .query("UPDATE creation_tasks SET state='failed',failure=?,token=NULL,leaseUntil=NULL,updatedAt=? WHERE id=?")
           .run(failure, now, row.id);
+        return true;
+      })
+      .immediate();
+  }
+  reply(lease: CreationLease, text: string, now: number) {
+    return this.db
+      .transaction(() => {
+        const row = readCreationTask(this.db, lease.owner, lease.taskId);
+        if (!this.matches(row, lease) || row.cancelRequested || (row.leaseUntil ?? 0) <= now) return false;
+        if (
+          this.db.query("SELECT 1 FROM creation_messages WHERE taskId=? AND state<>'delivered' LIMIT 1").get(row.id) ||
+          this.db.query("SELECT 1 FROM creation_questions WHERE taskId=? AND state='pending' LIMIT 1").get(row.id)
+        )
+          return false;
+        new SQLiteCreationProgress(this.db).record(lease, creationReplyProgress(lease, text, now));
+        this.db
+          .query(
+            "UPDATE creation_tasks SET state='replied',failure=NULL,token=NULL,leaseUntil=NULL,updatedAt=? WHERE id=?",
+          )
+          .run(now, row.id);
         return true;
       })
       .immediate();

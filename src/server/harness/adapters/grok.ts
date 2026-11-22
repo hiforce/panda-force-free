@@ -9,6 +9,7 @@ import {
   type HarnessPermissionMode,
 } from "../../../shared/harness/contracts.js";
 import { isRecord } from "../../../shared/records.js";
+import { tokenUsage } from "../../../shared/engine/usage.js";
 import type {
   HarnessAgent,
   HarnessAgentEvent,
@@ -299,9 +300,24 @@ export class GrokHarnessAgent implements HarnessAgent {
           this.application ? null : 30 * 60 * 1000,
         ),
       );
-      if (result.stopReason === "cancelled") return { stopReason: "cancelled" as const };
-      if (result.stopReason !== "end_turn") throw new HarnessError("deliveryUncertain", 409);
-      return { stopReason: "complete" as const };
+      const reported = record(record(result._meta).usage);
+      // Sibling counters in _meta cover the last model call, not the whole prompt.
+      const usage =
+        reported.usageIsIncomplete === true
+          ? undefined
+          : tokenUsage({
+              total: {
+                inputTokens: reported.inputTokens,
+                outputTokens: reported.outputTokens,
+                totalTokens: reported.totalTokens,
+                cachedInputTokens: reported.cachedReadTokens,
+                cacheWriteInputTokens: reported.cacheCreationTokens,
+                reasoningOutputTokens: reported.reasoningTokens,
+              },
+            })?.total;
+      const stopReason = result.stopReason;
+      if (stopReason !== "end_turn" && stopReason !== "cancelled") throw new HarnessError("deliveryUncertain", 409);
+      return { stopReason: stopReason === "cancelled" ? ("cancelled" as const) : ("complete" as const), usage };
     } catch (error) {
       if (error instanceof Error && "nativeCode" in error && error.nativeCode === -32800)
         return { stopReason: "cancelled" as const };

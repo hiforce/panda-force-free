@@ -239,6 +239,7 @@ export function createCreationFeature(options: {
         options.materials,
         messages,
         (owner, id) => savedArtifacts.read(owner, id),
+        (owner, id) => progress?.list(owner, id) ?? [],
       ),
       service = new CreationService(
         tasks,

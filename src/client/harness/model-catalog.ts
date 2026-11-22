@@ -5,13 +5,16 @@ import { runtimeModels } from "../../shared/engine/runtime-selection.js";
 import { harnessApi } from "./api.js";
 
 /** Catalog requests are independent of the active session and its model RPC interceptor. */
-export function runtimeModelCatalog(t: Translate) {
+export function runtimeModelCatalog(t: Translate, conversation = false) {
   const api = harnessApi(t);
   return {
-    list: () => api<HarnessCatalog>("/api/model-catalog"),
+    list: () => api<HarnessCatalog>(conversation ? "/api/model-catalog?scope=conversation" : "/api/model-catalog"),
     async discover(id: string) {
-      return (await api<{ runtime: HarnessRuntimeView }>(`/api/model-catalog?runtimeId=${encodeURIComponent(id)}`))
-        .runtime;
+      return (
+        await api<{ runtime: HarnessRuntimeView }>(
+          `/api/model-catalog?runtimeId=${encodeURIComponent(id)}${conversation ? "&scope=conversation" : ""}`,
+        )
+      ).runtime;
     },
     models: (runtime: HarnessRuntimeView) =>
       runtimeModels(runtime).map((model) => ({

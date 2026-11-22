@@ -66,10 +66,15 @@ export function createSessionSettingsDialog({
       kind === "model" && (!!snapshot.runtimeId || snapshot.permissionOwner === "creation") && !!applyRuntimeModel;
     runtimeField?.close();
     runtimeField = applicationSelection
-      ? createRuntimeModelField(t, "session-runtime", () => {
-          if (dialog.open && runtimeField)
-            requireElement('#sessionSettingsForm button[type="submit"]').disabled = !runtimeField.ready();
-        })
+      ? createRuntimeModelField(
+          t,
+          "session-runtime",
+          () => {
+            if (dialog.open && runtimeField)
+              requireElement('#sessionSettingsForm button[type="submit"]').disabled = !runtimeField.ready();
+          },
+          snapshot.permissionOwner !== "creation",
+        )
       : null;
     const fields =
       kind === "model"

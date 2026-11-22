@@ -14,6 +14,8 @@ import {
   type HarnessConversationSnapshot,
   type HarnessPermissionMode,
 } from "../../shared/harness/contracts.js";
+import type { TokenCount, TokenUsage } from "../../shared/engine/types.js";
+import { addTokenCounts } from "../../shared/engine/usage.js";
 import type {
   HarnessAgent,
   HarnessAgentEvent,
@@ -31,6 +33,7 @@ interface StoredConversation extends HarnessConversation {
   bindings: HarnessBinding[];
   permissions: HarnessPermission[];
   lastRunId?: string;
+  tokenUsage?: TokenUsage;
   source?: { threadId: string; cursor: string };
 }
 function conversationView(value: StoredConversation) {
@@ -41,6 +44,7 @@ function conversationView(value: StoredConversation) {
     permissions: _permissions,
     lastRunId: _last,
     source: _source,
+    tokenUsage: _usage,
     ...view
   } = value;
   return view;
@@ -55,6 +59,7 @@ interface Execution {
   timer: ReturnType<typeof setTimeout> | null;
   heartbeat: ReturnType<typeof setInterval> | null;
   cancelled: boolean;
+  thinking: boolean;
   permissions: Map<string, string>;
   tools: Map<string, { id: string; status: "running" | "complete" | "error" }>;
 }
@@ -260,7 +265,7 @@ export class HarnessConversations {
     if (conversation.activeRunId) {
       const run = decode<HarnessRun>(await this.options.metadata.read(runKey(conversation.activeRunId)));
       if (run && active(run) && run.leaseUntil < this.now()) {
-        await this.finish(run, "uncertain", "deliveryUncertain", true);
+        await this.finish(run, "uncertain", "deliveryUncertain", { expired: true });
         conversation = await this.owned(principal, id);
       }
     }
@@ -308,6 +313,7 @@ export class HarnessConversations {
       permissions,
       lastRunId: _lastRunId,
       source: _source,
+      tokenUsage,
       ...view
     } = conversation;
     return {
@@ -320,12 +326,14 @@ export class HarnessConversations {
             runtimeId: lastRun.runtimeId,
             model: lastRun.model,
             effort: lastRun.effort,
+            thinking: lastRun.thinking,
             error: lastRun.error,
             createdAt: lastRun.createdAt,
             updatedAt: lastRun.updatedAt,
           }
         : null,
       runtime: catalog.runtimes.find((runtime) => runtime.id === conversation.runtimeId) ?? null,
+      ...(tokenUsage ? { tokenUsage } : {}),
       cursor: String(conversation.revision),
       history: { beforeBytes: window.startBytes, hasEarlier: !!nextCursor, nextCursor },
       permissions,
@@ -487,6 +495,7 @@ export class HarnessConversations {
         timer: null,
         heartbeat: null,
         cancelled: false,
+        thinking: false,
         permissions: new Map(),
         tools: new Map(),
       };
@@ -608,7 +617,12 @@ export class HarnessConversations {
         (event) => this.event(execution, event),
       );
       await this.flush(execution);
-      await this.finish(run, execution.cancelled || result.stopReason === "cancelled" ? "cancelled" : "complete");
+      await this.finish(
+        run,
+        execution.cancelled || result.stopReason === "cancelled" ? "cancelled" : "complete",
+        undefined,
+        { usage: result.usage },
+      );
     } catch (error) {
       try {
         await this.flush(execution);
@@ -632,6 +646,19 @@ export class HarnessConversations {
     }
   }
   private async event(execution: Execution, event: HarnessAgentEvent) {
+    if (event.type === "activity") {
+      if (execution.thinking && !execution.pending) return;
+      await this.flush(execution);
+      await this.options.metadata.transaction(async (tx) => {
+        const { current, conversation } = await this.fenced(tx, execution.run);
+        current.thinking = true;
+        current.status = "running";
+        await save(tx, runKey(current.id), "run", current.owner, current);
+        await this.write(tx, conversation);
+      });
+      execution.thinking = true;
+      return;
+    }
     if (event.type === "text") {
       execution.pending += event.text;
       if (Buffer.byteLength(execution.pending) >= 16384) await this.flush(execution);
@@ -649,14 +676,24 @@ export class HarnessConversations {
       const publicId = randomUUID();
       execution.permissions.set(publicId, event.id);
       await this.options.metadata.transaction(async (tx) => {
-        const { conversation } = await this.fenced(tx, execution.run);
+        const { current, conversation } = await this.fenced(tx, execution.run);
+        if (current.thinking) {
+          current.thinking = false;
+          await save(tx, runKey(current.id), "run", current.owner, current);
+        }
         conversation.permissions.push({ id: publicId, title: event.title, options: event.options });
         await this.write(tx, conversation);
       });
+      execution.thinking = false;
     } else if (event.type === "tool") {
+      if (execution.tools.get(event.id)?.status === event.status) return;
       await this.flush(execution);
       await this.options.metadata.transaction(async (tx) => {
-        const { conversation } = await this.fenced(tx, execution.run);
+        const { current, conversation } = await this.fenced(tx, execution.run);
+        if (current.thinking) {
+          current.thinking = false;
+          await save(tx, runKey(current.id), "run", current.owner, current);
+        }
         const seq = ++conversation.lastSeq;
         const previous = execution.tools.get(event.id);
         if (previous) {
@@ -685,16 +722,19 @@ export class HarnessConversations {
           },
         ]);
       });
+      execution.thinking = false;
     }
   }
   private flush(execution: Execution) {
     const body = execution.pending;
     execution.pending = "";
     if (!body) return execution.flush;
+    execution.thinking = false;
     execution.flush = execution.flush.then(() =>
       this.options.metadata.transaction(async (tx) => {
         const { current, conversation } = await this.fenced(tx, execution.run);
         current.status = "running";
+        if (current.thinking) current.thinking = false;
         await save(tx, runKey(current.id), "run", current.owner, current);
         await this.write(tx, conversation, [
           { type: "text", seq: ++conversation.lastSeq, messageId: current.assistantMessageId, text: body },
@@ -707,7 +747,7 @@ export class HarnessConversations {
     run: HarnessRun,
     status: "complete" | "cancelled" | "error" | "uncertain",
     error?: HarnessRun["error"],
-    expired = false,
+    { expired = false, usage }: { expired?: boolean; usage?: TokenCount } = {},
   ) {
     await this.options.metadata.transaction(async (tx) => {
       const current = decode<HarnessRun>(await tx.get(runKey(run.id))),
@@ -721,8 +761,14 @@ export class HarnessConversations {
       )
         return;
       current.status = status;
+      if (current.thinking) current.thinking = false;
       current.error = error;
       current.updatedAt = this.now();
+      if (usage)
+        conversation.tokenUsage = {
+          total: addTokenCounts(conversation.tokenUsage?.total, usage),
+          updatedAt: current.updatedAt,
+        };
       conversation.permissions = [];
       conversation.lastRunId = current.id;
       if (status !== "uncertain") conversation.activeRunId = null;

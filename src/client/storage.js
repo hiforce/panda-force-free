@@ -32,6 +32,7 @@ export const STORAGE_KEYS = {
   permissionFullAccess: "panda-force-permission-full-access",
   reviewPreferences: "panda-force-review-preferences",
   projectDirectoryFor: (identity) => `panda-force-project-directory:${encodeURIComponent(identity)}`,
+  workspaceToolsFor: (identity) => `panda-force-workspace-tools:${encodeURIComponent(identity)}`,
   sessionToolsFor: (identity) => `panda-force-session-tools:${encodeURIComponent(identity)}`,
   sessionToolDataFor: (identity, session) =>
     `panda-force-session-tool-data:${encodeURIComponent(identity)}:${encodeURIComponent(session)}`,

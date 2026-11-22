@@ -21,6 +21,8 @@ import { applyThemePreference } from "./theme.js";
 import { MIN_ADMINISTRATOR_PASSWORD_LENGTH, validAdministratorPassword } from "../shared/password-policy.js";
 import { startStartupReads } from "./startup-reads.js";
 import { getWorkspacePreparation } from "./workspace-preparation.js";
+import { mountRemoteConsole } from "./workspace-tools/remote-console.js";
+import { remoteTerminalId } from "../shared/workspace-tools/remote.js";
 
 applyThemePreference();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applyThemePreference());
@@ -49,9 +51,12 @@ function showAuthFailure(message) {
 }
 
 async function loadApp() {
-  const preparation = getWorkspacePreparation();
-  preparation.begin();
-  startStartupReads();
+  const terminalId = remoteTerminalId(location.pathname);
+  const preparation = terminalId ? null : getWorkspacePreparation();
+  if (preparation) {
+    preparation.begin();
+    startStartupReads();
+  }
   for (const href of ["/vendor/katex/katex.min.css", "/vendor/xterm/xterm.css"]) {
     if (findElement(`link[href="${href}"]`)) continue;
     const link = document.createElement("link");
@@ -62,12 +67,19 @@ async function loadApp() {
   try {
     await prepareInterfaceStyles();
     dismissStartupScreen();
+    if (terminalId) {
+      const page = document.createElement("main");
+      page.className = "remote-console-page";
+      document.body.append(page);
+      mountRemoteConsole(page, terminalId, t);
+      return true;
+    }
     $("#app").hidden = false;
     await import("/app.bundle.js");
-    preparation.complete("interface");
+    preparation?.complete("interface");
     return true;
   } catch (error) {
-    preparation.fail("interface");
+    preparation?.fail("interface");
     if ($("#app").hidden) showAuthFailure(t("errors.couldNotOpenTheWorkspacePleaseReload"));
     console.error("[panda-force] workspace interface could not be loaded", error);
     return false;
@@ -118,7 +130,7 @@ async function start() {
     $("#passwordGate").hidden = true;
     if (status.passwordRequired) installPandaForceSession(status, { translate: t, i18n });
     if (!(await loadApp())) return;
-    void initializeDatabaseSetup(t);
+    if (!remoteTerminalId(location.pathname)) void initializeDatabaseSetup(t);
   };
   if (status.authenticated && !status.migrationRequired) {
     await finish();

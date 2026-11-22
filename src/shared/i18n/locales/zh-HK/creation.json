@@ -18,6 +18,7 @@
   "waiting": "等待你的回答",
   "committing": "正在儲存文件",
   "succeeded": "文件已產生",
+  "replied": "已回覆",
   "failed": "需要處理",
   "cancelled": "已取消",
   "cancel": "取消任務",
@@ -207,11 +208,5 @@
   "progressRenderVideo": "算繪影片",
   "progressSaveArtifact": "儲存產生的成果",
   "failedInactive": "引擎長時間沒有執行進展，任務已停止。要求已保留，可重試。",
-  "longRunningHint": "這項任務需要一些時間。你可以稍後回來查看，交付件儲存完成後會在通知中心提醒。",
-  "notificationsTitle": "通知中心",
-  "notificationsEmpty": "暫無已完成的創作通知。",
-  "notificationsReady": "交付件已準備好",
-  "notificationsUnread": "{count} 則未讀通知",
-  "notificationsLoadFailed": "暫時無法更新通知，請重試。",
-  "notificationsOpen": "查看交付件"
+  "longRunningHint": "這項任務需要一些時間。你可以稍後回來查看，交付件儲存完成後會在通知中心提醒。"
 }

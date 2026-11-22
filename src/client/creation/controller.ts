@@ -272,6 +272,7 @@ export class DocumentCreationPanel {
             parentId,
             selections,
             outputType: defaultCreationOutput(options),
+            dialogue: true,
             id: crypto.randomUUID(),
             projectId: context.projectId,
             treeVersion: context.treeVersion(),

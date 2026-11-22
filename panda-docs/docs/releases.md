@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.3` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.4` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -38,6 +38,16 @@ bun scripts/release/prepare-update.mjs \
 ```
 
 Three-way application preserves independent public changes and stops on conflicts. The tool neither commits nor pushes. Do not merge private Git branches into the public repository. New commercial material in an existing filename still needs explicit review; a path whitelist cannot make that licensing decision.
+
+## 0.1.4
+
+Use Git tag `v0.1.4` and `hiforceai/panda-force:0.1.4` on Linux amd64. [Install](installation.md) or [upgrade](updates.md).
+
+- Adds the experimental ZCode conversation runtime with named profiles, streamed replies, thinking and tool activity, usage where reported, and native approvals.
+- Keeps creative discussions in the same session. Questions and missing requirements can be resolved before generating another artifact.
+- Adds a compact notification center with paginated history and shared notification sources.
+- Adds workspace tool links and a standalone SSH terminal with password and key authentication, host fingerprint review, reconnect and font controls.
+- The Rocky Linux 9 build and runtime bases now ship ZCode CLI 0.17.1 from ZCode 3.18.2, alongside Codex CLI and Grok Build. Configure your own provider to enable it.
 
 ## 0.1.3
 

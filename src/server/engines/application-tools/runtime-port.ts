@@ -8,8 +8,8 @@ export interface ApplicationRuntimeSelection {
 }
 /** Domains select installed execution identities, never executable commands or provider endpoints. */
 export interface ApplicationRuntimePort {
-  catalog(owner: string): Promise<HarnessCatalog>;
-  discover(owner: string, runtimeId: string): Promise<HarnessRuntimeView>;
+  catalog(owner: string, conversation?: boolean): Promise<HarnessCatalog>;
+  discover(owner: string, runtimeId: string, conversation?: boolean): Promise<HarnessRuntimeView>;
   resolve(owner: string, selection: ApplicationRuntimeSelection): Promise<Required<ApplicationRuntimeSelection>>;
   engine(
     owner: string,

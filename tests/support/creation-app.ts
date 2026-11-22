@@ -20,6 +20,9 @@ import { CreationProfiles } from "../../src/server/creation/integration/profiles
 import { richDocumentFromMarkdown } from "../../src/server/documents/rich-codec.js";
 import { CreationError } from "../../src/server/creation/contracts.js";
 import { creativeAssetRoutes } from "../../src/server/creative/assets/routes.js";
+import { creationNotificationSource } from "../../src/server/creation/integration/notification-source.js";
+import { NotificationCenter, type NotificationSource } from "../../src/server/notifications/center.js";
+import { notificationRoutes } from "../../src/server/notifications/routes.js";
 
 type RunInput = Parameters<ApplicationToolEngine["run"]>[0];
 export type CreationTestHandler = (
@@ -32,6 +35,7 @@ export async function creationAppFixture(
     storage?: Parameters<typeof createCreationFeature>[0]["storage"];
     home?: string;
     assets?: boolean;
+    notificationSources?: readonly NotificationSource[];
     content?(
       files: Awaited<ReturnType<typeof projectFileApiFixture>>,
       root: string,
@@ -121,7 +125,14 @@ export async function creationAppFixture(
     });
   };
   let feature = open();
-  routes.push(...skills.routes, ...materialRoutes, ...assetRoutes, ...feature.routes);
+  const notifications = notificationRoutes(
+    new NotificationCenter([
+      creationNotificationSource("creation", () => feature.service),
+      ...(options.notificationSources ?? []),
+    ]),
+    () => actor,
+  );
+  routes.push(...skills.routes, ...materialRoutes, ...assetRoutes, ...feature.routes, ...notifications);
   feature.start();
   return {
     files,
@@ -172,7 +183,15 @@ export async function creationAppFixture(
       await feature.close();
       files.reopen();
       feature = open();
-      routes.splice(0, routes.length, ...skills.routes, ...materialRoutes, ...assetRoutes, ...feature.routes);
+      routes.splice(
+        0,
+        routes.length,
+        ...skills.routes,
+        ...materialRoutes,
+        ...assetRoutes,
+        ...feature.routes,
+        ...notifications,
+      );
       feature.start();
     },
     async close() {

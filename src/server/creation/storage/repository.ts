@@ -153,7 +153,7 @@ export class CreationTaskRepository implements CreationOutputTasks {
     creationInteger(now);
     return this.transaction(() => {
       const row = this.row(owner, id);
-      if (["succeeded", "failed", "cancelled"].includes(row.state)) return creationTask(row);
+      if (["succeeded", "replied", "failed", "cancelled"].includes(row.state)) return creationTask(row);
       this.db.query("UPDATE creation_questions SET state='expired' WHERE taskId=? AND state='pending'").run(id);
       this.db
         .query(
@@ -186,7 +186,24 @@ export class CreationTaskRepository implements CreationOutputTasks {
       return this.get(owner, id);
     });
   }
-  notifications(owner: string): import("../ports.js").CreationNotificationRecord[] {
+  notifications(
+    owner: string,
+    page?: Parameters<import("../ports.js").CreationNotificationStore["notifications"]>[1],
+  ): import("../ports.js").CreationNotificationRecord[] {
+    if (page) {
+      const order = " ORDER BY createdAt DESC,taskId DESC,generation DESC LIMIT ?";
+      const base = "SELECT taskId,generation,createdAt,readAt FROM creation_notifications WHERE owner=?";
+      const { before, limit } = page;
+      return before
+        ? this.db
+            .query<import("../ports.js").CreationNotificationRecord, [string, number, string, number, number]>(
+              base + " AND (createdAt,taskId,generation)<(?,?,?)" + order,
+            )
+            .all(creationText(owner), before.createdAt, before.taskId, before.generation, limit)
+        : this.db
+            .query<import("../ports.js").CreationNotificationRecord, [string, number]>(base + order)
+            .all(creationText(owner), limit);
+    }
     return this.db
       .query<import("../ports.js").CreationNotificationRecord, [string]>(
         "SELECT taskId,generation,createdAt,readAt FROM creation_notifications WHERE owner=? ORDER BY (readAt IS NULL) DESC,createdAt DESC,taskId DESC LIMIT 100",

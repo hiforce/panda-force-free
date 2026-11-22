@@ -99,7 +99,7 @@ export class CreationCards {
             .map((entry) => ({
               at: entry.at,
               text:
-                entry.stage === "message"
+                entry.stage === "message" || entry.stage === "reply"
                   ? entry.text
                   : creationProgressText(
                       entry,

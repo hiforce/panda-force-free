@@ -320,7 +320,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
               ? "question"
               : this.running
                 ? "running"
-                : task.state === "succeeded"
+                : task.state === "succeeded" || task.state === "replied"
                   ? "completed"
                   : "idle",
             label: this.t(
@@ -339,7 +339,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
               ? "messageSquare"
               : this.running
                 ? "sparkles"
-                : task.state === "succeeded"
+                : task.state === "succeeded" || task.state === "replied"
                   ? "check"
                   : "info",
           }
@@ -619,7 +619,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     for (const round of rounds) this.state.previous.set(round.id, { task: round, at: Date.now() });
     if (task.selections !== undefined) this.bridge.seedDraft("", task.selections);
     this.presenter.render(task, rounds, this.cards);
-    if (newlyCompleted) window.dispatchEvent(new Event("panda-force:creation-completed"));
+    if (newlyCompleted) window.dispatchEvent(new Event("panda-force:notifications-changed"));
     this.renderActions();
     this.bridge.changed();
   }

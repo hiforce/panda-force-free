@@ -6,7 +6,8 @@
     "src/client/workbench/styles/project-context.css",
     "src/client/workbench/styles/sidebar-typography.css",
     "src/client/workbench/styles/preparation.css",
-    "src/client/workbench/styles/completion-notifications.css"
+    "src/client/workbench/styles/notification-center.css",
+    "src/client/workbench/styles/workspace-tools.css"
   ],
   "public/creation.css": [
     "src/client/creation/styles/authoring.css",

@@ -1,3 +1,5 @@
+import { remoteTerminalId } from "../shared/workspace-tools/remote.js";
+
 const routes = new Set([
   "workspace",
   "bots",
@@ -11,6 +13,7 @@ const routes = new Set([
   "creation",
   "skills",
   "publish",
+  "tools",
   "new",
   "task",
 ]);
@@ -43,6 +46,7 @@ export function workbenchLinkPath(anchor, event, base = location.href) {
   if (
     url.origin !== current.origin ||
     !["http:", "https:"].includes(url.protocol) ||
+    remoteTerminalId(url.pathname) ||
     (page && page !== "settings" && !routes.has(page)) ||
     (url.pathname === current.pathname && url.search === current.search && url.hash)
   )

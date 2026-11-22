@@ -38,6 +38,16 @@ export function creationInteger(value: unknown): number {
   if (!Number.isSafeInteger(value) || Number(value) < 0) throw new CreationError("invalidInput");
   return Number(value);
 }
+export function creationNotificationPosition(cursor: string) {
+  const fields = creationText(cursor, 80).split(".");
+  if (fields.length !== 3 || !/^\d+$/.test(fields[0]!) || !/^\d+$/.test(fields[2]!))
+    throw new CreationError("invalidInput");
+  return {
+    createdAt: creationInteger(Number(fields[0])),
+    taskId: creationUuid(fields[1]),
+    generation: creationInteger(Number(fields[2])),
+  };
+}
 export function creationUuidFromDigest(value: string): string {
   const hex = creationDigest(value);
   return (
@@ -222,7 +232,9 @@ export function creationProgress(event: CreationProgress): CreationProgress {
     event.at < 0 ||
     !Number.isSafeInteger(event.generation) ||
     event.generation < 0 ||
-    !["preparing", "started", "saving", "waiting", "answered", "message", "usage", "activity"].includes(event.stage) ||
+    !["preparing", "started", "saving", "waiting", "answered", "message", "reply", "usage", "activity"].includes(
+      event.stage,
+    ) ||
     (event.stage === "activity"
       ? !creationOperation(event.operation) || !["running", "completed", "failed"].includes(event.status ?? "")
       : event.operation !== undefined || event.status !== undefined) ||

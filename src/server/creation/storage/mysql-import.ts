@@ -54,8 +54,7 @@ export function consolidateCreationSnapshots(
         try {
           source.transaction(() => {
             const version = source.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version;
-            if (version !== 2 && version !== 3 && version !== 4 && version !== 5 && version !== 6 && version !== 7)
-              throw Error("unsupportedCreationMigrationSchema");
+            if (version === undefined || version < 2 || version > 8) throw Error("unsupportedCreationMigrationSchema");
             target.query("INSERT INTO creation_ledgers VALUES(?)").run(ledger.namespace);
             for (const model of tables) {
               if (version < 7 && model.name === "panda_force_creation_notifications") continue;

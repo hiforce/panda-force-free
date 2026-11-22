@@ -5,6 +5,7 @@ import type { CreationSkillSelection } from "../../shared/creation/contracts.js"
 import type { ComposerAttachment } from "../../shared/data-contracts.js";
 
 export interface SessionUsageView {
+  reportedOnly?: boolean;
   total: number | null;
   input: number | null;
   output: number | null;

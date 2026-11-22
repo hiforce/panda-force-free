@@ -33,27 +33,33 @@ export function applicationRuntimes(options: {
   const checked = new Map<string, { revision: number; expiresAt: number }>();
   const now = options.now ?? Date.now;
   const port: ApplicationRuntimePort = {
-    async catalog(owner) {
+    async catalog(owner, conversation = false) {
       const principal = await options.principal(owner);
+      if (conversation) return options.registry.catalog(principal);
       const catalog = await options.registry.catalog({ ...principal, administrator: true });
-      if (principal.administrator) return catalog;
       const runtimes = catalog.runtimes.filter(
-        (runtime) => runtime.enabled && (runtime.id === "codex" || runtime.access === "members"),
+        (runtime) =>
+          options.registry.supportsApplication(runtime.profileId) &&
+          (principal.administrator || (runtime.enabled && (runtime.id === "codex" || runtime.access === "members"))),
       );
       return {
         ...catalog,
-        canManage: false,
-        profiles: [],
+        canManage: principal.administrator,
+        profiles: principal.administrator
+          ? catalog.profiles.filter((entry) => options.registry.supportsApplication(entry.id))
+          : [],
         runtimes,
         defaultRuntimeId: runtimes.some((runtime) => runtime.id === catalog.defaultRuntimeId)
           ? catalog.defaultRuntimeId
           : (runtimes.find((runtime) => runtime.id === "codex")?.id ?? runtimes[0]?.id ?? ""),
       };
     },
-    async discover(owner, id) {
-      const principal = await applicationPrincipal(owner, id);
+    async discover(owner, id, conversation = false) {
+      const principal = conversation ? await options.principal(owner) : await applicationPrincipal(owner, id);
       const configured = await options.registry.require(principal, id);
-      const runtime = (await port.catalog(owner)).runtimes.find((runtime) => runtime.id === id),
+      const scoped = options.registry.supportsApplication(configured.profileId);
+      if (!scoped && !conversation) throw new HarnessError("capabilityUnavailable", 409);
+      const runtime = (await port.catalog(owner, conversation)).runtimes.find((runtime) => runtime.id === id),
         key = JSON.stringify([owner, id]),
         cached = checked.get(key),
         requestKey = JSON.stringify([owner, id, configured.revision]),
@@ -92,15 +98,23 @@ export function applicationRuntimes(options: {
         );
         let agent: HarnessAgent | undefined;
         try {
-          const opened = await options.registry.agent(principal, id, `catalog-${randomUUID()}`, cwd, {
-            instructions: "Discover runtime capabilities only. No prompt is authorized.",
-            mcpServer: bridge.mcpServer,
-          });
+          const opened = await options.registry.agent(
+            principal,
+            id,
+            `catalog-${randomUUID()}`,
+            cwd,
+            scoped
+              ? {
+                  instructions: "Discover runtime capabilities only. No prompt is authorized.",
+                  mcpServer: bridge.mcpServer,
+                }
+              : undefined,
+          );
           agent = opened.agent;
           if (opened.runtime.kind !== "codex") await agent.create(cwd);
           const current = await options.registry.require(principal, id);
           if (current.revision !== configured.revision) throw new HarnessError("conflict", 409);
-          return (await port.catalog(owner)).runtimes.find((runtime) => runtime.id === id)!;
+          return (await port.catalog(owner, conversation)).runtimes.find((runtime) => runtime.id === id)!;
         } finally {
           await agent?.close();
           await bridge.close();
@@ -123,7 +137,9 @@ export function applicationRuntimes(options: {
     },
     async resolve(owner, selection) {
       const id = selection.runtimeId || "codex";
-      await options.registry.require(await applicationPrincipal(owner, id), id);
+      const configured = await options.registry.require(await applicationPrincipal(owner, id), id);
+      if (!options.registry.supportsApplication(configured.profileId))
+        throw new HarnessError("capabilityUnavailable", 409);
       const cached = (await port.catalog(owner)).runtimes.find((runtime) => runtime.id === id),
         runtime = cached?.models.length && !cached.error ? cached : await port.discover(owner, id),
         models = runtimeModels(runtime),
@@ -159,6 +175,8 @@ export function applicationRuntimes(options: {
         async run(input, callbacks) {
           callbacks.signal.throwIfAborted();
           const configured = await options.registry.require(await options.principal(owner), runtimeId);
+          if (!options.registry.supportsApplication(configured.profileId))
+            throw new HarnessError("capabilityUnavailable", 409);
           if (configured.kind === "codex")
             return options.codex(await port.resolve(owner, selection), directory, purpose).run(input, callbacks);
           let scope: ApplicationRunScope | null = null,

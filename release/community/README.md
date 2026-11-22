@@ -1,11 +1,11 @@
 <p align="center">
   <img src="./panda-docs/static/img/readme-hero-en.svg" width="1200" alt="PandaForce — Small panda. Big ideas. Create with skills. Put Bots to work." />
 </p>
-<p align="center"><a href="./README-zh.md">简体中文</a> · <a href="#create-something-fun">Try a creation</a> · <a href="#meet-your-bot">Build a Bot</a> · <a href="#install-013">Get started</a> · <a href="./panda-docs/docs/features.md">All features</a></p>
+<p align="center"><a href="./README-zh.md">简体中文</a> · <a href="#create-something-fun">Try a creation</a> · <a href="#meet-your-bot">Build a Bot</a> · <a href="#install-014">Get started</a> · <a href="./panda-docs/docs/features.md">All features</a></p>
 
 PandaForce is a self-hosted AI workspace with a friendly kung-fu panda at its heart. Create illustrations, slides, web pages and documents with skills. Put repeatable work behind a Bot API, and teach your panda new moves through skills and plugins.
 
-> **PandaForce 0.1.3** adds a shared sending indicator to creation, conversations and Bot chat, and improves creation submission and recovery. [Install the release →](#install-013) · [Release notes →](./panda-docs/docs/releases.md#013) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
+> **PandaForce 0.1.4** adds the ZCode conversation runtime, a notification center and a standalone SSH terminal, and improves multi-turn creation conversations. [Install the release →](#install-014) · [Release notes →](./panda-docs/docs/releases.md#014) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
 
 ## Create something fun
 
@@ -140,13 +140,13 @@ PandaForce also includes streaming AI conversations and coding, a terminal for a
 
 ## Multiple Harness Runtimes
 
-The 0.1.3 image contains **Codex CLI 0.171.0** and **Grok Build 1.0.89**. In conversations, assistants/Bots and supported creation settings, choose **Harness Runtime → model → reasoning level**. Finish the current turn before switching a conversation; selected context is handed over and files remain in the workspace.
+The 0.1.4 image contains **Codex CLI 0.171.0**, **Grok Build 1.0.89**, and **ZCode CLI 0.17.1**. In conversations, assistants/Bots and supported creation settings, choose **Harness Runtime → model → reasoning level**. Finish the current turn before switching a conversation; selected context is handed over and files remain in the workspace.
 
 Codex starts through the application's app-server connection. Grok uses on-demand ACP processes; its optional account service handles native credential renewal. No host Grok/tmux session is required. Provider logins remain separate from the PandaForce administrator. [Container roles, login, persistence and recovery →](./panda-docs/docs/harness-runtimes.md)
 
-## Install 0.1.3
+## Install 0.1.4
 
-Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.1.3`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes both Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
+Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.1.4`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes all three Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
 
 ```bash
 git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
@@ -174,7 +174,11 @@ docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
   run --rm grok-auth grok --no-auto-update login --device-auth
 ```
 
-Open **Settings → Harness Runtimes**, check Grok Build, and select its model/effort. The explicit **hi** test sends a real small request using your model account. The application and Grok helper services use the same 0.1.3 image by default. [Detailed setup and account volumes →](./panda-docs/docs/harness-runtimes.md)
+Open **Settings → Harness Runtimes**, check Grok Build, and select its model/effort. The explicit **hi** test sends a real small request using your model account. The application and Grok helper services use the same 0.1.4 image by default. [Detailed setup and account volumes →](./panda-docs/docs/harness-runtimes.md)
+
+**ZCode conversation runtime (experimental)**
+
+The image already includes the ZCode CLI. Use the optional Compose configuration to mount your provider JSON, then add a runtime in **Settings → Harness Runtimes**. Default installations can skip this setup. [Configuration steps →](./panda-docs/docs/harness-runtimes.md#zcode)
 
 State, Codex login, Grok account and workspace files persist in separate Docker volumes. Keep the same Compose project/volume names when upgrading and check `.env` for an old `PANDA_FORCE_IMAGE` override. `docker compose down` preserves named volumes. The default port binds to localhost; configure your own HTTPS entry for remote access. [Storage and backups →](./panda-docs/docs/storage.md)
 

@@ -6,6 +6,8 @@ import { MySQLCreationContext } from "./mysql-context.js";
 import { mysqlCreationTaskRow } from "./mysql-rows.js";
 import type { MySQLCreationTasks } from "./mysql-tasks.js";
 import { creationTask, type CreationTaskRow } from "./records.js";
+import { MySQLCreationProgress } from "./mysql-progress.js";
+import { creationReplyProgress } from "./progress.js";
 
 /** Leases operations borrow the shared transaction; this facet never owns a separate connection context. */
 export class MySQLCreationLeases {
@@ -128,6 +130,23 @@ export class MySQLCreationLeases {
       await this.tasks.expire(row.id);
       await this.context
         .sql`UPDATE panda_force_creation_tasks SET state='failed',failure=${failure},token=NULL,leaseUntil=NULL,updatedAt=${now} WHERE namespace=${this.context.namespace} AND id=${row.id}`;
+      return true;
+    });
+  }
+  async reply(lease: CreationLease, text: string, now: number) {
+    return this.context.transaction(async () => {
+      const row = await this.tasks.row(lease.owner, lease.taskId),
+        namespace = this.context.namespace;
+      if (!this.matches(row, lease) || row.cancelRequested || (row.leaseUntil ?? 0) <= now) return false;
+      const pending = await this.context
+        .sql`SELECT 1 FROM panda_force_creation_messages WHERE namespace=${namespace} AND taskId=${row.id} AND state<>'delivered' LIMIT 1`;
+      if (pending.length || (await this.tasks.hasPending(row.id))) return false;
+      await new MySQLCreationProgress(this.context, this.tasks).progress.record(
+        lease,
+        creationReplyProgress(lease, text, now),
+      );
+      await this.context
+        .sql`UPDATE panda_force_creation_tasks SET state='replied',failure=NULL,token=NULL,leaseUntil=NULL,updatedAt=${now} WHERE namespace=${namespace} AND id=${row.id}`;
       return true;
     });
   }

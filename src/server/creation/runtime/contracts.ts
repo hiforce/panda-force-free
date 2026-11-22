@@ -12,6 +12,7 @@ export interface CreationScheduling {
   claim(now: number, leaseMs?: number): CreationResult<CreationClaim | null>;
   release(lease: CreationLease, now: number): CreationResult<boolean>;
   fail(lease: CreationLease, failure: CreationFailure, now: number): CreationResult<boolean>;
+  reply(lease: CreationLease, text: string, now: number): CreationResult<boolean>;
   nextOutput(now: number): CreationResult<CreationTask | null>;
 }
 export interface CreationRunTasks extends CreationExecutionTasks {

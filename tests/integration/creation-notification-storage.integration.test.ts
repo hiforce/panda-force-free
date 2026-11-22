@@ -8,6 +8,7 @@ import { mysqlCreationModule } from "../../src/server/database/modules/creation.
 import { MySQLSchemaConnection } from "../../src/server/database/mysql-schema.js";
 import { isolatedMySQLDatabase } from "../support/mysql-database.js";
 import type { CreationTaskSpec, CreationDocumentArtifact } from "../../src/server/creation/contracts.js";
+import type { CreationNotificationRecord } from "../../src/server/creation/ports.js";
 for (const backend of ["sqlite", "mysql"] as const)
   test.skipIf(backend === "mysql" && !process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
     `${backend} commits exactly one completion receipt atomically and excludes cancelled saves`,
@@ -79,6 +80,28 @@ for (const backend of ["sqlite", "mysql"] as const)
         await committing(other.id, true);
         await store.complete(other.owner, other.id, digest, { ...artifact, operationId: other.operationId }, 1007);
         expect(await store.notifications(spec.owner)).toHaveLength(1);
+        for (let index = 0; index < 103; index++) {
+          const next = { ...spec, id: randomUUID(), operationId: randomUUID() };
+          await store.create(next, 2000);
+          await committing(next.id);
+          await store.complete(
+            next.owner,
+            next.id,
+            digest,
+            { ...artifact, operationId: next.operationId },
+            2000 + Math.floor(index / 3),
+          );
+        }
+        expect(await store.notifications(spec.owner)).toHaveLength(100);
+        const paged: CreationNotificationRecord[] = [];
+        for (;;) {
+          const page = await store.notifications(spec.owner, { limit: 12, before: paged.at(-1) });
+          paged.push(...page);
+          if (page.length < 12) break;
+        }
+        expect(new Set(paged.map(({ taskId }) => taskId)).size).toBe(104);
+        expect(paged.at(-1)?.taskId).toBe(spec.id);
+        expect(await store.notifications("another", { limit: 12, before: paged[0] })).toEqual([]);
       } finally {
         db?.close();
         await remote?.close();

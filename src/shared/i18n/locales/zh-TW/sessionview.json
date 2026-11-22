@@ -20,6 +20,7 @@
   "sessionUsage": "對話用量",
   "tokens": "tokens",
   "cumulative": "本對話累計消耗",
+  "recordedTotal": "此對話已記錄的用量",
   "input": "輸入",
   "output": "輸出",
   "cachedInput": "其中快取輸入",

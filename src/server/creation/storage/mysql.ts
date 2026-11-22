@@ -36,6 +36,7 @@ export class MySQLCreationLedger {
   readonly claimNext: MySQLCreationLeases["claimNext"];
   readonly release: MySQLCreationLeases["release"];
   readonly fail: MySQLCreationLeases["fail"];
+  readonly reply: MySQLCreationLeases["reply"];
   readonly question: MySQLCreationQuestions["question"];
   readonly pendingQuestion: MySQLCreationQuestions["pendingQuestion"];
   readonly register: MySQLCreationQuestions["register"];
@@ -76,6 +77,7 @@ export class MySQLCreationLedger {
     this.claimNext = leases.claimNext.bind(leases);
     this.release = leases.release.bind(leases);
     this.fail = leases.fail.bind(leases);
+    this.reply = leases.reply.bind(leases);
     this.question = questions.question.bind(questions);
     this.pendingQuestion = questions.pendingQuestion.bind(questions);
     this.register = questions.register.bind(questions);
@@ -97,6 +99,7 @@ export class MySQLCreationLedger {
       claim: this.claimNext.bind(this),
       release: this.release.bind(this),
       fail: this.fail.bind(this),
+      reply: this.reply.bind(this),
       nextOutput: this.nextOutput.bind(this),
       retry: this.retry.bind(this),
       clearHistory: this.clearHistory.bind(this),

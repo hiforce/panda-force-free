@@ -52,6 +52,23 @@ export function checkInstallation(root = process.cwd()) {
   const profiles = JSON.parse(grok.services["panda-force"].environment.PANDA_FORCE_HARNESS_PROFILES);
   require(profiles[0].credentialSocket ===
     grok.services["grok-auth"].environment.PANDA_FORCE_GROK_AUTH_SOCKET, "Grok socket paths differ");
+  const zcode = parse(text("deploy/harness/docker-compose.zcode.yml")).services["panda-force"];
+  const zcodeProfile = JSON.parse(zcode.environment.PANDA_FORCE_ZCODE_HARNESS_PROFILES)[0];
+  const provider = json("deploy/harness/zcode-provider.example.json").config.providerConfigRules.providerRules[0];
+  require(!zcode.image, "ZCode overlay must inherit the selected application image");
+  require(zcode.volumes.some(
+    (volume) =>
+      volume.target === zcodeProfile.providerConfig &&
+      volume.read_only === true &&
+      volume.bind?.create_host_path === false,
+  ), "ZCode provider must use a read-only private file mount");
+  require(provider.providerId === zcodeProfile.providerId &&
+    provider.config.personalModelIds.includes(zcodeProfile.model) &&
+    provider.config.access.apiKey === "", "ZCode example must match the profile and omit credentials");
+  const zcodeLock = json("scripts/build/zcode-runtime.lock.json");
+  require(zcodeLock.cliVersion === bases.engineVersions.zcode &&
+    createHash("sha256").update(text("scripts/build/zcode-runtime.lock.json")).digest("hex") ===
+      bases.zcodeLockSha256, "ZCode lock differs from base metadata");
   for (const mode of ["isolated", "shared", "cluster"])
     for (const document of parseAllDocuments(text(`panda-docs/static/downloads/kubernetes/panda-force-${mode}.yaml`))) {
       require(!document.errors.length, "Invalid Kubernetes template");
@@ -91,6 +108,7 @@ export function checkInstallation(root = process.cwd()) {
     profile: bases.defaultProfile,
     matchedBaseSelectors: 4,
     grokHelpers: 2,
+    zcodeProviderMount: true,
     kubernetesModes: 3,
   };
 }

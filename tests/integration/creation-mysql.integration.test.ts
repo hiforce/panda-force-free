@@ -190,6 +190,44 @@ test.skipIf(!enabled)(
 );
 
 test.skipIf(!enabled)(
+  "a plain creation reply is atomic, idempotent and stays out of MySQL artifact completion notifications",
+  async () => {
+    const f = await isolatedMySQLDatabase("creation");
+    try {
+      await new DatabaseRegistry().register(mysqlCreationModule).upgrade(new MySQLSchemaConnection(f.sql));
+      const ledger = new MySQLCreationLedger(f.sql, "application"),
+        reader = new MySQLCreationLedger(f.sql, "application"),
+        task = spec();
+      await ledger.create(task, 10000);
+      const lease = await ledger.claim("owner", task.id, 10001, 30000);
+      await ledger.bind(lease, "session", "run", 10002);
+      await expect(
+        ledger.transaction(async () => {
+          expect(await ledger.scheduling.reply(lease, "Rolled back", 10003)).toBe(true);
+          throw Error("rollback");
+        }),
+      ).rejects.toThrow("rollback");
+      expect((await reader.get("owner", task.id)).state).toBe("running");
+      expect(await reader.progress.list("owner", task.id)).toEqual([]);
+      expect(await ledger.scheduling.reply(lease, "The classification came from the brief.", 10004)).toBe(true);
+      expect(await reader.scheduling.reply(lease, "Duplicate", 10005)).toBe(false);
+      const saved = await reader.get("owner", task.id);
+      expect(saved.state).toBe("replied");
+      expect(saved.artifact).toBeNull();
+      expect((await reader.progress.list("owner", task.id)).map(({ stage, text }) => ({ stage, text }))).toEqual([
+        { stage: "reply", text: "The classification came from the brief." },
+      ]);
+      expect(await reader.progress.list("owner", task.id, false)).toEqual([]);
+      const [notifications] = await f.sql`SELECT COUNT(*) AS count FROM panda_force_creation_notifications`;
+      expect(Number(notifications?.count)).toBe(0);
+    } finally {
+      await f.close();
+    }
+  },
+  60000,
+);
+
+test.skipIf(!enabled)(
   "creation message ordering, dispatch recovery and output fencing remain transactional in MySQL",
   async () => {
     const f = await isolatedMySQLDatabase("messages");

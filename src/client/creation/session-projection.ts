@@ -24,7 +24,8 @@ export function creationRoundItems(round: CreationTaskDetail, t: Translate) {
     sentAt: round.createdAt / 1000,
   };
   const entries: Array<{ at: number; item: EngineItem }> = round.progress.flatMap((entry, index) => {
-    const text = entry.stage === "message" ? entry.text : creationProgressText(entry, t, creationActive(round));
+    const message = entry.stage === "message" || entry.stage === "reply";
+    const text = message ? entry.text : creationProgressText(entry, t, creationActive(round));
     return text
       ? [
           {
@@ -33,7 +34,7 @@ export function creationRoundItems(round: CreationTaskDetail, t: Translate) {
               id: turn + "-" + (entry.id || index),
               type: "agentMessage",
               text,
-              ...(entry.stage !== "message" ? { phase: "commentary" } : {}),
+              ...(!message ? { phase: "commentary" } : {}),
               status: entry.streaming && creationActive(round) ? "inProgress" : "completed",
               receivedAt: entry.at / 1000,
             },

@@ -121,3 +121,83 @@ test("an unsaved text-only run fails explicitly; stable retry and origin checks 
     await f.close();
   }
 }, 60000);
+
+test("a creation can clarify, answer a follow-up without saving, then revise the original using the discussion", async () => {
+  const f = await creationAppFixture();
+  try {
+    f.onRun(async (input, callbacks, scope) => {
+      const turn = (action: string, text?: string) =>
+        callbacks.call({
+          ...scope,
+          callId: randomUUID(),
+          name: "panda_creation_turn",
+          arguments: { action, ...(text ? { text } : {}) },
+        });
+      expect(input.tools.some((tool) => tool.name === "panda_creation_turn")).toBe(true);
+      if (input.prompt.startsWith("Why")) {
+        await expect(f.save(callbacks, scope, "This write must be blocked.")).rejects.toThrow("conflict");
+        await turn("reply", "The first draft used the classification from its brief.");
+      } else {
+        if (input.prompt.startsWith("Prepare")) {
+          const answer = await turn("clarify", "Who will read it?");
+          expect(answer.text).toContain("Students");
+        } else {
+          expect(input.prompt).toContain("The first draft used the classification from its brief.");
+        }
+        await turn("deliver");
+        await f.save(callbacks, scope, input.prompt.startsWith("Prepare") ? "Original" : "Revised");
+      }
+    });
+    const { body } = await f.files.call("/api/document-creations/options");
+    const first = randomUUID();
+    const start = await f.files.call("/api/document-creations", "POST", {
+      id: first,
+      projectId: "project-1",
+      treeVersion: 0,
+      parentId: null,
+      locale: "en",
+      prompt: "Prepare a classification guide.",
+      profileId: "codex",
+      selections: [body.defaultWorkflow],
+      dialogue: true,
+    });
+    expect(start.status).toBe(202);
+    const pending = await f.until(first, (task) => !!task.question);
+    expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(0);
+    expect(
+      (
+        await f.files.call("/api/document-creations/answer", "POST", {
+          id: pending.question!.id,
+          answers: { [pending.question!.questions[0]!.id]: { answers: ["Students"] } },
+        })
+      ).status,
+    ).toBe(200);
+    const original = await f.until(first, (task) => task.state === "succeeded");
+    const second = randomUUID();
+    const request = { taskId: first, id: second, prompt: "Why is it classified that way?", dialogue: true };
+    expect((await f.files.call("/api/document-creations/message", "POST", request)).status).toBe(202);
+    const reply = await f.until(second, (task) => task.state === "replied");
+    expect(reply.artifact).toBeNull();
+    expect(reply.progress.find((event) => event.stage === "reply")?.text).toContain("first draft");
+    await f.restart();
+    expect((await f.files.call("/api/document-creations/message", "POST", request)).status).toBe(202);
+    expect((await f.task(first)).artifact).toEqual(original.artifact);
+    const third = randomUUID();
+    expect(
+      (
+        await f.files.call("/api/document-creations/message", "POST", {
+          taskId: second,
+          id: third,
+          prompt: "Revise the original using the corrected classification.",
+          dialogue: true,
+        })
+      ).status,
+    ).toBe(202);
+    const revised = await f.until(third, (task) => task.state === "succeeded");
+    expect(revised.artifact).toMatchObject({ documentId: (original.artifact as { documentId: string }).documentId });
+    expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(1);
+    expect(f.runs()).toBe(3);
+  } finally {
+    await f.close();
+  }
+}, 150000);

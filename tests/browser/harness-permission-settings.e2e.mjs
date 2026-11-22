@@ -14,6 +14,8 @@ const app = await createAppFixture({
     const account = join(dir, "permission-settings-account");
     mkdirSync(account, { recursive: true });
     writeFileSync(join(account, "auth.json"), '{"fixture":{"access_token":"fixture-only"}}');
+    const zcodeSettings = join(dir, "zcode-provider.json");
+    writeFileSync(zcodeSettings, "{}");
     return {
       PANDA_FORCE_HARNESS_PROFILES: JSON.stringify([
         {
@@ -21,6 +23,17 @@ const app = await createAppFixture({
           name: "Grok Build",
           command: new URL("../support/grok-acp-fixture.mjs", import.meta.url).pathname,
           accountHome: account,
+        },
+      ]),
+      PANDA_FORCE_ZCODE_HARNESS_PROFILES: JSON.stringify([
+        {
+          id: "zcode-settings",
+          name: "ZCode",
+          command: new URL("../support/zcode-stdio-fixture.mjs", import.meta.url).pathname,
+          builtinConfig: zcodeSettings,
+          providerConfig: zcodeSettings,
+          providerId: "fixture",
+          model: "ZCode Fixture",
         },
       ]),
     };
@@ -165,6 +178,37 @@ try {
           .at(-1).params;
         assert.equal(restored.approvalPolicy, "on-request");
         assert.equal(restored.sandboxPolicy.type, "workspaceWrite");
+        await waitFor(async () => !(await snapshot(id)).conversation.activeRunId);
+        await page.locator("#harnessButton").click();
+        await page.locator('[data-harness-select="zcode-settings"]').click();
+        await waitFor(async () => (await snapshot(id)).conversation.runtimeId === "zcode-settings");
+        await page.waitForFunction(() =>
+          document.querySelector("#composerSettingModel")?.textContent?.includes("ZCode Fixture"),
+        );
+        await choose("full-access");
+        await page.locator("#fullAccessDialog[open]").waitFor();
+        assert.equal((await snapshot(id)).conversation.permissionMode, "ask");
+        await page.locator("#confirmFullAccess").click();
+        await waitFor(async () => (await snapshot(id)).conversation.permissionMode === "full-access");
+        await send("ZCode native access fixture");
+        await page.locator("#conversation").getByText("Fixture ZCode yolo active.", { exact: true }).waitFor();
+        await page.reload();
+        await open();
+        assert(await page.locator('input[name="session-permission"][value="full-access"]').isChecked());
+        await page.screenshot({ path: `${out}/zcode-${locale}-${width}.png`, scale: "css" });
+        await page.locator("[data-settings-dismiss]").first().click();
+        await send("ZCode resumed access fixture");
+        await waitFor(async () => {
+          const value = await snapshot(id);
+          return (
+            !value.conversation.activeRunId &&
+            value.messages.filter((m) => m.text === "Fixture ZCode yolo active.").length === 2
+          );
+        });
+        await choose("ask");
+        await waitFor(async () => (await snapshot(id)).conversation.permissionMode === "ask");
+        await send("ZCode restored approval fixture");
+        await page.locator("#conversation").getByText("Fixture ZCode build active.", { exact: true }).waitFor();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
         assert.deepEqual(errors, []);
         records.push({
@@ -177,6 +221,7 @@ try {
           switchResetsToAsk: true,
           codexConfirmation: true,
           codexNativePolicies: true,
+          zcodeNativeModeReapplied: true,
           errors,
         });
       } finally {
@@ -185,9 +230,7 @@ try {
       }
     }
   await writeFile(`${out}/result.json`, JSON.stringify({ passed: true, records }, null, 2));
-  console.log(
-    "Native Codex and managed Codex/Grok permission settings, persistence and native execution policies passed on PC/H5.",
-  );
+  console.log("Codex, Grok and ZCode permission settings, persistence and native execution policies passed on PC/H5.");
 } finally {
   await app.dispose();
 }

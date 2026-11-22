@@ -152,6 +152,7 @@ createInterface({ input: process.stdin }).on(
             });
           } else if (names.includes("panda_documents_create")) {
             await call("panda_creation_context", {});
+            if (names.includes("panda_creation_turn")) await call("panda_creation_turn", { action: "deliver" });
             await call("panda_documents_create", {
               title: "Grok document",
               body: {
@@ -252,6 +253,12 @@ createInterface({ input: process.stdin }).on(
         await new Promise((resolve) => setTimeout(resolve, 150));
         update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: " completed." } });
         result = { stopReason: "end_turn" };
+        if (behavior.includes("harness.token-usage"))
+          result._meta = {
+            inputTokens: 900,
+            totalTokens: 99999,
+            usage: { inputTokens: 1800, outputTokens: 200, totalTokens: 2000, cachedReadTokens: 700 },
+          };
         active = null;
       } else if (frame.method === "session/cancel") {
         if (active) send({ id: active.id, result: { stopReason: "cancelled" } });

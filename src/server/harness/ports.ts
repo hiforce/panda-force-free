@@ -9,6 +9,7 @@ import type {
   HarnessMessage,
   HarnessPermissionMode,
 } from "../../shared/harness/contracts.js";
+import type { TokenCount } from "../../shared/engine/types.js";
 export type HarnessImportedMessage = Pick<HarnessMessage, "role" | "text"> &
   Partial<Pick<HarnessMessage, "id" | "runId" | "createdAt">>;
 export interface HarnessSourcePage {
@@ -90,8 +91,7 @@ export type HarnessAgentEvent =
   | { type: "text"; text: string }
   | { type: "thought"; text: string }
   | { type: "tool"; id: string; name: string; status: "running" | "complete" | "error"; text?: string }
-  | { type: "permission"; id: string; title: string; options: Array<{ id: string; name: string; kind: string }> }
-  | { type: "usage"; inputTokens?: number; outputTokens?: number; totalTokens?: number };
+  | { type: "permission"; id: string; title: string; options: Array<{ id: string; name: string; kind: string }> };
 export interface HarnessPrompt {
   text: string;
   attachments: Array<HarnessAttachment & { path: string }>;
@@ -108,7 +108,7 @@ export interface HarnessAgent {
     session: HarnessNativeSession,
     input: HarnessPrompt,
     emit: (event: HarnessAgentEvent) => Promise<void>,
-  ): Promise<{ stopReason: "complete" | "cancelled" }>;
+  ): Promise<{ stopReason: "complete" | "cancelled"; usage?: TokenCount }>;
   cancel(session: HarnessNativeSession): Promise<void>;
   respondPermission(id: string, optionId: string | null): Promise<void>;
   close(): Promise<void>;

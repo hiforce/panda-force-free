@@ -6,6 +6,7 @@ export const creationStateLabels = {
   running: "creation.running",
   committing: "creation.committing",
   succeeded: "creation.succeeded",
+  replied: "creation.replied",
   failed: "creation.failed",
   cancelled: "creation.cancelled",
 } as const satisfies Record<CreationTaskState, MessageId>;

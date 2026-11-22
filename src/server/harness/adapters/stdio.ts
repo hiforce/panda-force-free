@@ -18,6 +18,7 @@ export interface HarnessStdioOptions {
   args: readonly string[];
   cwd: string;
   env: NodeJS.ProcessEnv;
+  protocol?: "jsonrpc" | "zcode";
   onNotification?(method: string, params: Record<string, unknown>): Promise<void> | void;
   onRequest?(method: string, params: Record<string, unknown>): Promise<unknown>;
   onDisconnect?(error: HarnessTransportError): void;
@@ -90,7 +91,11 @@ export class HarnessStdioTransport {
       let frame: Record<string, unknown>;
       try {
         const parsed: unknown = JSON.parse(line);
-        if (!isRecord(parsed) || parsed.jsonrpc !== "2.0") throw Error();
+        if (
+          !isRecord(parsed) ||
+          (this.options.protocol === "zcode" ? parsed.jsonrpc !== undefined : parsed.jsonrpc !== "2.0")
+        )
+          throw Error();
         frame = parsed;
       } catch {
         this.fail(new HarnessTransportError("invalidProtocol", true));
@@ -160,11 +165,10 @@ export class HarnessStdioTransport {
     try {
       if (!this.options.onRequest) throw new HarnessError("capabilityUnavailable");
       const result = await this.options.onRequest(method, params);
-      this.write({ jsonrpc: "2.0", id, result: result ?? null });
+      this.write({ id, result: result ?? null });
     } catch (error) {
       if (!this.stopped && !this.failure)
         this.write({
-          jsonrpc: "2.0",
           id,
           error: {
             code: error instanceof HarnessError && error.code === "capabilityUnavailable" ? -32601 : -32603,
@@ -176,7 +180,7 @@ export class HarnessStdioTransport {
   private write(frame: object) {
     if (!this.child || this.failure || this.stopped)
       throw this.failure ?? new HarnessTransportError("unavailable", false);
-    const bytes = JSON.stringify(frame) + "\n";
+    const bytes = JSON.stringify(this.options.protocol === "zcode" ? frame : { jsonrpc: "2.0", ...frame }) + "\n";
     if (Buffer.byteLength(bytes) > MAX_FRAME_BYTES) throw new HarnessTransportError("invalidInput", false);
     this.child.stdin.write(bytes);
   }
@@ -203,7 +207,7 @@ export class HarnessStdioTransport {
         }, timeout);
       this.pending.set(id, item);
       try {
-        this.write({ jsonrpc: "2.0", id, method, params });
+        this.write({ id, method, params });
         item.dispatched = true;
       } catch (error) {
         this.pending.delete(id);
@@ -214,7 +218,7 @@ export class HarnessStdioTransport {
   }
   async notify(method: string, params: Record<string, unknown>) {
     await this.start();
-    this.write({ jsonrpc: "2.0", method, params });
+    this.write({ method, params });
   }
   private fail(error: HarnessTransportError) {
     if (this.failure || this.stopped) return;

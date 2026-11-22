@@ -17,6 +17,7 @@ import type {
 import { decode, save } from "./records.js";
 export interface HarnessProfile extends HarnessProfileView {
   factory: HarnessAgentFactory;
+  conversationOnly?: boolean;
 }
 export interface HarnessPrincipal {
   owner: string;
@@ -79,12 +80,16 @@ export class HarnessRegistry {
       defaultRuntimeId: defaults?.runtimeId ?? "",
       canManage: principal.administrator,
       profiles: principal.administrator
-        ? [...this.profiles.values()].map(({ factory: _factory, ...view }) => view)
+        ? [...this.profiles.values()].map(({ factory: _factory, conversationOnly: _scope, ...view }) => view)
         : [],
       runtimes: values
         .filter((runtime) => principal.administrator || (runtime.enabled && runtime.access === "members"))
         .map((runtime) => this.view(runtime, defaults?.runtimeId)),
     };
+  }
+  supportsApplication(profileId: string) {
+    const profile = this.profiles.get(profileId);
+    return !!profile && !profile.conversationOnly;
   }
   view(runtime: HarnessRuntime, defaultId?: string): HarnessRuntimeView {
     const info = this.discovered.get(runtime.id),
@@ -169,6 +174,7 @@ export class HarnessRegistry {
   ) {
     const runtime = await this.require(principal, id),
       profile = this.profiles.get(runtime.profileId)!;
+    if (application && profile.conversationOnly) throw new HarnessError("capabilityUnavailable", 409);
     try {
       const agent = await profile.factory.create(runtime, { owner: principal.owner, scopeId, cwd, application });
       let info: HarnessAgentInfo;

@@ -1,5 +1,7 @@
+import type { TokenUsage } from "../engine/types.js";
+
 /** Runtime instances are deployment identities; conversations and model choices have separate lifetimes. */
-export type HarnessKind = "codex" | "grok-build";
+export type HarnessKind = "codex" | "grok-build" | "zcode";
 export type HarnessDeployment = "local" | "container" | "remote";
 export type HarnessStatus = "unknown" | "connecting" | "ready" | "authentication" | "unavailable";
 export type HarnessPermissionMode = "ask" | "always-approve" | "full-access";
@@ -124,6 +126,7 @@ export interface HarnessRun {
   effort: string | null;
   permissionMode?: HarnessPermissionMode;
   status: HarnessRunStatus;
+  thinking?: boolean;
   epoch: string;
   leaseUntil: number;
   userMessageId: string;
@@ -142,9 +145,10 @@ export interface HarnessConversationSnapshot {
   messages: HarnessMessage[];
   run: Pick<
     HarnessRun,
-    "id" | "status" | "runtimeId" | "model" | "effort" | "error" | "createdAt" | "updatedAt"
+    "id" | "status" | "runtimeId" | "model" | "effort" | "thinking" | "error" | "createdAt" | "updatedAt"
   > | null;
   runtime: HarnessRuntimeView | null;
+  tokenUsage?: TokenUsage;
   cursor: string;
   history: { beforeBytes: number; hasEarlier: boolean; nextCursor?: string | null };
 }

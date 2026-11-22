@@ -106,6 +106,7 @@ export class CreationSessionCommands {
             prompt,
             selections: [...input.selections],
             attachments,
+            dialogue: true,
             ...(runtimeId ? { runtimeId } : {}),
             ...(control.model ? { model: control.model } : {}),
             ...(control.effort ? { effort: control.effort } : {}),

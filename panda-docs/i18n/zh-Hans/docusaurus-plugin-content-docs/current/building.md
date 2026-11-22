@@ -2,7 +2,7 @@
 title: 编译源码与基础镜像
 ---
 
-0.1.3 默认使用已公开、配套的 **Rocky 创作构建/运行基础镜像**，平台为 Linux amd64。两种镜像均包含 Codex CLI、Grok Build 与完整的 Office/PDF/OCR、字体、图像、研究、写作、浏览器和视频工具；构建镜像增加应用开发/原生编译依赖，运行镜像保留生产依赖。[基础镜像内容与用途](base-images.md)说明清单、目的和锁定输入。
+0.1.4 默认使用已公开、配套的 **Rocky 创作构建/运行基础镜像**，平台为 Linux amd64。两种镜像均包含 Codex CLI、Grok Build 与完整的 Office/PDF/OCR、字体、图像、研究、写作、浏览器和视频工具；构建镜像增加应用开发/原生编译依赖，运行镜像保留生产依赖。[基础镜像内容与用途](base-images.md)说明清单、目的和锁定输入。
 
 ## Development container
 
@@ -32,7 +32,7 @@ Dockerfile、Compose 构建叠加文件与 `scripts/build/base-images.json` 固�
 
 在同版干净源码中使用 [Rocky 创作构建器](base-images.md#构建并选用-rocky-基础镜像)。它按 profile、Node/Python 锁和校验值构建两种基础镜像，验证实际清单，支持明确的拉取策略和可信源覆盖。插件或依赖变化后先重建验证配套镜像，再选用新摘要；仅应用版本号变化可复用兼容基础层。
 
-旧版 Debian 配方保留为明确选择的兼容环境，并提供 Rocky 配方使用的 Debian Harness seed。它不包含完整创作工具。[旧环境的完整构建顺序](https://github.com/hiforce/panda-force-free/blob/v0.1.3/panda-docs/docs/building.md#build-your-own-base-images)是 **核心依赖 → 媒体层 → Harness 引擎层**；单独的核心/媒体层不能满足本版引擎锁。
+旧版 Debian 配方保留为明确选择的兼容环境，并提供 Rocky 配方使用的 Debian Harness seed。它不包含完整创作工具。[旧环境的完整构建顺序](https://github.com/hiforce/panda-force-free/blob/v0.1.4/panda-docs/docs/building.md#build-your-own-base-images)是 **核心依赖 → 媒体层 → Harness 引擎层**；单独的核心/媒体层不能满足本版引擎锁。
 
 Rocky 的 seed 阶段通过 apt 准备可移植字体，所以 `--seed-image` 使用已验证的 **Debian 引擎构建镜像**，而非新的 Rocky 默认镜像；最终 Rocky 阶段自行安装 RPM 并重新编译原生模块。
 

@@ -93,8 +93,9 @@
   --pf-composer-shadow: 0 4px 18px #5645340b;
 }
 
-/* Aurora keeps restrained cyan emphasis on dark blue surfaces. */
-:root[data-appearance="aurora"] {
+/* Workbench Aurora and the standalone SSH terminal share the dark-blue palette. */
+:root[data-appearance="aurora"],
+.remote-console-page {
   --pf-backdrop: #040e1a;
   --pf-card: #0d2034;
   --pf-canvas: #071423;

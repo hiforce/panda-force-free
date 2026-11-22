@@ -1,224 +1,294 @@
-import type { CreationNotification } from "../../shared/creation/contracts.js";
-import type { Translate } from "../../shared/i18n/messages.js";
-import { creationApiFor, CreationApiError } from "../creation/api.js";
-import { creationDocumentRoute } from "../creation/delivery-route.js";
-import { LazyCreativeAssetsPanel } from "../creative/assets-lazy.js";
-import { codexIcon } from "../codex-icons.js";
-import { localizeAttribute, localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
-import { requireElement } from "../dom.js";
+import { notificationKey, type NotificationItem, type NotificationPage } from "../../shared/notifications/contracts.js";
+import type { MessageId, Translate } from "../../shared/i18n/messages.js";
+import { notificationApi } from "./api.js";
+import { NotificationCenterView, type NotificationMode } from "./view.js";
 
-type Entry = CreationNotification & { scope: "application" | "personal" };
+export interface NotificationIntentHandler {
+  label: MessageId;
+  directFromPreview?: boolean;
+  run(data: unknown): Promise<void>;
+}
+
 const activeIdentity = () =>
   (globalThis as typeof globalThis & { __pandaForceIdentityKey?: string }).__pandaForceIdentityKey;
-/** A durable owner-scoped inbox is independent of the active page and of native engine sessions. */
-export class CreationCompletionNotifications {
-  private readonly button = document.createElement("button");
-  private readonly badge = document.createElement("span");
-  private readonly dialog = document.createElement("dialog");
-  private readonly heading = document.createElement("h2");
-  private readonly close = document.createElement("button");
-  private readonly list = document.createElement("ol");
-  private readonly notice = document.createElement("p");
-  private readonly retry = document.createElement("button");
-  private readonly apis = { application: creationApiFor(), personal: creationApiFor("personal") };
-  private readonly viewer: LazyCreativeAssetsPanel;
+
+export class NotificationCenter {
+  private readonly view: NotificationCenterView;
   private readonly abort = new AbortController();
-  private entries: Entry[] = [];
+  private readonly reads = new Map<string, number>();
+  private unread = 0;
+  private preview: NotificationItem[] = [];
+  private pages: NotificationPage[] = [];
+  private mode: NotificationMode = "preview";
+  private detail?: NotificationItem;
+  private pageIndex = 0;
+  private detailOrigin: "preview" | "history" = "history";
+  private listScroll = 0;
   private pending?: Promise<void>;
   private reading?: AbortController;
+  private historyRead?: AbortController;
+  private historyRetry?: { cursor: string | null };
   private navigating = false;
-  private failed = false;
-  private signature = "";
+  private previewReady = false;
+  private previewFailed = false;
+  private actionFailed = false;
   private readonly timer: ReturnType<typeof setInterval>;
   private readonly update = () => void this.refresh();
   private readonly leaving = () => {
     this.navigating = true;
     this.reading?.abort();
+    this.stopHistoryRead();
   };
   private readonly returned = () => {
     this.navigating = false;
     this.update();
   };
+
   constructor(
-    private readonly t: Translate,
+    t: Translate,
     private readonly identity: string,
-    private readonly navigate: (path: string) => void,
+    private readonly actions: {
+      intents: Record<string, NotificationIntentHandler>;
+      close(): void;
+    },
   ) {
-    this.viewer = new LazyCreativeAssetsPanel(t, "notificationDeliveryViewer", identity);
-    this.button.type = "button";
-    this.button.id = "creationNotificationsButton";
-    this.button.className = "icon-button creation-notifications-button";
-    this.button.setAttribute("aria-haspopup", "dialog");
-    this.button.setAttribute("aria-controls", "creationNotificationsDialog");
-    setMessageHtml(this.button, codexIcon("bell"));
-    this.badge.className = "creation-notifications-badge";
-    this.badge.setAttribute("aria-hidden", "true");
-    this.badge.hidden = true;
-    this.button.append(this.badge);
-    requireElement(".top-actions").prepend(this.button);
-    this.dialog.id = "creationNotificationsDialog";
-    this.dialog.className = "workbench-dialog creation-notifications-dialog";
-    this.dialog.setAttribute("aria-labelledby", "creationNotificationsHeading");
-    this.heading.id = "creationNotificationsHeading";
-    const header = document.createElement("header");
-    this.close.type = "button";
-    this.close.className = "icon-button";
-    setMessageHtml(this.close, codexIcon("x"));
-    this.close.onclick = () => this.dialog.close();
-    header.append(this.heading, this.close);
-    this.list.className = "creation-notifications-list";
-    this.notice.setAttribute("role", "status");
-    this.retry.type = "button";
-    this.retry.className = "wb-button";
-    this.retry.onclick = this.update;
-    this.dialog.append(header, this.notice, this.list, this.retry);
-    this.dialog.addEventListener("close", () => this.button.focus());
-    document.body.append(this.dialog);
-    this.button.onclick = () => {
-      this.render();
-      this.dialog.showModal();
-      void this.refresh();
-    };
+    this.view = new NotificationCenterView(t, {
+      preview: () => this.openPreview(),
+      all: () => this.openHistory(),
+      back: () => this.back(),
+      page: (delta) => this.selectPage(delta),
+      entry: (entry) => this.open(entry),
+      deliver: () => {
+        if (this.detail) this.runIntent(this.detail);
+      },
+      retry: () => this.retry(),
+    });
     window.addEventListener("focus", this.update);
     window.addEventListener("pagehide", this.leaving);
     window.addEventListener("beforeunload", this.leaving);
     window.addEventListener("pageshow", this.returned);
-    window.addEventListener("panda-force:creation-completed", this.update);
+    window.addEventListener("panda-force:notifications-changed", this.update);
     document.addEventListener("visibilitychange", this.update);
     this.timer = setInterval(this.update, 15000);
     this.render();
-    void this.refresh();
+    this.update();
   }
-  refresh() {
-    if (this.abort.signal.aborted || this.navigating || document.hidden) return Promise.resolve();
-    if (activeIdentity() && activeIdentity() !== this.identity) {
+
+  private authorized() {
+    if (this.abort.signal.aborted) return false;
+    const active = activeIdentity();
+    if (active && active !== this.identity) {
       this.dispose();
-      return Promise.resolve();
+      return false;
     }
+    return true;
+  }
+  private refresh() {
+    if (!this.authorized() || this.navigating || document.hidden) return;
     if (this.pending) return this.pending;
-    this.pending = (async () => {
-      this.reading = new AbortController();
-      const signal = AbortSignal.any([this.abort.signal, this.reading.signal]);
-      const scopes = ["application", "personal"] as const;
-      const results = await Promise.allSettled(scopes.map((scope) => this.apis[scope].notifications(signal)));
-      if (signal.aborted) return;
-      if (activeIdentity() && activeIdentity() !== this.identity) {
-        this.dispose();
-        return;
-      }
-      this.failed = false;
-      for (const [index, result] of results.entries()) {
-        const scope = scopes[index]!;
-        if (result.status === "fulfilled")
-          this.entries = [
-            ...this.entries.filter((entry) => entry.scope !== scope),
-            ...result.value.items.map((entry) => ({ ...entry, scope })),
-          ];
-        else {
-          this.failed = true;
-          if (result.reason instanceof CreationApiError && [401, 403].includes(result.reason.status))
-            this.entries = this.entries.filter((entry) => entry.scope !== scope);
+    this.reading = new AbortController();
+    const signal = AbortSignal.any([this.abort.signal, this.reading.signal]);
+    this.pending = notificationApi
+      .preview(signal)
+      .then(({ items, unreadCount, partial }) => {
+        if (signal.aborted || !this.authorized()) return;
+        const reading = items.filter((item) => item.readAt === null && this.reads.has(notificationKey(item))).length;
+        this.unread = Math.max(0, unreadCount - reading);
+        this.preview = items.map((item) => this.applyRead(item));
+        this.previewFailed = Boolean(partial);
+      })
+      .catch(() => {
+        if (!signal.aborted && this.authorized()) this.previewFailed = true;
+      })
+      .finally(() => {
+        this.pending = undefined;
+        if (!signal.aborted) {
+          this.previewReady = true;
+          this.render();
         }
-      }
-      this.entries.sort(
-        (a, b) =>
-          Number(a.readAt !== null) - Number(b.readAt !== null) ||
-          b.createdAt - a.createdAt ||
-          a.taskId.localeCompare(b.taskId),
-      );
-      this.render();
-    })().finally(() => {
-      this.pending = undefined;
-    });
+      });
     return this.pending;
+  }
+
+  private intent(entry?: NotificationItem) {
+    const action = entry?.action;
+    return action?.type === "intent" && Object.hasOwn(this.actions.intents, action.name)
+      ? this.actions.intents[action.name]
+      : undefined;
   }
   render() {
     if (this.abort.signal.aborted) return;
-    const unread = this.entries.filter((entry) => entry.readAt === null).length;
-    localizeAttribute(this.button, "aria-label", "creation.notificationsUnread", { count: unread }, this.t);
-    localizeAttribute(this.button, "title", "creation.notificationsTitle", undefined, this.t);
-    setOpaqueText(this.badge, unread > 99 ? "99+" : String(unread));
-    this.badge.hidden = !unread;
-    localizeText(this.heading, "creation.notificationsTitle", undefined, this.t);
-    localizeAttribute(this.close, "aria-label", "common.close", undefined, this.t);
-    localizeText(this.retry, "common.retry", undefined, this.t);
-    this.retry.hidden = !this.failed;
-    this.notice.textContent = this.failed
-      ? this.t("creation.notificationsLoadFailed")
-      : this.entries.length
-        ? ""
-        : this.t("creation.notificationsEmpty");
-    const signature = JSON.stringify([this.entries, document.documentElement.lang]);
-    if (signature === this.signature) return;
-    this.signature = signature;
-    const focused = (document.activeElement as HTMLElement)?.dataset.notificationKey,
-      scroll = this.dialog.scrollTop;
-    this.list.replaceChildren(
-      ...this.entries.map((entry) => {
-        const li = document.createElement("li"),
-          button = document.createElement("button"),
-          title = document.createElement("strong"),
-          status = document.createElement("span"),
-          time = document.createElement("time");
-        button.type = "button";
-        button.className = "creation-notification";
-        button.dataset.notificationKey = entry.scope + ":" + entry.taskId + ":" + entry.generation;
-        button.dataset.unread = String(entry.readAt === null);
-        setOpaqueText(title, entry.title || this.t("creation.notificationsReady"));
-        localizeText(status, "creation.notificationsOpen", undefined, this.t);
-        time.dateTime = new Date(entry.createdAt).toISOString();
-        time.textContent = new Intl.DateTimeFormat(document.documentElement.lang, {
-          dateStyle: "short",
-          timeStyle: "short",
-        }).format(entry.createdAt);
-        button.append(title, status, time);
-        button.onclick = () => this.open(entry);
-        li.append(button);
-        return li;
-      }),
-    );
-    this.dialog.scrollTop = scroll;
-    if (focused)
-      this.list
-        .querySelector<HTMLButtonElement>(`[data-notification-key="${CSS.escape(focused)}"]`)
-        ?.focus({ preventScroll: true });
+    const page = this.pages[this.pageIndex];
+    this.view.render({
+      mode: this.mode,
+      entries: this.mode === "preview" ? this.preview : (page?.items ?? []),
+      detail: this.mode === "detail" ? this.detail : undefined,
+      intentLabel: this.intent(this.detail)?.label,
+      direct: (entry) => Boolean(this.intent(entry)?.directFromPreview),
+      unread: this.unread,
+      page: this.pageIndex + 1,
+      hasNext: Boolean(page?.nextCursor),
+      loading: this.mode === "preview" ? !this.previewReady : this.mode === "history" && Boolean(this.historyRead),
+      error: this.actionFailed
+        ? "notifications.actionFailed"
+        : (this.mode === "preview" ? this.previewFailed : this.historyRetry)
+          ? "notifications.loadFailed"
+          : undefined,
+    });
   }
-  private open(entry: Entry) {
-    if (this.abort.signal.aborted) return;
-    entry.readAt ??= Date.now();
+
+  private openPreview() {
+    if (!this.authorized()) return;
+    this.stopHistoryRead();
+    this.mode = "preview";
+    this.detail = undefined;
+    this.actionFailed = false;
     this.render();
-    void this.apis[entry.scope]
-      .readNotification(entry.taskId, entry.generation, this.abort.signal)
-      .then(() => this.refresh())
+    this.view.show();
+    this.update();
+  }
+  private openHistory() {
+    this.mode = "history";
+    this.pages = [];
+    this.detail = undefined;
+    this.pageIndex = 0;
+    this.historyRetry = undefined;
+    this.actionFailed = false;
+    void this.loadPage(null);
+    this.view.focus();
+  }
+  private stopHistoryRead() {
+    this.historyRead?.abort();
+    this.historyRead = undefined;
+  }
+  private back() {
+    if (this.mode === "detail") {
+      const key = this.detail && notificationKey(this.detail);
+      this.mode = this.detailOrigin;
+      this.detail = undefined;
+      this.actionFailed = false;
+      this.render();
+      this.view.list.scrollTop = this.listScroll;
+      this.view.focus(key);
+    } else {
+      this.openPreview();
+      this.view.focus();
+    }
+  }
+  private selectPage(delta: -1 | 1) {
+    if (this.historyRead) return;
+    const target = this.pageIndex + delta;
+    if (this.pages[target]) {
+      this.pageIndex = target;
+      this.historyRetry = undefined;
+      this.render();
+      this.view.list.scrollTop = 0;
+      this.view.focus();
+    } else if (delta === 1) {
+      const cursor = this.pages[this.pageIndex]?.nextCursor;
+      if (cursor) void this.loadPage(cursor);
+    }
+  }
+  private async loadPage(cursor: string | null) {
+    if (this.historyRead || !this.authorized()) return;
+    const request = new AbortController();
+    this.historyRead = request;
+    this.historyRetry = undefined;
+    this.render();
+    try {
+      const page = await notificationApi.history(cursor, request.signal);
+      if (request.signal.aborted || !this.authorized()) return;
+      page.items = page.items.map((entry) => this.applyRead(entry));
+      if (!page.items.length && this.pages.length) this.pages[this.pageIndex]!.nextCursor = null;
+      else this.pageIndex = this.pages.push(page) - 1;
+      this.view.list.scrollTop = 0;
+      this.view.focus();
+    } catch {
+      if (!request.signal.aborted && this.authorized()) this.historyRetry = { cursor };
+    } finally {
+      if (this.historyRead === request) {
+        this.historyRead = undefined;
+        this.render();
+      }
+    }
+  }
+
+  private retry() {
+    if (this.actionFailed && this.detail) this.runIntent(this.detail);
+    else if (this.mode === "preview") this.update();
+    else if (this.historyRetry) void this.loadPage(this.historyRetry.cursor);
+  }
+  private applyRead(entry: NotificationItem) {
+    const mark = this.reads.get(notificationKey(entry));
+    return mark && entry.readAt === null ? { ...entry, readAt: mark } : entry;
+  }
+  private markRead(entry: NotificationItem) {
+    if (entry.readAt !== null) return;
+    const key = notificationKey(entry);
+    if (this.reads.has(key)) return;
+    const stamp = Date.now();
+    this.reads.set(key, stamp);
+    const copies = () =>
+      [this.preview, ...this.pages.map((page) => page.items), [entry]]
+        .flat()
+        .filter((item) => notificationKey(item) === key);
+    for (const item of copies()) item.readAt ??= stamp;
+    this.unread = Math.max(0, this.unread - 1);
+    void notificationApi
+      .read(entry, this.abort.signal)
       .catch(() => {
         if (this.abort.signal.aborted) return;
-        this.failed = true;
-        this.render();
+        for (const item of copies()) if (item.readAt === stamp) item.readAt = null;
+      })
+      .finally(async () => {
+        this.reads.delete(key);
+        await this.pending;
+        this.update();
       });
-    this.dialog.close();
-    if (entry.artifact.kind === "document") this.navigate(creationDocumentRoute(entry.artifact));
-    else
-      void this.viewer
-        .follow(entry.artifact.projectId, entry.artifact.assetId, async () => {}, entry.artifact.version)
-        .catch(() => {
-          if (!this.abort.signal.aborted) {
-            this.notice.textContent = this.t("documents.unavailable");
-            this.dialog.showModal();
-          }
-        });
   }
-  dispose() {
+  private open(entry: NotificationItem) {
+    if (!this.authorized()) return;
+    this.stopHistoryRead();
+    this.markRead(entry);
+    this.detailOrigin = this.mode === "preview" ? "preview" : "history";
+    this.listScroll = this.view.list.scrollTop;
+    if (this.mode === "preview" && this.intent(entry)?.directFromPreview) {
+      this.runIntent(entry);
+      return;
+    }
+    this.mode = "detail";
+    this.detail = entry;
+    this.actionFailed = false;
+    this.render();
+    this.view.focus();
+  }
+  private runIntent(entry: NotificationItem) {
+    if (!this.authorized() || entry.action?.type !== "intent") return;
+    const intent = this.intent(entry);
+    if (!intent) return;
+    this.actionFailed = false;
+    this.render();
+    this.view.closeDialog();
+    void intent.run(entry.action.data).catch(() => {
+      if (!this.authorized()) return;
+      this.mode = "detail";
+      this.detail = entry;
+      this.actionFailed = true;
+      this.render();
+      this.view.show();
+    });
+  }
+  private dispose() {
     this.abort.abort();
+    this.stopHistoryRead();
     clearInterval(this.timer);
     window.removeEventListener("focus", this.update);
     window.removeEventListener("pagehide", this.leaving);
     window.removeEventListener("beforeunload", this.leaving);
     window.removeEventListener("pageshow", this.returned);
-    window.removeEventListener("panda-force:creation-completed", this.update);
+    window.removeEventListener("panda-force:notifications-changed", this.update);
     document.removeEventListener("visibilitychange", this.update);
-    this.button.remove();
-    this.dialog.remove();
-    this.viewer.close();
-    this.entries = [];
+    this.view.dispose();
+    this.actions.close();
   }
 }

@@ -7,8 +7,13 @@ import { messageHtml, localizeText, setOpaqueText } from "../i18n.js";
 import { runtimeModelCatalog } from "./model-catalog.js";
 
 /** A form owns its selection; late discovery never replaces another runtime's catalog or draft. */
-export function createRuntimeModelField(t: Translate, prefix: string, changed: () => void = () => {}) {
-  const catalog = runtimeModelCatalog(t);
+export function createRuntimeModelField(
+  t: Translate,
+  prefix: string,
+  changed: () => void = () => {},
+  conversation = false,
+) {
+  const catalog = runtimeModelCatalog(t, conversation);
   let host: HTMLElement | null = null,
     epoch = 0,
     pending = false,

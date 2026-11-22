@@ -57,14 +57,14 @@ for (const kind of ["document", "image"]) {
         });
         await page.goto(app.base + "/tasks");
         await page
-          .locator("#creationNotificationsButton")
+          .locator("#notificationCenterButton")
           .waitFor()
           .catch(async (error) => {
             console.error("Inbox bootstrap", {
               errors,
               url: page.url(),
               controls: await page.evaluate(() => ({
-                count: document.querySelectorAll("#creationNotificationsButton").length,
+                count: document.querySelectorAll("#notificationCenterButton").length,
                 identity: globalThis.__pandaForceIdentityKey,
                 globalActions: document.querySelector(".workbench-global-actions")?.outerHTML,
               })),
@@ -101,13 +101,15 @@ for (const kind of ["document", "image"]) {
             return task.state === "succeeded" ? task : null;
           }, 60000);
           await page.evaluate(() => dispatchEvent(new Event("focus")));
-          await page.locator("#creationNotificationsButton .creation-notifications-badge:visible").waitFor();
+          await page.locator("#notificationCenterButton .notification-center-badge:visible").waitFor();
         }
         for (const locale of ["en", "zh-CN", "zh-HK", "zh-TW"]) {
           await page.evaluate((value) => globalThis.__pandaForceI18n.setPreference(value), locale);
-          await page.locator("#creationNotificationsButton").click();
-          const dialog = page.locator("#creationNotificationsDialog"),
-            item = dialog.locator(`[data-notification-key="personal:${saved.id}:${saved.generation}"]`);
+          await page.locator("#notificationCenterButton").click();
+          const dialog = page.locator("#notificationCenterDialog"),
+            item = dialog.locator(
+              `[data-notification-key^="personal-creation:"][data-notification-key$=".${saved.id}.${saved.generation}"]`,
+            );
           await item.waitFor();
           assert((await dialog.boundingBox()).width <= (width > 767 ? 520 : width - 24) + 1);
           assert(!(await dialog.evaluate((el) => getComputedStyle(el).fontFamily)).includes("Times New Roman"));
@@ -116,12 +118,12 @@ for (const kind of ["document", "image"]) {
           const box = await item.boundingBox();
           assert(box.width >= 44 && box.height >= 44);
           await page.screenshot({ path: `${out}/${kind}-${locale}-${width}.png` });
-          await dialog.locator("header button").click();
+          await dialog.locator("[data-notifications-close]").click();
           records.push({ kind, width, locale, savedDelivery: true, touchTarget: true, noOverflow: true });
         }
-        await page.locator("#creationNotificationsButton").click();
+        await page.locator("#notificationCenterButton").click();
         const item = page.locator(
-          `#creationNotificationsDialog [data-notification-key="personal:${saved.id}:${saved.generation}"]`,
+          `#notificationCenterDialog [data-notification-key^="personal-creation:"][data-notification-key$=".${saved.id}.${saved.generation}"]`,
         );
         await item.focus();
         await page.keyboard.press("Enter");
@@ -150,14 +152,14 @@ for (const kind of ["document", "image"]) {
         );
         await page.waitForLoadState("networkidle");
         await page.reload();
-        await page.locator("#creationNotificationsButton").click();
+        await page.locator("#notificationCenterButton").click();
         await page
           .locator(
-            `#creationNotificationsDialog [data-notification-key="personal:${saved.id}:${saved.generation}"][data-unread="false"]`,
+            `#notificationCenterDialog [data-notification-key^="personal-creation:"][data-notification-key$=".${saved.id}.${saved.generation}"][data-unread="false"]`,
           )
           .waitFor();
         if (kind === "document") {
-          await page.locator("#creationNotificationsDialog header button").click();
+          await page.locator("#notificationCenterDialog [data-notifications-close]").click();
           await page.waitForLoadState("networkidle");
           await page.goto(app.base + "/task/old-alpha");
           await page.locator("#sessionInfoButton").click();

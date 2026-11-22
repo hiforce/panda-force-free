@@ -19,7 +19,7 @@ export function renderSessionUsage(root, usage, i18n, { compact = false } = {}) 
     root,
     `
     <div class="session-usage-total"><strong title="${exact(usage.total)}">${text(usage.total)}</strong><span>${label("sessionview.tokens")}</span></div>
-    <p class="session-caption session-usage-caption">${label(usage.total === null ? "sessionview.unavailable" : "sessionview.cumulative")}</p>
+    <p class="session-caption session-usage-caption">${label(usage.total === null ? "sessionview.unavailable" : usage.reportedOnly ? "sessionview.recordedTotal" : "sessionview.cumulative")}</p>
     ${usage.inputPercent !== null ? `<div class="session-token-bar" aria-hidden="true"><span style="width:${usage.inputPercent}%"></span><span style="width:${100 - usage.inputPercent}%"></span></div>` : ""}
     <div class="session-token-breakdown"><div><span><i></i>${label("sessionview.input")}</span><strong title="${exact(usage.input)}">${text(usage.input)}</strong></div><div><span><i></i>${label("sessionview.output")}</span><strong title="${exact(usage.output)}">${text(usage.output)}</strong></div></div>
     <div class="session-cached-input"><span title="${escapeHtml(t("sessionview.cachedHint"))}">${label("sessionview.cachedInput")} ⓘ</span><span title="${exact(usage.cached)}">${text(usage.cached)}</span></div>

@@ -756,6 +756,52 @@ describe("Harness source history and materials", () => {
   });
 });
 
+test("ZCode verifies native access before each new or resumed session can run", async () => {
+  const { ZCodeHarnessAgent } = await import("../../src/server/harness/adapters/zcode.js");
+  const cwd = await temporary();
+  const providerConfig = join(cwd, "provider.json");
+  const agent = async (settings: object) => {
+    await writeFile(providerConfig, JSON.stringify(settings));
+    const value = new ZCodeHarnessAgent({
+      cwd,
+      command: new URL("../support/zcode-stdio-fixture.mjs", import.meta.url).pathname,
+      env: { PATH: process.env.PATH, ZCODE_PERSONAL_PROVIDER_CONFIG_FILE: providerConfig },
+      providerId: "fixture",
+      model: "fixture",
+      cleanup: async () => {},
+    });
+    cleanups.push(() => value.close());
+    return value;
+  };
+  const opened = await agent({});
+  expect((await opened.initialize()).capabilities.permissionModes).toEqual(["ask", "full-access"]);
+  const session = await opened.create(cwd, { permissionMode: "full-access" });
+  const run = async (value: typeof opened, native: typeof session) => {
+    let answer = "";
+    await value.prompt(
+      native,
+      { text: "test", attachments: [], model: null, effort: null, operationId: randomUUID() },
+      async (event) => {
+        if (event.type === "text") answer += event.text;
+      },
+    );
+    return answer;
+  };
+  expect(await run(opened, session)).toBe("Fixture ZCode yolo active.");
+  const resumed = await agent({ projectionMode: "build" });
+  expect(await run(resumed, await resumed.load(session.id, cwd, { permissionMode: "full-access" }))).toBe(
+    "Fixture ZCode yolo active.",
+  );
+  const restored = await agent({ resumedMode: "yolo" });
+  expect(await run(restored, await restored.load(session.id, cwd))).toBe("Fixture ZCode build active.");
+  const unsupported = await agent({ ignoreMode: true });
+  await expect(unsupported.load(session.id, cwd, { permissionMode: "full-access" })).rejects.toMatchObject({
+    code: "capabilityUnavailable",
+  });
+  const elevated = await agent({ resumedMode: "yolo", ignoreMode: true });
+  await expect(elevated.load(session.id, cwd)).rejects.toMatchObject({ code: "capabilityUnavailable" });
+});
+
 describe("Codex Harness adapter lifecycle", () => {
   test("applies the selected native approval and sandbox policies on every resumed turn", async () => {
     const { CodexHarnessAgent } = await import("../../src/server/harness/adapters/codex.js");

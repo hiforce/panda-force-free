@@ -40,6 +40,7 @@ export class CreationMessages {
         "model",
         "effort",
         "outputType",
+        "dialogue",
       ]);
     const request = creationRequest({
       id: row.id,

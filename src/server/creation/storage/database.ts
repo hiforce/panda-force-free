@@ -9,10 +9,10 @@ export function openCreationDatabase(path: string): Database {
   const db = new Database(path, { create: true, strict: true });
   try {
     if (path !== ":memory:") chmodSync(path, 0o600);
-    db.exec("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;");
+    db.exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=3000;");
     db.transaction(() => {
       const version = db.query<{ user_version: number }, []>("PRAGMA user_version").get()!.user_version;
-      if (version > 7) throw new CreationError("unavailable");
+      if (version > 8) throw new CreationError("unavailable");
       if (!version)
         db.exec(`
           CREATE TABLE creation_tasks (
@@ -91,7 +91,36 @@ export function openCreationDatabase(path: string): Database {
         CREATE INDEX creation_notifications_owner ON creation_notifications(owner,readAt,createdAt);
         PRAGMA user_version=7;
       `);
+      if (version < 8) {
+        // Preserve child foreign keys while replacing the task table's state constraint.
+        db.exec(`
+          CREATE TABLE creation_tasks_v8 (
+            id TEXT PRIMARY KEY, owner TEXT NOT NULL, projectId TEXT NOT NULL,
+            operationId TEXT NOT NULL UNIQUE, spec TEXT NOT NULL, signature TEXT NOT NULL,
+            state TEXT NOT NULL CHECK(state IN ('queued','running','committing','succeeded','replied','failed','cancelled')),
+            generation INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0,
+            token TEXT, leaseUntil INTEGER, sessionId TEXT, runId TEXT,
+            cancelRequested INTEGER NOT NULL DEFAULT 0 CHECK(cancelRequested IN (0,1)),
+            outputDigest TEXT, artifact TEXT, failure TEXT, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL,
+            budget INTEGER NOT NULL DEFAULT 3,
+            CHECK(state!='committing' OR outputDigest IS NOT NULL),
+            CHECK(state!='succeeded' OR artifact IS NOT NULL),
+            CHECK(state!='replied' OR (artifact IS NULL AND outputDigest IS NULL)),
+            CHECK(artifact IS NULL OR outputDigest IS NOT NULL)
+          );
+          INSERT INTO creation_tasks_v8 SELECT id,owner,projectId,operationId,spec,signature,state,
+            generation,attempts,token,leaseUntil,sessionId,runId,cancelRequested,outputDigest,artifact,
+            failure,createdAt,updatedAt,budget FROM creation_tasks;
+          DROP TABLE creation_tasks;
+          ALTER TABLE creation_tasks_v8 RENAME TO creation_tasks;
+          CREATE INDEX creation_active ON creation_tasks(state,leaseUntil);
+          CREATE INDEX creation_owner ON creation_tasks(owner,projectId,createdAt);
+          PRAGMA user_version=8;
+        `);
+        if (db.query("PRAGMA foreign_key_check").get()) throw new CreationError("unavailable");
+      }
     }).immediate();
+    db.exec("PRAGMA foreign_keys=ON;");
     return db;
   } catch (error) {
     db.close();

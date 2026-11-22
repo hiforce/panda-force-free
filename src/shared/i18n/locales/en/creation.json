@@ -18,6 +18,7 @@
   "waiting": "Waiting for your answer",
   "committing": "Saving document",
   "succeeded": "Document ready",
+  "replied": "Answered",
   "failed": "Needs attention",
   "cancelled": "Cancelled",
   "cancel": "Cancel task",
@@ -207,11 +208,5 @@
   "progressRenderVideo": "Render the video",
   "progressSaveArtifact": "Save the generated artifact",
   "failedInactive": "The engine stopped making progress. Your request is retained; you can retry.",
-  "longRunningHint": "This task is taking longer. You can leave and return later; a notification will appear when the deliverable is saved.",
-  "notificationsTitle": "Notifications",
-  "notificationsEmpty": "No completed creations yet.",
-  "notificationsReady": "Your deliverable is ready",
-  "notificationsUnread": "{count} unread notifications",
-  "notificationsLoadFailed": "Notifications could not be refreshed. Try again.",
-  "notificationsOpen": "View deliverable"
+  "longRunningHint": "This task is taking longer. You can leave and return later; a notification will appear when the deliverable is saved."
 }

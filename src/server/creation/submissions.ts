@@ -39,6 +39,7 @@ export class CreationSubmissions {
       owner: string,
       id: string,
     ) => Promise<import("./contracts.js").CreationArtifact | null>,
+    private readonly readProgress?: import("./ports.js").CreationProgressStore["list"],
   ) {}
   async recover(owner: string, id: string, operationId: string) {
     const task = await this.tasks.find(owner, creationUuid(id));
@@ -62,6 +63,7 @@ export class CreationSubmissions {
         locale: task.spec.target.locale,
         prompt: input.prompt,
         ...(input.outputType === undefined ? {} : { outputType: input.outputType }),
+        ...(input.dialogue ? { dialogue: true } : {}),
         profileId: input.profile.id,
         ...(input.profile.runtimeId ? { runtimeId: input.profile.runtimeId } : {}),
         ...(input.profile.model ? { model: input.profile.model } : {}),
@@ -88,6 +90,7 @@ export class CreationSubmissions {
         "effort",
         "attachments",
         "outputType",
+        "dialogue",
       ]),
       task = await this.tasks.find(owner, creationUuid(id));
     if (!task) throw new CreationError("notFound");
@@ -103,6 +106,7 @@ export class CreationSubmissions {
       locale: task.spec.target.locale,
       profileId: input.profile.id,
       runtimeId: request.runtimeId ?? input.profile.runtimeId,
+      ...(request.dialogue === true || input.dialogue ? { dialogue: true } : {}),
       ...((request.outputType ?? input.outputType) === undefined
         ? {}
         : { outputType: request.outputType ?? input.outputType }),
@@ -143,6 +147,7 @@ export class CreationSubmissions {
     let creationKey = "t:" + request.id;
     let previous: import("./input.js").CreationInputSnapshot["previous"];
     let previousAsset: import("./input.js").CreationInputSnapshot["previousAsset"];
+    let discussion: import("./input.js").CreationInputSnapshot["discussion"];
     let documentFileLineage: string | undefined;
     let document: import("../../shared/documents/contracts.js").DocumentRevisionReference | undefined;
     let documentProjectId: string | undefined, documentTreeVersion: number | undefined;
@@ -152,7 +157,7 @@ export class CreationSubmissions {
       if (!task || task.spec.projectId !== request.projectId) throw new CreationError("notFound");
       await this.authority.authorize(owner, task.spec.projectId);
       const recovery = recoveryFrom?.taskId === task.spec.id && recoveryFrom.inputDigest === task.spec.inputDigest;
-      if (!recovery && (task.state !== "succeeded" || !task.artifact || !task.outputDigest))
+      if (!recovery && task.state !== "replied" && (task.state !== "succeeded" || !task.artifact || !task.outputDigest))
         throw new CreationError("conflict");
       let root = task;
       const seen = new Set([root.spec.id]);
@@ -167,6 +172,14 @@ export class CreationSubmissions {
         root.spec.target.document?.documentId || (root.artifact?.kind === "document" ? root.artifact.documentId : null);
       creationKey = root.spec.creationKey ?? (rootDocument ? "d:" + rootDocument : "t:" + root.spec.id);
       const input = await this.inputs.read(task.spec);
+      discussion = input.discussion;
+      if (task.state === "replied") {
+        const answer = (await this.readProgress?.(owner, task.spec.id))?.findLast(
+          (event) => event.generation === task.generation && event.stage === "reply",
+        )?.text;
+        if (!answer) throw new CreationError("unavailable");
+        discussion = [...(discussion ?? []), { user: input.prompt.slice(0, 6000), assistant: answer }].slice(-5);
+      }
       documentFileLineage = input.documentFileLineage;
       if (recovery) recoveredProfile = input.profile;
       let source = task,
@@ -186,11 +199,10 @@ export class CreationSubmissions {
           artifact: await this.authority.original(owner, saved),
         };
         documentFileLineage = request.id;
-      } else {
-        if (!this.authority.revision) throw new CreationError("unavailable");
+      } else if (saved?.kind === "document" || source.spec.target.document) {
         const documentId =
           (saved?.kind === "document" ? saved.documentId : undefined) || source.spec.target.document?.documentId;
-        if (!documentId) throw new CreationError("conflict");
+        if (!documentId || !this.authority.revision) throw new CreationError("unavailable");
         const current = await this.authority.revision(
           owner,
           source.spec.target.documentProjectId ?? source.spec.projectId,
@@ -200,7 +212,7 @@ export class CreationSubmissions {
         document = current.base;
         documentProjectId = current.projectId;
         documentTreeVersion = current.treeVersion;
-      }
+      } else if (source.state !== "replied") throw new CreationError("conflict");
     }
     const permitted = await this.authority.profile(
       request.profileId,
@@ -221,6 +233,8 @@ export class CreationSubmissions {
       requestDigest: signature,
       prompt: request.prompt,
       ...(request.outputType === undefined ? {} : { outputType: request.outputType }),
+      ...(request.dialogue ? { dialogue: true } : {}),
+      ...(discussion?.length ? { discussion } : {}),
       profile,
       skills,
       ...(materials.length ? { materials } : {}),

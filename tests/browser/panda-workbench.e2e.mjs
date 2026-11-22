@@ -58,10 +58,10 @@ try {
   await page.locator(".wb-task-row").first().waitFor();
   result.timings.coldWorkspaceMs = Date.now() - start;
   assert.equal(await page.title(), "PandaForce · Workspace");
-  assert.equal(await page.locator(".workbench-navigation>button").count(), 7);
+  assert.equal(await page.locator(".workbench-primary-navigation > button").count(), 7);
   assert.deepEqual(
     await page
-      .locator(".workbench-navigation>button")
+      .locator(".workbench-primary-navigation > button")
       .evaluateAll((buttons) => buttons.map((button) => button.dataset.route)),
     ["workspace", "bots", "tasks", "create", "projects", "skills", "publish"],
   );

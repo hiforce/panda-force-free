@@ -18,6 +18,7 @@
   "waiting": "等待你的回答",
   "committing": "正在保存文档",
   "succeeded": "文档已生成",
+  "replied": "已回复",
   "failed": "需要处理",
   "cancelled": "已取消",
   "cancel": "取消任务",
@@ -207,11 +208,5 @@
   "progressRenderVideo": "渲染视频",
   "progressSaveArtifact": "保存生成的成果",
   "failedInactive": "引擎长时间没有执行进展，任务已停止。需求已保留，可以重试。",
-  "longRunningHint": "这项任务需要一些时间。你可以稍后回来查看，交付件保存完成后会在消息中心提醒。",
-  "notificationsTitle": "消息中心",
-  "notificationsEmpty": "暂无已完成的创作消息。",
-  "notificationsReady": "交付件已准备好",
-  "notificationsUnread": "{count} 条未读消息",
-  "notificationsLoadFailed": "消息暂时无法刷新，请重试。",
-  "notificationsOpen": "查看交付件"
+  "longRunningHint": "这项任务需要一些时间。你可以稍后回来查看，交付件保存完成后会在消息中心提醒。"
 }

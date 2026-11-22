@@ -5,17 +5,20 @@
 }
 .workbench-navigation {
   gap: 2px;
-  padding: 0 3px 15px;
+  padding-inline: 3px;
+}
+.workbench-primary-navigation {
+  padding-block-end: 15px;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--pf-line);
 }
-.workbench-navigation > button {
+.workbench-navigation > :is(button, a) {
   font-size: var(--pf-text-nav);
   font-weight: 500;
   line-height: 20px;
   border-radius: 9px;
 }
-.workbench-navigation > button.active {
+.workbench-navigation > .active {
   font-weight: 600;
 }
 .workbench-navigation .icon-slot,

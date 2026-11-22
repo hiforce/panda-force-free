@@ -214,7 +214,7 @@ let account=${JSON.stringify(account)};
 const engineFiles=${JSON.stringify(engineFiles)};
 const threads=${JSON.stringify(initial)};
 const queues=new Map();
-const applicationThreads=new Set(), applicationCalls=new Map(), imageThreads=new Set(), chatThreads=new Set();
+const applicationThreads=new Set(), applicationDialogs=new Set(), applicationCalls=new Map(), imageThreads=new Set(), chatThreads=new Set();
 function applicationSave(pending){
  const callId='save-'+pending.run;applicationCalls.set(callId,{...pending,kind:'save'});
  send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_documents_create',arguments:{title:'Generated handbook',body:{schema:1,format:'richtext',document:{type:'doc',content:[{type:'heading',attrs:{level:2},content:[{type:'text',text:'A useful result'}]},{type:'paragraph',content:[{type:'text',text:pending.choice?.text||'An editable document from an answered task.'}]}]}},...(pending.choice?.projectId?{archiveTo:{projectId:pending.choice.projectId}}:{}),...(pending.choice?.fileDirectory?{fileDirectory:pending.choice.fileDirectory}:{})}}});
@@ -260,6 +260,14 @@ const handleLine=line=>{
       if(pending.kind==='question'){
         const callId='context-'+pending.run;applicationCalls.set(callId,{...pending,kind:'context'});
         send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_creation_context',arguments:{}}});
+      }else if(pending.kind==='context'&&!pending.gated&&applicationDialogs.has(pending.thread)){
+        const callId='intent-'+pending.run;
+        applicationCalls.set(callId,{...pending,kind:'deliver',contextResponse:m});
+        send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_creation_turn',arguments:{action:'deliver'}}});
+      }else if(pending.kind==='deliver'&&m.result?.success){
+        const saved=pending.contextResponse;
+        applicationCalls.set(saved.id,{...pending,kind:'context',gated:true});
+        handleLine(JSON.stringify(saved));
       }else if(pending.kind==='context'&&${Boolean(applicationImage || applicationArtifact)}){
         const artifact=${JSON.stringify(applicationArtifact)},callId='render-'+pending.run;applicationCalls.set(callId,{...pending,kind:'image',artifactKind:artifact?.kind||'image'});send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:artifact?.kind==='slides'?'panda_slides_render':artifact?.kind==='web'?'panda_web_render':artifact?.kind==='video'?'panda_videos_render':'panda_images_render',arguments:artifact?.arguments||{slot:1,prompt:'A finished computer history illustration'}}});
       }else if(pending.kind==='image'&&m.result?.success){
@@ -317,6 +325,7 @@ const handleLine=line=>{
     const imageRenderer=${Boolean(applicationImage)}&&p.permissions==='panda_image_renderer';
     const thread={id:imageRenderer?crypto.randomUUID():'new-'+(++count),name:${unnamedSessions} ? null : 'New session '+count,preview:'',cwd:p.cwd,status:{type:'idle'},createdAt:Date.now()/1000,updatedAt:Date.now()/1000,turns:[],canAcceptDirectInput:true};
     if(${applicationCreation}&&p.dynamicTools?.some(tool=>tool.name==='panda_documents_create'))applicationThreads.add(thread.id);
+    if(p.dynamicTools?.some(tool=>tool.name==='panda_creation_turn'))applicationDialogs.add(thread.id);
     if(${applicationChat}&&p.dynamicTools?.some(tool=>tool.name==='panda_bot_chat_reply'))chatThreads.add(thread.id);
     if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_draft'))knowledgeThreads.set(thread.id,'draft');
     if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_review_decision'))knowledgeThreads.set(thread.id,'review');
@@ -353,6 +362,11 @@ const handleLine=line=>{
       else knowledgeCall(pending,pending.stage==='source'?'panda_knowledge_context':'panda_knowledge_review_source',{id:manifest.sources[0].id,start:0});
     }
     if(applicationThreads.has(p.threadId)){
+      if(applicationDialogs.has(p.threadId)&&(p.input||[]).some(item=>item.type==='text'&&item.text.includes('Why did the fixture use that classification?'))){
+        const run=result.turn.id,id='reply-'+run;applicationCalls.set(id,{kind:'reply',thread:p.threadId,run});
+        setTimeout(()=>send({id,method:'item/tool/call',params:{threadId:p.threadId,turnId:run,callId:id,tool:'panda_creation_turn',arguments:{action:'reply',text:'The original was based on the first brief.'}}}),20);
+        send({id:m.id,result});return;
+      }
       if(${Boolean(applicationImage || applicationArtifact)}){const run=result.turn.id,id='context-'+run;applicationCalls.set(id,{kind:'context',thread:p.threadId,run});setTimeout(()=>send({id,method:'item/tool/call',params:{threadId:p.threadId,turnId:run,callId:id,tool:'panda_creation_context',arguments:{}}}),20);send({id:m.id,result});return;}
       send({method:'item/agentMessage/delta',params:{threadId:p.threadId,turnId:result.turn.id,itemId:'writing-'+result.turn.id,delta:'I am reviewing the requirements and organizing the document.'}});
       send({method:'thread/tokenUsage/updated',params:{threadId:p.threadId,tokenUsage:{total:{inputTokens:840,outputTokens:160,totalTokens:1000},modelContextWindow:200000}}});

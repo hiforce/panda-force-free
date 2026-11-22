@@ -26,7 +26,10 @@ export class CodexHarnessAgent implements HarnessAgent {
   private terminal: "complete" | "cancelled" | null = null;
   private readonly permissions = new Set<string>();
   private permissionMode: HarnessPermissionMode = "ask";
-  constructor(private readonly driver: EngineDriver) {
+  constructor(
+    private readonly driver: EngineDriver,
+    private readonly disposeDriver?: () => void,
+  ) {
     this.unsubscribe = driver.subscribe((event) => this.event(event));
   }
   async initialize(): Promise<HarnessAgentInfo> {
@@ -216,5 +219,6 @@ export class CodexHarnessAgent implements HarnessAgent {
     this.completion?.reject(new HarnessError("deliveryUncertain", 409));
     this.unsubscribe?.();
     this.unsubscribe = null;
+    this.disposeDriver?.();
   }
 }

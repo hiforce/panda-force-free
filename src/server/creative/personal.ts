@@ -13,9 +13,10 @@ import { DocumentFileProjects, type DocumentProjectReads } from "../documents/fi
 import { FileSavedQueries } from "../documents/files/saved-queries.js";
 import { FileCreativeAssetReader } from "./assets/reader.js";
 import { FileOriginalQueries } from "../content-sources/reader.js";
+import type { CreationNotificationReader } from "../creation/integration/notification-source.js";
 
 type Documents = ReturnType<typeof createFileDocumentApplication>;
-type Creation = { routes: Route[]; start(): void; close(): Promise<void> };
+type Creation = { service?: CreationNotificationReader; routes: Route[]; start(): void; close(): Promise<void> };
 export interface PersonalContentOptions {
   originalStorage?: Pick<OriginalStorageFeature, "objects" | "purges">;
   contentRoot: string;

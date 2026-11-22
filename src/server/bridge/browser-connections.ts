@@ -1,4 +1,4 @@
-import type { Server } from "node:http";
+import type { IncomingMessage, Server } from "node:http";
 import { WebSocket, WebSocketServer } from "ws";
 import type { RawData } from "ws";
 import type { ProjectVisibility } from "../../shared/engine/types.js";
@@ -7,6 +7,8 @@ import type { PasswordAuth } from "../auth/contracts.js";
 import type { RuntimeServices } from "../services.js";
 import { createTerminalSession, normalizeTerminalResize, resolveTerminalCwd } from "../terminal/session.js";
 import { sharedWorkspaceAllowed } from "../auth/users/access.js";
+import { matchesRequestOrigin } from "../auth/origin.js";
+import { REMOTE_TERMINAL_SOCKET } from "../../shared/workspace-tools/remote.js";
 
 /** Owns authenticated browser sockets, terminal workers and SSE keepalives. */
 export function installBrowserConnections({
@@ -23,6 +25,7 @@ export function installBrowserConnections({
   browseRoots,
   defaultCwd,
   handleClient,
+  openRemoteTerminal,
 }: Pick<
   RuntimeServices,
   | "browserWire"
@@ -39,6 +42,7 @@ export function installBrowserConnections({
   server: Server;
   passwordAuth: PasswordAuth;
   handleClient: (client: WebSocket, message: unknown) => Promise<void>;
+  openRemoteTerminal?: (client: WebSocket, request: IncomingMessage, url: URL) => Promise<void>;
 }) {
   const terminalSessions = new Map<WebSocket, ReturnType<typeof createTerminalSession>>();
   const sseKeepalive = setInterval(() => {
@@ -51,6 +55,7 @@ export function installBrowserConnections({
     perMessageDeflate: { threshold: 1024, serverNoContextTakeover: true, clientNoContextTakeover: true },
   });
   const terminalWss = new WebSocketServer({ noServer: true });
+  const remoteWss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
   const initialVisibility = new WeakMap<WebSocket, ProjectVisibility>();
   server.on("upgrade", async (req, socket, head) => {
     let pathname: string;
@@ -64,6 +69,7 @@ export function installBrowserConnections({
     let status = 401;
     let verified = false;
     let passwordVerified = false;
+    const remote = pathname === REMOTE_TERMINAL_SOCKET && Boolean(openRemoteTerminal);
     try {
       await cluster?.verify(req, true);
       if (idaasAuth) idaasSession = await idaasAuth.authenticate(req);
@@ -72,13 +78,20 @@ export function installBrowserConnections({
         status = 403;
         passwordVerified = false;
       }
+      if (remote && (!passwordVerified || !req.headers.origin || !matchesRequestOrigin({
+        hostHeader: req.headers.host, origin: req.headers.origin, fetchSite: req.headers["sec-fetch-site"],
+      }))) {
+        status = passwordVerified ? 403 : status;
+        passwordVerified = false;
+        idaasSession = null;
+      }
       verified = true;
     } catch (error) {
       status = errorStatus(error, 503);
     }
     if (
       !verified ||
-      (pathname !== "/ws" && pathname !== "/terminal") ||
+      (pathname !== "/ws" && pathname !== "/terminal" && !remote) ||
       (idaasAuth ? !idaasSession : !passwordVerified)
     ) {
       const body = JSON.stringify({ error: "Authentication required" });
@@ -97,7 +110,7 @@ export function installBrowserConnections({
       return;
     }
     if (socket.destroyed) return;
-    const target = pathname === "/terminal" ? terminalWss : wss;
+    const target = remote ? remoteWss : pathname === "/terminal" ? terminalWss : wss;
     target.handleUpgrade(req, socket, head, (client) => {
       const buffered: { data: RawData; binary: boolean }[] = [];
       let bufferedBytes = 0;
@@ -138,6 +151,11 @@ export function installBrowserConnections({
           buffered.length = 0;
         });
     });
+  });
+  remoteWss.on("connection", (client, req) => {
+    client.on("error", () => client.terminate());
+    void Promise.resolve().then(() => openRemoteTerminal?.(client, req, new URL(req.url!, "http://localhost")))
+      .catch(() => client.close(1008));
   });
   wss.on("connection", (client) => {
     browserWire.register(client, client.protocol === "panda-engine-v1");
@@ -219,6 +237,8 @@ export function installBrowserConnections({
       }
       terminalSessions.clear();
       terminalWss.close();
+      for (const client of remoteWss.clients) client.terminate();
+      remoteWss.close();
     },
   };
 }

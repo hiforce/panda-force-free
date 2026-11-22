@@ -1,0 +1,22 @@
+# Extend the reviewed Rocky pair with the optional headless ZCode runtime.
+ARG BUILD_BASE=hiforceai/panda-force-build-base@sha256:d7eb98ddaddf65c4247f887c9c491c76a6d43c1fa17c03fa6f1ece3eb3e2f22c
+ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base@sha256:d9ff95b034564c9d167070fd052c3ee5446509206e14471226a846342271004c
+FROM ${RUNTIME_BASE} AS zcode
+USER root
+COPY zcode-runtime.mjs zcode-runtime.lock.json zcode.cjs zcode-builtin.json LICENSE NOTICE.md THIRD-PARTY-NOTICES.md /opt/panda-zcode/
+RUN . /etc/os-release && test "$ID" = rocky && test "${VERSION_ID%%.*}" = 9 \
+    && node /opt/panda-zcode/zcode-runtime.mjs verify /opt/panda-zcode \
+    && printf '#!/bin/sh\nexec /usr/local/bin/node /opt/panda-zcode/zcode.cjs "$@"\n' > /opt/panda-zcode/zcode \
+    && chmod 0644 /opt/panda-zcode/* \
+    && chmod 0755 /opt/panda-zcode/zcode \
+    && HOME=/tmp /opt/panda-zcode/zcode --version | grep -Fx "$(node -p 'require("/opt/panda-zcode/zcode-runtime.lock.json").cliVersion')"
+
+FROM ${BUILD_BASE} AS build-base
+USER root
+COPY --link --from=zcode /opt/panda-zcode /opt/panda-zcode
+COPY --link --from=zcode /opt/panda-zcode/zcode /usr/local/bin/zcode
+
+FROM ${RUNTIME_BASE} AS runtime-base
+USER root
+COPY --link --from=zcode /opt/panda-zcode /opt/panda-zcode
+COPY --link --from=zcode /opt/panda-zcode/zcode /usr/local/bin/zcode

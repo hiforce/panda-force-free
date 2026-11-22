@@ -1,0 +1,21 @@
+{
+  "title": "Notifications",
+  "empty": "No notifications yet.",
+  "ready": "Notification",
+  "unread": "{count} unread notifications",
+  "loadFailed": "Notifications could not be refreshed. Try again.",
+  "openDeliverable": "View deliverable",
+  "viewAll": "View all",
+  "details": "Notification details",
+  "page": "Page {number}",
+  "previous": "Previous page",
+  "next": "Next page",
+  "loading": "Loading notifications",
+  "new": "Unread",
+  "notice": "Notice",
+  "openLink": "Open link",
+  "actionFailed": "This action could not be opened. Try again.",
+  "identityRequired": "Sign in to view notifications.",
+  "invalidRequest": "Invalid notification request.",
+  "notFound": "This notification is unavailable."
+}

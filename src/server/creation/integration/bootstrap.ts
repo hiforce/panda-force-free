@@ -115,6 +115,7 @@ export function createNativeCreationFeature(
     };
     // An optional execution ledger must not prevent ordinary document editing or authentication from starting.
     return {
+      service: undefined,
       routes: creationRoutes(
         {
           options: async () => ({

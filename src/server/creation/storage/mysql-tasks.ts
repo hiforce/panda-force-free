@@ -92,7 +92,7 @@ export class MySQLCreationTasks {
     creationInteger(now);
     return this.context.transaction(async () => {
       const row = await this.row(owner, id);
-      if (["succeeded", "failed", "cancelled"].includes(row.state)) return creationTask(row);
+      if (["succeeded", "replied", "failed", "cancelled"].includes(row.state)) return creationTask(row);
       await this.expire(id);
       await this.context
         .sql`UPDATE panda_force_creation_tasks SET cancelRequested=1,state=CASE WHEN outputDigest IS NULL THEN 'cancelled' ELSE 'committing' END,token=NULL,leaseUntil=NULL,updatedAt=${now} WHERE namespace=${this.context.namespace} AND id=${id}`;
@@ -118,11 +118,18 @@ export class MySQLCreationTasks {
       return this.get(owner, id);
     });
   }
-  async notifications(owner: string): Promise<import("../ports.js").CreationNotificationRecord[]> {
-    return (
-      await this.context
-        .sql`SELECT taskId,generation,createdAt,readAt FROM panda_force_creation_notifications WHERE namespace=${this.context.namespace} AND owner=${creationText(owner)} ORDER BY (readAt IS NULL) DESC,createdAt DESC,taskId DESC LIMIT 100`
-    ).map((row: Record<string, unknown>) => ({
+  async notifications(
+    owner: string,
+    page?: Parameters<import("../ports.js").CreationNotificationStore["notifications"]>[1],
+  ): Promise<import("../ports.js").CreationNotificationRecord[]> {
+    const { sql, namespace } = this.context;
+    const before = page?.before;
+    const rows = page
+      ? before
+        ? await sql`SELECT taskId,generation,createdAt,readAt FROM panda_force_creation_notifications WHERE namespace=${namespace} AND owner=${creationText(owner)} AND (createdAt,taskId,generation)<(${before.createdAt},${before.taskId},${before.generation}) ORDER BY createdAt DESC,taskId DESC,generation DESC LIMIT ${page.limit}`
+        : await sql`SELECT taskId,generation,createdAt,readAt FROM panda_force_creation_notifications WHERE namespace=${namespace} AND owner=${creationText(owner)} ORDER BY createdAt DESC,taskId DESC,generation DESC LIMIT ${page.limit}`
+      : await sql`SELECT taskId,generation,createdAt,readAt FROM panda_force_creation_notifications WHERE namespace=${namespace} AND owner=${creationText(owner)} ORDER BY (readAt IS NULL) DESC,createdAt DESC,taskId DESC LIMIT 100`;
+    return rows.map((row: Record<string, unknown>) => ({
       taskId: creationUuid(row.taskId),
       generation: mysqlInteger(row.generation),
       createdAt: mysqlInteger(row.createdAt),

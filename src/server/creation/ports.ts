@@ -69,6 +69,9 @@ export interface CreationNotificationRecord {
 }
 /** Receipts are committed with the saved task; delivery never depends on a browser being connected. */
 export interface CreationNotificationStore {
-  notifications(owner: string): CreationResult<CreationNotificationRecord[]>;
+  notifications(
+    owner: string,
+    page?: { limit: number; before?: import("../../shared/creation/notifications.js").CreationNotificationPosition },
+  ): CreationResult<CreationNotificationRecord[]>;
   readNotification(owner: string, taskId: string, generation: number, now: number): CreationResult<void>;
 }

@@ -5,6 +5,7 @@ import type { Socket } from "node:net";
 import { readRequestBytes } from "../request-bytes.js";
 import { respondJson } from "../http/respond.js";
 import { errorStatus } from "../../shared/errors.js";
+import { REMOTE_TERMINAL_SOCKET } from "../../shared/workspace-tools/remote.js";
 import type { CoordinationStore, OwnerLease } from "./contracts.js";
 import { ClusterError } from "./contracts.js";
 import type { ClusterConfig } from "./config.js";
@@ -166,7 +167,7 @@ export async function createClusterGateway(
   server.on("upgrade", async (request, client: Duplex, head: Buffer) => {
     try {
       const path = request.url || "/";
-      if (!["/ws", "/terminal"].includes(new URL(path, "http://localhost").pathname))
+      if (!["/ws", "/terminal", REMOTE_TERMINAL_SOCKET].includes(new URL(path, "http://localhost").pathname))
         throw new ClusterError("Unsupported socket path", "cluster_request_rejected", 404);
       const lease = await owner(),
         url = target(lease, path);

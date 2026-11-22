@@ -20,6 +20,7 @@
   "sessionUsage": "会话用量",
   "tokens": "tokens",
   "cumulative": "本会话累计消耗",
+  "recordedTotal": "本会话已记录的用量",
   "input": "输入",
   "output": "输出",
   "cachedInput": "其中缓存输入",

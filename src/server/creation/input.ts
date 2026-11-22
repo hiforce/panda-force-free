@@ -15,6 +15,8 @@ export interface CreationInputSnapshot {
   requestDigest: string;
   prompt: string;
   outputType?: import("../../shared/creation/contracts.js").CreationRequestedOutput;
+  dialogue?: true;
+  discussion?: readonly { user: string; assistant: string }[];
   documentFileLineage?: string;
   profile: CreationEngineProfile;
   skills: SkillCapture;

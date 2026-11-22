@@ -48,7 +48,8 @@ export class CreationSessionPresenter {
           anchor = node;
         }
       }
-      cards?.render([task]);
+      this.status.hidden = task.state === "replied";
+      if (!this.status.hidden) cards?.render([task]);
       document.querySelector("#conversation")!.append(this.status);
     });
   }

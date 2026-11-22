@@ -5,6 +5,12 @@ import type { CreationProgress } from "../../../shared/creation/contracts.js";
 import type { CreationProgressStore } from "../ports.js";
 import { creationProgress } from "../validation.js";
 import { readCreationTask } from "./records.js";
+export const creationReplyProgress = (lease: CreationLease, text: string, at: number): CreationProgress => ({
+  stage: "reply",
+  generation: lease.generation,
+  text,
+  at,
+});
 
 export class SQLiteCreationProgress implements CreationProgressStore {
   constructor(private readonly db: Database) {}
@@ -28,7 +34,7 @@ export class SQLiteCreationProgress implements CreationProgressStore {
             "SELECT COUNT(*) n FROM creation_progress WHERE taskId=? AND generation=?",
           )
           .get(lease.taskId, lease.generation)!.n;
-        if (count >= 64) return;
+        if (count >= 64 && event.stage !== "reply") return;
         this.db
           .query("INSERT INTO creation_progress(id,taskId,generation,createdAt,ordinal,event) VALUES(?,?,?,?,?,?)")
           .run(event.id || randomUUID(), lease.taskId, lease.generation, event.at, count, JSON.stringify(event));
@@ -39,7 +45,7 @@ export class SQLiteCreationProgress implements CreationProgressStore {
     readCreationTask(this.db, owner, id);
     return this.db
       .query<{ event: string }, [string, number]>(
-        "SELECT event FROM (SELECT event,generation,ordinal FROM creation_progress WHERE taskId=? AND (?=1 OR json_extract(event,'$.stage')<>'message') ORDER BY generation DESC,ordinal DESC LIMIT 192) ORDER BY generation,ordinal",
+        "SELECT event FROM (SELECT event,generation,ordinal FROM creation_progress WHERE taskId=? AND (?=1 OR json_extract(event,'$.stage') NOT IN ('message','reply')) ORDER BY generation DESC,ordinal DESC LIMIT 192) ORDER BY generation,ordinal",
       )
       .all(id, conversation ? 1 : 0)
       .map((row) => creationProgress(JSON.parse(row.event)));

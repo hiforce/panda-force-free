@@ -7,7 +7,7 @@ function count(value: unknown): number | null {
 }
 
 /** Read engine counters without treating missing data as zero or double-counting cached input. */
-export function sessionUsageView(value?: DataView<TokenUsage>): SessionUsageView {
+export function sessionUsageView(value?: DataView<TokenUsage>, reportedOnly = false): SessionUsageView {
   const input = count(value?.total?.inputTokens);
   const output = count(value?.total?.outputTokens);
   const total = count(value?.total?.totalTokens) ?? (input !== null && output !== null ? input + output : null);
@@ -16,6 +16,7 @@ export function sessionUsageView(value?: DataView<TokenUsage>): SessionUsageView
   const window = reportedWindow !== null && reportedWindow > 0 ? reportedWindow : null;
   const sum = input !== null && output !== null ? input + output : 0;
   return {
+    ...(reportedOnly ? { reportedOnly } : {}),
     input,
     output,
     total,

@@ -8,6 +8,13 @@ import { engineImageRoutes } from "./http/engine-image-routes.js";
 import { isApplicationSession } from "./engines/application-tools/sessions.js";
 import { upgradeSystemGadgetLayout } from "../gadget/system/layout.js";
 import { createApplicationContent } from "./application/content.js";
+import { creationNotificationSource } from "./creation/integration/notification-source.js";
+import { NotificationCenter } from "./notifications/center.js";
+import { notificationRoutes } from "./notifications/routes.js";
+import { remoteConnectionRoutes } from "./remote-terminal/routes.js";
+import { RemoteRegistry } from "./remote-terminal/registry.js";
+import { RemoteHostKeyProbe } from "./remote-terminal/host-key.js";
+import { RemoteTerminalSessions } from "./remote-terminal/sessions.js";
 import { createApplicationAuthentication } from "./application/authentication.js";
 import { createApplicationProjects } from "./application/projects.js";
 import { createApplicationExtensions } from "./application/extensions.js";
@@ -555,7 +562,16 @@ const mime: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
+const notifications = new NotificationCenter([
+  creationNotificationSource("creation", () => creationFeature.service),
+  creationNotificationSource("personal-creation", async (owner) => (await personalContent.forOwner(owner)).creation?.service),
+]);
+const remoteRegistry = new RemoteRegistry(config.stateRoot);
+const remoteSessions = new RemoteTerminalSessions(remoteRegistry);
+const remoteHostKeys = new RemoteHostKeyProbe();
 const dispatchApiRoute = createRouter([
+  ...notificationRoutes(notifications, resolveOwner),
+  ...remoteConnectionRoutes(remoteRegistry, remoteSessions, remoteHostKeys, resolveOwner),
   ...harnessFeature.routes,
   ...applicationRuntimeRoutes(applicationRuntime, resolveOwner),
   ...(localAccountFeature?.routes ?? []),
@@ -726,7 +742,7 @@ const server = createServer(
       const appRoute =
         req.method === "GET" &&
         (["/", "/invite", "/verify-email", "/reset-password", "/reset-password/new"].includes(url.pathname) ||
-          /^\/(?:settings(?:\/[^/]+)?|workspace|bots(?:\/tasks|\/[a-f0-9-]{36}\/(?:chat|tasks|integrations))?|tasks|projects|project|documents|deliverables|connections|create|creation\/[^/]+|skills(?:\/[^/]+)?|publish(?:\/[^/]+)?|new|task\/[^/]+)\/?$/.test(
+          /^\/(?:settings(?:\/[^/]+)?|workspace|bots(?:\/tasks|\/[a-f0-9-]{36}\/(?:chat|tasks|integrations))?|tasks|projects|project|documents|deliverables|connections|create|creation\/[^/]+|skills(?:\/[^/]+)?|publish(?:\/[^/]+)?|new|task\/[^/]+|tools\/[a-z0-9-]+(?:\/terminal\/[a-f0-9-]{36})?)\/?$/.test(
             url.pathname,
           ));
       const loginAssets = new Set([
@@ -849,6 +865,7 @@ const browserConnections = installBrowserConnections({
   browseRoots,
   defaultCwd,
   handleClient,
+  openRemoteTerminal: (client, req, url) => remoteSessions.open(client, resolveOwner({ req }), url),
   cluster,
 });
 
@@ -940,6 +957,9 @@ function shutdown() {
   engineDriver.cancelRestart();
   engineDriver.rejectPending(new Error("PandaForce is shutting down"));
   browserConnections.close();
+  remoteSessions.close();
+  remoteHostKeys.close();
+  remoteRegistry.close();
   passwordAuth.close();
   engineDriver.stop();
   server.close(() => {

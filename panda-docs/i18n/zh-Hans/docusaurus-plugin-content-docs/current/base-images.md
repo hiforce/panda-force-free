@@ -2,7 +2,7 @@
 title: 基础镜像的内容与用途
 ---
 
-PandaForce 0.1.3 源码将可复用工具环境与应用代码分开。基础镜像提前安装经过审核、下载和安装耗时较长的依赖，应用更新时复用这些层，再编译当前源码、组装可运行的应用镜像。这样，创作任务可以直接使用 Office、字体、浏览器和语言工具库。
+PandaForce 0.1.4 源码将可复用工具环境与应用代码分开。基础镜像提前安装经过审核、下载和安装耗时较长的依赖，应用更新时复用这些层，再编译当前源码、组装可运行的应用镜像。这样，创作任务可以直接使用 Office、字体、浏览器和语言工具库。
 
 ## 选择配套的基础镜像
 
@@ -10,14 +10,14 @@ PandaForce 0.1.3 源码将可复用工具环境与应用代码分开。基础镜
 
 | 层                            | 内容                                                                            | 目的及获取方式                                                                                                                                         |
 | ----------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 默认 Rocky 创作构建基础镜像   | Rocky Linux 9、两种 Harness CLI、原生编译工具、锁定的应用开发依赖和下表创作工具 | 已公开的 `hiforceai/panda-force-build-base:rocky9-creative-20261121-14a4a23a90de`，源码 Dockerfile 与 Compose 构建叠加文件按不可变摘要选择。           |
-| 默认 Rocky 创作运行基础镜像   | Rocky Linux 9、两种 Harness CLI、应用生产依赖和相同创作工具                     | 已公开的 `hiforceai/panda-force-runtime-base:rocky9-creative-20261121-14a4a23a90de`，使用自己的配套不可变摘要；任务直接使用预装工具。                  |
-| 应用镜像                      | 选定运行环境、应用源码、编译后的前端、CLI 和启动命令                            | 可直接运行的 `hiforceai/panda-force:0.1.3`，普通用户安装时拉取此镜像。                                                                                 |
-| 旧版 Debian 构建/运行基础镜像 | 原有锁定应用依赖、Harness 引擎、FFmpeg 与 Noto CJK 字体                         | `engines-20261120-b3302dd60ade` 配套镜像保留，供明确选用的兼容旧环境或已审核的 Debian Harness seed 使用；它不是 0.1.3 默认环境，也不包含完整创作工具。 |
+| 默认 Rocky 创作构建基础镜像   | Rocky Linux 9、三种 Harness CLI、原生编译工具、锁定的应用开发依赖和下表创作工具 | 已公开的 `hiforceai/panda-force-build-base:rocky9-creative-zcode-0.17.1-20261122`，源码 Dockerfile 与 Compose 构建叠加文件按不可变摘要选择。           |
+| 默认 Rocky 创作运行基础镜像   | Rocky Linux 9、三种 Harness CLI、应用生产依赖和相同创作工具                     | 已公开的 `hiforceai/panda-force-runtime-base:rocky9-creative-zcode-0.17.1-20261122`，使用自己的配套不可变摘要；任务直接使用预装工具。                  |
+| 应用镜像                      | 选定运行环境、应用源码、编译后的前端、CLI 和启动命令                            | 可直接运行的 `hiforceai/panda-force:0.1.4`，普通用户安装时拉取此镜像。                                                                                 |
+| 旧版 Debian 构建/运行基础镜像 | 原有锁定应用依赖、Harness 引擎、FFmpeg 与 Noto CJK 字体                         | `engines-20261120-b3302dd60ade` 配套镜像保留，供明确选用的兼容旧环境或已审核的 Debian Harness seed 使用；它不是 0.1.4 默认环境，也不包含完整创作工具。 |
 
 </div>
 
-稳定版 0.1.3 应用镜像和默认配套的两种 Rocky 创作基础镜像均已公开，平台为 **Linux amd64**。使用配套的 `v0.1.3` 源码和安装文件。Dockerfile、Compose 与 `scripts/build/base-images.json` 固定实际公开的构建/运行摘要，两种用途分别引用各自镜像；安装清单与审核过的创作输入一致。[Codex 与 Grok 容器配置](harness-runtimes.md)说明账户服务和登录。
+稳定版 0.1.4 应用镜像和默认配套的两种 Rocky 创作基础镜像均已公开，平台为 **Linux amd64**。使用配套的 `v0.1.4` 源码和安装文件。Dockerfile、Compose 与 `scripts/build/base-images.json` 固定实际公开的构建/运行摘要，两种用途分别引用各自镜像；安装清单与审核过的创作输入一致。[Codex 与 Grok 容器配置](harness-runtimes.md)说明账户服务和登录。
 
 容器用户空间独立于宿主机发行版。Rocky 宿主机可以运行两种配套环境；需要 Rocky 用户空间和完整创作工具时选择 Rocky 配方。当前配方面向 **Linux amd64**。
 
@@ -39,7 +39,7 @@ PandaForce 0.1.3 源码将可复用工具环境与应用代码分开。基础镜
 
 </div>
 
-已验证构建的实际版本包括 Rocky Linux **9.9**、Node.js **22.23.4**、Python **3.11.13**、LibreOffice **26.8.3.1**、FFmpeg **7.1.5**、Codex CLI **0.171.0**、Grok Build **1.0.89** 和 PptxGenJS **4.0.1**。这些版本描述该次已验证构建；每次重建以安装后的 RPM 清单和 `panda-tools inventory` 为准，系统软件源更新可能改变 RPM 版本。
+已验证构建的实际版本包括 Rocky Linux **9.9**、Node.js **22.23.4**、Python **3.11.13**、LibreOffice **26.8.3.1**、FFmpeg **7.1.5**、Codex CLI **0.171.0**、Grok Build **1.0.89**、ZCode CLI **0.17.1** 和 PptxGenJS **4.0.1**。这些版本描述该次已验证构建；每次重建以安装后的 RPM 清单和 `panda-tools inventory` 为准，系统软件源更新可能改变 RPM 版本。
 
 配方从审核后的 seed 复制可移植的 Node/Bun/Harness 二进制和字体数据，再安装 Rocky RPM，并在 Rocky 上重新编译应用原生模块。系统依赖来自 Rocky/EPEL/CRB，视频编码使用校验过摘要的 RPM Fusion free 仓库安装包，LibreOffice 使用校验过摘要的官方 RPM 归档。Debian 原生 `node_modules` 不会复制到 Rocky。
 
@@ -59,6 +59,8 @@ PandaForce 0.1.3 源码将可复用工具环境与应用代码分开。基础镜
 </div>
 
 新增插件依赖可执行程序或语言库时，需要更新这些维护输入、对应 profile 和平台包映射，审查许可，刷新相应依赖锁，然后重建两种基础镜像。仅在运行容器或任务临时目录安装，不能维护下次镜像。未知 profile、缺失平台映射、Node/Python 声明不一致会阻止构建；插件输入不能选择任意执行镜像，也不能向构建器提供安装命令。
+
+0.1.4 的 Rocky 构建和运行基础镜像在已验证的创作工具链上加入 ZCode 3.18.2 的无界面 CLI。发布制品包含锁定的 CLI 文件和上游许可声明。Provider 凭据由用户在运行时提供。重建创作基础镜像后，先按 [ZCode 镜像构建步骤](https://github.com/hiforce/panda-force-free/blob/v0.1.4/deploy/harness/README.md#rebuild-the-rocky-base-images-with-zcode) 派生构建和运行两份镜像，再选用新摘要。
 
 ## 构建并选用 Rocky 基础镜像
 

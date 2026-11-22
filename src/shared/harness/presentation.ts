@@ -68,6 +68,13 @@ export function harnessPresentation(
           message: localizeError(`harness.error${message.error[0]!.toUpperCase()}${message.error.slice(1)}`),
           code: message.error,
         };
+      if (snapshot.run?.id === turn.id && typeof snapshot.run.thinking === "boolean")
+        turn.items.push({
+          id: `${turn.id}:thinking`,
+          type: "reasoning",
+          historyOrder: message.seq,
+          status: snapshot.run.thinking && turn.status === "inProgress" ? "inProgress" : "completed",
+        });
       turn.items.push({
         id: message.id,
         type: "agentMessage",
@@ -80,12 +87,19 @@ export function harnessPresentation(
       turn.items.push({
         id: message.id,
         type: "mcpToolCall",
+        historyOrder: message.seq,
         tool: message.text,
         status: message.status === "running" ? "inProgress" : message.status === "complete" ? "completed" : "failed",
       });
   }
+  for (const turn of turns.values()) {
+    if (turn.status === "inProgress") continue;
+    for (const item of turn.items)
+      if (item.type === "mcpToolCall" && item.status === "inProgress") item.status = "interrupted";
+  }
   return {
     ...harnessSummary(snapshot.conversation),
+    ...(snapshot.tokenUsage ? { tokenUsage: snapshot.tokenUsage } : {}),
     threadSettings: {
       runtimeContext: `harness:${snapshot.conversation.runtimeId}`,
       model:

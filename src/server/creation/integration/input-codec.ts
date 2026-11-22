@@ -28,6 +28,8 @@ function snapshot(value: unknown): CreationInputSnapshot {
       "requestDigest",
       "prompt",
       "outputType",
+      "dialogue",
+      "discussion",
       "documentFileLineage",
       "profile",
       "skills",
@@ -43,6 +45,8 @@ function snapshot(value: unknown): CreationInputSnapshot {
     requestDigest = creationDigest(row.requestDigest);
   if (
     row.schema !== 1 ||
+    (row.dialogue !== undefined && row.dialogue !== true) ||
+    (row.discussion !== undefined && (!Array.isArray(row.discussion) || row.discussion.length > 5)) ||
     skills.id !== taskId ||
     skills.owner !== owner ||
     skills.requestBinding !== requestDigest ||
@@ -61,6 +65,15 @@ function snapshot(value: unknown): CreationInputSnapshot {
     requestDigest,
     prompt: creationPrompt(row.prompt),
     ...(outputType === undefined ? {} : { outputType }),
+    ...(row.dialogue === true ? { dialogue: true as const } : {}),
+    ...(Array.isArray(row.discussion)
+      ? {
+          discussion: row.discussion.map((entry) => {
+            const turn = creationRecord(entry, ["user", "assistant"]);
+            return { user: creationText(turn.user, 6000), assistant: creationText(turn.assistant, 6000) };
+          }),
+        }
+      : {}),
     ...(row.documentFileLineage === undefined ? {} : { documentFileLineage: creationUuid(row.documentFileLineage) }),
     profile: creationEngineProfile(row.profile),
     skills,

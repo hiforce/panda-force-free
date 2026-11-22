@@ -7,6 +7,7 @@ import { createSessionToolStorage } from "../session-workspace/tool-storage.js";
 import { sessionUsageView } from "../session-workspace/usage.js";
 import { parseWorkbenchRoute } from "../workbench-route.js";
 import { findElement } from "../dom.js";
+import { harnessId } from "../../shared/harness/presentation.js";
 
 /** The inspector consumes domain projections and invokes named capabilities, never engine RPCs. */
 /** @param {import('./ports.js').FeatureOptions<'state' | 'identity' | 't' | 'i18n', 'sidebarLayout' | 'models' | 'status' | 'approvals' | 'projects' | 'workbench' | 'panels' | 'details' | 'timing' | 'notices', 'sessionWorkspace'>} options */
@@ -178,7 +179,7 @@ export function assembleSessionWorkspace({
       project: project ? { id: project.id, name: project.name, code: project.code } : null,
       status,
       elapsedMs,
-      usage: sessionUsageView(id ? state.tokenUsage.get(id) : undefined),
+      usage: sessionUsageView(id ? state.tokenUsage.get(id) : undefined, !!harnessId(id)),
       hasGoal: Boolean(id && state.goals.has(id)),
       goal: goal ? { id: goal.goalId, status: goal.status } : null,
       modelLabel: model?.label || t("workbench.modelUnavailable"),

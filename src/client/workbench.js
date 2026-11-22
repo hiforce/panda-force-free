@@ -1,4 +1,6 @@
-import { CreationCompletionNotifications } from "./notifications/controller.js";
+import { NotificationCenter } from "./notifications/controller.js";
+import { creationNotificationActions } from "./creation/notification-actions.js";
+import { createWorkspaceToolNavigation } from "./workspace-tools/navigation.js";
 import { CreationSessionWorkspace } from "./creation/session-workspace.js";
 import { harnessId } from "../shared/harness/presentation.js";
 import { parkMessageComposer } from "./message-composer-placement.js";
@@ -76,7 +78,7 @@ export function createWorkbench({
   creationBridge,
 }) {
   createWorkbenchFrame(t);
-  const completionNotifications = new CreationCompletionNotifications(t, identityKey, (path) => navigate(path));
+  const notifications = new NotificationCenter(t, identityKey, creationNotificationActions(t, identityKey, (path) => navigate(path)));
   const shell = requireElement(".conversation-shell"),
     viewport = requireElement(".conversation-viewport"),
     dock = requireElement(".composer-dock"),
@@ -175,9 +177,12 @@ export function createWorkbench({
     canUseBots: globalThis.__pandaForceIdentity?.role !== "member",
   }));
   const navigation = document.createElement("nav");
-  navigation.className = "workbench-navigation";
+  navigation.className = "workbench-navigation workbench-primary-navigation";
   localizeAttribute(navigation, "aria-label", "workbench.workspaceNavigation", undefined, t);
-  requireElement(".sidebar-top").append(navigation);
+  const tools = createWorkspaceToolNavigation(
+    t, identityKey, () => ({ restricted: globalThis.__pandaForceIdentity?.role === "member" }), (path) => navigate(path),
+  );
+  requireElement(".sidebar-top").append(navigation, tools.nav);
   const connection = document.createElement("button");
   connection.type = "button";
   connection.className = "workbench-connection";
@@ -282,6 +287,9 @@ export function createWorkbench({
     connections: "plug",
     settings: "settings",
   };
+  const pageLabel = () => route.page === "tools"
+    ? tools.label(route.id) || "remoteTools.unavailableTitle"
+    : labels[route.page] || "common.workspace";
   const {
     button,
     allProjects,
@@ -369,12 +377,12 @@ export function createWorkbench({
     const dockedWorkspace = isBotConversationRoute(routeUrl);
     view.classList.toggle("conversation-workspace-view", dockedWorkspace);
     document.body.classList.toggle("conversation-workspace-layout", dockedWorkspace);
-    document.title = `PandaForce · ${t(labels[route.page] || "common.workspace")}`;
+    document.title = `PandaForce · ${t(pageLabel())}`;
     syncConversationSurfaces(conversation);
     renderPage(conversation);
     renderNavigation();
     if (!conversation)
-      localizeText(requireElement("#threadTitle"), labels[route.page] || "common.workspace", undefined, t);
+      localizeText(requireElement("#threadTitle"), pageLabel(), undefined, t);
     if (!conversation) setOpaqueText(requireElement("#threadPath"), "");
     renderProjectContext();
     renderPreparation();
@@ -396,6 +404,7 @@ export function createWorkbench({
     if (route.page !== "skills") skills.hide();
     if (route.page !== "publish") publish.hide();
     if (route.page !== "bots") bots.hide();
+    if (route.page !== "tools") tools.hide();
   }
   function syncConversationSurfaces(conversation) {
     view.hidden = conversation;
@@ -457,6 +466,7 @@ export function createWorkbench({
         else if (route.page === "bots")
           bots.show(content, { route: location.pathname + location.search, identity: identityKey });
         else if (route.page === "connections") renderConnections();
+        else if (route.page === "tools") tools.show(content, route.id, routeUrl);
         else renderDeliverables();
       }
     }
@@ -492,6 +502,7 @@ export function createWorkbench({
       navigation.dataset.botMenu = menu;
     }
     botNavigation.mount(navigation.querySelector("[data-bot-shortcuts]"), location.pathname);
+    tools.render(route.page === "tools" ? route.id : "");
     setMessageHtml(
       bottom,
       nav
@@ -802,9 +813,9 @@ export function createWorkbench({
   });
   i18n.subscribe(() => {
     // Bindings update owned copy in place, preserving search focus and selection.
-    document.title = `PandaForce · ${t(labels[route.page] || "common.workspace")}`;
+    document.title = `PandaForce · ${t(pageLabel())}`;
     i18n.bindings.refresh();
-    completionNotifications.render();
+    notifications.render();
     gadgetHome.refresh();
   });
   preparation.subscribe((snapshot) => {
