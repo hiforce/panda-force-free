@@ -3826,6 +3826,7 @@ export interface MessageParameters {
   "skillWorkspace.deleteHint": {  };
   "skillWorkspace.deleteNamed": { "name": string };
   "skillWorkspace.done": {  };
+  "skillWorkspace.filters": {  };
   "skillWorkspace.invalidInput": {  };
   "skillWorkspace.manageCategories": {  };
   "skillWorkspace.moveDown": { "name": string };

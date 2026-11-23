@@ -32,19 +32,39 @@ export function templateState(t: Translate, item: ManagedTemplate) {
   );
 }
 export function managerFrame(t: Translate, domain?: TemplateDomain) {
+  const skills = domain === "skills";
   const search = domain === "publishing" ? "templates.resourceSearch" : "templates.search";
   const option = (value: string, id: MessageId) =>
     `<option value="${e(value)}" data-pf-message="${e(id)}">${e(t(id))}</option>`;
-  return `<header class="resource-heading template-manager-heading"><div><h1>${m("templates.title", undefined, t)}</h1><p>${m("templates.subtitle", undefined, t)}</p></div><div class="resource-actions"><button type="button" class="wb-button primary" data-template-action="article">${m("templates.newArticleTemplate", undefined, t)}</button><button type="button" class="wb-button template-import-button" data-template-action="import" ${a("aria-label", "templates.import", undefined, t)} ${a("title", "templates.import", undefined, t)}>${codexIcon("fileInput")}<span class="template-import-label">${m("templates.import", undefined, t)}</span></button><details class="resource-menu" data-template-menu><summary class="wb-button" ${a("aria-label", "templates.moreActions", undefined, t)}>${codexIcon("ellipsis")}</summary><div class="resource-menu-items"><button type="button" data-template-action="source-import">${m("sources.import", undefined, t)}</button><button type="button" data-template-action="article-drafts">${m("templates.articleDrafts", undefined, t)}</button><button type="button" data-template-action="drafts">${m("templates.publishingDrafts", undefined, t)}</button></div></details></div><span role="status" data-template-creation-notice></span></header>
-    <div class="skills-gallery-tools" data-template-workspace-tools hidden></div><div class="template-filters"><input type="search" data-template-search ${a("placeholder", search, undefined, t)} ${a("aria-label", search, undefined, t)}><select class="wb-select" data-template-type ${a("aria-label", domain === "publishing" ? "templates.resourceType" : "templates.type", undefined, t)}>${option("", "templates.allTypes")}${Object.entries(
-      typeNames,
-    )
-      .filter(([value]) => !domain || publishingTemplateTypes.includes(value) === (domain === "publishing"))
-      .map(([value, id]) => option(value, id))
-      .join(
-        "",
-      )}</select><select class="wb-select" data-template-state ${a("aria-label", "templates.state", undefined, t)}>${option("all", "templates.allStates")}${option("enabled", "plugins.enabled")}${option("disabled", "plugins.disabled")}${option("removed", "templates.removed")}</select><button type="button" class="wb-button template-refresh-button" data-template-action="refresh" ${a("aria-label", "plugins.refresh", undefined, t)} ${a("title", "plugins.refresh", undefined, t)}>${codexIcon("refreshCw")}</button></div>
-    <p class="styles-notice" role="status" data-template-notice></p><div class="template-grid" data-template-grid></div><footer class="template-page-footer"><span data-template-total></span><button type="button" class="wb-button" data-template-action="more" hidden>${m("templates.loadMore", undefined, t)}</button></footer>`;
+  const searchInput = `<input type="search" data-template-search ${a("placeholder", search, undefined, t)} ${a("aria-label", search, undefined, t)}>`;
+  const type = `<select class="wb-select" data-template-type ${a("aria-label", domain === "publishing" ? "templates.resourceType" : "templates.type", undefined, t)}>${option("", "templates.allTypes")}${Object.entries(
+    typeNames,
+  )
+    .filter(([value]) => !domain || publishingTemplateTypes.includes(value) === (domain === "publishing"))
+    .map(([value, id]) => option(value, id))
+    .join("")}</select>`;
+  const state = `<select class="wb-select" data-template-state ${a("aria-label", "templates.state", undefined, t)}>${option("all", "templates.allStates")}${option("enabled", "plugins.enabled")}${option("disabled", "plugins.disabled")}${option("removed", "templates.removed")}</select>`;
+  const refresh = `<button type="button" class="wb-button template-refresh-button" data-template-action="refresh" ${a("aria-label", "plugins.refresh", undefined, t)} ${a("title", "plugins.refresh", undefined, t)}>${codexIcon("refreshCw")}</button>`;
+  const toolbar = skills
+    ? `<div class="template-filters skills-catalog-filters">
+      <span class="wb-control-with-icon skills-catalog-search">${codexIcon("search")}${searchInput}</span>
+      <button type="button" class="wb-button skills-catalog-filter-toggle" data-template-action="filters" aria-expanded="false" aria-controls="skillsCatalogFilters">${codexIcon("slidersHorizontal")}${m("skillWorkspace.filters", undefined, t)}</button>
+      <div id="skillsCatalogFilters" class="skills-catalog-refinements" data-expanded="false"><div data-template-workspace-tools></div>${type}${state}</div>
+      ${refresh}
+    </div>`
+    : `<div class="template-filters">${searchInput}${type}${state}${refresh}</div>`;
+  const organization = skills
+    ? `<button type="button" class="skills-navigation-menu-entry" data-skills-action="navigation">${m("skillWorkspace.categoriesAndPins", undefined, t)}</button>
+       <button type="button" data-skills-action="categories">${m("skillWorkspace.manageCategories", undefined, t)}</button>
+       <button type="button" data-skills-action="pins">${m("skillWorkspace.configure", undefined, t)}</button>`
+    : "";
+  return `<header class="resource-heading template-manager-heading${skills ? " skills-catalog-heading" : ""}">
+      <div><h1>${m("templates.title", undefined, t)}</h1>${skills ? "" : `<p>${m("templates.subtitle", undefined, t)}</p>`}</div>
+      <div class="resource-actions"><button type="button" class="wb-button primary" data-template-action="article">${m("templates.newArticleTemplate", undefined, t)}</button><button type="button" class="wb-button template-import-button" data-template-action="import" ${a("aria-label", "templates.import", undefined, t)} ${a("title", "templates.import", undefined, t)}>${codexIcon("fileInput")}<span class="template-import-label">${m("templates.import", undefined, t)}</span></button><details class="resource-menu" data-template-menu><summary class="wb-button" ${a("aria-label", "templates.moreActions", undefined, t)}>${codexIcon("ellipsis")}</summary><div class="resource-menu-items">${organization}<button type="button" data-template-action="source-import">${m("sources.import", undefined, t)}</button><button type="button" data-template-action="article-drafts">${m("templates.articleDrafts", undefined, t)}</button><button type="button" data-template-action="drafts">${m("templates.publishingDrafts", undefined, t)}</button></div></details></div><span role="status" data-template-creation-notice></span>
+    </header>${toolbar}
+    <p class="styles-notice" role="status" data-template-notice></p>
+    ${skills ? '<p class="busy-status skills-catalog-progress" role="status" data-template-progress hidden></p>' : ""}
+    <div class="template-grid" data-template-grid></div><footer class="template-page-footer"><span data-template-total></span><button type="button" class="wb-button" data-template-action="more" hidden>${m("templates.loadMore", undefined, t)}</button></footer>`;
 }
 export function managerEmpty(t: Translate, filtered: boolean, domain?: TemplateDomain) {
   const publishing = domain === "publishing";

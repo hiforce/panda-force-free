@@ -106,19 +106,20 @@ export function createProjectDirectory({ root, t, catalog, isProjectPinned, iden
     setMessageHtml(
       root,
       `<section class="project-directory">
-      <header class="wb-page-heading project-directory-heading"><div><div class="project-directory-title"><h1>${message("common.projects")}</h1>${catalog.ready ? `<span class="project-directory-count" data-i18n-ignore>${escape(getBrowserI18n().format.number(selected.total))}</span>` : ""}</div><p>${message("projects.directoryDescription")}</p></div><button type="button" class="wb-button primary" data-wb="create-project">${codexIcon("plus")}${message("common.createProject")}</button></header>
-      <div class="project-directory-toolbar wb-form">
-        <label class="wb-field project-directory-search"><span class="project-directory-caption">${message("workbench.searchProjects")}</span><span class="project-directory-search-control wb-control-with-icon">${codexIcon("search")}<input id="wbProjectSearch" type="search" ${attributes("workbench.searchProjects")} ${messageAttributes("placeholder", "projects.searchPlaceholder", undefined, t)} value="${escape(query)}"></span></label>
+      <header class="project-directory-heading project-directory-toolbar wb-form">
+        <h1>${message("common.projects")}</h1>
+        <label class="wb-field project-directory-search"><span class="sr-only">${message("workbench.searchProjects")}</span><span class="project-directory-search-control wb-control-with-icon">${codexIcon("search")}<input id="wbProjectSearch" type="search" ${messageAttributes("title", "projects.searchPlaceholder", undefined, t)} ${messageAttributes("placeholder", "workbench.searchProjects", undefined, t)} value="${escape(query)}"></span></label>
+        <div class="project-directory-options">
         <div class="project-directory-filters" role="group" ${attributes("projects.filterProjects")}>${[
           ["all", "projects.allProjects", selected.total],
           ["pinned", "projects.pinnedProjects", selected.pinnedCount],
         ]
           .map(
             ([value, label, count]) =>
-              `<button type="button" class="wb-button" id="project-filter-${value}" data-project-action="filter" data-value="${value}" aria-pressed="${filter === value}">${value === "pinned" ? codexIcon("pin") : ""}${message(label)}<span data-i18n-ignore>${escape(getBrowserI18n().format.number(count))}</span></button>`,
+              `<button type="button" class="wb-button" id="project-filter-${value}" data-project-action="filter" data-value="${value}" aria-pressed="${filter === value}">${value === "pinned" ? codexIcon("pin") : ""}<span class="project-directory-filter-label">${message(label)}</span><span data-i18n-ignore>${escape(getBrowserI18n().format.number(count))}</span></button>`,
           )
           .join("")}</div>
-        <label class="wb-field project-directory-sort"><span class="project-directory-caption">${message("projects.sortProjects")}</span><select id="projectDirectorySort" class="wb-select" ${attributes("projects.sortProjects")}>${[
+        <label class="wb-field project-directory-sort"><span class="sr-only">${message("projects.sortProjects")}</span>${codexIcon("listOrdered")}<select id="projectDirectorySort" class="wb-select" ${attributes("projects.sortProjects")}>${[
           ["updated", "projects.sortUpdated"],
           ["name", "projects.sortName"],
           ["sessions", "projects.sortSessions"],
@@ -134,11 +135,13 @@ export function createProjectDirectory({ root, t, catalog, isProjectPinned, iden
         ]
           .map(
             ([value, icon, label]) =>
-              `<button type="button" class="wb-button" id="project-layout-${value}" data-project-action="layout" data-value="${value}" aria-pressed="${layout === value}" ${attributes(label)}>${codexIcon(icon)}${message(label)}</button>`,
+              `<button type="button" class="wb-button" id="project-layout-${value}" data-project-action="layout" data-value="${value}" aria-pressed="${layout === value}" ${attributes(label)}>${codexIcon(icon)}<span class="project-directory-layout-label">${message(label)}</span></button>`,
           )
           .join("")}</div>
-        <div class="project-directory-top-pages" id="projectDirectoryTopPages"></div>
-      </div>
+          <div class="project-directory-top-pages" id="projectDirectoryTopPages"></div>
+        </div>
+        <button type="button" class="wb-button primary project-directory-create" data-wb="create-project" ${attributes("common.createProject")}>${codexIcon("plus")}<span class="project-directory-create-label">${message("common.createProject")}</span></button>
+      </header>
       <div id="wbProjectResults" aria-busy="${!catalog.ready}"></div><footer id="projectDirectoryPagination" class="project-directory-pagination"></footer>
     </section>`,
     );

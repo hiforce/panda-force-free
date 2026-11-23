@@ -7,9 +7,9 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 
 PandaForce is a browser workspace for natural-language work: organize projects, run conversations, review requests and inspect results.
 
-PandaForce 0.1.7 supports multiple Harness Runtimes, including Codex and Grok Build. Choose a runtime, then its model and reasoning level. Switch an existing conversation after the current turn finishes; its history and workspace files remain available while selected context is handed over. Application sign-in and model-provider sign-in are separate. See [Harness setup](harness-runtimes.md).
+PandaForce 0.1.8 supports multiple Harness Runtimes, including Codex and Grok Build. Choose a runtime, then its model and reasoning level. Switch an existing conversation after the current turn finishes; its history and workspace files remain available while selected context is handed over. Application sign-in and model-provider sign-in are separate. See [Harness setup](harness-runtimes.md).
 
-Browse the [feature catalog](features.md) for the 0.1.7 release, optional services and current limits.
+Browse the [feature catalog](features.md) for the 0.1.8 release, optional services and current limits.
 
 Start with <a href={useBaseUrl('/installation/')}>installation</a>, then learn the [workspace](./workspace.md). The standard installation uses the published Docker image; source development is covered separately in the [development guide](building.md).
 

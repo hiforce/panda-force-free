@@ -5,6 +5,7 @@ import type { BotWorkspaceOverview } from "../../shared/bots/workspace.js";
 import type { SettingsPageMount } from "../settings-pages/contracts.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { request } from "../http-client.js";
+import { busyStatus } from "../busy-indicator.js";
 import { setMessageHtml } from "../i18n.js";
 import { botAvatarHtml } from "./avatar.js";
 import { openBotEditor } from "./editor.js";
@@ -13,7 +14,7 @@ import { createBotTaskList } from "./tasks.js";
 import { createBotWorkspace as createTaskWorkspace } from "./settings.js";
 import { createBotHumanChat, type BotChatDraft } from "./human-chat.js";
 import { createBotIntegrations } from "./integrations.js";
-import { botHomeList } from "./home-view.js";
+import { botHomeHeading, botHomeList } from "./home-view.js";
 import { botChatHeading, bindBotChatHeading } from "./chat-heading.js";
 
 export function botRoute(label: string, route: string, primary = false) {
@@ -39,7 +40,7 @@ export function createBotWorkspace(t: Translate) {
     loading: Promise<void> | null = null,
     searchTimer: ReturnType<typeof setTimeout> | undefined;
   const drafts = new Map<string, BotChatDraft>(),
-    { h, button, iconButton } = botUi(t);
+    { h, iconButton } = botUi(t);
   let queue = createTaskWorkspace(t);
   let integrationView: ReturnType<typeof createBotIntegrations> | undefined;
   let chatHeading: ReturnType<typeof bindBotChatHeading> | undefined;
@@ -112,8 +113,18 @@ export function createBotWorkspace(t: Translate) {
     reload() {
       if (loading) return loading;
       const current = epoch;
+      const progress = host?.querySelector<HTMLElement>("[data-bot-loading]");
+      if (progress) {
+        progress.hidden = false;
+        host?.setAttribute("aria-busy", "true");
+      }
       loading = load(current).finally(() => {
-        if (current === epoch) loading = null;
+        if (current !== epoch) return;
+        loading = null;
+        if (progress) {
+          progress.hidden = true;
+          host?.removeAttribute("aria-busy");
+        }
       });
       return loading;
     },
@@ -175,6 +186,7 @@ export function createBotWorkspace(t: Translate) {
       if (current !== epoch) return;
       for (const item of host!.querySelectorAll<HTMLElement>("[data-summary]"))
         item.textContent = String(overview.counts[item.dataset.summary as keyof typeof overview.counts]);
+      if (target.querySelector("[data-bot-loading]")) context.notice("");
       const next = JSON.stringify([overview.cards, search]);
       if (next === fingerprint) return;
       fingerprint = next;
@@ -231,15 +243,43 @@ export function createBotWorkspace(t: Translate) {
       host.className = "bot-workspace bot-home" + (match?.[2] === "chat" ? " bot-home-chat" : "");
       container.append(host);
       host.setAttribute("aria-busy", "true");
+      const heading = home
+        ? botHomeHeading(t)
+        : match?.[2] === "chat"
+          ? botChatHeading(t, match[1]!)
+          : `<header class="bot-home-heading"><div>${botRoute(h("bots.homeTitle"), "/bots")}
+             <div class="bot-title-row"><span data-bot-profile></span><h1 data-bot-title>${h(match?.[2] === "tasks" ? "bots.tasks" : "bots.integrations")}</h1></div>
+             <p>${h(match?.[2] === "integrations" ? "bots.integrationHint" : "bots.retainedHint")}</p></div>
+             <div class="bot-record-actions">${iconButton("cli.botRefresh", "refreshCw", "data-refresh")}${
+               match
+                 ? [
+                     ["chat", "messageSquare"],
+                     ["tasks", "list"],
+                     ["integrations", "plug"],
+                   ]
+                     .map(([section, icon]) =>
+                       botIconRoute(
+                         t,
+                         ("bots." + section) as MessageId,
+                         `/bots/${match[1]}/${section}`,
+                         icon!,
+                         section === match[2],
+                       ),
+                     )
+                     .join("")
+                 : ""
+             }</div></header>`;
       setMessageHtml(
         host,
-        `${match?.[2] === "chat" ? botChatHeading(t, match[1]!) : `<header class="bot-home-heading"><div>${home ? "" : botRoute(h("bots.homeTitle"), "/bots")}<div class="bot-title-row"><span data-bot-profile ${home ? "hidden" : ""}></span><h1 data-bot-title>${h(home ? "bots.homeTitle" : route === "/bots/tasks" || match?.[2] === "tasks" ? "bots.tasks" : match?.[2] === "chat" ? "bots.chat" : "bots.integrations")}</h1></div><p>${h(home ? "bots.homeHint" : match?.[2] === "chat" ? "bots.chatHint" : match?.[2] === "integrations" ? "bots.integrationHint" : "bots.retainedHint")}</p></div><div class="bot-record-actions">${home ? button("cli.botRefresh", "data-refresh") : iconButton("cli.botRefresh", "refreshCw", "data-refresh")}${home ? botRoute(h("cli.botAllTasks"), "/bots/tasks") + button("cli.botCreate", "data-new-bot", true) : match ? ["chat", "tasks", "integrations"].map((s) => botIconRoute(t, ("bots." + s) as MessageId, `/bots/${match[1]}/${s}`, ({ chat: "messageSquare", tasks: "list", integrations: "plug" } as Record<string, string>)[s]!, s === match[2])).join("") : ""}</div></header>`}<p class="bot-notice" data-bot-notice role="status" hidden></p>${home ? `<dl class="bot-home-summary">${(["bots", "running", "attention", "integrations"] as const).map((key) => `<div><dt>${h(({ bots: "bots.summaryBots", running: "bots.summaryRunning", attention: "bots.summaryAttention", integrations: "bots.summaryIntegrations" } as const)[key])}</dt><dd data-summary="${key}">—</dd></div>`).join("")}</dl><div class="wb-form bot-home-search"><label class="wb-field"><span>${h("bots.searchLabel")}</span><input type="search" data-bot-search maxlength="160"></label></div>` : ""}<div data-bot-content><p role="status">${h("settings.pageLoading")}</p></div>`,
+        `${heading}<p class="bot-notice" data-bot-notice role="status" hidden></p>
+        <div data-bot-content>${home ? `<p class="busy-status busy-status-panel" role="status" data-bot-loading>${busyStatus(t, "common.pageLoading")}</p>` : `<p role="status">${h("settings.pageLoading")}</p>`}</div>`,
       );
       if (match?.[2] === "chat") chatHeading = bindBotChatHeading(host);
       host
         .querySelector<HTMLButtonElement>("[data-new-bot]")
         ?.addEventListener("click", () => openBotEditor(host!, context));
       host.querySelector<HTMLButtonElement>("[data-refresh]")!.onclick = () => {
+        if (home) context.notice("");
         void context.execute(context.reload);
       };
       const searchField = host.querySelector<HTMLInputElement>("[data-bot-search]");

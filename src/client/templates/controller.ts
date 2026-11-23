@@ -8,6 +8,7 @@ import type { TemplateDomain } from "../../shared/templates/domain.js";
 import type { TemplateCommands } from "./command-port.js";
 import {
   setMessageHtml,
+  messageHtml,
   errorText,
   localizeAttribute,
   getBrowserI18n,
@@ -15,6 +16,8 @@ import {
   setOpaqueAttribute,
 } from "../i18n.js";
 import { presentationLabel } from "../presentation-labels.js";
+import { busyStatus } from "../busy-indicator.js";
+import { escapeHtml } from "../../shared/html.js";
 
 import { PluginApiError } from "../plugins/api.js";
 import { TemplateCatalogCache } from "./catalog-cache.js";
@@ -198,6 +201,13 @@ export function createTemplateManager(
     node.textContent = text;
     node.dataset.error = String(failed);
   }
+  function catalogProgress(label?: "creation.loadingSkill" | "templates.updating") {
+    const progress = host?.querySelector<HTMLElement>("[data-template-progress]");
+    if (!progress) return;
+    progress.hidden = !label;
+    progress.classList.toggle("busy-status-panel", !get("[data-template-grid]").hasChildNodes());
+    setMessageHtml(progress, label ? busyStatus(t, label) : "");
+  }
   function controls() {
     if (!host) return;
     host.setAttribute("aria-busy", String(busy));
@@ -218,7 +228,10 @@ export function createTemplateManager(
       target = host;
     busy = true;
     controls();
-    notice(t("plugins.working"));
+    if (scope.domain === "skills") {
+      notice("");
+      catalogProgress("creation.loadingSkill");
+    } else notice(t("plugins.working"));
     const query = new URLSearchParams({
       limit: "24",
       view: "gallery",
@@ -259,7 +272,8 @@ export function createTemplateManager(
     const saved = cached && !more ? cache.read(query.toString()) : null;
     if (saved) {
       draw(saved);
-      notice(t("templates.updating"));
+      if (scope.domain === "skills") catalogProgress("templates.updating");
+      else notice(t("templates.updating"));
     }
     try {
       const page = await api.list(query, request.signal);
@@ -276,14 +290,22 @@ export function createTemplateManager(
           get("[data-template-grid]").replaceChildren();
           get("[data-template-total]").hidden = true;
         }
-        notice(
-          errorText(error instanceof PluginApiError ? error.payload : null, t, "plugins.packageUnavailable"),
-          true,
+        const message = errorText(
+          error instanceof PluginApiError ? error.payload : null,
+          t,
+          "plugins.packageUnavailable",
         );
+        notice(message, true);
+        if (scope.domain === "skills")
+          setMessageHtml(
+            get("[data-template-notice]"),
+            `<span data-i18n-ignore>${escapeHtml(message)}</span><button type="button" class="wb-button" data-template-action="refresh">${messageHtml("common.retry", undefined, t)}</button>`,
+          );
       }
     } finally {
       if (generation === epoch) {
         busy = false;
+        catalogProgress();
         controls();
       }
     }
@@ -371,13 +393,15 @@ export function createTemplateManager(
       }
       if (scope.section) {
         const title = host.querySelector("h1")!;
-        host.querySelector(".resource-heading p")!.textContent = t(
-          scope.section === "site"
-            ? "creative.siteThemeHint"
-            : scope.section === "channel"
-              ? "creative.channelLayoutHint"
-              : "creative.skillHint",
-        );
+        const description = host.querySelector(".resource-heading p");
+        if (description)
+          description.textContent = t(
+            scope.section === "site"
+              ? "creative.siteThemeHint"
+              : scope.section === "channel"
+                ? "creative.channelLayoutHint"
+                : "creative.skillHint",
+          );
         title.textContent = t(
           scope.section === "channel"
             ? "creative.channelTemplates"
@@ -407,6 +431,12 @@ export function createTemplateManager(
         if (!button || button.disabled) return;
         closeMenu();
         const action = button.dataset.templateAction;
+        if (action === "filters") {
+          const open = button.getAttribute("aria-expanded") !== "true";
+          button.setAttribute("aria-expanded", String(open));
+          get("#skillsCatalogFilters").dataset.expanded = String(open);
+          return;
+        }
         if (action === "pin" && workspace) {
           const item = entries.find((entry) => entry.key === button.dataset.skillsPinKey);
           if (item) void workspace.togglePin(item).catch(() => {});

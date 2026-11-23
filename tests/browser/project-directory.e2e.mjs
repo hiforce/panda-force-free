@@ -71,7 +71,7 @@ try {
       await items.nth(23).waitFor();
       assert.equal(await items.count(), 24);
       assert.equal(await page.locator(".project-directory-collection").getAttribute("data-layout"), "list");
-      assert.equal(await page.locator(".project-directory-count").innerText(), "37");
+      assert.equal(await page.locator("#project-filter-all > span:last-child").innerText(), "37");
       const first = page.locator(`[data-project-item="${ids[0]}"]`);
       await first.locator('[data-wb="pin"]').click();
       await waitFor(async () => (await first.locator('[data-wb="pin"]').getAttribute("aria-pressed")) === "true");
@@ -116,12 +116,16 @@ try {
           }
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
           assert.equal(await page.locator("#projectDirectorySort").inputValue(), "updated");
+          const search = await page.locator("#wbProjectSearch").boundingBox();
+          const create = await page.locator('.project-directory-heading [data-wb="create-project"]').boundingBox();
+          const title = await page.locator(".project-directory-heading h1").boundingBox();
+          const center = (box) => box.y + box.height / 2;
+          assert.ok(Math.abs(center(search) - center(create)) < 3 && Math.abs(center(search) - center(title)) < 3);
           if (width === 1440) {
-            const search = await page.locator("#wbProjectSearch").boundingBox();
             const sort = await page.locator("#projectDirectorySort").boundingBox();
             const toggle = await page.locator(".project-directory-layout").boundingBox();
             assert.ok(
-              Math.abs(search.y - sort.y) < 4 && Math.abs(search.y - toggle.y) < 4,
+              Math.abs(center(search) - center(sort)) < 3 && Math.abs(center(search) - center(toggle)) < 3,
               "Desktop toolbar must occupy one row",
             );
           }

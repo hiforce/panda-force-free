@@ -65,14 +65,13 @@ export function createSkillsWorkspace(
     if (focused) nav.querySelector<HTMLElement>(`[data-skills-category="${focused}"]`)?.focus({ preventScroll: true });
     const tools = host.querySelector<HTMLElement>("[data-template-workspace-tools]");
     if (tools) {
-      tools.hidden = false;
+      const keepFocus = tools.contains(document.activeElement);
       setMessageHtml(tools, filters(t, client.snapshot, selected));
+      if (keepFocus) tools.querySelector("select")?.focus({ preventScroll: true });
     }
     showWorkspaceNotice(host.querySelector<HTMLElement>("[data-skills-notice]")!, client, t);
     const heading = host.querySelector<HTMLElement>("[data-skills-gallery] h1");
     if (heading) heading.textContent = title();
-    const hint = host.querySelector<HTMLElement>("[data-skills-gallery] .resource-heading p");
-    if (hint) hint.textContent = t("skillWorkspace.browseHint");
     manager.syncWorkspace();
     const stamp = String(client.snapshot?.revision ?? "");
     if (selected !== "all" && assignmentStamp && assignmentStamp !== stamp) void manager.reload();
@@ -117,7 +116,12 @@ export function createSkillsWorkspace(
           return;
         }
         const action = button.dataset.skillsAction;
-        if (action === "pins" || action === "categories" || action === "navigation") dialogs.open({ kind: action });
+        if (action === "pins" || action === "categories" || action === "navigation") {
+          const menu = button.closest("[data-template-menu]");
+          menu?.removeAttribute("open");
+          menu?.querySelector("summary")?.focus();
+          dialogs.open({ kind: action });
+        }
         if (action === "retry") void client.retry().catch(() => {});
       };
       target.onchange = (event) => {

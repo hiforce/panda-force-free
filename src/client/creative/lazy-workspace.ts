@@ -4,8 +4,8 @@ import type { createLazyTemplateManager } from "../templates/lazy-settings.js";
 import { DocumentRuntimeLoader, RuntimeLoadError } from "../documents/runtime-loader.js";
 import { isModuleNetworkError } from "../documents/module-network-error.js";
 import { prepareDocumentModule } from "../documents/module-transfer.js";
-import { setMessageHtml } from "../i18n.js";
-import { escapeHtml as e } from "../../shared/html.js";
+import { messageHtml, setMessageHtml } from "../i18n.js";
+import { busyStatus } from "../busy-indicator.js";
 import { ProjectReadAhead } from "./read-ahead.js";
 import { projectLoadingView } from "./project-view.js";
 import type { ComposerMount } from "../../gadget/system/composer/host.js";
@@ -37,13 +37,15 @@ export function createLazyContentWorkspace(
     readAhead?.cancel();
     view?.hide();
   }
+  function skillShell(body: string, category?: string) {
+    const title = !category || category === "all" ? "skillWorkspace.all" : "creative.skills";
+    return `<section class="skills-workspace"><div class="skills-navigation" aria-hidden="true"></div><div class="skills-main"><header class="resource-heading skills-catalog-heading"><h1>${messageHtml(title, undefined, t)}</h1></header>${body}</div></section>`;
+  }
   function failure(host: HTMLElement, retryable: boolean, first?: string, second?: string) {
     readAhead?.cancel();
-    setMessageHtml(
-      host,
-      `<p role="status" data-content-workspace-status>${e(t(retryable ? "common.pageLoadFailed" : "common.pageReloadRequired"))}</p><button type="button" class="wb-button" data-content-workspace-retry>${e(t(retryable ? "common.retry" : "common.reloadWorkspace"))}</button>`,
-    );
-    host.querySelector<HTMLButtonElement>("button")!.onclick = () =>
+    const pane = `<div class="content-workspace-recovery"><p role="status" data-content-workspace-status>${messageHtml(retryable ? "common.pageLoadFailed" : "common.pageReloadRequired", undefined, t)}</p><button type="button" class="wb-button" data-content-workspace-retry>${messageHtml(retryable ? "common.retry" : "common.reloadWorkspace", undefined, t)}</button></div>`;
+    setMessageHtml(host, kind === "skills" ? skillShell(pane, first) : pane);
+    host.querySelector<HTMLButtonElement>("[data-content-workspace-retry]")!.onclick = () =>
       retryable ? show(host, first, second) : location.reload();
   }
   function show(host: HTMLElement, first?: string, second?: string) {
@@ -51,6 +53,7 @@ export function createLazyContentWorkspace(
     if (fatal) return failure(host, false, first, second);
     if (view) return view.show(host, first, second);
     if (first) readAhead?.prepare(first);
+    const pending = `<p class="busy-status busy-status-panel" role="status" data-content-workspace-status>${busyStatus(t, kind === "skills" ? "creation.loadingSkill" : "common.pageLoading")}</p>`;
     setMessageHtml(
       host,
       ["project", "directory"].includes(kind) && first
@@ -60,7 +63,9 @@ export function createLazyContentWorkspace(
             projects().find((project) => project.id === first),
             kind === "directory" ? "documents" : "content",
           )
-        : `<p role="status" data-content-workspace-status>${e(t("common.pageLoading"))}</p>`,
+        : kind === "skills"
+          ? skillShell(pending, first)
+          : pending,
     );
     void runtime.load().then(
       (loaded) => {

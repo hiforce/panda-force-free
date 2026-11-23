@@ -1,8 +1,39 @@
 import type { Translate } from "../../shared/i18n/messages.js";
 import type { BotWorkspaceCard } from "../../shared/bots/workspace.js";
 import { escapeHtml as e } from "../../shared/html.js";
+import { codexIcon } from "../codex-icons.js";
 import { botUi } from "./ui.js";
 import { botAvatarHtml } from "./avatar.js";
+
+const homeCounts = {
+  bots: "bots.summaryBots",
+  running: "bots.summaryRunning",
+  attention: "bots.summaryAttention",
+  integrations: "bots.summaryIntegrations",
+} as const;
+
+export function botHomeHeading(t: Translate) {
+  const { h, button, iconButton, icon, attributes } = botUi(t);
+  return `<header class="bot-home-heading bot-management-heading">
+    <div class="bot-management-context">
+      <h1 data-bot-title>${h("bots.homeTitle")}</h1>
+      <dl class="bot-home-summary">${Object.entries(homeCounts)
+        .map(([key, label]) => `<div><dt>${h(label)}</dt><dd data-summary="${key}">—</dd></div>`)
+        .join("")}</dl>
+    </div>
+    <div class="bot-management-tools">
+      <div class="wb-form bot-home-search"><label class="wb-field">
+        <span class="sr-only">${h("bots.searchLabel")}</span>
+        <span class="wb-control-with-icon">${codexIcon("search")}<input type="search" data-bot-search maxlength="160" ${attributes("placeholder", "bots.searchLabel")}></span>
+      </label></div>
+      <div class="bot-record-actions">
+        ${iconButton("cli.botRefresh", "refreshCw", "data-refresh")}
+        <a class="wb-button bot-management-tasks" href="/bots/tasks" data-wb="route" data-route="/bots/tasks" ${attributes("aria-label", "cli.botAllTasks")} ${attributes("title", "cli.botAllTasks")}>${icon("list")}<span class="bot-management-tasks-label">${h("cli.botAllTasks")}</span></a>
+        ${button("cli.botCreate", "data-new-bot", true)}
+      </div>
+    </div>
+  </header>`;
+}
 
 /** A compact management list keeps personality editing behind the explicit edit action. */
 export function botHomeList(cards: BotWorkspaceCard[], search: string, t: Translate) {

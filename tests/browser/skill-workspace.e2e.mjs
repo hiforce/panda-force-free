@@ -30,6 +30,18 @@ for (const [engine, width, locale, theme] of [
       assert.ok(r.ok(), await r.text());
       return r.json();
     };
+    const management = page.locator("[data-template-menu]");
+    async function manage(action) {
+      await management.locator("summary").click();
+      await management.locator(`[data-skills-action="${action}"]`).click();
+    }
+    async function selectCategory(category) {
+      const filters = page.locator('[data-template-action="filters"]');
+      if ((await filters.isVisible()) && (await filters.getAttribute("aria-expanded")) !== "true") {
+        await filters.click();
+      }
+      await page.locator("[data-skills-select]").selectOption(category);
+    }
     await page.goto(app.base + "/skills");
     await page.locator(".template-card").first().waitFor();
     await page.waitForFunction(() => !document.querySelector('[data-template-action="pin"]')?.disabled);
@@ -61,7 +73,7 @@ for (const [engine, width, locale, theme] of [
       ),
     );
     await page.screenshot({ path: `${out}/all-${width}.png` });
-    await page.locator('.skills-gallery-tools [data-skills-action="categories"]').click();
+    await manage("categories");
     const dialog = page.locator("#skillWorkspaceDialog[open]");
     await dialog.locator('[data-skills-action="new-category"]').click();
     await dialog.locator('input[name="zh"]').fill("产品");
@@ -79,7 +91,7 @@ for (const [engine, width, locale, theme] of [
     assert.equal((await read()).categories.find((value) => value.id === "writing").name.en, "Drafting");
     await page.screenshot({ path: `${out}/configured-categories-${width}.png` });
     await dialog.locator('header [data-skills-action="close"]').click();
-    await page.locator('.skills-gallery-tools [data-skills-action="pins"]').click();
+    await manage("pins");
     await dialog.locator(`[data-skills-pin-category="${category.id}"]`).check();
     await page.waitForFunction(
       (id) => document.querySelectorAll(`[data-skills-category="${id}"]`).length > 0,
@@ -96,8 +108,8 @@ for (const [engine, width, locale, theme] of [
     assert.equal((await read()).pins[last - 1].id, category.id);
     await page.screenshot({ path: `${out}/pins-${width}.png` });
     await page.keyboard.press("Escape");
-    assert.equal(await page.evaluate(() => document.activeElement?.dataset.skillsAction), "pins");
-    await page.locator("[data-skills-select]").selectOption("writing");
+    assert.equal(await management.locator("summary").evaluate((element) => element === document.activeElement), true);
+    await selectCategory("writing");
     const card = page
       .locator(".template-card-shell")
       .filter({ hasText: locale === "en" ? "Software PRD" : "软件需求 PRD" });
@@ -105,8 +117,8 @@ for (const [engine, width, locale, theme] of [
     await page.waitForFunction(() => document.querySelectorAll('.skills-card-pin[aria-pressed="true"]').length === 1);
     const search = page.locator("[data-template-search]");
     await search.fill("PRD");
-    await page.locator("[data-skills-select]").selectOption("slides");
-    await page.locator("[data-skills-select]").selectOption("writing");
+    await selectCategory("slides");
+    await selectCategory("writing");
     assert.equal(await search.inputValue(), "PRD");
     await search.fill("");
     const pinned = (await read()).pins.find((p) => p.kind === "skill");
@@ -120,7 +132,7 @@ for (const [engine, width, locale, theme] of [
     await dialog.locator('[data-skills-action="save-assignment"]').click();
     await dialog.waitFor({ state: "hidden" });
     await page.keyboard.press("Escape");
-    await page.locator("[data-skills-select]").selectOption(category.id);
+    await selectCategory(category.id);
     await page.waitForURL("**/skills/" + category.id);
     await page.locator(".template-card").waitFor();
     assert.equal(await page.locator(".template-card").count(), 1);
@@ -129,7 +141,7 @@ for (const [engine, width, locale, theme] of [
     await page.locator(".template-card").waitFor();
     assert.equal(await page.locator(".template-card").count(), 1);
     if (width < 901) {
-      await page.locator('[data-skills-action="navigation"]').click();
+      await manage("navigation");
       await page.screenshot({ path: `${out}/navigation-${width}.png` });
       await dialog.locator(`[data-skills-key="${pinned.key}"]`).click();
     } else await page.locator(`[data-skills-navigation] [data-skills-key="${pinned.key}"]`).click();
@@ -156,7 +168,7 @@ for (const [engine, width, locale, theme] of [
     assert.deepEqual(mutations[0], mutations[1]);
     assert.equal((await read()).pins.filter((p) => p.kind === "skill").length, 0);
     await page.unroute("**/api/skill-workspace/commands");
-    await page.locator('.skills-gallery-tools [data-skills-action="categories"]').click();
+    await manage("categories");
     await dialog.locator(`[data-skills-edit-category="${category.id}"]`).click();
     await dialog.locator('input[name="en"]').fill("Product planning");
     await dialog.locator('[data-skills-action="save-category"]').click();
