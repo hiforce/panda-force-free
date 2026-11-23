@@ -159,7 +159,7 @@ export function harnessProfiles(
       deployment,
       conversationOnly: true,
       factory: {
-        create: async (_runtime, { cwd }) => {
+        create: async (_runtime, { cwd, permissionMode }) => {
           if (accountHome === resolve(homedir())) throw new HarnessError("invalidInput");
           const nativeEnv: NodeJS.ProcessEnv = { HOME: accountHome };
           for (const key of [
@@ -173,7 +173,7 @@ export function harnessProfiles(
             "NO_PROXY",
           ])
             if (env[key]) nativeEnv[key] = env[key];
-          return new AntigravityHarnessAgent({ command, cwd, env: nativeEnv });
+          return new AntigravityHarnessAgent({ command, cwd, env: nativeEnv }, permissionMode);
         },
       },
     });

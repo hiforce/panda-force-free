@@ -84,17 +84,15 @@ try {
         third = await seed("Launch plan"),
         fourth = await seed("Category mapping");
       await page.goto(app.base + "/create");
-      const recent = page.locator(".creation-session-recent");
+      await page.locator("[data-creation-history]").click();
+      const recent = page.locator(".creation-history-page");
       await recent.locator(`[data-activity-task="${fourth}"]`).waitFor();
-      await recent.scrollIntoViewIfNeeded();
-      const track = recent.locator(".horizontal-carousel-track");
-      await track.focus();
-      await page.keyboard.press("Home");
-      assert(await page.evaluate(() => document.activeElement.matches("a[data-activity-task]")));
-      await page.keyboard.press("End");
-      assert(await page.evaluate(() => document.activeElement.matches("a[data-activity-task]")));
-      await track.focus();
-      await page.keyboard.press("Home");
+      assert.equal(await page.locator("#composer").isVisible(), false);
+      await recent.locator("[data-activity-search-toggle]").click();
+      await recent.locator("[data-activity-search]").fill("Category mapping");
+      assert.equal(await recent.locator("[data-activity-task]").count(), 1);
+      await recent.locator("[data-activity-search]").fill("");
+      await recent.locator("[data-activity-search]").press("Escape");
       const remove = recent.locator(`[data-history-clear="${fourth}"]`);
       assert((await remove.boundingBox()).width >= 44);
       assert((await remove.boundingBox()).height >= 44);
@@ -166,7 +164,9 @@ try {
       await waitFor(async () => (await recent.locator('[data-history-pending="false"]').count()) === 1);
       assert.equal(await recent.locator(`[data-activity-task="${fifth}"]`).count(), 1);
       assert.equal(await recent.locator(`[data-activity-task="${fourth}"]`).count(), 0);
+      await page.locator('.creation-home-heading a[href="/create"]').click();
       await fillComposer(page, "Keep this unsent creation draft.");
+      await page.locator("[data-creation-history]").click();
       phase = "all";
       await recent.locator("[data-history-clear-all]").click();
       await dialog.waitFor();
@@ -177,7 +177,11 @@ try {
       const latest = await seed("New work after clearing all history");
       await page.reload();
       await recent.locator(`[data-activity-task="${latest}"]`).waitFor();
+      await page.locator('.creation-home-heading a[href="/create"]').click();
+      await page.locator("#prompt").waitFor();
       assert.match(await page.locator("#prompt").inputValue(), /Keep this unsent/);
+      await page.locator("[data-creation-history]").click();
+      await recent.locator(`[data-activity-task="${latest}"]`).waitFor();
       await recent.locator("[data-history-clear-all]").click();
       await waitFor(async () => (await recent.locator('[data-history-pending="false"]').count()) === 1);
       assert.deepEqual(
@@ -256,7 +260,7 @@ try {
               })),
             ),
             status: await page
-              .locator(".creation-session-recent, .creation-session-records")
+              .locator(".creation-history-page, .creation-session-records")
               .first()
               .textContent()
               .catch(() => null),

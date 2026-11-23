@@ -104,6 +104,23 @@ test("Antigravity profiles isolate account homes and resume approved ACP turns w
       if (event.type === "activity") await resumed.agent.cancel(same);
     }),
   ).resolves.toEqual({ stopReason: "cancelled" });
+  await resumed.agent.close();
+
+  const auto = await registry.agent(administrator, "google-primary", "conversation", directory, {
+    permissionMode: "always-approve",
+  });
+  cleanups.push(() => auto.agent.close());
+  await expect(auto.agent.load(session.id, directory)).rejects.toMatchObject({ code: "capabilityUnavailable" });
+  const autoSession = await auto.agent.load(session.id, directory, { permissionMode: "always-approve" });
+  expect(autoSession.id).toBe(session.id);
+  const autoEvents: HarnessAgentEvent[] = [];
+  await expect(
+    auto.agent.prompt(autoSession, input, async (event) => {
+      autoEvents.push(event);
+      if (event.type === "permission") await auto.agent.respondPermission(event.id, null);
+    }),
+  ).resolves.toMatchObject({ stopReason: "complete" });
+  expect(autoEvents).toEqual([{ type: "text", text: "Fixture native auto-approval active." }]);
 });
 
 const info: HarnessAgentInfo = {

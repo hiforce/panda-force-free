@@ -1008,7 +1008,7 @@
 .session-layout .conversation {
   width: 100%;
   max-width: none;
-  padding: 36px 0 28px;
+  padding: var(--session-conversation-top, 36px) 0 28px;
 }
 /* Measure both rails from the main column, independent of panels and scrollbar width. */
 .session-layout .conversation > * {

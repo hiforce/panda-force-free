@@ -114,7 +114,8 @@ try {
       await page.screenshot({ path: `${out}/inspector-${locale}-${width}.png` });
       if (width < 1081) await page.locator('#sessionInspector [data-session-action="close"]').click();
       if (locale === "en") {
-        await page.locator("#composerSkillControl button").click();
+        await page.locator('[data-composer-control="add"]').click();
+        await page.locator(".composer-add-menu[open] [data-session-skills]").click();
         const picker = page.locator(".creation-skill-browser[open]");
         await picker.locator('[data-skill-category="research"]').click();
         await picker.locator('[data-skill-id="research-digest"]').click();
@@ -198,105 +199,45 @@ try {
       );
       if (locale === "en") assert.match(await page.locator("#prompt").inputValue(), /new draft/);
       await page.screenshot({ path: `${out}/conversation-${locale}-${width}.png` });
-      const carouselSeeds = [];
-      if (locale === "en")
-        for (let index = 0; index < 6; index++) {
-          const reply = await context.request.post(app.base + "/api/personal/document-creations", {
-            headers: { Origin: app.base },
-            data: {
-              ...firstResponse.request().postDataJSON(),
-              id: crypto.randomUUID(),
-              prompt: [
-                "Product launch plan",
-                "Category field mapping",
-                "Research brief",
-                "Release checklist",
-                "User interview outline",
-                "Brand guidelines",
-              ][index],
-            },
-          });
-          assert.equal(reply.status(), 202, await reply.text());
-          carouselSeeds.push((await reply.json()).task.id);
-        }
       await page.locator(".creation-session-actions [data-creation-new]").click();
       await gallery.locator(".creation-discovery-card").first().waitFor();
       assert(!(await page.locator("#sessionInfoButton").isVisible()));
-      await page.locator(".creation-session-recent [data-activity-task]").first().waitFor();
-      const recent = page.locator(".creation-session-recent");
-      assert.equal(await recent.locator(".creation-record-excerpt,.creation-record-destination").count(), 0);
-      assert((await recent.locator("[data-activity-task]").count()) <= 8);
+      assert.equal(await page.locator("#conversation [data-activity-list]").count(), 0);
+      const firstCard = gallery.locator(".creation-discovery-card").first();
+      const { inputMinimum, emptyInputHeight, firstCardHeight, firstCardBottom, coverWidth, viewportHeight } =
+        await page.evaluate(() => {
+          const bottom = (selector) => document.querySelector(selector).getBoundingClientRect();
+          const input = document.querySelector("#prompt");
+          return {
+            inputMinimum: Number.parseFloat(getComputedStyle(input).minHeight),
+            emptyInputHeight: input.value ? 0 : input.getBoundingClientRect().height,
+            firstCardHeight: bottom(".creation-discovery-card").height,
+            firstCardBottom: bottom(".creation-discovery-card").bottom,
+            coverWidth: bottom(".creation-discovery-card .template-cover").width,
+            viewportHeight: innerHeight,
+          };
+        });
+      assert.equal(inputMinimum, 64);
+      assert(emptyInputHeight <= 96);
+      assert(firstCardHeight <= 144);
+      assert(coverWidth >= 80);
+      assert(firstCardBottom < viewportHeight, "Skills must be actionable on the first screen");
+      await page.screenshot({ path: `${out}/home-${locale}-${width}.png` });
+      await firstCard.locator(".creation-discovery-title").click();
+      const detail = page.locator(".creation-skill-detail[open]");
+      await detail.waitFor();
+      assert((await detail.locator(".creation-skill-readme").innerText()).trim().length > 0);
+      await page.keyboard.press("Escape");
+      await detail.waitFor({ state: "hidden" });
       assert(
-        await recent
-          .locator(".creation-record")
-          .evaluateAll((cards) =>
-            cards.every(
-              (card) => card.getBoundingClientRect().height <= 96 && card.getBoundingClientRect().width <= 261,
-            ),
-          ),
-        "Recent records should remain compact on PC and H5",
+        await firstCard.locator("[data-skill-action=details]").evaluate((node) => document.activeElement === node),
       );
-      await recent.scrollIntoViewIfNeeded();
-      const track = recent.locator(".horizontal-carousel-track");
-      await track.waitFor();
-      await waitFor(async () => track.evaluate((node) => node.scrollWidth > node.clientWidth + 1));
-      const all = recent.locator("[data-activity-more]");
-      if (await all.isVisible()) {
-        const height = (await track.boundingBox()).height;
-        await all.click();
-        assert.equal(await all.getAttribute("aria-expanded"), "true");
-        assert((await track.boundingBox()).height <= height + 1, "All records must remain a single carousel row");
-        await all.click();
-      }
-      const arrows = recent.locator(".horizontal-carousel-controls button");
-      await arrows.nth(1).click();
-      await waitFor(async () => (await track.evaluate((node) => node.scrollLeft)) > 200);
-      await arrows.nth(0).click();
-      await waitFor(async () => (await track.evaluate((node) => node.scrollLeft)) < 2);
-      if (locale === "en") {
-        const box = await track.boundingBox();
-        await page.mouse.move(box.x + 240, box.y + 25);
-        await page.mouse.down();
-        await page.mouse.move(box.x + 35, box.y + 25, { steps: 12 });
-        await page.mouse.up();
-        await waitFor(async () => (await track.evaluate((node) => node.scrollLeft)) > 100);
-        assert.equal(new URL(page.url()).pathname, "/create", "Dragging must not open a creation record");
-        await track.focus();
-        await page.keyboard.press("Home");
-        await waitFor(async () => (await track.evaluate((node) => node.scrollLeft)) < 2);
-        const touch = await context.newCDPSession(page);
-        await touch.send("Emulation.setTouchEmulationEnabled", { enabled: true });
-        await touch.send("Input.dispatchTouchEvent", {
-          type: "touchStart",
-          touchPoints: [{ x: box.x + 350, y: box.y + 35 }],
-        });
-        for (let step = 1; step <= 12; step++) {
-          await touch.send("Input.dispatchTouchEvent", {
-            type: "touchMove",
-            touchPoints: [{ x: box.x + 350 - step * 20, y: box.y + 35 }],
-          });
-          await page.waitForTimeout(20);
-        }
-        await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-        await waitFor(async () => (await track.evaluate((node) => node.scrollLeft)) > 100);
-        await touch.detach();
-      }
-      await track.focus();
-      await page.keyboard.press("Home");
-      await waitFor(async () => (await track.evaluate((node) => node.scrollLeft)) < 2);
-      await page.evaluate(() => {
-        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-      });
-      await page.screenshot({ path: `${out}/recent-${locale}-${width}.png` });
-      await recent.screenshot({ path: `${out}/recent-compact-${locale}-${width}.png` });
+      await page.locator("[data-creation-history]").press("Enter");
+      await page.locator(".creation-history-page [data-activity-task]").first().waitFor();
+      await page.screenshot({ path: `${out}/history-${locale}-${width}.png` });
+      await page.goBack();
+      await firstCard.waitFor();
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
-      for (const id of carouselSeeds) {
-        const cancelled = await context.request.post(app.base + "/api/personal/document-creations/cancel", {
-          headers: { Origin: app.base },
-          data: { id },
-        });
-        assert.equal(cancelled.status(), 200, await cancelled.text());
-      }
       assert.deepEqual(errors, []);
       records.push({ locale, width, inspectorWidth, actualRoute: true, errors });
     } finally {

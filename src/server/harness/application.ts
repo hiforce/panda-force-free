@@ -105,8 +105,10 @@ export function applicationRuntimes(options: {
             cwd,
             scoped
               ? {
-                  instructions: "Discover runtime capabilities only. No prompt is authorized.",
-                  mcpServer: bridge.mcpServer,
+                  application: {
+                    instructions: "Discover runtime capabilities only. No prompt is authorized.",
+                    mcpServer: bridge.mcpServer,
+                  },
                 }
               : undefined,
           );
@@ -219,8 +221,7 @@ export function applicationRuntimes(options: {
               `application-${randomUUID()}`,
               directory,
               {
-                instructions: input.instructions,
-                mcpServer: bridge.mcpServer,
+                application: { instructions: input.instructions, mcpServer: bridge.mcpServer },
               },
             );
             agent = opened.agent;

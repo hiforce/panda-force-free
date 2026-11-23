@@ -13,7 +13,15 @@ import type {
 } from "../contracts/session-workspace.js";
 import { LazyCreativeAssetsPanel } from "../creative/assets-lazy.js";
 import { runtimeModelCatalog } from "../harness/model-catalog.js";
-import { errorText, localizeAttribute, localizeText, messageHtml, setMessageHtml, setOpaqueText } from "../i18n.js";
+import {
+  errorText,
+  localizeAttribute,
+  localizeText,
+  messageAttributes,
+  messageHtml,
+  setMessageHtml,
+  setOpaqueText,
+} from "../i18n.js";
 import { parkMessageComposer } from "../message-composer-placement.js";
 import { sessionUsageView } from "../session-workspace/usage.js";
 import { storage, STORAGE_KEYS } from "../storage.js";
@@ -53,6 +61,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   private readonly recordList = document.createElement("div");
   private readonly home = document.createElement("div");
   private readonly composerHome = document.createElement("div");
+  private readonly composerLabel = document.createElement("label");
   private readonly dock = document.querySelector<HTMLElement>(".composer-dock")!;
   private readonly discovery: CreationSkillDiscovery;
   private cards?: CreationCards;
@@ -69,7 +78,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.sectionView = new CreationSessionSections(this.state, {
       t: this.t,
       records: () => {
-        this.ensureRecords("sidebar");
+        this.ensureRecords();
         return this.records;
       },
       savedDocument: () => this.savedDocument(),
@@ -101,6 +110,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.goals = new CreationSessionGoals(this.state, commandPorts);
     this.home.className = "creation-session-home";
     this.composerHome.className = "creation-entry-composer";
+    this.composerLabel.htmlFor = "prompt";
+    localizeText(this.composerLabel, "creation.startComposerLabel", {}, this.t);
     this.discovery = new CreationSkillDiscovery(t, bridge.selections, (selection) => {
       bridge.selectSkill(selection);
       this.discovery.update();
@@ -174,6 +185,11 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     root.replaceChildren(this.historyHost, this.notice);
     this.notice.classList.remove("sr-only");
     setOpaqueText(this.notice, "");
+    if (!route.id) {
+      root.append(this.home);
+      this.home.append(this.composerHome);
+      this.composerHome.append(this.composerLabel, this.dock);
+    }
     this.bridge.restoreDraft();
     if (!route.id) {
       if (!this.state.pending) this.commands.warmDestination();
@@ -183,10 +199,6 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
         if (legacy) this.bridge.seedDraft(legacy.prompt, legacy.selections, true);
         storage.set(migrationKey, "true");
       }
-      this.ensureRecords("cards");
-      root.append(this.home);
-      this.home.append(this.composerHome, this.records);
-      this.composerHome.append(this.dock);
       this.discovery.show(this.home);
     } else {
       localizeText(this.notice, "creation.detailLoading", {}, this.t);
@@ -359,9 +371,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   renderSections(host: HTMLElement) {
     this.sectionView.render(host);
   }
-  private ensureRecords(presentation: "cards" | "sidebar") {
-    this.records.className =
-      presentation === "cards" ? "creation-session-recent" : "session-section creation-session-records";
+  private ensureRecords() {
+    this.records.className = "session-section creation-session-records";
     let heading = this.records.querySelector("h3");
     if (!heading) {
       const header = document.createElement("div");
@@ -370,12 +381,11 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       header.append(heading);
       this.records.append(header, this.recordList);
     }
-    localizeText(heading, presentation === "cards" ? "creation.recentCreations" : "creation.activityTitle", {}, this.t);
+    localizeText(heading, "creation.activityTitle", {}, this.t);
     this.activity ??= new CreationActivity(this.recordList, this.t, this.identity, this.projects, this.navigate, {
       limit: 4,
-      presentation,
+      presentation: "sidebar",
     });
-    this.activity.setPresentation(presentation);
     this.activity.show();
   }
   private preferenceKey() {
@@ -405,7 +415,9 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.actions.dataset.signature = signature;
     setMessageHtml(
       this.actions,
-      `<a class="icon-button" href="/create" data-creation-new>${codexIcon("plus")}</a><a class="icon-button" href="/create?view=works" data-creation-works>${codexIcon("folderOpen")}</a>${this.state.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.state.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon(artifact && artifact.kind !== "document" ? creativeKindIcons[artifact.kind] : "file")}<span>${messageHtml(openLabel, {}, this.t)}</span></button>` : ""}`,
+      `${this.state.route.id ? `<a class="icon-button" href="/create" data-creation-new>${codexIcon("plus")}</a>` : ""}
+      <a class="${this.state.route.id ? "icon-button" : "wb-button"}" href="/create?view=activity" data-creation-history ${messageAttributes("aria-label", "creation.activityTitle", {}, this.t)} ${messageAttributes("title", "creation.activityTitle", {}, this.t)}>${codexIcon("clock")}${this.state.route.id ? "" : `<span>${messageHtml("creation.activityTitle", {}, this.t)}</span>`}</a>
+      <a class="icon-button" href="/create?view=works" data-creation-works ${messageAttributes("title", "creative.assetLibrary", {}, this.t)}>${codexIcon("folderOpen")}</a>${this.state.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.state.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon(artifact && artifact.kind !== "document" ? creativeKindIcons[artifact.kind] : "file")}<span>${messageHtml(openLabel, {}, this.t)}</span></button>` : ""}`,
     );
     localizeAttribute(
       this.actions.querySelector("[data-creation-new]"),

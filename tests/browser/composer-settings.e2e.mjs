@@ -151,8 +151,12 @@ try {
       await page.locator("#fullAccessDialog[open]").waitFor();
       await page.locator('#fullAccessDialog [value="cancel"]').click();
       assert.equal(await page.evaluate(() => globalThis.__pandaForceDebug.state.permissionMode), "default");
-      await page.goto(app.base + "/create");
+      await page.locator("#harnessButton").click();
+      await page.locator("#harnessMenu:visible").waitFor();
+      await page.evaluate(() => globalThis.__pandaForceDebug.workbench.navigate("/create"));
       await page.locator('.creation-skill-discovery [data-skill-id="software-prd"]:enabled').waitFor();
+      assert.equal(await page.locator("#harnessButton").isVisible(), false);
+      assert.equal(await page.locator("#harnessMenu").isVisible(), false);
       await page.locator("#composerSettingsButton").click();
       assert.equal(await page.locator('[data-composer-setting="permissions"]').count(), 0);
       await page.locator('[data-composer-setting="model"]').click();
@@ -169,6 +173,16 @@ try {
       await page.locator("#composerSettingsButton").click();
       await page.locator("#composerSettingsMenu .session-menu-close").click();
       assert(await page.locator("#composerSettingsButton").evaluate((e) => document.activeElement === e));
+      await page.goBack();
+      await page.locator("#harnessButton:visible").waitFor();
+      assert.match((await page.locator("#harnessButton").getAttribute("aria-label")) || "", /Codex/i);
+      assert.equal(await page.locator("#prompt").inputValue(), draft);
+      await page.evaluate(() => globalThis.__pandaForceDebug.workbench.navigate("/create"));
+      await page.locator(".creation-session-home").waitFor();
+      await page.evaluate(() => globalThis.__pandaForceDebug.workbench.navigate("/new"));
+      await page.locator("#emptyState").waitFor();
+      assert.equal(await page.locator(".creation-session-home").count(), 0);
+      assert.equal(await page.locator("#harnessButton").isVisible(), true);
       assert.deepEqual(errors, []);
       records.push({
         width,

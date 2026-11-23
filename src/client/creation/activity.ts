@@ -17,7 +17,6 @@ import { aggregateCreationActivity, type ActivityTask } from "./activity-model.j
 import { CreationHistoryControl } from "./history-control.js";
 import { creationRecordTitle } from "./record-view.js";
 import { creationRecordView } from "./record-view.js";
-import { createHorizontalCarousel } from "../horizontal-carousel.js";
 
 import { creationStateMessage } from "./state.js";
 export { creationStateLabels } from "./state.js";
@@ -28,7 +27,6 @@ export class CreationActivity {
   private readonly history: CreationHistoryControl;
   private historyRevision = 0;
   private historyBefore = 0;
-  private carousel?: ReturnType<typeof createHorizontalCarousel>;
   private visible = false;
   private timer?: ReturnType<typeof setTimeout>;
   private loading = false;
@@ -53,7 +51,7 @@ export class CreationActivity {
     identity: string,
     private readonly projects: () => { id: string; name: string }[],
     private readonly navigate: (path: string) => void,
-    private readonly options: { limit?: number; presentation?: "cards" | "sidebar" } = {},
+    private readonly options: { limit?: number; presentation?: "list" | "sidebar" } = {},
   ) {
     host.classList.add("creation-activity");
     this.cacheKey = STORAGE_KEYS.creationSnapshotFor(identity, "list");
@@ -100,15 +98,6 @@ export class CreationActivity {
     if (this.visible) return;
     this.visible = true;
     void this.refresh();
-  }
-  setPresentation(presentation: "cards" | "sidebar") {
-    if (this.options.presentation === presentation && this.host.dataset.presentation === presentation) return;
-    this.options.presentation = presentation;
-    this.host.dataset.presentation = presentation;
-    this.locale = document.documentElement.lang;
-    this.layout();
-    this.signature = "";
-    this.render();
   }
   hide() {
     this.visible = false;
@@ -169,22 +158,19 @@ export class CreationActivity {
     this.disposed = true;
     this.unsubscribe();
     this.history.dispose();
-    this.carousel?.dispose();
     window.removeEventListener("panda-force:creation-changed", this.changed);
     document.removeEventListener("visibilitychange", this.visibilityChanged);
 
     this.host.classList.remove("creation-activity");
   }
   private layout() {
-    this.carousel?.dispose();
-    this.carousel = undefined;
     const t = this.t;
     setMessageHtml(
       this.host,
       `<div class="creation-activity-toolbar"><div class="creation-activity-filters" role="group" ${messageAttributes("aria-label", "creation.activityFilter", {}, t)}>${(["all", "active", "completed", "attention"] as const).map((key) => `<button type="button" data-activity-filter="${key}" aria-pressed="${this.filter === key}" ${key === "attention" ? messageAttributes("aria-label", "creation.filterAttention", {}, t) + " " + messageAttributes("title", "creation.filterAttention", {}, t) : ""}>${key === "attention" ? codexIcon("circleAlert") : messageHtml(({ all: "creation.filterAll", active: "creation.filterActive", completed: "creation.filterCompleted" } as const)[key], {}, t)}</button>`).join("")}</div><div class="creation-activity-tools"><button type="button" data-activity-search-toggle aria-expanded="${!!this.query}" ${messageAttributes("aria-label", "creation.searchTasks", {}, t)} ${messageAttributes("title", "creation.searchTasks", {}, t)}>${codexIcon("search")}</button><button type="button" data-activity-refresh ${messageAttributes("aria-label", "creation.refresh", {}, t)} ${messageAttributes("title", "creation.refresh", {}, t)}>${codexIcon("refreshCw")}</button><button type="button" data-history-clear-all ${messageAttributes("aria-label", "creation.clearHistory", {}, t)} ${messageAttributes("title", "creation.clearHistory", {}, t)}>${codexIcon("trash")}</button></div></div><div class="creation-activity-search wb-form" ${this.query ? "" : "hidden"}><label class="wb-field"><span class="sr-only">${messageHtml("creation.searchTasks", {}, t)}</span><input type="search" data-activity-search ${messageAttributes("placeholder", "creation.searchTasks", {}, t)} value="${e(this.query)}"></label></div><p role="status" data-activity-status>${messageHtml("creation.activityLoading", {}, t)}</p><div data-activity-list></div><button type="button" class="creation-activity-more" data-activity-more hidden>${messageHtml("creation.showMoreTasks", {}, t)}${codexIcon("chevronDown")}</button>`,
     );
-    if (this.options.presentation) {
-      this.host.dataset.presentation = this.options.presentation;
+    if (this.options.presentation) this.host.dataset.presentation = this.options.presentation;
+    if (this.options.presentation === "sidebar") {
       const filters = this.host.querySelector<HTMLElement>(".creation-activity-filters")!;
       const details = document.createElement("details"),
         summary = document.createElement("summary");
@@ -215,18 +201,6 @@ export class CreationActivity {
           summary.focus();
         });
       }
-    }
-    if (this.options.presentation === "cards") {
-      const clear = this.host.querySelector<HTMLButtonElement>("[data-history-clear-all]")!;
-      clear.classList.add("icon-button", "creation-history-all");
-      this.host.append(clear);
-      this.carousel = createHorizontalCarousel(this.host.querySelector<HTMLElement>("[data-activity-list]")!, t, {
-        region: "creation.recentCreations",
-        kind: "creation.carousel",
-        previous: "creation.previousCreation",
-        next: "creation.nextCreation",
-      });
-      this.host.append(this.carousel.controls);
     }
     this.host.querySelector<HTMLButtonElement>("[data-history-clear-all]")!.onclick = () =>
       void this.history.clear(undefined, () => this.historyFocus());
@@ -440,7 +414,7 @@ export class CreationActivity {
                 ? task.state === "succeeded" || task.state === "replied"
                 : Boolean(task.failure) || ["failed", "cancelled"].includes(task.state))),
       ),
-      limit = this.options.presentation === "cards" ? 8 : (this.options.limit ?? 4),
+      limit = this.options.limit ?? 4,
       shown = this.expanded ? matches : matches.slice(0, limit),
       signature = JSON.stringify([
         shown.map(({ task, scope }) => [
@@ -506,17 +480,10 @@ export class CreationActivity {
         .querySelector<HTMLAnchorElement>(`[data-activity-task="${CSS.escape(focused)}"]`)
         ?.focus({ preventScroll: true });
     this.signature = signature;
-    this.carousel?.refresh();
     const more = this.host.querySelector<HTMLButtonElement>("[data-activity-more]")!;
     more.hidden = matches.length <= limit;
     more.setAttribute("aria-expanded", String(this.expanded));
-    const label = this.expanded
-      ? this.options.presentation === "cards"
-        ? "creation.collapseCreations"
-        : "creation.showFewerTasks"
-      : this.options.presentation === "cards"
-        ? "creation.allCreations"
-        : "creation.showMoreTasks";
+    const label = this.expanded ? "creation.showFewerTasks" : "creation.showMoreTasks";
     setMessageHtml(
       more,
       `<span class="creation-record-more-label">${messageHtml(label, {}, this.t)}</span>${codexIcon(this.expanded ? "chevronUp" : "chevronDown")}`,

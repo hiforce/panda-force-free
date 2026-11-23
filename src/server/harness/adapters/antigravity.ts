@@ -18,7 +18,7 @@ export class AntigravityHarnessAgent implements HarnessAgent {
       fileInput: false,
       tools: true,
       permissions: true,
-      permissionModes: ["ask"],
+      permissionModes: ["ask", "always-approve"],
       load: false,
       models: false,
       imageGeneration: "unknown",
@@ -33,10 +33,15 @@ export class AntigravityHarnessAgent implements HarnessAgent {
   private cancelled = false;
   private options: Record<string, unknown>[] = [];
 
-  constructor(private readonly launch: LaunchOptions) {
+  constructor(
+    private readonly launch: LaunchOptions,
+    private readonly launchPermission: HarnessPermissionMode = "ask",
+  ) {
+    if (launchPermission !== "ask" && launchPermission !== "always-approve")
+      throw new HarnessError("capabilityUnavailable", 409);
     this.transport = new HarnessStdioTransport({
       ...launch,
-      args: ["acp"],
+      args: launchPermission === "always-approve" ? ["acp", "--dangerously-skip-permissions"] : ["acp"],
       onNotification: (method, params) => this.notification(method, params),
       onRequest: (method, params) => this.events.request(method, params, this.session?.id, this.emit),
     });
@@ -63,7 +68,7 @@ export class AntigravityHarnessAgent implements HarnessAgent {
 
   private async open(cwd: string, id: string | undefined, permissionMode: HarnessPermissionMode = "ask") {
     if (this.session || resolve(cwd) !== resolve(this.launch.cwd)) throw new HarnessError("workspaceUnavailable", 409);
-    if (permissionMode !== "ask") throw new HarnessError("capabilityUnavailable", 409);
+    if (permissionMode !== this.launchPermission) throw new HarnessError("capabilityUnavailable", 409);
     await this.initialize();
     if (id && !this.info.capabilities.load) throw new HarnessError("capabilityUnavailable", 409);
     const result = record(

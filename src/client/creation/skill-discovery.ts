@@ -35,7 +35,7 @@ export class CreationSkillDiscovery {
     this.root.className = "creation-skill-discovery";
     setMessageHtml(
       this.root,
-      `<header class="creation-discovery-heading"><div><h2>${messageHtml("creation.discoverSkills", {}, t)}</h2><p>${messageHtml("creation.discoveryHint", {}, t)}</p></div><a class="session-text-button" href="/skills">${messageHtml("creation.viewAll", {}, t)}${codexIcon("arrowUpRight")}</a></header><div class="creation-discovery-search wb-form"><label class="wb-field"><span class="sr-only">${messageHtml("creation.searchSkills", {}, t)}</span><input type="search" data-discovery-search ${messageAttributes("placeholder", "creation.browserSearchHint", {}, t)} ${messageAttributes("aria-label", "creation.searchSkills", {}, t)}></label></div><div data-discovery-categories></div><div class="creation-discovery-grid" data-discovery-grid></div><p role="status" data-discovery-notice></p><button type="button" class="session-button" data-discovery-more hidden>${messageHtml("creation.moreSkills", {}, t)}</button>`,
+      `<header class="creation-discovery-heading"><h2>${messageHtml("creation.discoverSkills", {}, t)}</h2><a class="session-text-button" href="/skills">${messageHtml("creation.viewAll", {}, t)}${codexIcon("arrowUpRight")}</a></header><div class="creation-discovery-controls"><div class="creation-discovery-search wb-form"><label class="wb-field"><span class="sr-only">${messageHtml("creation.searchSkills", {}, t)}</span><input type="search" data-discovery-search ${messageAttributes("placeholder", "creation.browserSearchHint", {}, t)} ${messageAttributes("aria-label", "creation.searchSkills", {}, t)}></label></div><div data-discovery-categories></div></div><div class="creation-discovery-grid" data-discovery-grid></div><p role="status" data-discovery-notice></p><button type="button" class="session-button" data-discovery-more hidden>${messageHtml("creation.moreSkills", {}, t)}</button>`,
     );
     this.grid = this.root.querySelector<HTMLElement>("[data-discovery-grid]")!;
     this.search = this.root.querySelector<HTMLInputElement>("input")!;
@@ -65,6 +65,11 @@ export class CreationSkillDiscovery {
       } else {
         this.add(entry.reference);
         this.render();
+        this.grid
+          .querySelector<HTMLElement>(
+            `[data-skill-action="add"][data-skill-key="${CSS.escape(button.dataset.skillKey!)}"]`,
+          )
+          ?.focus({ preventScroll: true });
       }
     };
     getBrowserI18n().subscribe(() => {

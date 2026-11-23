@@ -48,7 +48,14 @@ test("recent and attention projections use the common opener so history authoriz
 test("route surfaces keep keyboard and page ownership independent of presentation classes", () => {
   for (const path of ["/new", "/task/known", "/creation/known", "/create", "/workspace?creation=known"])
     expect(workbenchRouteSurface(new URL(path, "https://app.example"))).toBe("conversation");
-  for (const path of ["/workspace", "/tasks", "/projects", "/create?view=works", "/create?asset=known"])
+  for (const path of [
+    "/workspace",
+    "/tasks",
+    "/projects",
+    "/create?view=works",
+    "/create?view=activity",
+    "/create?asset=known",
+  ])
     expect(workbenchRouteSurface(new URL(path, "https://app.example"))).toBe("workspace");
   const base = new URL("/workspace", "https://app.example");
   expect(workbenchRouteSurface(base, parseWorkbenchRoute(new URL("/settings/profile", base)))).toBe("settings");

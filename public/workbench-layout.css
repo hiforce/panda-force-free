@@ -68,6 +68,7 @@
 }
 .panda-workspace.creation-entry-layout {
   --session-content-width: var(--workspace-creation-width);
+  --session-conversation-top: var(--pf-space-4);
 }
 .panda-workspace .app-shell {
   position: fixed;
@@ -575,7 +576,7 @@
     min-height: 44px;
   }
   .panda-workspace .conversation {
-    padding-block-start: 18px;
+    padding-block-start: var(--session-conversation-top, 18px);
   }
 }
 @media (max-width: 767px) and (max-height: 620px) {

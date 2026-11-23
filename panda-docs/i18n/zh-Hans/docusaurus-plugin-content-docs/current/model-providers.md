@@ -2,7 +2,7 @@
 title: 模型服务配置
 ---
 
-PandaForce 0.1.5 通过不同 Harness Runtime 支持 Codex 和 Grok Build；[容器配置](harness-runtimes.md)说明运行实例选择及 Grok 登录/续期。本文介绍 Codex 兼容服务的配置，请先配置实际运行的 Codex CLI，再在网页选择对应模型。网页账号登录与模型服务的密钥认证相互独立。本文介绍智谱 GLM、Ollama 和 DeepSeek。请在实际执行环境中使用 `codex --version` 查看命令行版本。
+PandaForce 0.1.6 通过不同 Harness Runtime 支持 Codex 和 Grok Build；[容器配置](harness-runtimes.md)说明运行实例选择及 Grok 登录/续期。本文介绍 Codex 兼容服务的配置，请先配置实际运行的 Codex CLI，再在网页选择对应模型。网页账号登录与模型服务的密钥认证相互独立。本文介绍智谱 GLM、Ollama 和 DeepSeek。请在实际执行环境中使用 `codex --version` 查看命令行版本。
 
 ## 配置目录
 
@@ -75,7 +75,7 @@ spec:
     fsGroup: 1000
   containers:
     - name: panda-force
-      image: hiforceai/panda-force:0.1.5
+      image: hiforceai/panda-force:0.1.6
       env:
         - name: CODEX_HOME
           value: /home/codex/.codex

@@ -36,7 +36,10 @@ export function assembleApplicationProjections({
       sideTasksPort.flush();
     });
     viewUpdates.attach({
-      sessionWorkspace: () => sessionWorkspacePort.refresh(),
+      sessionWorkspace: () => {
+        transportPort.syncHarnessRoute();
+        sessionWorkspacePort.refresh();
+      },
       workbench: () => workbenchPort.workbench?.refresh(),
       sidebar: () => sidebarPort.renderThreads(),
       header: () => {

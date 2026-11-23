@@ -233,6 +233,22 @@
   flex-wrap: wrap;
   gap: var(--pf-space-2);
 }
+.creation-history-page .creation-activity-toolbar,
+.creation-history-page .creation-activity-search {
+  padding-inline: 0;
+}
+.creation-history-page [data-activity-list] {
+  display: grid;
+  gap: var(--pf-space-2);
+  overflow: visible;
+}
+.creation-history-page .creation-record > .icon-slot:last-child {
+  display: none;
+}
+.creation-history-page .creation-record {
+  grid-template-columns: 32px minmax(0, 1fr);
+  padding-inline-end: calc(var(--pf-touch-target) + var(--pf-space-3));
+}
 .creation-entry > .gadget-embedded {
   min-width: 0;
 }

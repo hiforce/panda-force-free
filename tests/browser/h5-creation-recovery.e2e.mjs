@@ -125,14 +125,12 @@ for (const [engine, width, locale] of [
       !seen.some((u) => u.includes("content-workspace.bundle.js")),
       "Creation records must not require the asset-library module",
     );
-    assert(await page.locator("#composer").isVisible());
+    assert.equal(await page.locator("#composer").isVisible(), false);
     await page.screenshot({ path: `${out}/history-with-tools-blocked-${width}-${locale}.png`, fullPage: true });
+    const openDetail = page.waitForRequest((request) => request.url().includes("/document-creations/detail?"));
     await page.locator(`[data-activity-task="${id}"]`).click();
     await page.locator("#conversation .user-message").first().waitFor();
-    assert(
-      seen.some((u) => u.includes("/document-creations/detail?")),
-      "Conversation history is visible on opening a record",
-    );
+    await openDetail;
     await page.goto(app.base + "/workspace");
     await page.locator("#gadgetDocumentPrompt:enabled").waitFor();
     await page.locator("[data-gd-retry]:visible").waitFor();

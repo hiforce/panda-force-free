@@ -359,7 +359,7 @@ export function createWorkbench({
     status,
   });
   const composerMount = systemComposerMount(gadgetRegistry, gadgetCapabilities, t, () => i18n.locale);
-  const creative = createCreationHome(t, composerMount, creationLibrary, navigate);
+  const creative = createCreationHome(t, creationLibrary, identityKey, () => catalog.projects(), navigate);
   const gadgetHome = new GadgetWorkspace(
     t,
     () => i18n.locale,
@@ -544,26 +544,29 @@ export function createWorkbench({
     if (url.origin !== location.origin) return;
     const next = parseWorkbenchRoute(url);
     const oldCreation = creationSessionRoute(routeUrl),
-      nextCreation = creationSessionRoute(url);
-    if (oldCreation?.key !== nextCreation?.key && (oldCreation || nextCreation)) {
-      // History has already changed location. Persist only the departing input, using its prior identity.
+      nextCreation = creationSessionRoute(url),
+      creationChanged = oldCreation?.key !== nextCreation?.key;
+    if (creationChanged) {
+      // A history navigation may already have changed location. Save with the departing route's identity.
       if (oldCreation) creationBridge.saveDraft(oldCreation.key);
       else if (workbenchRouteSurface(routeUrl, route) !== "workspace")
         creationBridge.saveDraft(state.active?.id || "new:" + (state.newSessionProjectId || "personal"));
       parkMessageComposer({ blur: true });
-      newTask({ saveCurrentDraft: false, keepRoute: true });
     }
     routing = true;
     unavailableId = "";
     if (workbenchRouteSurface(url) === "workspace") parkMessageComposer({ blur: true });
     // Returning home invalidates pending session reads without invoking new-session focus or routing.
-    if (next.page === "workspace" && (state.active || route.page === "task")) newTask({ keepRoute: true });
+    if (!creationChanged && next.page === "workspace" && (state.active || route.page === "task"))
+      newTask({ keepRoute: true });
     if (next.page !== "settings") {
       hideSettings();
       updateUrl(url.pathname + url.search + url.hash, replace);
     }
     route = next;
     routeUrl = url;
+    // The shared timeline and draft must read the destination route before they reset.
+    if (creationChanged) newTask({ saveCurrentDraft: false, keepRoute: true });
     signature = "";
     closeSidebar();
     render();

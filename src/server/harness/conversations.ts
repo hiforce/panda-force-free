@@ -535,7 +535,10 @@ export class HarnessConversations {
     execution.heartbeat.unref();
     try {
       const conversation = await this.owned(principal, run.conversationId);
-      const { agent } = await this.options.registry.agent(principal, run.runtimeId, conversation.id, conversation.cwd);
+      const permissionMode = run.permissionMode ?? "ask";
+      const { agent } = await this.options.registry.agent(principal, run.runtimeId, conversation.id, conversation.cwd, {
+        permissionMode,
+      });
       execution.agent = agent;
       if (this.stopped || execution.cancelled) {
         await this.finish(run, "cancelled");
@@ -543,7 +546,6 @@ export class HarnessConversations {
       }
       const initialInfo = await agent.initialize();
       const binding = conversation.bindings.find((value) => value.runtimeId === run.runtimeId);
-      const permissionMode = run.permissionMode ?? "ask";
       if (permissionMode !== "ask" && !initialInfo.capabilities.permissionModes?.includes(permissionMode))
         throw new HarnessPromptError("capabilityUnavailable", false, 409);
       const native = binding

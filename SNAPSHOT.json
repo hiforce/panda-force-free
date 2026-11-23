@@ -12,7 +12,7 @@
     {
       "path": ".env.example",
       "bytes": 1874,
-      "sha256": "54636625a3e1626ddba5d69a2451911854431792afda855be9c8ccf4a64f6ca4",
+      "sha256": "02ce6bd1439ad7597748a3c72c289e44a2a6a2dc74fd5fdd08f71c6b19270ae4",
       "mode": "100644"
     },
     {
@@ -137,14 +137,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 17638,
-      "sha256": "45ec2be679abea12313be41007989578ad6273b45b9939f134757c3f10784f81",
+      "bytes": 17529,
+      "sha256": "d3e00f2cad5907899b256a2adaeefeebddbef577b8ca243ce1a0e94246cf0591",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 18202,
-      "sha256": "3849b317b8ec0fa551e8850557519df24d378d15d44c6c51d00dbf5474d0ae2d",
+      "bytes": 18209,
+      "sha256": "e8e55b0d3aa14bcca15223fc3645e13ca61f19554bb5fdb562e9096adc5f88f9",
       "mode": "100644"
     },
     {
@@ -192,13 +192,13 @@
     {
       "path": "deploy/harness/Dockerfile.grok",
       "bytes": 410,
-      "sha256": "f7c46a17a419c222ff357281895c3933cd217deb89e103d38ffb2f8e793b6c36",
+      "sha256": "7aa85bd0657b9447ffd8be953379b6ccc836962f22d491803a9711e982362a88",
       "mode": "100644"
     },
     {
       "path": "deploy/harness/README.md",
-      "bytes": 16054,
-      "sha256": "1986e9f8caa77910b50d05be638f62d1955ac2917c205f117773238934ea4728",
+      "bytes": 16531,
+      "sha256": "91ee371e30b9f9da9391a0ffdbfbba36dfa6c484ddf35a8ed31ba267cef0b5eb",
       "mode": "100644"
     },
     {
@@ -210,7 +210,7 @@
     {
       "path": "deploy/harness/docker-compose.grok.yml",
       "bytes": 2831,
-      "sha256": "91c29f3c6083b1ea43afaebcedceae4d72af98b9fdd7a4745724ed765a0bce30",
+      "sha256": "9bb989a7791516c398fbd36eaf8d0dddc9377e84dd0df33ad92429b978ceb471",
       "mode": "100644"
     },
     {
@@ -294,7 +294,7 @@
     {
       "path": "docker-compose.yml",
       "bytes": 2128,
-      "sha256": "d6ecce6fde39f5e71a2a6b0e014bd3c2a4fd0a2e2d0e191dab2220e8ad313d97",
+      "sha256": "961ccba2328c80cac3a961f01dbfef21c80b6c6f89192b62ecae69336f242a55",
       "mode": "100644"
     },
     {
@@ -372,7 +372,7 @@
     {
       "path": "package.json",
       "bytes": 6898,
-      "sha256": "17204e41cf89ded3042ee3c4397726130ac014d6e0c5b6a25a3fbb23e74a7609",
+      "sha256": "d604637daeba089a8b7923804b9385b77fa475720021ebd0e617a075dd47830c",
       "mode": "100644"
     },
     {
@@ -389,14 +389,14 @@
     },
     {
       "path": "panda-docs/docs/base-images.md",
-      "bytes": 15321,
-      "sha256": "aedcd2693f2e9a7f2f67baa16fb6043b3a2e2d6cfbb338ccf214a56e1d2b1b72",
+      "bytes": 15325,
+      "sha256": "bbac28775e3f29941ab1e91cc2cd1f2f982d2f8489a1c5e5e16ce87d3a159bd4",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/bot-api-quickstart.md",
       "bytes": 7943,
-      "sha256": "4d013596f885b3055693d8b72710968cec4c3c4926f9af0c81e75cad902b7afc",
+      "sha256": "09e0dffd5e6eca1546408619bbd5c6fae6ba001259b5411fb378230e00148eb3",
       "mode": "100644"
     },
     {
@@ -420,7 +420,7 @@
     {
       "path": "panda-docs/docs/building.md",
       "bytes": 14913,
-      "sha256": "d9960b9d2287247d4529cc4a5a9b762b2d37f06389db1d8ef2a96e6f731f42bb",
+      "sha256": "3897617eb22cde0e67c60088fd4e8a311f68079b4930755a43c0bc0d26c05b7f",
       "mode": "100644"
     },
     {
@@ -432,7 +432,7 @@
     {
       "path": "panda-docs/docs/cluster.md",
       "bytes": 8034,
-      "sha256": "e8ace2466185d101d4d42ba45c54d15474c2c3740de25f09460e5d0db48e47ed",
+      "sha256": "7ba709cc1ec3c2dcdcdd086ceb19b502192eda551e4e0b05cec2bb73da170daf",
       "mode": "100644"
     },
     {
@@ -444,43 +444,43 @@
     {
       "path": "panda-docs/docs/features.md",
       "bytes": 16416,
-      "sha256": "94604b65230dd1344224492eb9cc374ed5832d8cd92aef0da8b0dc92998afb44",
+      "sha256": "ed457a5968b7714ddf233cfe75ec607327d489f7e0d21f82b8b39e7604cd481e",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/harness-runtimes.md",
-      "bytes": 10097,
-      "sha256": "0c5e4557713d4eb3e626e68ad002aa61bb8437372ec4ba89e9afb56e79c73462",
+      "bytes": 10395,
+      "sha256": "397dfbfa177442142c1fe35a17f9449b8c7cad23a9bca5deaeece6a8eabec24f",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/installation.md",
       "bytes": 12177,
-      "sha256": "231b98fa9634f11df4ab5715dd72c25d0ee74dbb4de1d2dceed9712190e0d080",
+      "sha256": "387888839d05e1a9eb33b1e351f83fcbd4bf22b4d273678640cabaf395057db9",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/kubernetes.md",
       "bytes": 11415,
-      "sha256": "c1174763a09ec2bb3c7568566ff1e80bea06b9c4445d17944ee55308ef70087b",
+      "sha256": "2827a72968cf67313d711e255d6dd7310a053411e0fc2bde3893b98b8b77a2e6",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/model-providers.md",
       "bytes": 13558,
-      "sha256": "a4706f840381bbda4bdbc43255eb1330085bbb51ad844bf51d6eb434437a24cf",
+      "sha256": "780329fa985db785e6a62768a182f56b9a8d2b365030aa85294f1c9534cb6fe1",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/overview.md",
       "bytes": 1567,
-      "sha256": "069d3f59af814e2400f93b9989ebe2157c3d4b56fa9635f90f01da8e3ecb9ae0",
+      "sha256": "4594a4c4346eee167ef9fd7a74abe9cf3002d5b3f3f4c4469e70f958b6dac152",
       "mode": "100644"
     },
     {
       "path": "panda-docs/docs/releases.md",
-      "bytes": 23143,
-      "sha256": "ee056bdce436147db23f669b16eb5b579084b83a617c3a1146534ce336bff70e",
+      "bytes": 23816,
+      "sha256": "2cb611fed3b1ed2fa053cfb259ee8657eb2e410a3e83d92c6aba4a5eb896251e",
       "mode": "100644"
     },
     {
@@ -492,7 +492,7 @@
     {
       "path": "panda-docs/docs/storage.md",
       "bytes": 11415,
-      "sha256": "2f5d1cf769100742869532a7c7fe763abb7ef2989f6992d9b07622691a9017be",
+      "sha256": "3897021ee3266efd9eef3f45c4ef527b93d779c79b7b4f97831de73d8b9c825a",
       "mode": "100644"
     },
     {
@@ -504,7 +504,7 @@
     {
       "path": "panda-docs/docs/updates.md",
       "bytes": 2857,
-      "sha256": "35b37352bfe7bca08633e0eef94d8777e452c912fc0befa03ff2aea5caf917d1",
+      "sha256": "65c59057a8827fecbf6aaeb7629702cd7af79762ae4222fa9d67eccf45a1001d",
       "mode": "100644"
     },
     {
@@ -528,13 +528,13 @@
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md",
       "bytes": 13169,
-      "sha256": "fbab88cbe9e36990b66e16ce71e4ca24f310d2acdfde4e989e772f9bcfec814b",
+      "sha256": "b36f828213b00eeb1d26e9b495da7d00a6a25635f7b360037e0d86e362331982",
       "mode": "100644"
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/bot-api-quickstart.md",
       "bytes": 7234,
-      "sha256": "8845350d56e008480cdc5f88aca373e8300a20988d565efe18efb6f5b031cbe6",
+      "sha256": "b06efce00e686739c8c95f207ed2145b6022237292ccaff408652d7b7e8a8b9c",
       "mode": "100644"
     },
     {
@@ -558,7 +558,7 @@
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md",
       "bytes": 5393,
-      "sha256": "55b116ef1af9a29972631a6058e3e5842f5692f0d940eb61e1e39b5ae439c199",
+      "sha256": "002b0e081fe79756f47c9bc22a24adb1c8c90b9254dc3b544d55fd5dabd85ad4",
       "mode": "100644"
     },
     {
@@ -570,43 +570,43 @@
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md",
       "bytes": 14027,
-      "sha256": "ed4f84638d95f13fa5c5f5e6484f3e41abe855d414681067bf75b7db15d5d05e",
+      "sha256": "628736cde22c8fc53a8a54de3cb7e331f6593993876b08b6b750c6af34b6e5af",
       "mode": "100644"
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md",
-      "bytes": 9207,
-      "sha256": "73518542cb93dff0fbd27a4939708d8865e32cf9645ac236daabcb35b28b20fe",
+      "bytes": 9445,
+      "sha256": "30b4d38ed05954fd33513454659e326c8afc378d4ce76247d84467f7240e2c34",
       "mode": "100644"
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/installation.md",
       "bytes": 4746,
-      "sha256": "a8721efda15f4062ec9c8fa848c6a09c12e2928208ea6ce397b63536e9e844b8",
+      "sha256": "0cef9b6b333a9280fa3ff7f4342ccc9639e5e79015428f86f32b083e6d281ae9",
       "mode": "100644"
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/model-providers.md",
       "bytes": 12871,
-      "sha256": "6c6ab14a0809fa66b5f72d2e22ccb3ef3aeaf4d94eeb3e3fed38dca7ec3f4054",
+      "sha256": "a42ebc2e69b813e590c56b9679f138c0a86fd6261442fd9cc11a1391c39a7756",
       "mode": "100644"
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/overview.md",
       "bytes": 1278,
-      "sha256": "b9a120fa789f8d22b79926d3459ec590d21552e73e8adfac704fd2c2a5d72ce8",
+      "sha256": "f194f27b5d7cbe7c2dc69b0501348aaecbd056157bf5df3237c093990f7f0b77",
       "mode": "100644"
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/storage.md",
       "bytes": 7827,
-      "sha256": "bb636c9d83ab2b70448d3ba752c11493d70be6572f31f6d98df6e87cdda1be9e",
+      "sha256": "1418cd718c3ee323e3de9c3d911f592285df73db8d779b468faac53aa2e89b22",
       "mode": "100644"
     },
     {
       "path": "panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/updates.md",
-      "bytes": 2776,
-      "sha256": "f632672ad85fd6909be22e36da74f97fc7d621a52028834891ef4a2ab41e555a",
+      "bytes": 2767,
+      "sha256": "a9a974d90315bb173276f8395079f33977cf825da07a4dccf3756d3197c665fc",
       "mode": "100644"
     },
     {
@@ -630,19 +630,19 @@
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-cluster.yaml",
       "bytes": 7199,
-      "sha256": "38d0c2374bb9eeb6f1203e8a945dc9fda4a719257bc6a1ea7add5d696b5a27f0",
+      "sha256": "0a790e60f18b7adb15d89d284fac199722ea306d29ac31f82af8923e4e2b32d9",
       "mode": "100644"
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-isolated.yaml",
       "bytes": 3959,
-      "sha256": "8b6edf33b2e08e98e06a62f3fe5c6a22ad7ba7ebd58a814602c61fedaa19bec6",
+      "sha256": "c7c1eee3f091214c184a74e371609a112b5b3aa5c63be0e9025e78c020c38610",
       "mode": "100644"
     },
     {
       "path": "panda-docs/static/downloads/kubernetes/panda-force-shared.yaml",
       "bytes": 4706,
-      "sha256": "e303aa92b64a2f67692f3dc88abdf94de9233fb2649c912094913ebf23965b7c",
+      "sha256": "2285b2aad667b5a28115cea9dc87bd22e0cbf994ae9836b065b5683203676510",
       "mode": "100644"
     },
     {
@@ -1301,8 +1301,8 @@
     },
     {
       "path": "public/creation.css",
-      "bytes": 38230,
-      "sha256": "152e41c9584c4b319e2c8a77212c8d971513d4156a09badbd248175b27e0b815",
+      "bytes": 36265,
+      "sha256": "beda43dca932c5529627f98cc20a9d3ff7f987a5a560d0b09fe4b9705201a109",
       "mode": "100644"
     },
     {
@@ -1415,8 +1415,8 @@
     },
     {
       "path": "public/session-workspace.css",
-      "bytes": 31619,
-      "sha256": "7d7283de92dcf74e039147cc676dea5d28d5066a8f2c65f711e5e186a283febd",
+      "bytes": 31652,
+      "sha256": "1f9ceea38eac961aa473292b7d474917350bf5feb3c11ae835ae8e63add46d06",
       "mode": "100644"
     },
     {
@@ -1517,8 +1517,8 @@
     },
     {
       "path": "public/workbench-layout.css",
-      "bytes": 16136,
-      "sha256": "ed25781f21dd0ad9be39b5975f22078c4191d98ddd34153dd5b99853ffe26483",
+      "bytes": 16218,
+      "sha256": "ae6faf5601aec39fe1b9f63e512fd49f0ee7b1ed0ae713494b3b8b5bac9d65d5",
       "mode": "100644"
     },
     {
@@ -1536,7 +1536,7 @@
     {
       "path": "release/community/.env.example",
       "bytes": 1874,
-      "sha256": "54636625a3e1626ddba5d69a2451911854431792afda855be9c8ccf4a64f6ca4",
+      "sha256": "02ce6bd1439ad7597748a3c72c289e44a2a6a2dc74fd5fdd08f71c6b19270ae4",
       "mode": "100644"
     },
     {
@@ -1559,14 +1559,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 17638,
-      "sha256": "45ec2be679abea12313be41007989578ad6273b45b9939f134757c3f10784f81",
+      "bytes": 17529,
+      "sha256": "d3e00f2cad5907899b256a2adaeefeebddbef577b8ca243ce1a0e94246cf0591",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 18202,
-      "sha256": "3849b317b8ec0fa551e8850557519df24d378d15d44c6c51d00dbf5474d0ae2d",
+      "bytes": 18209,
+      "sha256": "e8e55b0d3aa14bcca15223fc3645e13ca61f19554bb5fdb562e9096adc5f88f9",
       "mode": "100644"
     },
     {
@@ -1590,13 +1590,13 @@
     {
       "path": "release/community/docker-compose.yml",
       "bytes": 2128,
-      "sha256": "d6ecce6fde39f5e71a2a6b0e014bd3c2a4fd0a2e2d0e191dab2220e8ad313d97",
+      "sha256": "961ccba2328c80cac3a961f01dbfef21c80b6c6f89192b62ecae69336f242a55",
       "mode": "100644"
     },
     {
       "path": "release/community/edition.json",
       "bytes": 40,
-      "sha256": "3d3c6f5ff38ffa84d08be962adb08e76b7fc2193af79c8d23569ee3b5c43d7db",
+      "sha256": "20073387df00a7ba4b1dd22dd771ec5889e992ffcad4467145503a51ee51a791",
       "mode": "100644"
     },
     {
@@ -2141,8 +2141,8 @@
     },
     {
       "path": "src/client/application/application-projections.js",
-      "bytes": 3144,
-      "sha256": "234cdd2c6e84f6fdd10fd50c1f9187396f024fbd12a8613ba5843d505408126e",
+      "bytes": 3205,
+      "sha256": "de39e4d6b895c76bc9da433be40df88174c40eb74eb0dd4d85929b1dd1cb592a",
       "mode": "100644"
     },
     {
@@ -2429,8 +2429,8 @@
     },
     {
       "path": "src/client/application/transport-service.js",
-      "bytes": 1809,
-      "sha256": "776d900a74e5551f8b16f7ea8e56442147eb18438fdfb2287e8c7cbc0224fe78",
+      "bytes": 1850,
+      "sha256": "2e4543fc93a8755ddc5d2c76fbe648a808418e975cfe6ffdc9187ccb3558b9c2",
       "mode": "100644"
     },
     {
@@ -2795,14 +2795,14 @@
     },
     {
       "path": "src/client/contracts/features.ts",
-      "bytes": 25196,
-      "sha256": "cfad9df5b5fce5bed111f4be178eb6b8ab838ca27d6867ba0baa3b07284cd615",
+      "bytes": 25228,
+      "sha256": "75a335c71330013c3a07199540388160f2d86d13806b008ee3b3e58fb7d12d01",
       "mode": "100644"
     },
     {
       "path": "src/client/contracts/harness.ts",
-      "bytes": 566,
-      "sha256": "3866d34b99045f15e4aee83f8324ace227d45bc03d35f48a8a37f300e6789031",
+      "bytes": 587,
+      "sha256": "5ee1b5bcec1263795415a305a6026777311fa49db3f8aa4624e294f0706e2261",
       "mode": "100644"
     },
     {
@@ -2975,8 +2975,8 @@
     },
     {
       "path": "src/client/creation/activity.ts",
-      "bytes": 24099,
-      "sha256": "9b58277bcff9cb611bf6fdf26917899972a527c4932792639515b9b611568d5d",
+      "bytes": 22695,
+      "sha256": "7fc4f00998e57b18a7a72e77f8d7aa6e39e55710832d02709e454b5a4732d233",
       "mode": "100644"
     },
     {
@@ -3023,8 +3023,8 @@
     },
     {
       "path": "src/client/creation/home.ts",
-      "bytes": 2625,
-      "sha256": "321334973a5c10f5caa42a3d92d9a4bf5d201edec075fb4549dc473772bb1f41",
+      "bytes": 2524,
+      "sha256": "e18bbdef263ec4cd61dbbc0107c54f83a8058511650a595994ffb5298e93ef8f",
       "mode": "100644"
     },
     {
@@ -3101,8 +3101,8 @@
     },
     {
       "path": "src/client/creation/session-workspace.ts",
-      "bytes": 29754,
-      "sha256": "4985e4bc96ad9337e24d3e3ac7710e23bf15ff6760fc4f12e7b8ca991783c326",
+      "bytes": 30272,
+      "sha256": "6c93ec81b75b4f5f6b7e1d76724e660a0db11c961a1d1923d1011fb69da72b87",
       "mode": "100644"
     },
     {
@@ -3125,14 +3125,14 @@
     },
     {
       "path": "src/client/creation/skill-details.ts",
-      "bytes": 3267,
-      "sha256": "eb22641a2f092802a845da66d3c78082a22c7f540abe56e12d219098deaa8fec",
+      "bytes": 3455,
+      "sha256": "67999a6009020d4d6394014c2b0dc5becd048ca875c941f8e81c4c89f184f200",
       "mode": "100644"
     },
     {
       "path": "src/client/creation/skill-discovery.ts",
-      "bytes": 7548,
-      "sha256": "2e6744955d46679d8c34552d13c21fa0ba2cb8ab6306d01448c2b82647b73fe4",
+      "bytes": 7742,
+      "sha256": "32eaeabccaa98a9ebf11fd174cce376a41d7a32d0af92d27136e6fb8139a0f7e",
       "mode": "100644"
     },
     {
@@ -3143,8 +3143,8 @@
     },
     {
       "path": "src/client/creation/skill-views.ts",
-      "bytes": 11769,
-      "sha256": "7a345b55f6aadc0b61b885b4add4bc9fe5c907d908700fd7451fd042be8693bd",
+      "bytes": 11516,
+      "sha256": "2ca932cbdc71e25b481d38cfafcf64ca214218e1704c96e11b96686ce2fa9ea4",
       "mode": "100644"
     },
     {
@@ -3161,8 +3161,8 @@
     },
     {
       "path": "src/client/creation/styles/activity.css",
-      "bytes": 9158,
-      "sha256": "33df3ca0280eec93b8f00b53b3ef3ab8dabd93610493c65e4987841feb2bd6b3",
+      "bytes": 9642,
+      "sha256": "d71e04129f4f10cfd25879ec85ee6a60fb3f5e7525047a57c2e192ccafb59643",
       "mode": "100644"
     },
     {
@@ -3173,8 +3173,8 @@
     },
     {
       "path": "src/client/creation/styles/conversation.css",
-      "bytes": 13509,
-      "sha256": "252ac2b6c25a857d7512f345df7ac1f9f8bb9a5fa15ea5c77583ef7ec804f597",
+      "bytes": 11060,
+      "sha256": "8a99017d2a160e4684f255f7c29e2f102c59986d552e0276a64dbe7f2f498891",
       "mode": "100644"
     },
     {
@@ -4043,14 +4043,14 @@
     },
     {
       "path": "src/client/harness/boundary.ts",
-      "bytes": 2180,
-      "sha256": "25d53a2dc3468de43533487145055f8c3c6173ad3d0c508bcab628097edfdf97",
+      "bytes": 2234,
+      "sha256": "908d6cbefaa3b95a6b2f99b1781affba4a465faef76cb5aa4a89a44dabc72d43",
       "mode": "100644"
     },
     {
       "path": "src/client/harness/controller.ts",
-      "bytes": 27340,
-      "sha256": "d3df9712f74b6f505bf80526d87abeea8aca60497ae7ee295bccaf5417bd70bd",
+      "bytes": 27553,
+      "sha256": "14e450bf5e5ac3e3731a2760c277d8a57bb5cb23ffe06da24ec0b073bb3efc68",
       "mode": "100644"
     },
     {
@@ -5477,8 +5477,8 @@
     },
     {
       "path": "src/client/workbench-route.js",
-      "bytes": 2975,
-      "sha256": "b9ad7581e1eee06fe41ca416a778d23190adc2e5c6c6491a42616627116f302b",
+      "bytes": 3014,
+      "sha256": "6cf8bd95f6391f1c5a5a0161cb556dee3d173996d33666adc2bc029471eadb74",
       "mode": "100644"
     },
     {
@@ -5495,8 +5495,8 @@
     },
     {
       "path": "src/client/workbench.js",
-      "bytes": 33013,
-      "sha256": "0b3d1d40504cd6b870ae777aaba272708175fae2784548dc5b6440e2f1bdaacd",
+      "bytes": 33178,
+      "sha256": "05390b19f982e03315ec189e51231832533663ecd3ed7108ae9542eb263c4731",
       "mode": "100644"
     },
     {
@@ -10877,8 +10877,8 @@
     },
     {
       "path": "src/server/harness/adapters/antigravity.ts",
-      "bytes": 8614,
-      "sha256": "7b045b86be810bf35c5431eaa9cf0e5100891e985a35702062ba08683c6b9688",
+      "bytes": 8948,
+      "sha256": "f57b507edd01f9a4ff9a78d494c8f405ce728c75cc3ce58924bd3bd9a0c090c1",
       "mode": "100644"
     },
     {
@@ -10913,8 +10913,8 @@
     },
     {
       "path": "src/server/harness/application.ts",
-      "bytes": 13349,
-      "sha256": "3718ab6a0b42132b80438446216013231907b8ccbb50226c82e12e5fdba5c4bb",
+      "bytes": 13408,
+      "sha256": "fd1252a35e54d0aaeace31fcbf3f219f159d0be16f31f6c798d8ac9983f4b676",
       "mode": "100644"
     },
     {
@@ -10961,8 +10961,8 @@
     },
     {
       "path": "src/server/harness/conversations.ts",
-      "bytes": 36422,
-      "sha256": "a9a0d0937b7fde9b491a4a2a7a3288f34fb7b19ce175b156193e3e3bdc7bdfed",
+      "bytes": 36457,
+      "sha256": "dac04e8fa712231ba3b79583e4e50e9595f1c1b7c358bbc76c14c804502fad10",
       "mode": "100644"
     },
     {
@@ -10991,14 +10991,14 @@
     },
     {
       "path": "src/server/harness/ports.ts",
-      "bytes": 4366,
-      "sha256": "1661f302f64c75008e707ac3f7a9c24d536da6bb02afb361cd66935489c359f8",
+      "bytes": 4441,
+      "sha256": "ea22135320aa7e28e8f356bdf51047d7992598b6d26f409d2886a2eb7b96fd17",
       "mode": "100644"
     },
     {
       "path": "src/server/harness/profiles.ts",
-      "bytes": 14525,
-      "sha256": "3eb813583fbe289b10e4843bfbfa158fde6f00d605cd302ecee89a8cc1108718",
+      "bytes": 14557,
+      "sha256": "3a07ad756e8980a8b6688bb624b35b842400a30281212a43be25c30420ebb5a6",
       "mode": "100644"
     },
     {
@@ -11009,8 +11009,8 @@
     },
     {
       "path": "src/server/harness/registry.ts",
-      "bytes": 8963,
-      "sha256": "165d2db62dc5f160c93e8a66e09a16d39330e657a22e570bc73a0dcef2496859",
+      "bytes": 9155,
+      "sha256": "2cb35900a0f8eee4d98a0418efa90b2b819609f6a5577c5addda0c0d8574d9ed",
       "mode": "100644"
     },
     {
@@ -15947,8 +15947,8 @@
     },
     {
       "path": "src/shared/i18n/locales/en/creation.json",
-      "bytes": 12852,
-      "sha256": "ebe454449c7f1cd7c0fbd6df69a1ae5290177f55d4fa1426215ba2f82aec2df7",
+      "bytes": 12936,
+      "sha256": "a57202ffc56e2f1b7f81b9c4e62bb2542af94bc2b3f716c4222799bf201ebb96",
       "mode": "100644"
     },
     {
@@ -16205,8 +16205,8 @@
     },
     {
       "path": "src/shared/i18n/locales/zh-CN/creation.json",
-      "bytes": 12157,
-      "sha256": "f832654c99057a96ec437b9dab987deaf19d11fd58d3804d6b334938e03361c0",
+      "bytes": 12230,
+      "sha256": "a185757bdd1581cc95ab5e06baed4f32e73054342669526dded327e656249250",
       "mode": "100644"
     },
     {
@@ -16463,8 +16463,8 @@
     },
     {
       "path": "src/shared/i18n/locales/zh-HK/creation.json",
-      "bytes": 12188,
-      "sha256": "ab47c16f9c9b9b26ecb076c604b94934a09b2ce915ed5bb360f236b2c9cf2c3e",
+      "bytes": 12261,
+      "sha256": "07650d427c30e24c28e1bccb825d2c9f8a7ed8ec7733f1eba664c9bdc1e7ab54",
       "mode": "100644"
     },
     {
@@ -16721,8 +16721,8 @@
     },
     {
       "path": "src/shared/i18n/locales/zh-TW/creation.json",
-      "bytes": 12224,
-      "sha256": "4537d5c4c94308bc38e18e8aadb2e26de1d3c0ba2fd195ce79062200e6a14b1b",
+      "bytes": 12294,
+      "sha256": "4a5db753d8b72aa8153e29f1c2af9f37d5f57a54506d3d647ebad39bfe2a1063",
       "mode": "100644"
     },
     {
@@ -16925,8 +16925,8 @@
     },
     {
       "path": "src/shared/i18n/messages.d.ts",
-      "bytes": 155787,
-      "sha256": "6baa1be4df49f10745c3b2c400614b125f2142e3cc1921410d9f7460b36217eb",
+      "bytes": 155864,
+      "sha256": "0ed0f50f9697e70e43da1dc8aad8b6a0abc187efe314b24a7511f6e88d2e1523",
       "mode": "100644"
     },
     {
@@ -17945,8 +17945,8 @@
     },
     {
       "path": "tests/browser/composer-settings.e2e.mjs",
-      "bytes": 9611,
-      "sha256": "c8a01363927fe0c47e330906c32fb8386f0931212cf7ee9a82e5dfb71a866336",
+      "bytes": 10635,
+      "sha256": "b55b688e734077f393c3c795fdac1ee59b818440a2f54aa2793b8c104c94c68b",
       "mode": "100644"
     },
     {
@@ -18005,8 +18005,8 @@
     },
     {
       "path": "tests/browser/creation-activity.e2e.mjs",
-      "bytes": 15440,
-      "sha256": "41bd9dffee27ff034a5b5746c055b4918f15a8e0ebd1e03932f613a57f82580b",
+      "bytes": 12937,
+      "sha256": "e0cc774d981b655edddb2f3e613000d0dc43da387090b4b9b5834c8e9bd405ac",
       "mode": "100644"
     },
     {
@@ -18053,8 +18053,8 @@
     },
     {
       "path": "tests/browser/creation-history.e2e.mjs",
-      "bytes": 12497,
-      "sha256": "235a2a99290abf92f75cef3fa2c08efedeb661b7c940f6fdd465e063ee1c46eb",
+      "bytes": 12900,
+      "sha256": "3f8259427840a8768cb3084800881a99e61550d90196c360d90a3ece83e3a779",
       "mode": "100644"
     },
     {
@@ -18342,13 +18342,13 @@
     {
       "path": "tests/browser/h5-creation-recovery.e2e.mjs",
       "bytes": 8284,
-      "sha256": "7d4b71d4c808c64a9f407738429332653c2c951b2e8421c3c44921e00616ebce",
+      "sha256": "ee37734d57d7916fff2e5b9bd30df3f0494140043cb24dfadbea71845b98d293",
       "mode": "100644"
     },
     {
       "path": "tests/browser/harness-active-composer.e2e.mjs",
-      "bytes": 5024,
-      "sha256": "7b4a921b3dd67f5fbb47ba47548319e20e27a2f906d42ac43d01fb7e68c9821c",
+      "bytes": 7284,
+      "sha256": "cb833020ee339ff0b1df1a4799b15ab08bfd18e947b067022d46600585e4f0b7",
       "mode": "100644"
     },
     {
@@ -20795,8 +20795,8 @@
     },
     {
       "path": "tests/support/antigravity-acp-fixture.mjs",
-      "bytes": 4425,
-      "sha256": "59ff981ffc14ec711ff8c08e0c69b1069b4d51d83a0adb0b1b11a8a3e0506d93",
+      "bytes": 4620,
+      "sha256": "f4f81b79c14c4ccca87ac806be2dcf204ac57e46893a727abb185661d5aebcac",
       "mode": "100755"
     },
     {
@@ -22385,8 +22385,8 @@
     },
     {
       "path": "tests/unit/gadget-navigation.test.ts",
-      "bytes": 2613,
-      "sha256": "22a1259705473c1b6f60f47751bf34ee9ada8e19a6dadca775f2fc09281e6c2b",
+      "bytes": 2667,
+      "sha256": "e031e975a228dc1a511b743e0a2f2c8c2b4f8cb67dba4c9d6029d2159712835d",
       "mode": "100644"
     },
     {
@@ -22427,8 +22427,8 @@
     },
     {
       "path": "tests/unit/harness-runtime.test.ts",
-      "bytes": 46624,
-      "sha256": "0a64653701a9bbe031a88c38f01156343ff9afe5c976e8ad6a0b6953b68dec0e",
+      "bytes": 47507,
+      "sha256": "3eb6c937a5568f17685864290d014e94a302b2d7108c790c0859745d809c6753",
       "mode": "100644"
     },
     {
@@ -23656,5 +23656,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "d56f4e4889b5d58386b57cddc4df0ebb2c654fc234a39cf02a3fddf3fc33869c"
+  "contentSha256": "7b0542d988cd87d812bd73ef1b45c9f2352986c603ee74dfb19ebe3722ddf85a"
 }

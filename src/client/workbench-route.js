@@ -88,7 +88,9 @@ export function workbenchRouteSurface(url = new URL(location.href), route = pars
   if (route.page === "settings") return "settings";
   if (
     ["new", "task", "creation"].includes(route.page) ||
-    (route.page === "create" && url.searchParams.get("view") !== "works" && !url.searchParams.has("asset"))
+    (route.page === "create" &&
+      !["works", "activity"].includes(url.searchParams.get("view") || "") &&
+      !url.searchParams.has("asset"))
   )
     return "conversation";
   return "workspace";

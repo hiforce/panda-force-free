@@ -366,6 +366,7 @@ export interface TimelinePort {
 
 export interface TransportPort {
   attachHarness: (boundary: import("./harness.js").HarnessBrowserBoundary) => void;
+  syncHarnessRoute: () => void;
   harnessControls: (view: SessionControlView) => SessionControlView;
   applyHarnessPermission: (sessionId: string, mode: string) => Promise<boolean>;
   applyHarnessRuntime: (sessionId: string, runtimeId: string) => Promise<string>;

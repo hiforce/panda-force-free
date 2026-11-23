@@ -108,8 +108,54 @@ for (const [engine, width, locale, hint] of [
     await button.click();
     await serverStatus("complete");
     assert.deepEqual(actions, ["send", "send", "send", "stop", "send"]);
+
+    await page.goto(app.base + "/new");
+    await page.locator("#harnessButton").click();
+    await page.locator('[data-harness-select="antigravity"]').click();
+    await page.locator("#harnessMenu").waitFor({ state: "hidden" });
+    const permission = (value) => page.locator(`input[name="session-permission"][value="${value}"]`);
+    const openPermissions = async () => {
+      await page.locator("#composerSettingsButton").click();
+      await page.locator('[data-composer-setting="permissions"]:enabled').click();
+    };
+    const savePermission = async (value) => {
+      await permission(value).check();
+      await page.locator('#sessionSettingsForm button[type="submit"]').click();
+      await page.locator("#sessionSettingsDialog").waitFor({ state: "hidden" });
+    };
+    await openPermissions();
+    assert(await permission("ask").isChecked());
+    await page.screenshot({ path: join(output, `permissions-${locale}-${width}.png`), scale: "css" });
+    await savePermission("always-approve");
+    const sendApproval = async () => {
+      await prompt.fill("antigravity.approval");
+      await button.click();
+    };
+    await sendApproval();
+    const automatic = page.getByText("Fixture native auto-approval active.", { exact: true });
+    await automatic.last().waitFor();
+    assert.equal(await approve.count(), 0);
+    await mode("send");
+    await page.reload();
+    await openPermissions();
+    assert(await permission("always-approve").isChecked());
+    await page.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
+    await sendApproval();
+    await waitFor(async () => (await automatic.count()) === 2);
+    await mode("send");
+    await openPermissions();
+    await savePermission("ask");
+    const selectedId = decodeURIComponent(new URL(page.url()).pathname.split("/").at(-1)).replace(/^harness:/, "");
+    await waitFor(async () => {
+      const response = await context.request.get(`${conversations}/${selectedId}`);
+      return response.ok() && (await response.json()).conversation.permissionMode === "ask";
+    });
+    await sendApproval();
+    await approve.waitFor();
+    await approve.click();
+    await page.getByText("Fixture approval received.", { exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    console.log(`Managed composer passed for ${locale} at ${width}px.`);
+    console.log(`Managed composer and Antigravity permissions passed for ${locale} at ${width}px.`);
   } finally {
     await browser.close();
     await app.dispose();

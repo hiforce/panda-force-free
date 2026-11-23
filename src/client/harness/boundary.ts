@@ -30,6 +30,9 @@ export function createHarnessBrowserBoundary() {
     controls(view: SessionControlView) {
       return delegate?.controls(view) ?? view;
     },
+    syncRoute() {
+      delegate?.syncRoute();
+    },
     applyPermission(sessionId: string, mode: string) {
       return delegate?.applyPermission(sessionId, mode) ?? Promise.resolve(false);
     },

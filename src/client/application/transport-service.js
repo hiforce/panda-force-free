@@ -22,6 +22,7 @@ export function assembleTransport({ t, state, mutations }) {
     postBridge: (path, payload, signal) =>
       harness.post(path, payload, () => transport.postBridge(path, payload, signal)),
     attachHarness: harness.attach,
+    syncHarnessRoute: harness.syncRoute,
     harnessControls: harness.controls,
     applyHarnessPermission: harness.applyPermission,
     applyHarnessRuntime: harness.applyRuntime,

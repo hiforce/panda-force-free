@@ -1624,6 +1624,7 @@ export interface MessageParameters {
   "creation.discoverSkills": {  };
   "creation.discoveryHint": {  };
   "creation.documentAccess": {  };
+  "creation.documentPlanLabel": {  };
   "creation.documentProject": { "project": string };
   "creation.documentUnavailable": {  };
   "creation.doneSelecting": {  };
@@ -1761,6 +1762,7 @@ export interface MessageParameters {
   "creation.skillUnavailable": {  };
   "creation.slidesDocumentOnly": {  };
   "creation.startComposerHint": {  };
+  "creation.startComposerLabel": {  };
   "creation.submitFollowUp": {  };
   "creation.submitted": {  };
   "creation.subtitle": {  };

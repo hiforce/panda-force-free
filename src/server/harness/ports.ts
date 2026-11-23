@@ -116,7 +116,13 @@ export interface HarnessAgent {
 export interface HarnessAgentFactory {
   create(
     runtime: HarnessRuntime,
-    scope: { owner: string; scopeId: string; cwd: string; application?: HarnessApplicationPolicy },
+    scope: {
+      owner: string;
+      scopeId: string;
+      cwd: string;
+      application?: HarnessApplicationPolicy;
+      permissionMode?: HarnessPermissionMode;
+    },
   ): Promise<HarnessAgent>;
 }
 

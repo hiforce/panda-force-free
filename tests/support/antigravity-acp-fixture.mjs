@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { createInterface } from "node:readline";
 
 if (process.argv[2] !== "acp" || !process.env.HOME) throw Error("Expected agy acp and a dedicated home");
+const autoApprove = process.argv.slice(3).includes("--dangerously-skip-permissions");
 const path = (name) => join(process.env.HOME, name);
 const send = (message) => console.log(JSON.stringify({ jsonrpc: "2.0", ...message }));
 let session;
@@ -78,6 +79,10 @@ for await (const line of createInterface({ input: process.stdin })) {
     const text = params.prompt[0].text.split("Current user message:\n").at(-1);
     pending = id;
     if (text.includes("antigravity.approval")) {
+      if (autoApprove) {
+        complete("Fixture native auto-approval active.");
+        continue;
+      }
       update({ sessionUpdate: "agent_thought_chunk", content: { type: "text", text: "Private test thought" } });
       update({ sessionUpdate: "tool_call", toolCallId: "fixture-tool", title: "Fixture edit", status: "pending" });
       send({

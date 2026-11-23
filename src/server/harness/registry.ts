@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   HarnessError,
   type HarnessCatalog,
+  type HarnessPermissionMode,
   type HarnessRuntime,
   type HarnessRuntimeView,
   type HarnessProfileView,
@@ -170,13 +171,22 @@ export class HarnessRegistry {
     id: string,
     scopeId: string,
     cwd: string,
-    application?: HarnessApplicationPolicy,
+    {
+      application,
+      permissionMode,
+    }: { application?: HarnessApplicationPolicy; permissionMode?: HarnessPermissionMode } = {},
   ) {
     const runtime = await this.require(principal, id),
       profile = this.profiles.get(runtime.profileId)!;
     if (application && profile.conversationOnly) throw new HarnessError("capabilityUnavailable", 409);
     try {
-      const agent = await profile.factory.create(runtime, { owner: principal.owner, scopeId, cwd, application });
+      const agent = await profile.factory.create(runtime, {
+        owner: principal.owner,
+        scopeId,
+        cwd,
+        application,
+        permissionMode,
+      });
       let info: HarnessAgentInfo;
       try {
         info = await agent.initialize();

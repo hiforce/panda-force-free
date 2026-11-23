@@ -19,6 +19,7 @@ import { setMessageHtml } from "../i18n.js";
 import { codexIcon } from "../codex-icons.js";
 import { bindMenuDismiss, mountSessionMenu, restoreSessionMenu } from "../session-controls/menu.js";
 import { creationSessionRoute } from "../creation/session-route.js";
+import { parseWorkbenchRoute } from "../workbench-route.js";
 import { harnessPermissionCard } from "./permission-card.js";
 /** Composer selection owns no conversation state; navigation, model controls and drafts keep their existing ports. */
 export function createHarnessController(options: {
@@ -91,9 +92,15 @@ export function createHarnessController(options: {
             : selected || catalog?.defaultRuntimeId),
     );
   function close() {
+    scope = "";
     panel.hidden = true;
     restoreSessionMenu(panel);
     trigger.setAttribute("aria-expanded", "false");
+  }
+  function syncRoute() {
+    const { page } = parseWorkbenchRoute();
+    trigger.hidden = !catalog?.runtimes.length || (page !== "new" && page !== "task");
+    if (scope && (trigger.hidden || scope !== context())) close();
   }
   function sync() {
     const value = runtime(),
@@ -108,7 +115,7 @@ export function createHarnessController(options: {
         if (managed || previous) void options.models.loadModels({ attempts: 1 }).catch(() => {});
       }
     }
-    trigger.hidden = !!creationSessionRoute() || !catalog?.runtimes.length;
+    syncRoute();
     trigger.disabled = busy || state.active?.turns?.some((turn) => turn.status === "inProgress") === true;
     trigger.setAttribute("aria-busy", String(busy));
     trigger.title = t("harness.select");
@@ -117,7 +124,6 @@ export function createHarnessController(options: {
       trigger,
       `${codexIcon("plug")}<span class="harness-label">${escapeHtml(label)}</span>${codexIcon("chevronDown")}`,
     );
-    if (scope && scope !== context()) close();
   }
   async function loadCatalog() {
     catalog = await api<HarnessCatalog>("/api/harness-runtimes");
@@ -252,6 +258,7 @@ export function createHarnessController(options: {
     return projectRuntimeCatalog(discovered);
   }
   const boundary: HarnessBrowserBoundary = {
+    syncRoute,
     managed: () => !!current() || (!state.active && !!selected && selected !== "codex"),
     context: () =>
       current() || (!state.active && !!selected && selected !== "codex")

@@ -1,6 +1,7 @@
 import type { SessionControlView } from "./session-workspace.js";
 /** Native transports and the composer share only this application-owned boundary. */
 export interface HarnessBrowserBoundary {
+  syncRoute(): void;
   rpc(method: string, params: Record<string, unknown>, next: () => Promise<unknown>): Promise<unknown>;
   available(): boolean;
   managed(): boolean;
