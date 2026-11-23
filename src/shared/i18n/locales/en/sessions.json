@@ -11,6 +11,7 @@
   "steer": "Steer",
   "taskFailed": "Task failed",
   "taskFailedMessage": "Task failed: {message}",
+  "recentActivity": "Last activity",
   "lastActivityTime": "Last activity: {time}",
   "activityTimeUnavailable": "Activity time unavailable",
   "pinned": "Pinned",

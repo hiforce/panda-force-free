@@ -7,6 +7,8 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
   let projects = new Map(),
     assignments = new Map();
   const pendingAssignments = new Map();
+  const removedHistorySessions = new Set();
+  const historySummaries = new Map();
   let invalidatedRevision = -1;
   function apply(value) {
     if (value?.reloadRequired === true && Number.isSafeInteger(value.revision)) {
@@ -108,13 +110,27 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
     },
     assign: (projectId, sessionIds, revision) =>
       mutate("/api/projects/assign", { projectId, sessionIds, ...(revision !== undefined ? { revision } : {}) }),
-    history: ({ search = "", cursor = "", directory = /** @type {string | undefined} */ (undefined) } = {}) =>
-      read(
+    history: async ({ search = "", cursor = "", directory = /** @type {string | undefined} */ (undefined) } = {}) => {
+      const result = await read(
         "/api/projects/history?" +
           new URLSearchParams({ search, cursor, ...(directory === undefined ? {} : { directory }) }),
-      ),
+      );
+      const sessions = result.sessions.filter((session) => !removedHistorySessions.has(session.id));
+      for (const session of sessions) historySummaries.set(session.id, session);
+      return { ...result, sessions };
+    },
     directories: (cursor = "") => read("/api/projects/directories?" + new URLSearchParams({ cursor })),
     pendingAssignments,
+    discardHistorySession(id) {
+      removedHistorySessions.add(id);
+      historySummaries.delete(id);
+      directoryIndex.invalidate();
+    },
+    get historyRevision() {
+      return removedHistorySessions.size;
+    },
+    wasHistorySessionRemoved: (id) => removedHistorySessions.has(id),
+    sessionForMenu: (id) => sessions().find((session) => session.id === id) || historySummaries.get(id),
     async finishAssignment(thread) {
       if (!pendingAssignments.has(thread.id)) return;
       const id = pendingAssignments.get(thread.id);

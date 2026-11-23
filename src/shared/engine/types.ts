@@ -10,6 +10,7 @@ export interface EngineError {
 }
 export interface SessionStatus {
   type: string;
+  activeFlags?: string[];
   error?: string | EngineError;
   failure?: string | EngineError;
 }
@@ -235,6 +236,7 @@ export interface WorkspaceConfiguration {
   defaultCwd: string;
   projectless: boolean;
   browseRoots?: string[];
+  sessionDirectoryRoots?: string[];
   attachmentUrlPrefix?: string;
 }
 export interface WorkspaceContext {

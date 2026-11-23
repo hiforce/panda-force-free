@@ -2053,22 +2053,6 @@
   padding-block: var(--pf-space-2);
   overflow-wrap: anywhere;
 }
-.project-sessions-view .wb-task-row {
-  padding: var(--pf-space-3);
-}
-.project-sessions-view .wb-task-copy {
-  min-width: 0;
-}
-.project-sessions-view .wb-task-copy strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.project-sessions-view .wb-task-copy small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .project-document-search {
   margin-block: var(--pf-space-4);
 }
@@ -2218,16 +2202,6 @@
   .project-document-open {
     min-height: var(--pf-touch-target);
   }
-  .project-sessions-view .wb-task-copy strong {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-  }
-  .project-sessions-view .wb-status {
-    max-width: 76px;
-  }
-
   .project-overview-placeholders {
     grid-template-columns: 1fr 1fr;
   }

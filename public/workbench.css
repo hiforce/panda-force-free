@@ -418,62 +418,104 @@
   font-weight: 600;
 }
 .wb-task-list {
+  --wb-session-columns: minmax(0, 3fr) minmax(0, 1.55fr) minmax(0, 1fr) minmax(72px, 0.9fr) minmax(80px, 1fr);
   background: var(--pf-card);
   border: 1px solid var(--pf-line);
   border-radius: var(--pf-radius);
   overflow: hidden;
 }
+.wb-task-columns,
 .wb-task-row {
-  width: 100%;
+  display: grid;
+  grid-template-columns: var(--wb-session-columns);
+  align-items: center;
+  gap: var(--pf-space-3);
+  padding-inline: var(--pf-space-3);
+  text-align: start;
+}
+.wb-task-columns {
+  min-block-size: 32px;
+  padding-inline-end: calc(var(--pf-space-3) + var(--pf-touch-target));
+  border-block-end: 1px solid var(--pf-line);
+  background: var(--pf-soft);
+  color: var(--pf-muted);
+  font-size: var(--pf-text-meta);
+  font-weight: 600;
+}
+.wb-session-entry {
   display: flex;
   align-items: center;
-  gap: 13px;
-  padding: 17px 19px;
-  min-height: 76px;
-  text-align: left;
-  border-bottom: 1px solid var(--pf-line);
 }
-.wb-task-row:last-child {
-  border: 0;
+.wb-session-entry + .wb-session-entry {
+  border-block-start: 1px solid var(--pf-line);
 }
-.wb-task-row:hover {
+.wb-session-entry:hover {
   background: var(--pf-soft);
 }
-.wb-task-icon {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--pf-line);
-  border-radius: 8px;
+.wb-task-row {
+  flex: 1;
+  min-inline-size: 0;
+  min-block-size: var(--pf-touch-target);
+  padding-block: var(--pf-space-1);
+  background: transparent;
+  font-size: var(--pf-text-label);
+  line-height: 1.35;
+}
+.wb-task-columns > span,
+.wb-task-title,
+.wb-task-location > span,
+.wb-task-model,
+.wb-task-activity,
+.wb-task-state > span {
+  display: block;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-task-title {
+  font-size: var(--pf-text-body);
+  font-weight: 600;
+}
+.wb-task-folder,
+.wb-task-model,
+.wb-task-activity {
   color: var(--pf-muted);
+}
+.wb-task-location > span + .wb-task-folder {
+  font-size: var(--pf-text-meta);
+}
+.wb-task-state {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-space-1);
+  min-inline-size: 0;
+  color: var(--pf-muted);
+}
+.wb-task-state::before {
+  content: "";
+  inline-size: 6px;
+  block-size: 6px;
+  border-radius: 50%;
+  background: currentColor;
   flex: none;
 }
-.wb-task-icon svg {
-  width: 17px;
-  height: 17px;
+.wb-task-state[data-status="common.inProgress"] {
+  color: var(--pf-accent);
 }
-.wb-task-copy {
-  display: block;
-  min-width: 0;
-  flex: 1;
+.wb-task-state[data-status="workbench.needsReview"] {
+  color: var(--pf-warning);
 }
-.wb-task-copy strong {
-  display: block;
-  font-size: 13px;
-  font-weight: 550;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.wb-task-state[data-status="common.failed"] {
+  color: var(--pf-danger);
 }
-.wb-task-copy small {
-  display: block;
-  font-size: 11px;
-  color: var(--pf-muted);
-  margin-top: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.wb-task-state[data-status="sessions.completed"] {
+  color: var(--pf-success);
+}
+.wb-session-association {
+  flex: 0 0 var(--pf-touch-target);
+  min-inline-size: var(--pf-touch-target);
+  min-block-size: var(--pf-touch-target);
 }
 .wb-status {
   display: inline-flex;
@@ -532,24 +574,31 @@
   flex: none;
   margin: 0;
 }
-.wb-filter-row {
-  display: flex;
-  gap: 12px;
+.wb-sessions-toolbar {
   align-items: center;
+  gap: var(--pf-space-2) var(--pf-space-3);
+}
+.wb-sessions-title {
+  display: flex;
+  align-items: baseline;
   flex-wrap: wrap;
-  margin: 22px 0;
+  gap: 0 var(--pf-space-2);
 }
-.wb-filter-row > input {
-  min-height: 42px;
-  border: 1px solid var(--pf-line);
-  border-radius: 8px;
-  background: var(--pf-card);
-  padding: 9px 12px;
-  font-size: 13px;
-  min-width: 0;
+#wbSessionCount {
+  color: var(--pf-muted);
+  font-size: var(--pf-text-label);
 }
-.wb-filter-row > input {
-  flex: 1;
+.wb-session-filters {
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  flex: 1 1 18rem;
+  max-inline-size: 36rem;
+  min-inline-size: 0;
+  margin-inline-start: auto;
+  gap: var(--pf-space-2);
+}
+.wb-session-filters > select {
+  max-inline-size: 12rem;
+  text-overflow: ellipsis;
 }
 .wb-check {
   display: flex;
@@ -1359,17 +1408,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .wb-task-row {
-    padding: 14px 12px;
-    gap: 9px;
-  }
-  .wb-task-copy strong {
-    font-size: 12px;
-  }
-  .wb-task-icon {
-    width: 28px;
-    height: 28px;
-  }
   .wb-status {
     font-size: 10px;
     max-width: 90px;
@@ -1407,17 +1445,53 @@
     min-height: 44px;
     padding: 9px;
   }
-  .wb-filter-row {
-    gap: 9px;
+  .wb-page-heading.wb-sessions-toolbar > .wb-sessions-title {
+    display: flex;
   }
-  .wb-filter-row > input {
-    flex-basis: 100%;
-    width: 100%;
-    font-size: 16px;
+  .wb-page-heading.wb-sessions-toolbar > .wb-session-filters {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    max-inline-size: none;
+    margin-inline-start: 0;
   }
-  .wb-filter-row > select {
-    min-height: 44px;
-    max-width: 100%;
+  .wb-session-filters > select {
+    max-inline-size: 9rem;
+  }
+  .wb-task-columns {
+    display: none;
+  }
+  .wb-task-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    grid-template-areas:
+      "title state"
+      "location activity";
+    gap: 0 var(--pf-space-2);
+    padding-inline: var(--pf-space-2);
+  }
+  .wb-task-title {
+    grid-area: title;
+  }
+  .wb-task-location {
+    grid-area: location;
+    min-inline-size: 0;
+  }
+  .wb-task-location:has(.wb-task-project) > .wb-task-folder,
+  .wb-task-location > .wb-task-unassigned,
+  .wb-task-model {
+    display: none;
+  }
+  .wb-task-state,
+  .wb-task-activity {
+    justify-self: end;
+    font-size: var(--pf-text-meta);
+  }
+  .wb-task-state {
+    grid-area: state;
+    max-inline-size: 6.25rem;
+  }
+  .wb-task-activity {
+    grid-area: activity;
   }
   .wb-button {
     min-height: var(--pf-touch-target);
@@ -1617,11 +1691,36 @@
   width: auto;
   justify-content: flex-end;
 }
-.wb-list-limit {
+.wb-session-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--pf-space-2);
+  margin-block-start: var(--pf-space-3);
   color: var(--pf-muted);
-  font-size: 12px;
-  line-height: 1.8;
-  margin-top: 12px;
+  font-size: var(--pf-text-label);
+}
+.wb-session-pages:not(.compact) > :first-child {
+  margin-inline-end: auto;
+}
+.wb-session-pages.compact {
+  gap: var(--pf-space-1);
+  margin: 0;
+}
+.wb-sessions-title:has(.wb-session-pages.compact) {
+  align-items: center;
+}
+.wb-session-pages .wb-session-page-step {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  inline-size: var(--pf-touch-target);
+  min-block-size: var(--pf-touch-target);
+}
+.wb-session-page-step > .icon-slot {
+  inline-size: 16px;
+  block-size: 16px;
 }
 @media (max-width: 760px), (pointer: coarse) {
   .thread-heading {
@@ -1659,7 +1758,6 @@
     min-height: 44px;
   }
 }
-
 /* Product projects and native session working folders have independent controls. */
 .business-project-context {
   display: flex;
@@ -1720,22 +1818,6 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-.wb-session-entry {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border-bottom: 1px solid var(--pf-line);
-}
-.wb-session-entry .wb-task-row {
-  flex: 1;
-  min-width: 0;
-  border-bottom: 0;
-}
-.wb-session-association {
-  flex-shrink: 0;
-  min-width: 44px;
-  min-height: 44px;
 }
 .project-dialog {
   width: min(680px, calc(100vw - 24px));
@@ -2172,6 +2254,7 @@
   width: 100%;
   min-height: 52px;
   padding: 8px 7px;
+  padding-inline-start: calc(7px + var(--sidebar-folder-indent, 0px));
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -2241,6 +2324,7 @@
 }
 .sidebar-folder-sessions {
   margin: 4px 0 8px 18px;
+  margin-inline-start: calc(18px + var(--sidebar-folder-indent, 0px));
   padding-inline-start: 5px;
   border-inline-start: 1px solid var(--pf-line);
 }

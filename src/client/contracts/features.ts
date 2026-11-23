@@ -77,6 +77,10 @@ export interface BusinessProjects extends DirectorySource {
     cursor?: string;
   }): Promise<{ sessions: SessionSummary[]; nextCursor: string | null }>;
   pendingAssignments: Map<string, string>;
+  discardHistorySession(id: string): void;
+  readonly historyRevision: number;
+  wasHistorySessionRemoved(id: string): boolean;
+  sessionForMenu(id: string): View<SessionSummary> | undefined;
   finishAssignment(thread: View<SessionSummary>): Promise<void>;
 }
 export interface ReviewController {

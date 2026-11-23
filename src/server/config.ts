@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import packageInfo from "../../package.json";
 import { existingApplicationPath, pandaEnvironment } from "./environment.js";
 import { defaultBrowseRoots } from "./path-utils.js";
@@ -50,6 +50,17 @@ if (
   throw new Error("PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES must be true or false");
 const allowExternalDirectories = env.PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES !== "false";
 const defaultCwd = allowExternalDirectories ? configuredDefaultCwd : projectWorkspaceRoot;
+const extraSessionRoots = (env.PANDA_FORCE_SESSION_DIRECTORY_ROOTS || "")
+  .split(",")
+  .map((path) => path.trim())
+  .filter(Boolean);
+if (allowExternalDirectories && extraSessionRoots.some((path) => !isAbsolute(path)))
+  throw new Error("PANDA_FORCE_SESSION_DIRECTORY_ROOTS requires absolute directory paths");
+const sessionDirectoryRoots = allowExternalDirectories
+  ? extraSessionRoots.length
+    ? [...new Set([defaultCwd, ...extraSessionRoots.map((path) => resolve(path))])]
+    : undefined
+  : [defaultCwd];
 const browseRoots = allowExternalDirectories
   ? [...new Set([...defaultBrowseRoots(homeDir), projectWorkspaceRoot])]
   : [projectWorkspaceRoot];
@@ -79,6 +90,7 @@ export const config = Object.freeze({
   ntfyTopic: env.PANDA_FORCE_NTFY_TOPIC || null,
   ntfyUrl: (env.PANDA_FORCE_NTFY_URL || "https://ntfy.sh").replace(/\/+$/, ""),
   defaultCwd,
+  sessionDirectoryRoots,
   browseRoots,
   attachmentRoot,
   stateRoot,

@@ -11,6 +11,7 @@
   "steer": "插入訊息",
   "taskFailed": "任務失敗",
   "taskFailedMessage": "任務失敗：{message}",
+  "recentActivity": "近期活動",
   "lastActivityTime": "上次活動：{time}",
   "activityTimeUnavailable": "暫無活動時間",
   "pinned": "已置頂",

@@ -11,6 +11,7 @@
   "steer": "插入消息",
   "taskFailed": "任务失败",
   "taskFailedMessage": "任务失败：{message}",
+  "recentActivity": "最近活动",
   "lastActivityTime": "上次活动：{time}",
   "activityTimeUnavailable": "暂无活动时间",
   "pinned": "已置顶",

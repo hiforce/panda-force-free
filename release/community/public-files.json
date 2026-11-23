@@ -782,6 +782,7 @@
   "src/client/session-controls/permissions.js",
   "src/client/session-controls/reasoning-slider.ts",
   "src/client/session-directory-index.ts",
+  "src/client/session-list-history.ts",
   "src/client/session-runtime.js",
   "src/client/session-skill-labels.ts",
   "src/client/session-skills-api.ts",

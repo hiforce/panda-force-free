@@ -1,6 +1,6 @@
 services:
   panda-force:
-    image: ${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.1.6}
+    image: ${PANDA_FORCE_IMAGE:-hiforceai/panda-force:0.1.7}
     platform: ${PANDA_FORCE_PLATFORM:-linux/amd64}
     pull_policy: ${PANDA_FORCE_PULL_POLICY:-missing}
     restart: unless-stopped
@@ -19,6 +19,7 @@ services:
       PANDA_FORCE_CWD: /home/codex/workspace
       PANDA_FORCE_PROJECTS_ROOT: "${PANDA_FORCE_PROJECTS_ROOT:-/home/codex/workspace/projects}"
       PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES: "${PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES:-true}"
+      PANDA_FORCE_SESSION_DIRECTORY_ROOTS: "${PANDA_FORCE_SESSION_DIRECTORY_ROOTS:-}"
       PANDA_FORCE_REVIEW_ROOT: /home/codex/workspace
       PANDA_FORCE_APP_SERVER_MODE: isolated
       PANDA_FORCE_AUTH_MODE: password

@@ -1,6 +1,6 @@
 # Optional administrator override using the same reviewed Grok executable; standard bases already include Grok.
 # For a new version, refresh the engine lock and both bases through scripts/build/harness-engines.mjs.
-ARG PANDA_FORCE_IMAGE=hiforceai/panda-force:0.1.6
+ARG PANDA_FORCE_IMAGE=hiforceai/panda-force:0.1.7
 FROM ${PANDA_FORCE_IMAGE}
 USER root
 COPY --chmod=0755 grok /usr/local/bin/grok

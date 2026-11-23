@@ -27,6 +27,12 @@ PANDA_FORCE_CWD=/absolute/path/to/workspace bun run start
 
 Use Bun to install dependencies so the tracked compatibility patch is applied. Supply secrets privately at runtime, never in committed environment files or client bundles.
 
+## Session folder roots
+
+Set `PANDA_FORCE_SESSION_DIRECTORY_ROOTS` to a comma-separated list of absolute paths to add to the default working folder in the sidebar. For Compose, use paths inside the application container and set this variable in `.env`. The tree groups working folders that contain visible conversations.
+
+When `PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES=false`, the tree starts at the restricted working folder. Access follows the installation's existing directory permissions.
+
 ## Interface language
 
 Choose **Language** in the top navigation, or **Workspace preferences → Language**

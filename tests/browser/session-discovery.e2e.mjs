@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
 import { createAppFixture } from "../support/app-fixture.mjs";
-const fixture = await createAppFixture({ historySessions: 140 });
+const fixture = await createAppFixture({
+  historySessions: 140,
+  startupTimeoutMs: 60000,
+  extraEnvironment: ({ dir }) => ({
+    PANDA_FORCE_CWD: dir,
+    PANDA_FORCE_SESSION_DIRECTORY_ROOTS: dir,
+  }),
+});
 const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
 try {
   const context = await browser.newContext({ locale: "en", viewport: { width: 1440, height: 1000 } });
@@ -21,8 +28,10 @@ try {
   assert.match(await unassigned.locator('[data-session-browse-view="recent"]').innerText(), /^Recent\s+10$/);
   assert.equal(await unassigned.locator('[data-session-browse-view="folders"]').innerText(), "Folders");
   await unassigned.locator('[data-session-browse-view="folders"]').click();
+  const fixtureRoot = unassigned.locator(`[data-session-directory="${fixture.dir}"]`);
+  await fixtureRoot.click();
   await unassigned.locator(`[data-session-directory="${fixture.alpha}"]`).click();
-  await unassigned.locator(".sidebar-folder-sessions[aria-busy=false]").waitFor();
+  await unassigned.locator(".sidebar-folder-sessions[aria-busy=false]").first().waitFor();
   const alphaFolder = unassigned.locator(`[data-session-directory="${fixture.alpha}"]`);
   assert.equal(await alphaFolder.getAttribute("aria-expanded"), "true");
   assert.equal(await alphaFolder.evaluate((node) => node === document.activeElement), true);
@@ -47,14 +56,15 @@ try {
   assert.equal(await alphaFolder.getAttribute("aria-expanded"), "false");
   assert.equal(await unassigned.locator(".thread-item").count(), 0);
   await page.keyboard.press("ArrowRight");
-  await unassigned.locator(".sidebar-folder-sessions[aria-busy=false]").waitFor();
+  await unassigned.locator(".sidebar-folder-sessions[aria-busy=false]").first().waitFor();
   assert.equal(await alphaFolder.getAttribute("aria-expanded"), "true");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowRight");
-  await unassigned.locator(".sidebar-folder-sessions[aria-busy=false]").waitFor();
-  assert.equal(await alphaFolder.getAttribute("aria-expanded"), "false");
-  await alphaFolder.click();
-  await unassigned.locator(".sidebar-folder-sessions[aria-busy=false]").waitFor();
+  await unassigned.locator(".sidebar-folder-sessions[aria-busy=false]").first().waitFor();
+  assert.equal(await alphaFolder.getAttribute("aria-expanded"), "true");
+  const betaFolder = unassigned.locator(`[data-session-directory="${fixture.beta}"]`);
+  assert.equal(await betaFolder.getAttribute("aria-expanded"), "true");
+  await betaFolder.click();
   await mkdir(".artifacts/sidebar-design", { recursive: true });
   await page.locator("#sidebar").screenshot({ path: ".artifacts/sidebar-design/folders-en.png" });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -72,7 +82,7 @@ try {
   await page.evaluate(async () => {
     await globalThis.__pandaForceI18n.setPreference("zh-CN");
   });
-  assert.equal(await unassigned.locator('[data-session-directory=""] strong').textContent(), "不指定工作目录");
+  assert.equal(await unassigned.locator('[data-session-browse-view="folders"]').textContent(), "目录");
   assert.equal(await page.locator("#accountName").textContent(), "设置");
   await page.locator("#sidebar").screenshot({ path: ".artifacts/sidebar-design/folders-zh.png" });
   await page.evaluate(async () => {
@@ -150,6 +160,7 @@ try {
   await unassigned.locator('[data-session-browse-view="recent"]').click();
   assert.equal(await unassigned.locator(".thread-item").count(), 0);
   await unassigned.locator('[data-session-browse-view="folders"]').click();
+  await fixtureRoot.click();
   await unassigned.locator(`[data-session-directory="${fixture.alpha}"]`).click();
   await unassigned.locator('.thread-item[data-id="historic-70"]').waitFor();
   assert.deepEqual(errors, []);

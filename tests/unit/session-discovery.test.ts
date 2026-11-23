@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import { createSessionDiscovery, directoryKey } from "../../src/server/conversation/discovery.js";
 import { createSessionDirectoryIndex } from "../../src/client/session-directory-index.js";
 
+import { sessionFolderTree } from "../../src/client/sidebar-session-folders.js";
+import { createSessionListHistory } from "../../src/client/session-list-history.js";
 test("directory browsing keeps full paths distinct and combines directory and text filters", async () => {
   const rows = [
     { id: "one", name: "Invoices", cwd: "/alpha/shop/" },
@@ -84,4 +86,47 @@ test("directory counts use actual assigned session IDs and cannot hide an unassi
   });
   const result = await service.directories(null, new Set(["linked", "deleted-old-session"]));
   expect(result.directories).toEqual([{ path: "/work", count: 2, unassignedCount: 1 }]);
+});
+
+test("the directory tree keeps direct conversations and nested counts under the most specific allowed root", () => {
+  const tree = sessionFolderTree(
+    [
+      { path: "/home/team", count: 1 },
+      { path: "/home/team/client/design", count: 2, unassignedCount: 1 },
+      { path: "/home/code/example", count: 4 },
+      { path: "/home2/elsewhere", count: 7 },
+      { path: "/root/notes", count: 3 },
+    ],
+    ["/home/team", "/root", "/home"],
+  );
+  expect([...tree.keys()]).toEqual(["/home/team", "/root", "/home"]);
+  expect(tree.get("/home/team")).toMatchObject({ direct: 1, total: 2 });
+  expect(tree.get("/home/team")?.children.get("/home/team/client")?.direct).toBe(0);
+  expect(tree.get("/home")?.total).toBe(4);
+  expect(tree.get("/home")?.children.has("/home/team")).toBe(false);
+});
+
+test("session listing coalesces cursor reads and preserves native order at page boundaries", async () => {
+  const coldManaged = { id: "harness:00000000-0000-0000-0000-000000000001", updatedAt: 1 };
+  const calls: string[] = [];
+  const history = createSessionListHistory(async (cursor) => {
+    calls.push(cursor);
+    return cursor
+      ? {
+          sessions: [
+            { id: "a", updatedAt: 4 },
+            { id: "x", updatedAt: 3 },
+          ],
+          nextCursor: null,
+        }
+      : {
+          sessions: [coldManaged, { id: "z", updatedAt: 4 }, { id: "q", updatedAt: 4 }],
+          nextCursor: "older",
+        };
+  });
+  await Promise.all([history.more(), history.more()]);
+  expect(history.rows([], () => false).map((entry) => entry.id)).toEqual(["z", "q"]);
+  expect(calls).toEqual([""]);
+  await history.more();
+  expect(history.rows([], (id) => id === "q").map((entry) => entry.id)).toEqual(["z", "a", "x", coldManaged.id]);
 });

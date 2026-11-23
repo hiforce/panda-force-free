@@ -3642,6 +3642,7 @@ export interface MessageParameters {
   "sessions.projectHiddenCreatingANewSessionWillShowItAgain": {  };
   "sessions.projectOptions": {  };
   "sessions.projectOptionsForName": { "name": string };
+  "sessions.recentActivity": {  };
   "sessions.recentTab": {  };
   "sessions.retryLoadingModels": {  };
   "sessions.sessionOptions": {  };

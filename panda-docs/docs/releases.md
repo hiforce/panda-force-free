@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.6` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.7` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -38,6 +38,14 @@ bun scripts/release/prepare-update.mjs \
 ```
 
 Three-way application preserves independent public changes and stops on conflicts. The tool neither commits nor pushes. Do not merge private Git branches into the public repository. New commercial material in an existing filename still needs explicit review; a path whitelist cannot make that licensing decision.
+
+## 0.1.7
+
+Use Git tag `v0.1.7` and `hiforceai/panda-force:0.1.7` on Linux amd64. [Install](installation.md) or [upgrade](updates.md).
+
+- The session workspace shows the project, model, status and last activity in compact rows. The main list and project session lists show 30 rows per page. Search can find older conversations.
+- The sidebar groups conversations by working folder. Each expanded folder shows its subfolders first, followed by the conversations stored directly in that folder.
+- Administrators can set additional folder-tree roots. Restricted installations start the tree at their configured working folder. See [session folder roots](configuration.md#session-folder-roots).
 
 ## 0.1.6
 

@@ -337,6 +337,7 @@ export interface InterfaceElements {
   "#wbCommandResults": HTMLElementTagNameMap["div"];
   "#wbProjectResults": HTMLElementTagNameMap["div"];
   "#wbProjectSearch": HTMLElementTagNameMap["input"];
+  "#wbSessionCount": HTMLElementTagNameMap["div"];
   "#wbTaskFilter": HTMLElementTagNameMap["select"];
   "#wbTaskResults": HTMLElementTagNameMap["div"];
   "#wbTaskSearch": HTMLElementTagNameMap["input"];

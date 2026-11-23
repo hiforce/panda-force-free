@@ -225,6 +225,7 @@ export function bridgeRoutes({
             ? {
                 home: homeDir,
                 defaultCwd,
+                sessionDirectoryRoots: config.sessionDirectoryRoots,
                 reviewRoot: reviewRoots[0],
                 browseRoots,
                 allowExternalDirectories: config.allowExternalDirectories,

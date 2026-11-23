@@ -38,8 +38,22 @@ export function createSessionDiscovery({
         cwd: typeof entry.cwd === "string" ? entry.cwd : "",
         updatedAt:
           typeof entry.updatedAt === "number" || typeof entry.updatedAt === "string" ? entry.updatedAt : undefined,
+        recencyAt:
+          typeof entry.recencyAt === "number" || typeof entry.recencyAt === "string" ? entry.recencyAt : undefined,
+        model: typeof entry.model === "string" ? entry.model : undefined,
+        threadSettings:
+          isRecord(entry.threadSettings) && typeof entry.threadSettings.model === "string"
+            ? { model: entry.threadSettings.model }
+            : undefined,
         status:
-          isRecord(entry.status) && typeof entry.status.type === "string" ? { type: entry.status.type } : undefined,
+          isRecord(entry.status) && typeof entry.status.type === "string"
+            ? {
+                type: entry.status.type,
+                activeFlags: Array.isArray(entry.status.activeFlags)
+                  ? entry.status.activeFlags.filter((flag): flag is string => typeof flag === "string")
+                  : undefined,
+              }
+            : undefined,
       });
     }
     const nextCursor = typeof result.nextCursor === "string" && result.nextCursor !== cursor ? result.nextCursor : null;

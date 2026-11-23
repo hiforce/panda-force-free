@@ -4,7 +4,7 @@ title: Install and sign in
 
 ## Understand what runs where
 
-PandaForce provides the browser interface and sends requests through the selected Harness Runtime. The 0.1.6 container includes Codex CLI, Grok Build and ZCode CLI. Choose a runtime, then its model and reasoning level. Your PandaForce administrator account controls application access; each model-provider login is separate. [Codex/Grok container setup and account lifecycle](harness-runtimes.md) describes both engines. The host-service options below apply specifically to Codex.
+PandaForce provides the browser interface and sends requests through the selected Harness Runtime. The 0.1.7 container includes Codex CLI, Grok Build and ZCode CLI. Choose a runtime, then its model and reasoning level. Your PandaForce administrator account controls application access; each model-provider login is separate. [Codex/Grok container setup and account lifecycle](harness-runtimes.md) describes both engines. The host-service options below apply specifically to Codex.
 
 There are two independent choices:
 
@@ -21,7 +21,7 @@ A Unix socket is a local communication endpoint between processes, represented b
 
 ## Start the published container
 
-The current container release is **hiforceai/panda-force:0.1.6**, currently for Linux amd64. The Rocky Linux 9 image contains Bun, Node.js, Codex CLI 0.171.0, Grok Build 1.0.89, ZCode CLI 0.17.1 and the reviewed creative tools. You do not need to install those tools on the host. Use the matching 0.1.6 Compose files; check an existing `.env` for an old image override.
+The current container release is **hiforceai/panda-force:0.1.7**, currently for Linux amd64. The Rocky Linux 9 image contains Bun, Node.js, Codex CLI 0.171.0, Grok Build 1.0.89, ZCode CLI 0.17.1 and the reviewed creative tools. You do not need to install those tools on the host. Use the matching 0.1.7 Compose files; check an existing `.env` for an old image override.
 
 Clone the `main` branch and enter its directory to use the installation configuration:
 
@@ -87,7 +87,7 @@ docker run -d --name panda-force-host --restart unless-stopped \
   -e PANDA_FORCE_APP_SERVER_MODE=shared \
   -e PANDA_FORCE_APP_SERVER_SOCKET="/run/panda-force/codex-control/$(basename "$PANDA_FORCE_HOST_SOCKET")" \
   -e PANDA_FORCE_AUTH_MODE=password \
-  hiforceai/panda-force:0.1.6
+  hiforceai/panda-force:0.1.7
 
 docker logs panda-force-host
 ```
@@ -121,7 +121,7 @@ The default Compose setup instead starts its own Codex service inside the contai
 
 ## Source development
 
-Use the [development guide](building.md#run-from-source) to run a checkout directly or [build your own application image](building.md#development-container). Container installation uses the published `hiforceai/panda-force:0.1.6` image and the commands above.
+Use the [development guide](building.md#run-from-source) to run a checkout directly or [build your own application image](building.md#development-container). Container installation uses the published `hiforceai/panda-force:0.1.7` image and the commands above.
 
 ## Install on your phone
 

@@ -13,11 +13,13 @@ export function createSidebarSessionBrowser({
   catalog,
   t,
   appendRows,
+  directoryRoots,
   onError,
   onRender = () => {},
 }: {
   catalog: BusinessProjects;
   t: Translate;
+  directoryRoots(): readonly string[] | undefined;
   appendRows(container: HTMLElement, sessions: readonly DataView<SessionSummary>[]): void;
   onError(error: unknown): void;
   onRender?(): void;
@@ -26,17 +28,14 @@ export function createSidebarSessionBrowser({
   let host: HTMLElement | undefined;
   let recent: readonly DataView<SessionSummary>[] = [],
     search = "",
-    directory: string | undefined,
-    loadedSearch = "",
-    cursor: string | null = null;
-  let directories: readonly DirectoryEntry[] | null = null;
-  let sessions: SessionSummary[] = [],
-    busy = false,
+    directories: readonly DirectoryEntry[] | null = null,
     indexPending = false,
-    version = 0;
-  let shape = "",
+    shape = "",
     indexFailed = false,
     catalogRevision = -1;
+  const expanded = new Set<string>();
+  type FolderPage = { sessions: SessionSummary[]; cursor: string | null; busy: boolean; failed: boolean };
+  const pages = new Map<string, FolderPage>();
   const assigned = (session: DataView<SessionSummary>) => Boolean(catalog.projectForSession(session.id));
   function focusView() {
     host?.querySelector<HTMLElement>(`[data-session-browse-view="${view}"]`)?.focus();
@@ -56,66 +55,70 @@ export function createSidebarSessionBrowser({
       render();
     }
   }
-  async function load(append = false) {
-    const request = ++version;
-    const path = directory;
-    busy = true;
-    loadedSearch = search;
-    render();
+  async function load(path: string, page: FolderPage) {
     try {
-      const result = await catalog.history({ directory: path, search, cursor: append ? cursor || "" : "" });
-      if (request !== version) return;
-      sessions = [
-        ...new Map([...(append ? sessions : []), ...result.sessions].map((session) => [session.id, session])).values(),
+      const result = await catalog.history({ directory: path, search, cursor: page.cursor || "" });
+      if (pages.get(path) !== page) return;
+      page.sessions = [
+        ...new Map([...page.sessions, ...result.sessions].map((session) => [session.id, session])).values(),
       ];
-      cursor = result.nextCursor;
-    } catch (error) {
-      if (request === version) onError(error);
+      page.cursor = result.nextCursor;
+    } catch {
+      if (pages.get(path) === page) page.failed = true;
     } finally {
-      if (request === version) {
-        busy = false;
+      if (pages.get(path) === page) {
+        page.busy = false;
         render();
       }
     }
   }
   function toggleDirectory(path: string) {
-    version++;
-    busy = false;
-    if (directory === path) {
-      directory = undefined;
-      render();
-    } else {
-      directory = path;
-      sessions = [];
-      cursor = null;
-      void load();
-    }
+    if (expanded.has(path)) expanded.delete(path);
+    else expanded.add(path);
+    render();
     host
       ?.querySelector<HTMLButtonElement>(`[data-session-directory="${CSS.escape(path)}"]`)
       ?.focus({ preventScroll: true });
   }
-  function renderExpanded(body: HTMLElement) {
-    body.setAttribute("aria-busy", String(busy));
-    appendRows(
-      body,
-      sessions.filter((session) => !assigned(session)),
+  function renderExpanded(body: HTMLElement, path: string) {
+    let page = pages.get(path);
+    if (!page) {
+      const initial = { sessions: [], cursor: null, busy: true, failed: false };
+      pages.set(path, initial);
+      page = initial;
+      queueMicrotask(() => {
+        if (pages.get(path) === initial) void load(path, initial);
+      });
+    }
+    const current = page;
+    body.setAttribute("aria-busy", String(current.busy));
+    const shown = current.sessions.filter(
+      (session) => !assigned(session) && !catalog.wasHistorySessionRemoved(session.id),
     );
-    if (busy) {
+    appendRows(body, shown);
+    if (current.busy || current.failed) {
       const status = document.createElement("p");
       status.setAttribute("role", "status");
-      localizeText(status, "workbench.loadingSessions", undefined, t);
+      localizeText(status, current.busy ? "workbench.loadingSessions" : "errors.couldNotLoadSessions", undefined, t);
       body.append(status);
-    } else if (cursor) {
-      const more = document.createElement("button");
-      more.type = "button";
-      more.className = "sidebar-sessions-more";
-      localizeText(more, "projects.loadOlderSessions", undefined, t);
-      more.onclick = () => void load(true);
-      body.append(more);
-    } else if (!sessions.some((session) => !assigned(session))) {
+    } else if (!current.cursor && !shown.length) {
       const empty = document.createElement("p");
       localizeText(empty, "common.noMatchingSessions", undefined, t);
       body.append(empty);
+    }
+    if (!current.busy && (current.failed || current.cursor)) {
+      const next = document.createElement("button");
+      next.type = "button";
+      next.className = "sidebar-sessions-more";
+      localizeText(next, current.failed ? "common.retry" : "projects.loadOlderSessions", undefined, t);
+      next.onclick = () => {
+        if (current.busy) return;
+        current.busy = true;
+        current.failed = false;
+        render();
+        void load(path, current);
+      };
+      body.append(next);
     }
   }
   function selectView(next: "recent" | "folders") {
@@ -124,7 +127,6 @@ export function createSidebarSessionBrowser({
     render();
     focusView();
     if (view === "folders" && !directories && !indexPending && !indexFailed) void readIndex();
-    else if (view === "folders" && directory !== undefined && loadedSearch !== search) void load();
   }
   function render() {
     if (!host) return;
@@ -161,7 +163,8 @@ export function createSidebarSessionBrowser({
       const count = renderSessionFolders({
         root: body,
         entries: directories,
-        expanded: directory,
+        roots: directoryRoots(),
+        expanded,
         search,
         t,
         toggle: toggleDirectory,
@@ -193,18 +196,19 @@ export function createSidebarSessionBrowser({
     render(container: HTMLElement, threads: readonly DataView<SessionSummary>[], query = "") {
       host = container;
       recent = threads;
+      if (search !== query) pages.clear();
       search = query;
-      const nextShape = JSON.stringify(threads.map(({ id, cwd }) => [id, cwd || ""]).sort());
+      const nextShape = JSON.stringify([catalog.historyRevision, threads.map(({ id, cwd }) => [id, cwd || ""]).sort()]);
       if (shape !== nextShape || catalogRevision !== catalog.revision) {
         if (shape && shape !== nextShape) catalog.directoryIndex.invalidate();
         shape = nextShape;
         catalogRevision = catalog.revision;
         directories = null;
+        pages.clear();
         indexFailed = false;
       }
       render();
       if (view === "folders" && !directories && !indexPending && !indexFailed) void readIndex();
-      if (view === "folders" && directory !== undefined && loadedSearch !== search) void load();
     },
   };
 }

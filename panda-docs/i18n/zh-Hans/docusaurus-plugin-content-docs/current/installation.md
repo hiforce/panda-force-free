@@ -2,7 +2,7 @@
 title: 安装、登录与数据库选择
 ---
 
-0.1.6 支持多个 Harness Runtime，先选运行实例，再选该实例的模型和推理强度。应用管理员与模型账户分别登录；[Codex/Grok 容器配置](harness-runtimes.md)说明两种引擎、账户持久化和原生续期。下方宿主机共享模式专门针对 Codex。
+0.1.7 支持多个 Harness Runtime，先选运行实例，再选该实例的模型和推理强度。应用管理员与模型账户分别登录；[Codex/Grok 容器配置](harness-runtimes.md)说明两种引擎、账户持久化和原生续期。下方宿主机共享模式专门针对 Codex。
 
 ## 运行方式与引擎位置 {#understand-what-runs-where}
 
@@ -10,7 +10,7 @@ Codex 可使用容器内独立服务，或通过共享模式连接指定宿主�
 
 ## 安装公开镜像
 
-版本 `0.1.6` 发布为 `hiforceai/panda-force:0.1.6`，平台为 Linux amd64。Rocky Linux 9 镜像包含 Bun、Node.js、Codex CLI 0.171.0、Grok Build 1.0.89 和创作工具链，宿主机只需 Docker、Compose 和 Git。其他架构需要 amd64 模拟或自行构建兼容镜像。
+版本 `0.1.7` 发布为 `hiforceai/panda-force:0.1.7`，平台为 Linux amd64。Rocky Linux 9 镜像包含 Bun、Node.js、Codex CLI 0.171.0、Grok Build 1.0.89 和创作工具链，宿主机只需 Docker、Compose 和 Git。其他架构需要 amd64 模拟或自行构建兼容镜像。
 
 ```bash
 git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
@@ -42,11 +42,11 @@ docker compose restart panda-force
 
 ## 源码开发
 
-直接运行源码或构建自有应用镜像，请参阅[开发指南](building.md#development-container)。普通容器安装使用已发布的 `hiforceai/panda-force:0.1.6` 与上面的安装命令。
+直接运行源码或构建自有应用镜像，请参阅[开发指南](building.md#development-container)。普通容器安装使用已发布的 `hiforceai/panda-force:0.1.7` 与上面的安装命令。
 
 ## 使用宿主机已有 Codex {#use-codex-already-installed-on-the-host}
 
-共享模式需要挂载实际 Unix socket 目录，并让工作区在宿主机和容器中使用相同绝对路径。它共享服务连接，模型凭据继续由宿主机管理。详细 Linux 命令和 UID/GID、socket 重建及额外工作区要求见[完整共享模式说明](https://github.com/hiforce/panda-force-free/blob/v0.1.6/panda-docs/docs/installation.md#use-codex-already-installed-on-the-host)。Docker 默认安装使用独立的容器内引擎，无需宿主机已有 Codex。
+共享模式需要挂载实际 Unix socket 目录，并让工作区在宿主机和容器中使用相同绝对路径。它共享服务连接，模型凭据继续由宿主机管理。详细 Linux 命令和 UID/GID、socket 重建及额外工作区要求见[完整共享模式说明](https://github.com/hiforce/panda-force-free/blob/v0.1.7/panda-docs/docs/installation.md#use-codex-already-installed-on-the-host)。Docker 默认安装使用独立的容器内引擎，无需宿主机已有 Codex。
 
 ## 手机访问
 
@@ -54,6 +54,6 @@ docker compose restart panda-force
 
 ## 添加 Grok Build
 
-使用同一发行源码中的 [Grok 账户服务叠加配置](harness-runtimes.md#启用-grok-build-与托管账户续期)，再完成设备登录。应用与辅助服务默认使用相同的 0.1.6 镜像；Codex 继续可用。账户卷和 socket 卷各自持久化，无需保留宿主机终端会话。已有 `.env` 请检查旧镜像覆盖项，并保留原 Compose 项目和卷名。
+使用同一发行源码中的 [Grok 账户服务叠加配置](harness-runtimes.md#启用-grok-build-与托管账户续期)，再完成设备登录。应用与辅助服务默认使用相同的 0.1.7 镜像；Codex 继续可用。账户卷和 socket 卷各自持久化，无需保留宿主机终端会话。已有 `.env` 请检查旧镜像覆盖项，并保留原 Compose 项目和卷名。
 
 [按需启用 ZCode 会话运行环境](harness-runtimes.md#zcode)。

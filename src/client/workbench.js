@@ -7,6 +7,7 @@ import { parkMessageComposer } from "./message-composer-placement.js";
 import { creationSessionRoute } from "./creation/session-route.js";
 import { createCreationHome } from "./creation/home.js";
 import { captureRenderFocus, restoreRenderFocus } from "./render-focus.js";
+import { threadLastActivityAt } from "./conversation-policy.js";
 import { systemGadgetCapabilities, gadgetApplicationNavigation } from "../gadget/system/bindings.js";
 import { systemGadgetRegistry } from "../gadget/system/client.js";
 import { systemComposerMount } from "../gadget/system/composer/host.js";
@@ -630,10 +631,19 @@ export function createWorkbench({
       }
       if (state.active && ["workspace", "new"].includes(route.page)) threadOpened(state.active.id);
       loadRouteTask();
+      const showsSessionList =
+        route.page === "tasks" || (route.page === "project" && routeUrl.searchParams.get("tab") === "sessions");
       const next = JSON.stringify([
         route,
         state.connected,
         state.threads.map((x) => [x.id, x.name, x.preview, x.cwd, x.status, x.turns?.at(-1)?.status, status(x)]),
+        showsSessionList
+          ? [
+              i18n.locale,
+              Math.floor(Date.now() / 60_000),
+              state.threads.map((x) => [threadLastActivityAt(x), x.threadSettings?.model || x.model]),
+            ]
+          : null,
         catalog.revision,
         route.page === "projects"
           ? catalog.projects().map((project) => [project.id, isProjectPinned("project:" + project.id)])

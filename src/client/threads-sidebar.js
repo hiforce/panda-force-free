@@ -397,6 +397,7 @@ export function createThreadSidebar({
       await rpc("thread/delete", { threadId: thread.id });
       removePersistentError(`session-delete:${thread.id}`);
       cleanupDeletedThread(thread.id);
+      projectCatalog?.discardHistorySession(thread.id);
       sidebarPinnedThreads.delete(thread.id);
       saveSidebarPinnedThreads();
       const wasActive = state.active?.id === thread.id;
@@ -470,6 +471,7 @@ export function createThreadSidebar({
   const unassignedBrowser = projectCatalog
     ? createSidebarSessionBrowser({
         catalog: projectCatalog,
+        directoryRoots: () => state.config.sessionDirectoryRoots,
         t,
         appendRows: appendSessionRows,
         onError: (error) => addPersistentError(errorMessage(error)),
@@ -643,7 +645,7 @@ export function createThreadSidebar({
     renderThreads,
     refreshSessionMenu: refreshSidebarMenu,
     openSessionMenu(id, trigger) {
-      const thread = (projectCatalog ? projectCatalog.sessions() : state.threads).find((item) => item.id === id);
+      const thread = projectCatalog ? projectCatalog.sessionForMenu(id) : state.threads.find((item) => item.id === id);
       if (thread) openSidebarThreadMenu(thread, trigger);
     },
     applyProjectVisibility,
