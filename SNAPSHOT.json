@@ -137,14 +137,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 18341,
-      "sha256": "d5c6753ea3de9b5b22472f24b609ce3545634022b29f85145d76e89e0d0165c2",
+      "bytes": 19298,
+      "sha256": "498f436f2cb59443b88d325d7b0e45a884c0aec65e94f25369a5ed533ccb01aa",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 19006,
-      "sha256": "81413cac1fe8f8b9a5d322c971381998288f0cad454fda372be171f6874c71c4",
+      "bytes": 19908,
+      "sha256": "c3fd04717f1a507035c786b973b5866e22f906724d72d84189845e8fe9080bcd",
       "mode": "100644"
     },
     {
@@ -1583,14 +1583,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 18341,
-      "sha256": "d5c6753ea3de9b5b22472f24b609ce3545634022b29f85145d76e89e0d0165c2",
+      "bytes": 19298,
+      "sha256": "498f436f2cb59443b88d325d7b0e45a884c0aec65e94f25369a5ed533ccb01aa",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 19006,
-      "sha256": "81413cac1fe8f8b9a5d322c971381998288f0cad454fda372be171f6874c71c4",
+      "bytes": 19908,
+      "sha256": "c3fd04717f1a507035c786b973b5866e22f906724d72d84189845e8fe9080bcd",
       "mode": "100644"
     },
     {
@@ -23686,5 +23686,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "3d6550304cae0a2885d30912f61fac5bf934f450c9b4e821afd4343b8ed8e9e3"
+  "contentSha256": "25702ddad16b1d86c0b0df2f26e5bfeb91fe4a8bc4bfbaf7c73cc4d345595652"
 }

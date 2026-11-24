@@ -2,7 +2,13 @@
   <img src="./panda-docs/static/img/readme-hero-zh-CN.svg" width="1200" alt="PandaForce — 小熊猫，大功夫。用技能创作，让 Bot 干活。" />
 </p>
 
-# PandaForce
+<p align="center">
+  <a href="https://github.com/hiforce/panda-force-free/tags"><img src="https://img.shields.io/github/v/tag/hiforce/panda-force-free?sort=semver&amp;label=Release" alt="最新版本标签" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/hiforce/panda-force-free?label=License" alt="MIT 许可证" /></a>
+  <a href="./src"><img src="https://img.shields.io/badge/TypeScript%20%2B%20JS-3178C6?logo=typescript&amp;logoColor=white" alt="开发语言：TypeScript 和 JavaScript" /></a>
+  <a href="https://hub.docker.com/r/hiforceai/panda-force/tags"><img src="https://img.shields.io/badge/Docker-Linux%20amd64-2496ED?logo=docker&amp;logoColor=white" alt="Docker Hub 镜像，支持 Linux amd64" /></a>
+  <a href="./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md"><img src="https://img.shields.io/badge/Protocols-ACP%20%2B%20JSON--RPC-6E56CF" alt="运行协议：ACP 和 JSON-RPC" /></a>
+</p>
 
 PandaForce 是一个可自行部署的开源 Web 工作台，支持 **Codex**、**ZCode** 和 **Grok Build**。在浏览器里打开项目，选择运行实例和模型，向编码代理发送任务、查看工具执行进度、处理审批，并继续之前的会话。
 

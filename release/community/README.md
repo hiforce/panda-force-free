@@ -2,7 +2,13 @@
   <img src="./panda-docs/static/img/readme-hero-en.svg" width="1200" alt="PandaForce — Small panda. Big ideas. Create with skills. Put Bots to work." />
 </p>
 
-# PandaForce
+<p align="center">
+  <a href="https://github.com/hiforce/panda-force-free/tags"><img src="https://img.shields.io/github/v/tag/hiforce/panda-force-free?sort=semver&amp;label=Release" alt="Latest version tag" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/hiforce/panda-force-free?label=License" alt="MIT license" /></a>
+  <a href="./src"><img src="https://img.shields.io/badge/TypeScript%20%2B%20JS-3178C6?logo=typescript&amp;logoColor=white" alt="Languages: TypeScript and JavaScript" /></a>
+  <a href="https://hub.docker.com/r/hiforceai/panda-force/tags"><img src="https://img.shields.io/badge/Docker-Linux%20amd64-2496ED?logo=docker&amp;logoColor=white" alt="Docker Hub image for Linux amd64" /></a>
+  <a href="./panda-docs/docs/harness-runtimes.md"><img src="https://img.shields.io/badge/Protocols-ACP%20%2B%20JSON--RPC-6E56CF" alt="Runtime protocols: ACP and JSON-RPC" /></a>
+</p>
 
 PandaForce is an open-source, self-hosted web workspace for **Codex**, **ZCode**, and **Grok Build**. Open a project, choose a runtime and model, and work with your coding agent in the browser. Follow tool activity, review approvals, and resume earlier sessions.
 
