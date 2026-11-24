@@ -1,9 +1,23 @@
-<p align="center">
-  <img src="./panda-docs/static/img/readme-hero-zh-CN.svg" width="1200" alt="PandaForce — 小熊猫，大功夫。用技能创作，让 Bot 干活。" />
-</p>
-<p align="center"><a href="./README.md">English</a> · <a href="#先来做点好玩的">体验创作</a> · <a href="#认识你的-bot">配置 Bot</a> · <a href="#安装-018">开始使用</a> · <a href="./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/features.md">完整功能</a></p>
+# PandaForce
 
-PandaForce 是可以自行部署的 AI 创作工作台。选一项技能，把想法变成插画、幻灯片、网页或文档；把重复工作交给 Bot，再通过技能和插件，教这只可爱的小熊猫学会更多功夫。
+PandaForce 是一个可自行部署的开源 Web 工作台，支持 **Codex**、**ZCode** 和 **Grok Build**。在浏览器里打开项目，选择运行实例和模型，向编码代理发送任务、查看工具执行进度、处理审批，并继续之前的会话。
+
+**支持电脑和手机浏览器。** 通过 HTTPS 访问自己的实例并登录账号，有网络时就能随时随地继续工作。
+
+[Docker Compose 安装](#安装-018) · [配置 Codex、ZCode 和 Grok Build](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md) · [远程访问与安全](./panda-docs/docs/security.md) · [English](./README.md)
+
+![PandaForce 桌面对话演示。用户请 Codex 为徒步笔记添加搜索，界面显示测试命令和代理回复。](./panda-docs/static/img/conversation-zh-CN.webp)
+
+_模拟对话截图。截图来自实际界面，项目、消息和测试结果均为演示数据。_
+
+<details>
+<summary><strong>查看同一会话在手机浏览器中的样子</strong></summary>
+
+<img src="./panda-docs/static/img/conversation-mobile-zh-CN.webp" width="390" alt="PandaForce 在手机浏览器中显示同一段编码对话" />
+
+</details>
+
+也可以[用技能创作插画、幻灯片、网页或文档](#先来做点好玩的)，以及[通过 Bot API 交给助理处理重复任务](#认识你的-bot)。
 
 > **PandaForce 0.1.8** 收紧助理管理和项目页工具栏，技能页使用统一加载提示并支持就地重试。[安装发行版 →](#安装-018) · [发行说明 →](./panda-docs/docs/releases.md#018) · [Harness 配置 →](./panda-docs/docs/harness-runtimes.md)
 

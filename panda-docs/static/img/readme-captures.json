@@ -81,6 +81,50 @@
       "locale": "zh-CN",
       "theme": "aurora",
       "demoContent": true
+    },
+    {
+      "file": "conversation-en.webp",
+      "viewport": {
+        "width": 1320,
+        "height": 900
+      },
+      "locale": "en",
+      "theme": "aurora",
+      "demoContent": true,
+      "sourceVersion": "0.1.8"
+    },
+    {
+      "file": "conversation-mobile-en.webp",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "locale": "en",
+      "theme": "aurora",
+      "demoContent": true,
+      "sourceVersion": "0.1.8"
+    },
+    {
+      "file": "conversation-zh-CN.webp",
+      "viewport": {
+        "width": 1320,
+        "height": 900
+      },
+      "locale": "zh-CN",
+      "theme": "aurora",
+      "demoContent": true,
+      "sourceVersion": "0.1.8"
+    },
+    {
+      "file": "conversation-mobile-zh-CN.webp",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "locale": "zh-CN",
+      "theme": "aurora",
+      "demoContent": true,
+      "sourceVersion": "0.1.8"
     }
   ]
 }

@@ -1,9 +1,23 @@
-<p align="center">
-  <img src="./panda-docs/static/img/readme-hero-en.svg" width="1200" alt="PandaForce — Small panda. Big ideas. Create with skills. Put Bots to work." />
-</p>
-<p align="center"><a href="./README-zh.md">简体中文</a> · <a href="#create-something-fun">Try a creation</a> · <a href="#meet-your-bot">Build a Bot</a> · <a href="#install-018">Get started</a> · <a href="./panda-docs/docs/features.md">All features</a></p>
+# PandaForce
 
-PandaForce is a self-hosted AI workspace with a friendly kung-fu panda at its heart. Create illustrations, slides, web pages and documents with skills. Put repeatable work behind a Bot API, and teach your panda new moves through skills and plugins.
+PandaForce is an open-source, self-hosted web workspace for **Codex**, **ZCode**, and **Grok Build**. Open a project, choose a runtime and model, and work with your coding agent in the browser. Follow tool activity, review approvals, and resume earlier sessions.
+
+**Works in desktop and mobile browsers.** Use HTTPS and sign in to your own instance to pick up your work wherever you have a connection.
+
+[Install with Docker Compose](#install-018) · [Set up Codex, ZCode, and Grok Build](./panda-docs/docs/harness-runtimes.md) · [Secure remote access](./panda-docs/docs/security.md) · [简体中文](./README-zh.md)
+
+![PandaForce desktop conversation demo showing a request to add search to Trail Notes, the test command, and the Codex reply.](./panda-docs/static/img/conversation-en.webp)
+
+_Simulated conversation captured in the real interface. The project, messages, and test results are demo data._
+
+<details>
+<summary><strong>See the same conversation in a phone browser</strong></summary>
+
+<img src="./panda-docs/static/img/conversation-mobile-en.webp" width="390" alt="PandaForce displaying the same coding conversation in a mobile browser" />
+
+</details>
+
+You can also [create illustrations, slides, web pages, and documents with skills](#create-something-fun) and [hand repeatable tasks off to Bots through the API](#meet-your-bot).
 
 > **PandaForce 0.1.8** makes assistant management and the project directory more compact, and gives Skills a shared loading indicator and retry feedback. [Install the release →](#install-018) · [Release notes →](./panda-docs/docs/releases.md#018) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
 
