@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./panda-docs/static/img/readme-hero-en.svg" width="1200" alt="PandaForce — Small panda. Big ideas. Create with skills. Put Bots to work." />
+</p>
+
 # PandaForce
 
 PandaForce is an open-source, self-hosted web workspace for **Codex**, **ZCode**, and **Grok Build**. Open a project, choose a runtime and model, and work with your coding agent in the browser. Follow tool activity, review approvals, and resume earlier sessions.

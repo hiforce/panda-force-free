@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./panda-docs/static/img/readme-hero-zh-CN.svg" width="1200" alt="PandaForce — 小熊猫，大功夫。用技能创作，让 Bot 干活。" />
+</p>
+
 # PandaForce
 
 PandaForce 是一个可自行部署的开源 Web 工作台，支持 **Codex**、**ZCode** 和 **Grok Build**。在浏览器里打开项目，选择运行实例和模型，向编码代理发送任务、查看工具执行进度、处理审批，并继续之前的会话。
