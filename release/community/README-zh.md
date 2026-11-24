@@ -10,7 +10,7 @@
   <a href="./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md"><img src="https://img.shields.io/badge/Protocols-ACP%20%2B%20JSON--RPC-6E56CF" alt="运行协议：ACP 和 JSON-RPC" /></a>
 </p>
 
-PandaForce 是一个可自行部署的开源 Web 工作台，支持 **Codex**、**ZCode** 和 **Grok Build**。在浏览器里打开项目，选择运行实例和模型，向编码代理发送任务、查看工具执行进度、处理审批，并继续之前的会话。
+PandaForce 是一个可自行部署的开源 Web 工作台，支持 **Codex**、**ZCode**、**Grok Build** 和 **[Google Antigravity CLI](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md#antigravity-cli)**。在浏览器里打开项目，选择运行实例和模型，向编码代理发送任务、查看工具执行进度、处理审批，并继续之前的会话。如果用 Docker 启用 Antigravity，需要按指南构建可选镜像，再完成 Google 登录。
 
 **支持电脑和手机浏览器。** 通过 HTTPS 访问自己的实例并登录账号，有网络时就能随时随地继续工作。
 
