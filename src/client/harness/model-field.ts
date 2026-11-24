@@ -1,10 +1,11 @@
-import { reasoningMessage } from "./reasoning-label.js";
+import { reasoningLabel } from "./reasoning-label.js";
 import type { MessageId, Translate } from "../../shared/i18n/messages.js";
 import type { HarnessCatalog, HarnessRuntimeView } from "../../shared/harness/contracts.js";
 import type { RuntimeSelection } from "../../shared/engine/runtime-selection.js";
-import { changeRuntimeSelection } from "../../shared/engine/runtime-selection.js";
+import { changeRuntimeSelection, defaultRuntimeModel } from "../../shared/engine/runtime-selection.js";
 import { messageHtml, localizeText, setOpaqueText } from "../i18n.js";
 import { runtimeModelCatalog } from "./model-catalog.js";
+import { mountReasoningSlider } from "../session-controls/reasoning-slider.js";
 
 /** A form owns its selection; late discovery never replaces another runtime's catalog or draft. */
 export function createRuntimeModelField(
@@ -46,7 +47,10 @@ export function createRuntimeModelField(
       runtimeMissing = !!selection.runtimeId && !runtimes.some((entry) => entry.id === selection.runtimeId),
       models = runtime?.id === selection.runtimeId ? catalog.models(runtime) : [],
       model = models.find((entry) => entry.id === selection.model),
-      efforts = model?.efforts ?? [],
+      effectiveModel =
+        model ??
+        (!selection.model && runtime ? models.find((entry) => entry.id === defaultRuntimeModel(runtime!)) : undefined),
+      efforts = effectiveModel?.efforts ?? [],
       modelMissing = !!selection.model && !model,
       effortMissing = !!selection.effort && !efforts.some((entry) => entry.id === selection.effort);
     options(
@@ -66,21 +70,28 @@ export function createRuntimeModelField(
       ],
       selection.model,
     );
-    options(
-      control("effort"),
+    const effort = host.querySelector<HTMLInputElement>(`[name="${prefix}-effort"]`)!;
+    const effortField = host.querySelector<HTMLElement>("[data-runtime-effort-slider]")!;
+    effort.value = selection.effort;
+    mountReasoningSlider(
+      effortField,
       [
-        { id: "", label: t("harness.automatic"), message: "harness.automatic" },
-        ...efforts.map((entry) => ({ ...entry, message: reasoningMessage(entry.id) })),
-        ...(effortMissing
-          ? [{ id: selection.effort, label: selection.effort, message: reasoningMessage(selection.effort) }]
-          : []),
+        { id: "", label: t("harness.automatic") },
+        ...efforts,
+        ...(effortMissing ? [{ id: selection.effort, label: reasoningLabel(selection.effort, t) }] : []),
       ],
       selection.effort,
+      t("common.reasoningEffort"),
+      (value) => {
+        selection.effort = effort.value = value;
+        changed();
+      },
+      locked || pending || !runtime,
     );
-    for (const name of ["runtime", "model", "effort"]) control(name).setAttribute("aria-busy", String(pending));
+    for (const name of ["runtime", "model"]) control(name).setAttribute("aria-busy", String(pending));
+    effortField.setAttribute("aria-busy", String(pending));
     control("runtime").disabled = locked;
     control("model").disabled = locked || pending || !runtime;
-    control("effort").disabled = locked || pending || !runtime || !selection.model;
     control("runtime").setCustomValidity(
       !pending && (!selection.runtimeId || runtimeMissing) && selection.runtimeId !== retained.runtimeId
         ? t("harness.empty")
@@ -131,7 +142,7 @@ export function createRuntimeModelField(
   }
   return {
     html: () =>
-      `<div data-runtime-model-field class="wb-form"><label class="wb-field"><span>${messageHtml("harness.title", {}, t)}</span><select name="${prefix}-runtime" required></select></label><label class="wb-field"><span>${messageHtml("common.model", {}, t)}</span><select name="${prefix}-model"></select></label><label class="wb-field"><span>${messageHtml("common.reasoningEffort", {}, t)}</span><select name="${prefix}-effort"></select><small data-runtime-hint></small></label><p data-runtime-status data-bot-model-status role="status" hidden></p><button class="wb-button" type="button" data-runtime-retry data-bot-model-retry hidden>${messageHtml("sessions.retryLoadingModels", {}, t)}</button></div>`,
+      `<div data-runtime-model-field class="wb-form"><label class="wb-field"><span>${messageHtml("harness.title", {}, t)}</span><select name="${prefix}-runtime" required></select></label><label class="wb-field"><span>${messageHtml("common.model", {}, t)}</span><select name="${prefix}-model"></select></label><div class="wb-field"><input type="hidden" name="${prefix}-effort"><div data-runtime-effort-slider></div><small data-runtime-hint></small></div><p data-runtime-status data-bot-model-status role="status" hidden></p><button class="wb-button" type="button" data-runtime-retry data-bot-model-retry hidden>${messageHtml("sessions.retryLoadingModels", {}, t)}</button></div>`,
     mount(parent: HTMLElement, initial?: Partial<RuntimeSelection>) {
       epoch++;
       host = parent.querySelector("[data-runtime-model-field]");
@@ -152,10 +163,6 @@ export function createRuntimeModelField(
       control("model").onchange = () => {
         selection = changeRuntimeSelection(selection, runtime!, control("model").value);
         render();
-        changed();
-      };
-      control("effort").onchange = () => {
-        selection.effort = control("effort").value;
         changed();
       };
       host.querySelector<HTMLButtonElement>("[data-runtime-retry]")!.onclick = () => void load(true);

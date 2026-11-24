@@ -42,3 +42,5 @@ export async function buildCdn() {
     rmSync(staging, { recursive: true, force: true });
   }
 }
+
+if (import.meta.main) await buildCdn();

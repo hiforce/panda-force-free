@@ -1,0 +1,17 @@
+services:
+  panda-force:
+    environment:
+      PANDA_FORCE_CLAUDE_CODE_HARNESS_PROFILES: >-
+        [{"id":"claude-code","name":"Claude Code","command":"/opt/panda-claude-code/node_modules/.bin/claude-agent-acp","claudeCommand":"/opt/panda-claude-code/claude","accountHome":"/run/panda-claude-account","deployment":"container"}]
+    volumes:
+      - type: bind
+        source: ${PANDA_FORCE_CLAUDE_CODE_TOOLS_HOST:?set the Claude Code tools directory}
+        target: /opt/panda-claude-code
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${PANDA_FORCE_CLAUDE_CODE_ACCOUNT_HOME_HOST:?set the Claude Code account directory}
+        target: /run/panda-claude-account
+        bind:
+          create_host_path: false

@@ -4,11 +4,12 @@ import { runtimeModelCatalog as projectRuntimeCatalog } from "../../shared/engin
 import { escapeHtml } from "../../shared/html.js";
 import { isRecord } from "../../shared/records.js";
 import { harnessId, harnessPresentation, harnessSummary } from "../../shared/harness/presentation.js";
-import type {
-  HarnessCatalog,
-  HarnessConversation,
-  HarnessRuntimeView,
-  HarnessPermissionMode,
+import {
+  HARNESS_PERMISSION_MODES,
+  type HarnessCatalog,
+  type HarnessConversation,
+  type HarnessRuntimeView,
+  type HarnessPermissionMode,
 } from "../../shared/harness/contracts.js";
 import type { Translate, MessageId } from "../../shared/i18n/messages.js";
 import type { StateReader, StateStore } from "../contracts/ownership.js";
@@ -72,13 +73,16 @@ export function createHarnessController(options: {
     return value;
   }
   const current = () => harnessId(state.active?.id);
-  const context = () => state.active?.id ?? `new:${state.newSessionProjectId ?? "personal"}`;
+  const context = () => state.active?.id || `new:${state.newSessionProjectId || "personal"}`;
   const newPermissionModes = new Map<string, HarnessPermissionMode>();
   const permissionSaves = new Set<string>();
   const permissionKey = () => `${context()}:${runtime()?.id ?? "pending"}`;
   const permissionMessages = {
     ask: ["harness.permissionAsk", "harness.permissionAskDescription"],
+    "accept-edits": ["harness.permissionClaudeEdit", "harness.permissionClaudeEditDescription"],
+    plan: ["harness.permissionClaudePlan", "harness.permissionClaudePlanDescription"],
     "always-approve": ["harness.permissionAlways", "harness.permissionAlwaysDescription"],
+    "deny-unapproved": ["harness.permissionClaudeDeny", "harness.permissionClaudeDenyDescription"],
     "full-access": ["common.fullAccess", "common.unrestrictedAccessToTheInternetAndAnyFileOnYour"],
   } as const;
   const runtime = () =>
@@ -270,7 +274,11 @@ export function createHarnessController(options: {
       const id = current(),
         snapshot = id ? snapshots.get(id) : null,
         permission = snapshot?.conversation.permissionMode ?? newPermissionModes.get(permissionKey()) ?? "ask",
-        modes = runtime()?.capabilities?.permissionModes ?? [],
+        selectedRuntime = runtime(),
+        availableModes = selectedRuntime?.capabilities?.permissionModes ?? [],
+        claude = selectedRuntime?.kind === "claude-code",
+        modes = claude ? HARNESS_PERMISSION_MODES : availableModes,
+        allowFullAccess = view.permissions.some((item) => item.id === "full-access" && item.allowed),
         active = !!snapshot?.conversation.activeRunId;
       return {
         ...view,
@@ -280,15 +288,26 @@ export function createHarnessController(options: {
         permissionOwner: "harness",
         permissionHint: "harness.permissionUnavailable",
         settingsHint: "harness.permissionNextTurn",
-        permissions: modes.map((mode) => ({
-          id: mode,
-          label: t(permissionMessages[mode][0]),
-          description: t(permissionMessages[mode][1]),
-          allowed:
-            !active &&
-            !permissionSaves.has(permissionKey()) &&
-            (mode !== "full-access" || view.permissions.some((item) => item.id === "full-access" && item.allowed)),
-        })),
+        permissions: modes.map((mode) => {
+          const messages =
+            mode === "always-approve" && claude
+              ? (["harness.permissionClaudeAuto", "harness.permissionClaudeAutoDescription"] as const)
+              : permissionMessages[mode];
+          const offered = availableModes.includes(mode),
+            fullAccessBlocked = mode === "full-access" && !allowFullAccess,
+            reason = !offered
+              ? "harness.permissionClaudeNotOffered"
+              : fullAccessBlocked
+                ? "harness.permissionClaudeFullRestricted"
+                : null;
+          return {
+            id: mode,
+            label: t(messages[0]),
+            description: t(messages[1]),
+            allowed: offered && !active && !permissionSaves.has(permissionKey()) && !fullAccessBlocked,
+            ...(claude && reason ? { unavailableReason: t(reason) } : {}),
+          };
+        }),
       };
     },
     async applyRuntime(sessionId, runtimeId) {

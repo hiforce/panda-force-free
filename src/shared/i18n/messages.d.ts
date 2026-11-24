@@ -2762,6 +2762,16 @@ export interface MessageParameters {
   "harness.permissionAlwaysDescription": {  };
   "harness.permissionAsk": {  };
   "harness.permissionAskDescription": {  };
+  "harness.permissionClaudeAuto": {  };
+  "harness.permissionClaudeAutoDescription": {  };
+  "harness.permissionClaudeDeny": {  };
+  "harness.permissionClaudeDenyDescription": {  };
+  "harness.permissionClaudeEdit": {  };
+  "harness.permissionClaudeEditDescription": {  };
+  "harness.permissionClaudeFullRestricted": {  };
+  "harness.permissionClaudeNotOffered": {  };
+  "harness.permissionClaudePlan": {  };
+  "harness.permissionClaudePlanDescription": {  };
   "harness.permissionDetails": {  };
   "harness.permissionNextTurn": {  };
   "harness.permissions": {  };

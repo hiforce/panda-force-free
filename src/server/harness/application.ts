@@ -113,7 +113,7 @@ export function applicationRuntimes(options: {
               : undefined,
           );
           agent = opened.agent;
-          if (opened.runtime.kind !== "codex") await agent.create(cwd);
+          if (opened.runtime.kind !== "codex") await agent.create(cwd, { discoverModels: true });
           const current = await options.registry.require(principal, id);
           if (current.revision !== configured.revision) throw new HarnessError("conflict", 409);
           return (await port.catalog(owner, conversation)).runtimes.find((runtime) => runtime.id === id)!;

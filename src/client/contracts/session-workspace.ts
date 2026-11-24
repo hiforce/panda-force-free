@@ -121,7 +121,7 @@ export interface SessionControlView {
   effort: string;
   permission: string;
   models: Array<{ id: string; label: string; defaultEffort: string; efforts: Array<{ id: string; label: string }> }>;
-  permissions: Array<{ id: string; label: string; description: string; allowed: boolean }>;
+  permissions: Array<{ id: string; label: string; description: string; allowed: boolean; unavailableReason?: string }>;
 }
 
 export interface SessionSettingsDialogOptions {

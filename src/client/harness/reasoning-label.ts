@@ -1,5 +1,6 @@
 import type { MessageId, Translate } from "../../shared/i18n/messages.js";
 const labels: Record<string, MessageId> = {
+  default: "common.default",
   none: "common.none",
   minimal: "common.minimal",
   low: "common.low",

@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "platform": "linux/amd64",
+  "claude": {
+    "version": "2.1.330",
+    "url": "https://downloads.claude.ai/claude-code-releases/2.1.330/linux-x64/claude",
+    "sha256": "f390eaa0814e6a1bff74cbb47acb74cb9c89d30ced809fe0af5af00c7bfe8ebb"
+  },
+  "adapter": {
+    "version": "0.110.1",
+    "packageLockSha256": "374cf9cdd77f07d7ab40d20fa32bc546af4f0acb364d94b000b75c94e538bc02"
+  }
+}

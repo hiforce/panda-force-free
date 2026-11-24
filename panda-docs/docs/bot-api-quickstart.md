@@ -4,7 +4,7 @@ title: Bot API quickstart
 
 # Create a Bot and integrate its tasks
 
-This guide targets **PandaForce 0.1.8**. It uses fictional product data and no external callback. Run examples from the repository root in Bash with `curl` and `jq` installed, against your own installation. Use HTTPS for remote access.
+This guide targets **PandaForce 0.1.9**. It uses fictional product data and no external callback. Run examples from the repository root in Bash with `curl` and `jq` installed, against your own installation. Use HTTPS for remote access.
 
 ## 1. Create and configure
 

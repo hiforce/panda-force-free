@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
-ARG BUILD_BASE=hiforceai/panda-force-build-base@sha256:50226fbc3e63b5477e4b56326d67eee962845ad464d0aee4aa09ee5eff185668
-ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base@sha256:a8a889237d44c1bbea1f94b581d5075138b038ac07808eb666b8ccb28315d13e
+ARG BUILD_BASE=hiforceai/panda-force-build-base@sha256:963bf3d085b78419caec7f5a2a53323c012956e334c716e3754cd744bfb4b1e3
+ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base@sha256:ce564a38e60c4119cd4addd7f9cda11fd3accefa72a4fb7ad6978800a37a86ba
 FROM ${BUILD_BASE} AS build
 USER root
 WORKDIR /app
@@ -11,17 +11,17 @@ COPY package.json bun.lock ./
 COPY patches ./patches
 RUN node /opt/panda-force-dependencies.mjs verify /app /tmp/panda-force-base-dependencies.json \
     && rm /tmp/panda-force-base-dependencies.json
-COPY src ./src
-COPY public ./public
-COPY scripts ./scripts
-COPY tests ./tests
-COPY release/community ./release/community
-COPY LICENSES ./LICENSES
-COPY deploy/documents ./deploy/documents
-COPY deploy/previews ./deploy/previews
-COPY deploy/search ./deploy/search
-COPY docker-compose*.yml ./
-COPY tsconfig*.json eslint.config.mjs prettier.config.mjs Dockerfile .dockerignore LICENSE THIRD_PARTY_NOTICES.md ./
+COPY --link src ./src
+COPY --link public ./public
+COPY --link scripts ./scripts
+COPY --link tests ./tests
+COPY --link release/community ./release/community
+COPY --link LICENSES ./LICENSES
+COPY --link deploy/documents ./deploy/documents
+COPY --link deploy/previews ./deploy/previews
+COPY --link deploy/search ./deploy/search
+COPY --link docker-compose*.yml ./
+COPY --link tsconfig*.json eslint.config.mjs prettier.config.mjs Dockerfile .dockerignore LICENSE THIRD_PARTY_NOTICES.md ./
 ARG VERIFICATION_PROFILE=none
 ARG BUILD_BASE
 ARG RUNTIME_BASE
@@ -35,7 +35,7 @@ RUN --mount=type=secret,id=cdn_credentials \
     if [ -n "$PANDA_FORCE_CDN_BASE_URL" ]; then \
       test -s /run/secrets/cdn_credentials && \
       set -a && . /run/secrets/cdn_credentials && set +a && \
-      bun run build:client && cp -a dist/cdn-public/. public/; \
+      bun scripts/cdn/build.mjs && cp -a dist/cdn-public/. public/; \
     fi
 
 FROM ${RUNTIME_BASE} AS runtime
@@ -55,14 +55,15 @@ COPY --chmod=0644 package.json bun.lock ./
 COPY patches ./patches
 RUN node /opt/panda-force-dependencies.mjs verify /app /tmp/panda-force-base-dependencies.json \
     && rm /tmp/panda-force-base-dependencies.json
-COPY --from=build /app/public ./public
-COPY --from=build /app/.build-info/ ./
+COPY --link --from=build /app/public ./public
+COPY --link --from=build /app/.build-info/ ./
 RUN node -e 'const fs=require("node:fs"),c=require("node:crypto"),i=JSON.parse(fs.readFileSync("build-info.json"));if(i.bases.engineLockSha256&&c.createHash("sha256").update(fs.readFileSync("/opt/panda-harness/engines.json")).digest("hex")!==i.bases.engineLockSha256)throw Error("Runtime base Harness versions differ from the reviewed lock");'
 RUN node -e 'const fs=require("node:fs"),p=require("node:child_process"),i=JSON.parse(fs.readFileSync("build-info.json"));if(i.bases.creativeToolchain&&p.execFileSync("node",["/usr/local/lib/panda-creative.mjs","digest"],{encoding:"utf8"}).trim()!==i.bases.creativeToolchain.inputsSha256)throw Error("Runtime creative toolchain differs from the reviewed build base");'
-COPY src ./src
+RUN node -e 'const fs=require("node:fs"),c=require("node:crypto"),i=JSON.parse(fs.readFileSync("build-info.json")),p="/opt/panda-claude/runtime.lock.json";const digest=fs.existsSync(p)?c.createHash("sha256").update(fs.readFileSync(p)).digest("hex"):undefined;if(digest!==i.bases.claudeRuntimeLockSha256)throw Error("Build and runtime bases must provide the same reviewed Claude runtime");'
+COPY --link src ./src
 COPY scripts/start.ts ./scripts/start.ts
 COPY LICENSE THIRD_PARTY_NOTICES.md ./
-COPY LICENSES ./LICENSES
+COPY --link LICENSES ./LICENSES
 RUN find /app/src /app/public /app/scripts /app/LICENSES \( ! -perm -a=r -o \( -type d ! -perm -a=x \) -o \( -perm /111 ! -perm -a=x \) \) -exec chmod a+rX {} + \
     && mkdir -p /usr/local/lib/panda \
     && bun build src/cli/main.ts --target=node --outfile=/usr/local/lib/panda/panda.mjs \

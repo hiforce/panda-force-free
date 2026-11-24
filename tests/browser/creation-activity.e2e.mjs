@@ -1,5 +1,6 @@
 import { openComposerSettings } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
+import { chooseReasoning } from "../support/reasoning-slider.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
 import { createAppFixture, waitFor } from "../support/app-fixture.mjs";
@@ -75,7 +76,7 @@ try {
       await openComposerSettings(page, "model");
       const modelDialog = page.locator("#sessionSettingsDialog[open]");
       await modelDialog.locator('[name="session-runtime-model"]').selectOption("gpt-fixture");
-      await modelDialog.locator('[name="session-runtime-effort"]').selectOption("high");
+      await chooseReasoning(modelDialog.locator('[name="session-runtime-effort"]'), "high");
       await modelDialog.locator('button[type="submit"]').click();
       await modelDialog.waitFor({ state: "hidden" });
       const prompt = "Write a requirements document for a multi-channel product platform. " + locale;

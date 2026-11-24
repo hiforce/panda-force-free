@@ -14,7 +14,7 @@ import type {
   HarnessPrompt,
   HarnessApplicationPolicy,
 } from "../ports.js";
-import { HarnessStdioTransport, type HarnessStdioOptions } from "./stdio.js";
+import { HarnessStdioTransport, type HarnessNativeConnection } from "./stdio.js";
 import type { HarnessCredentialLease } from "../auth/contracts.js";
 import { AcpTurnEvents, acpPrompt, acpRecord as record, acpText as text } from "./acp.js";
 /** ACP terminates here. It never exposes a Codex envelope or treats thought chunks as portable context. */
@@ -46,7 +46,7 @@ export class GrokHarnessAgent implements HarnessAgent {
   private emit: ((event: HarnessAgentEvent) => Promise<void>) | null = null;
   private readonly events = new AcpTurnEvents();
   constructor(
-    options: Omit<HarnessStdioOptions, "onNotification" | "onRequest"> & {
+    options: HarnessNativeConnection & {
       cleanup?: () => Promise<void>;
       application?: HarnessApplicationPolicy;
       credentials?: Pick<HarnessCredentialLease, "prepare" | "rejected">;

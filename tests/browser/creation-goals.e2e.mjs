@@ -1,5 +1,6 @@
 import { openComposerSettings } from "../support/composer-settings.mjs";
 import assert from "node:assert/strict";
+import { chooseReasoning } from "../support/reasoning-slider.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
 import { createAppFixture } from "../support/app-fixture.mjs";
@@ -84,7 +85,7 @@ try {
       assert.equal(await page.locator('[name="session-runtime-effort"]').inputValue(), "medium");
       await page.screenshot({ path: `${out}/effort-${locale}-${width}.png` });
       if (locale === "zh-TW") {
-        await page.locator('[name="session-runtime-effort"]').selectOption("low");
+        await chooseReasoning(page.locator('[name="session-runtime-effort"]'), "low");
         await page.locator('#sessionSettingsForm [type="submit"]').click();
       } else await page.locator("#sessionSettingsDialog [data-settings-dismiss]").first().click();
       await page.locator('.creation-discovery-card [data-skill-id="software-prd"]').click();

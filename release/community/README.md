@@ -10,11 +10,11 @@
   <a href="./panda-docs/docs/harness-runtimes.md"><img src="https://img.shields.io/badge/Protocols-ACP%20%2B%20JSON--RPC-6E56CF" alt="Runtime protocols: ACP and JSON-RPC" /></a>
 </p>
 
-PandaForce is an open-source, self-hosted web workspace for **Codex**, **ZCode**, **Grok Build**, and **[Google Antigravity CLI](./panda-docs/docs/harness-runtimes.md#antigravity-cli)**. Open a project, choose a runtime and model, and work with your coding agent in the browser. Follow tool activity, review approvals, and resume earlier sessions. To enable Antigravity in Docker, follow the guide to build the optional image and sign in with Google.
+PandaForce is an open-source, self-hosted web workspace for **Codex**, **ZCode**, **Grok Build**, **[Google Antigravity CLI](./panda-docs/docs/harness-runtimes.md#antigravity-cli)**, and **[Claude Code](./panda-docs/docs/harness-runtimes.md#choose-host-or-container-mode)**. Open a project, choose a runtime and model, and work with your coding agent in the browser. Follow tool activity, review approvals, and resume earlier sessions. To enable Antigravity in Docker, follow the guide to build the optional image and sign in with Google. Claude Code uses an operator-installed CLI and ACP adapter.
 
 **Works in desktop and mobile browsers.** Use HTTPS and sign in to your own instance to pick up your work wherever you have a connection.
 
-[Install with Docker Compose](#install-018) · [Set up Codex, ZCode, and Grok Build](./panda-docs/docs/harness-runtimes.md) · [Secure remote access](./panda-docs/docs/security.md) · [简体中文](./README-zh.md)
+[Install with Docker Compose](#install-019) · [Set up Harness runtimes](./panda-docs/docs/harness-runtimes.md) · [Secure remote access](./panda-docs/docs/security.md) · [简体中文](./README-zh.md)
 
 ![PandaForce desktop conversation demo showing a request to add search to Trail Notes, the test command, and the Codex reply.](./panda-docs/static/img/conversation-en.webp)
 
@@ -29,7 +29,7 @@ _Simulated conversation captured in the real interface. The project, messages, a
 
 You can also [create illustrations, slides, web pages, and documents with skills](#create-something-fun) and [hand repeatable tasks off to Bots through the API](#meet-your-bot).
 
-> **PandaForce 0.1.8** makes assistant management and the project directory more compact, and gives Skills a shared loading indicator and retry feedback. [Install the release →](#install-018) · [Release notes →](./panda-docs/docs/releases.md#018) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
+> **PandaForce 0.1.9** makes assistant management and the project directory more compact, and gives Skills a shared loading indicator and retry feedback. [Install the release →](#install-019) · [Release notes →](./panda-docs/docs/releases.md#018) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
 
 ## Create something fun
 
@@ -164,13 +164,13 @@ PandaForce also includes streaming AI conversations and coding, a terminal for a
 
 ## Multiple Harness Runtimes
 
-The 0.1.8 image contains **Codex CLI 0.171.0**, **Grok Build 1.0.89**, and **ZCode CLI 0.17.1**. In conversations, assistants/Bots and supported creation settings, choose **Harness Runtime → model → reasoning level**. Finish the current turn before switching a conversation; selected context is handed over and files remain in the workspace. See the [multi-runtime guide](./panda-docs/docs/harness-runtimes.md#use-several-named-runtimes) for account isolation and the optional Antigravity setup.
+The 0.1.9 image contains **Codex CLI 0.171.0**, **Grok Build 1.0.89**, and **ZCode CLI 0.17.1**. In conversations, assistants/Bots and supported creation settings, choose **Harness Runtime → model → reasoning level**. Finish the current turn before switching a conversation; selected context is handed over and files remain in the workspace. See the [multi-runtime guide](./panda-docs/docs/harness-runtimes.md#use-several-named-runtimes) for account isolation and the optional Antigravity setup.
 
 Codex starts through the application's app-server connection. Grok uses on-demand ACP processes; its optional account service handles native credential renewal. No host Grok/tmux session is required. Provider logins remain separate from the PandaForce administrator. [Container roles, login, persistence and recovery →](./panda-docs/docs/harness-runtimes.md)
 
-## Install 0.1.8
+## Install 0.1.9
 
-Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.1.8`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes all three Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
+Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.1.9`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes all three Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
 
 ```bash
 git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
@@ -198,7 +198,7 @@ docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
   run --rm grok-auth grok --no-auto-update login --device-auth
 ```
 
-Open **Settings → Harness Runtimes**, check Grok Build, and select its model/effort. The explicit **hi** test sends a real small request using your model account. The application and Grok helper services use the same 0.1.8 image by default. [Detailed setup and account volumes →](./panda-docs/docs/harness-runtimes.md)
+Open **Settings → Harness Runtimes**, check Grok Build, and select its model/effort. The explicit **hi** test sends a real small request using your model account. The application and Grok helper services use the same 0.1.9 image by default. [Detailed setup and account volumes →](./panda-docs/docs/harness-runtimes.md)
 
 **ZCode conversation runtime (experimental)**
 

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { chooseReasoning, reasoningSteps } from "../support/reasoning-slider.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium, webkit } from "playwright";
@@ -49,7 +50,7 @@ try {
         const name = page.locator('[name="pf-bot-name"]'),
           instructions = page.locator('[name="pf-bot-instructions"]'),
           select = page.locator('select[name="pf-bot-model"]'),
-          effort = page.locator('select[name="pf-bot-effort"]');
+          effort = page.locator('[name="pf-bot-effort"]');
         await name.fill("Catalog Bot " + suffix);
         await page.locator('[name="pf-bot-code"]').fill("catalog-bot-" + suffix);
         await instructions.fill("Preserve these constraints while the catalog loads.");
@@ -81,12 +82,8 @@ try {
         );
         const sessionModel = await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel);
         await select.selectOption("model-catalog-two");
-        assert.deepEqual(await effort.locator("option").evaluateAll((options) => options.map((o) => o.value)), [
-          "",
-          "low",
-          "medium",
-        ]);
-        await effort.selectOption("low");
+        assert.deepEqual(await reasoningSteps(effort), ["", "low", "medium"]);
+        await chooseReasoning(effort, "low");
         await page.evaluate(async (locale) => {
           const runtime = globalThis[Symbol.for("PandaForce.browserI18n")];
           await runtime.setPreference(locale === "en" ? "zh-HK" : "en");
@@ -171,7 +168,7 @@ try {
         await hosts.fill("callback.example.com\nsecondary.example.com");
         await select.selectOption("model-catalog-one");
         assert.equal(await effort.inputValue(), "");
-        await effort.selectOption("xhigh");
+        await chooseReasoning(effort, "xhigh");
         await page.locator('[data-create-bot] button[type="submit"]').focus();
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
         await page.screenshot({ path: join(artifacts, "edit-" + suffix + ".png"), fullPage: true });
@@ -218,7 +215,7 @@ try {
         await page.locator(`[data-edit="${createdBot.id}"]`).click();
         assert.equal(await hosts.inputValue(), "callback.example.com\nsecondary.example.com");
         assert.equal(await effort.inputValue(), "xhigh");
-        await effort.selectOption("high");
+        await chooseReasoning(effort, "high");
         await hosts.fill("unsaved.example.com");
         await page.locator("[data-cancel-edit]").click();
         await page.locator("[data-cancel-edit]").waitFor({ state: "detached" });

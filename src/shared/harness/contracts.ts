@@ -1,10 +1,21 @@
 import type { TokenUsage } from "../engine/types.js";
 
 /** Runtime instances are deployment identities; conversations and model choices have separate lifetimes. */
-export type HarnessKind = "codex" | "grok-build" | "zcode" | "antigravity";
+export type HarnessKind = "codex" | "grok-build" | "zcode" | "antigravity" | "claude-code";
 export type HarnessDeployment = "local" | "container" | "remote";
 export type HarnessStatus = "unknown" | "connecting" | "ready" | "authentication" | "unavailable";
-export type HarnessPermissionMode = "ask" | "always-approve" | "full-access";
+export const HARNESS_PERMISSION_MODES = [
+  "ask",
+  "accept-edits",
+  "plan",
+  "always-approve",
+  "deny-unapproved",
+  "full-access",
+] as const;
+export type HarnessPermissionMode = (typeof HARNESS_PERMISSION_MODES)[number];
+export function isHarnessPermissionMode(value: unknown): value is HarnessPermissionMode {
+  return typeof value === "string" && (HARNESS_PERMISSION_MODES as readonly string[]).includes(value);
+}
 export interface HarnessRuntime {
   id: string;
   name: string;

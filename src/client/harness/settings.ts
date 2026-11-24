@@ -5,6 +5,7 @@ import type { HarnessCatalog, HarnessPingResult } from "../../shared/harness/con
 import type { Translate, MessageId } from "../../shared/i18n/messages.js";
 import { setMessageHtml } from "../i18n.js";
 import { harnessApi } from "./api.js";
+import { mountReasoningSlider } from "../session-controls/reasoning-slider.js";
 /** Runtime selection precedes its scoped model and account configuration. No executable or secret is accepted here. */
 export function createHarnessSettings(t: Translate) {
   const api = harnessApi(t),
@@ -82,7 +83,7 @@ export function createHarnessSettings(t: Translate) {
           model = models.find((model) => model.id === value.model);
         const option = (id: string, name: string, current: string) =>
           `<option value="${escapeHtml(id)}"${id === current ? " selected" : ""}>${escapeHtml(name)}</option>`;
-        content = `<button type="button" class="wb-button" data-harness-back>${label("harness.back")}</button><form class="wb-form harness-form">${field("harness.name", `<input name="runtimeName" maxlength="80" required value="${escapeHtml(value.name)}">`)}${field("harness.profile", `<select name="profileId" ${runtime ? "disabled" : ""}>${catalog.profiles.map((profile) => option(profile.id, profile.name, value.profileId)).join("")}</select>`)}<p class="harness-hint">${label("harness.accountHint")}</p>${field("harness.model", `<select name="model">${option("", t("harness.automatic"), value.model)}${models.map((model) => option(model.id, model.label, value.model)).join("")}${value.model && !model ? option(value.model, value.model, value.model) : ""}</select>`)}${field("harness.effort", `<select name="effort">${option("", t("harness.automatic"), value.effort)}${(model?.efforts ?? []).map((effort) => option(effort.id, reasoningLabel(effort.id, t, effort.label), value.effort)).join("")}</select>`)}<label class="wb-choice"><input type="checkbox" name="enabled" ${value.enabled ? "checked" : ""}>${label("harness.enabled")}</label><label class="wb-choice"><input type="checkbox" name="makeDefault" ${value.makeDefault ? "checked" : ""}>${label("harness.makeDefault")}</label><p class="harness-hint">${label("harness.inheritedWorkspace")}</p><div class="harness-actions">${runtime ? `<button type="button" class="wb-button" data-harness-probe>${label(busy ? "harness.checking" : "harness.probe")}</button>` : ""}<button class="wb-button primary" type="submit">${label("harness.save")}</button></div></form>`;
+        content = `<button type="button" class="wb-button" data-harness-back>${label("harness.back")}</button><form class="wb-form harness-form">${field("harness.name", `<input name="runtimeName" maxlength="80" required value="${escapeHtml(value.name)}">`)}${field("harness.profile", `<select name="profileId" ${runtime ? "disabled" : ""}>${catalog.profiles.map((profile) => option(profile.id, profile.name, value.profileId)).join("")}</select>`)}<p class="harness-hint">${label("harness.accountHint")}</p>${field("harness.model", `<select name="model">${option("", t("harness.automatic"), value.model)}${models.map((model) => option(model.id, model.label, value.model)).join("")}${value.model && !model ? option(value.model, value.model, value.model) : ""}</select>`)}<div class="wb-field"><input type="hidden" name="effort"><div data-runtime-effort-slider></div></div><label class="wb-choice"><input type="checkbox" name="enabled" ${value.enabled ? "checked" : ""}>${label("harness.enabled")}</label><label class="wb-choice"><input type="checkbox" name="makeDefault" ${value.makeDefault ? "checked" : ""}>${label("harness.makeDefault")}</label><p class="harness-hint">${label("harness.inheritedWorkspace")}</p><div class="harness-actions">${runtime ? `<button type="button" class="wb-button" data-harness-probe>${label(busy ? "harness.checking" : "harness.probe")}</button>` : ""}<button class="wb-button primary" type="submit">${label("harness.save")}</button></div></form>`;
       }
     } else content = `<p role="status">${label("settings.pageLoading")}</p>`;
     setMessageHtml(
@@ -156,6 +157,29 @@ export function createHarnessSettings(t: Translate) {
         }),
     );
     const form = host.querySelector<HTMLFormElement>("form");
+    if (form) {
+      const value = draft(),
+        runtime = catalog?.runtimes.find((entry) => entry.id === selected),
+        efforts = runtime && runtimeModels(runtime).find((model) => model.id === value.model)?.efforts,
+        effort = form.querySelector<HTMLInputElement>('[name="effort"]')!;
+      effort.value = value.effort;
+      mountReasoningSlider(
+        form.querySelector<HTMLElement>("[data-runtime-effort-slider]")!,
+        [
+          { id: "", label: t("harness.automatic") },
+          ...(efforts ?? []).map((option) => ({ id: option.id, label: reasoningLabel(option.id, t, option.label) })),
+          ...(value.effort && !efforts?.some((option) => option.id === value.effort)
+            ? [{ id: value.effort, label: reasoningLabel(value.effort, t) }]
+            : []),
+        ],
+        value.effort,
+        t("harness.effort"),
+        (selected) => {
+          value.effort = effort.value = selected;
+        },
+        busy || !value.model,
+      );
+    }
     form?.addEventListener("input", capture);
     form?.querySelector<HTMLSelectElement>('[name="model"]')?.addEventListener("change", () => {
       capture();
@@ -208,7 +232,7 @@ export function createHarnessSettings(t: Translate) {
     value.name = form.querySelector<HTMLInputElement>('[name="runtimeName"]')!.value;
     value.profileId = form.querySelector<HTMLSelectElement>('[name="profileId"]')!.value;
     value.model = form.querySelector<HTMLSelectElement>('[name="model"]')!.value;
-    value.effort = form.querySelector<HTMLSelectElement>('[name="effort"]')!.value;
+    value.effort = form.querySelector<HTMLInputElement>('[name="effort"]')!.value;
     value.enabled = form.querySelector<HTMLInputElement>('[name="enabled"]')!.checked;
     value.makeDefault = form.querySelector<HTMLInputElement>('[name="makeDefault"]')!.checked;
   }

@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1
+ARG BUILD_BASE
+ARG RUNTIME_BASE
+
+FROM ${BUILD_BASE} AS build-base
+COPY scripts/build/claude-runtime.mjs /opt/panda-claude-setup/
+COPY scripts/build/claude-tools/ /opt/panda-claude-setup/claude-tools/
+LABEL org.opencontainers.image.title="PandaForce Rocky build base"
+
+FROM ${RUNTIME_BASE} AS runtime-base
+COPY scripts/build/claude-runtime.mjs /opt/panda-claude-setup/
+COPY scripts/build/claude-tools/ /opt/panda-claude-setup/claude-tools/
+LABEL org.opencontainers.image.title="PandaForce Rocky runtime base"

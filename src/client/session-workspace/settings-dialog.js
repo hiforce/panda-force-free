@@ -88,7 +88,7 @@ export function createSessionSettingsDialog({
           `
         : `<fieldset class="session-permission-fieldset">
             <legend class="sr-only">${label("common.permissions")}</legend>
-            ${snapshot.permissions.map((item) => `<label class="session-permission-choice ${item.allowed ? "" : "unavailable"}"><input type="radio" name="session-permission" value="${escapeHtml(item.id)}" ${item.id === permission ? "checked" : ""} ${item.allowed ? "" : "disabled"} /><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.description)}</small></span></label>`).join("")}
+            ${snapshot.permissions.map((item) => `<label class="session-permission-choice ${item.allowed ? "" : "unavailable"}"><input type="radio" name="session-permission" value="${escapeHtml(item.id)}" ${item.id === permission ? "checked" : ""} ${item.allowed ? "" : "disabled"} /><span><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.description)}</small>${item.unavailableReason ? `<small data-permission-unavailable>${escapeHtml(item.unavailableReason)}</small>` : ""}</span></label>`).join("")}
           </fieldset>`;
     setMessageHtml(
       dialog,

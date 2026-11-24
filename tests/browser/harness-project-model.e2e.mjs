@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
+import { chooseReasoning, reasoningSteps } from "../support/reasoning-slider.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { chromium, webkit } from "playwright";
 import { createAppFixture, waitFor } from "../support/app-fixture.mjs";
+import { serveHostAgent } from "../../src/server/harness/host.ts";
 
 const output = process.env.PANDA_FORCE_PROJECT_MODEL_PROOF || ".artifacts/harness-project-model";
 await mkdir(output, { recursive: true });
 const command = (file) => new URL("../support/" + file, import.meta.url).pathname;
+let hostAgent;
 const app = await createAppFixture({
   startupTimeoutMs: 60000,
   completedTurnNotifications: true,
@@ -18,6 +21,26 @@ const app = await createAppFixture({
     const home = join(dir, "antigravity-account");
     await mkdir(home);
     await writeFile(join(home, "signed-in"), "");
+    const claude = join(dir, "claude-account");
+    await mkdir(claude, { mode: 0o700 });
+    await writeFile(join(claude, "signed-in"), "");
+    const claudeHost = join(dir, "claude-host-account");
+    await mkdir(claudeHost, { mode: 0o700 });
+    await writeFile(join(claudeHost, "signed-in"), "");
+    await writeFile(join(claudeHost, "native-auto"), "");
+    const adapter = command("antigravity-acp-fixture.mjs");
+    hostAgent = await serveHostAgent({
+      socketPath: join(dir, "claude-host.sock"),
+      command: adapter,
+      args: [],
+      env: {
+        PATH: process.env.PATH,
+        HOME: claudeHost,
+        CLAUDE_CONFIG_DIR: join(claudeHost, ".claude"),
+        CLAUDE_AGENT_ACP_PROTOCOL: "v1",
+        CLAUDE_CODE_EXECUTABLE: adapter,
+      },
+    });
     const grok = join(dir, "grok-account");
     await mkdir(grok);
     await writeFile(
@@ -27,6 +50,18 @@ const app = await createAppFixture({
     await writeFile(join(dir, "zcode-provider.json"), "{}");
   },
   extraEnvironment: ({ dir }) => ({
+    PANDA_FORCE_HOST_HARNESS_PROFILES: JSON.stringify([
+      { id: "claude-host", name: "Claude Code Host", kind: "claude-code", socketPath: join(dir, "claude-host.sock") },
+    ]),
+    PANDA_FORCE_CLAUDE_CODE_HARNESS_PROFILES: JSON.stringify([
+      {
+        id: "claude-code",
+        name: "Claude Code",
+        accountHome: join(dir, "claude-account"),
+        command: command("antigravity-acp-fixture.mjs"),
+        claudeCommand: command("antigravity-acp-fixture.mjs"),
+      },
+    ]),
     PANDA_FORCE_ANTIGRAVITY_HARNESS_PROFILES: JSON.stringify([
       {
         id: "antigravity",
@@ -64,6 +99,8 @@ const runtimeCases = [
     "Antigravity Pro fixture reply.",
     "Antigravity reply (high).",
   ],
+  ["claude-code", "claude-fixture", "claude-fixture-pro", "Claude Pro fixture reply (medium).", "Claude reply (high)."],
+  ["claude-host", "claude-fixture", "claude-fixture-pro", "Claude Pro fixture reply (medium).", "Claude reply (high)."],
   ["codex", "gpt-fixture", "gpt-fixture-alt"],
   [
     "grok-local",
@@ -122,7 +159,7 @@ try {
       const conversations = "/api/personal/harness/conversations";
       for (const [runtime, original, alternate, reply, nextReply, alternateRuntime] of locale.startsWith("zh-") &&
       locale !== "zh-CN"
-        ? runtimeCases.slice(0, 1)
+        ? runtimeCases.slice(0, 3)
         : runtimeCases) {
         const page = await context.newPage();
         const errors = [];
@@ -150,12 +187,44 @@ try {
           await page.locator(`[data-harness-select="${runtime}"]`).click();
           await page.locator("#harnessMenu").waitFor({ state: "hidden" });
 
+          if (runtime === "claude-host") {
+            await page.locator("#composerSettingsButton").click();
+            await page.locator('[data-composer-setting="permissions"]').click();
+            const permissionDialog = page.locator("#sessionSettingsDialog");
+            const auto = permissionDialog.locator('[name="session-permission"][value="always-approve"]');
+            await permissionDialog.locator('[name="session-permission"][value="always-approve"]:enabled').waitFor();
+            assert.match(await auto.locator("..").innerText(), /Claude (Auto mode|自动模式|自動模式)/);
+            const choices = permissionDialog.locator('[name="session-permission"]');
+            assert.deepEqual(
+              await choices.evaluateAll((radios) => radios.map(({ value, disabled }) => [value, disabled])),
+              [
+                ["ask", false],
+                ["accept-edits", false],
+                ["plan", false],
+                ["always-approve", false],
+                ["deny-unapproved", true],
+                ["full-access", true],
+              ],
+            );
+            assert.equal(await permissionDialog.locator("[data-permission-unavailable]").count(), 2);
+            await page.screenshot({ path: join(output, `permissions-${locale}-${width}.png`), scale: "css" });
+            await permissionDialog.locator('[value="full-access"]').scrollIntoViewIfNeeded();
+            assert(await permissionDialog.locator('[value="full-access"]').isDisabled());
+            await auto.check();
+            await save(permissionDialog);
+          }
           const before = (await api(conversations)).conversations.length;
           const draft = "Keep the draft and use the newly selected model.";
           await page.locator("#prompt").fill(draft);
           const dialog = await openModel(alternate, alternateRuntime);
-          if (runtime === "antigravity") {
-            await page.screenshot({ path: join(output, `${locale}-${width}.png`), scale: "css" });
+          if (runtime.startsWith("claude-")) {
+            const effort = dialog.locator('[name="session-runtime-effort"]');
+            assert.deepEqual(await reasoningSteps(effort), ["", "medium", "high"]);
+            await chooseReasoning(effort, "medium");
+          }
+          if (runtime === "antigravity" || runtime.startsWith("claude-")) {
+            const prefix = runtime === "antigravity" ? "" : `${runtime}-`;
+            await page.screenshot({ path: join(output, `${prefix}${locale}-${width}.png`), scale: "css" });
             assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
           }
           await save(dialog);
@@ -187,6 +256,7 @@ try {
             const snapshot = await api(conversations + "/" + id);
             assert.equal(snapshot.conversation.projectId, project.id);
             assert.equal(snapshot.run.runtimeId, expectedRuntime);
+            if (expectedRuntime === "claude-host") assert.equal(snapshot.conversation.permissionMode, "always-approve");
             await page.getByText(expectedReply, { exact: true }).last().waitFor();
           };
           await send(alternate, alternateRuntime ?? runtime, reply);
@@ -206,5 +276,5 @@ try {
     }
   }
 } finally {
-  await app.dispose();
+  await Promise.allSettled([app.dispose(), hostAgent?.close()]);
 }

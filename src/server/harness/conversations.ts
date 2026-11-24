@@ -6,6 +6,7 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   HarnessError,
   HarnessPromptError,
+  isHarnessPermissionMode,
   type HarnessBinding,
   type HarnessConversation,
   type HarnessHistoryEvent,
@@ -142,8 +143,7 @@ export class HarnessConversations {
     runtimeId: string,
     value: unknown,
   ): Promise<HarnessPermissionMode> {
-    if (value !== "ask" && value !== "always-approve" && value !== "full-access")
-      throw new HarnessError("invalidInput");
+    if (!isHarnessPermissionMode(value)) throw new HarnessError("invalidInput");
     const runtime = await this.options.registry.require(principal, runtimeId);
     if (value !== "ask" && !this.options.registry.view(runtime).capabilities?.permissionModes?.includes(value))
       throw new HarnessError("capabilityUnavailable", 409);
@@ -548,9 +548,10 @@ export class HarnessConversations {
       const binding = conversation.bindings.find((value) => value.runtimeId === run.runtimeId);
       if (permissionMode !== "ask" && !initialInfo.capabilities.permissionModes?.includes(permissionMode))
         throw new HarnessPromptError("capabilityUnavailable", false, 409);
+      const settings = { permissionMode, model: run.model };
       const native = binding
-        ? await agent.load(binding.nativeSessionId, conversation.cwd, { permissionMode })
-        : await agent.create(conversation.cwd, { permissionMode });
+        ? await agent.load(binding.nativeSessionId, conversation.cwd, settings)
+        : await agent.create(conversation.cwd, settings);
       execution.native = native;
       if (execution.cancelled) {
         await this.finish(run, "cancelled");

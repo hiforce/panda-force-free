@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { chooseReasoning } from "../support/reasoning-slider.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -92,7 +93,7 @@ try {
           .waitFor({ state: "attached" });
         assert.equal(await sessionSettings.locator('[name="session-runtime-model"]').inputValue(), "");
         await sessionSettings.locator('[name="session-runtime-model"]').selectOption("grok-fixture");
-        await sessionSettings.locator('[name="session-runtime-effort"]').selectOption("low");
+        await chooseReasoning(sessionSettings.locator('[name="session-runtime-effort"]'), "low");
         await page.screenshot({ path: join(out, "session-settings-" + suffix + ".png"), fullPage: true });
         await sessionSettings.locator('[type="submit"]').click();
         await sessionSettings.waitFor({ state: "hidden" });
@@ -126,7 +127,7 @@ try {
           "grok-fixture",
         ]);
         await model.selectOption("grok-fixture");
-        await effort.selectOption("low");
+        await chooseReasoning(effort, "low");
         const beforeModel = await page.evaluate(() => globalThis.__pandaForceDebug.state.selectedModel);
         await page.screenshot({ path: join(out, "bot-" + suffix + ".png"), fullPage: true });
         const saved = page.waitForResponse((r) => r.url().endsWith("/api/bots") && r.request().method() === "POST");
@@ -173,7 +174,7 @@ try {
           .locator('[name="session-runtime-model"] option[value="grok-fixture"]')
           .waitFor({ state: "attached" });
         await setting.locator('[name="session-runtime-model"]').selectOption("grok-fixture");
-        await setting.locator('[name="session-runtime-effort"]').selectOption("low");
+        await chooseReasoning(setting.locator('[name="session-runtime-effort"]'), "low");
         await page.screenshot({ path: join(out, "creation-settings-" + suffix + ".png"), fullPage: true });
         await setting.locator('[type="submit"]').click();
         await setting.waitFor({ state: "hidden" });
@@ -214,7 +215,7 @@ try {
         await panel.locator('[name="creation-runtime"]').selectOption("grok-local");
         await panel.locator('[name="creation-model"] option[value="grok-fixture"]').waitFor({ state: "attached" });
         await panel.locator('[name="creation-model"]').selectOption("grok-fixture");
-        await panel.locator('[name="creation-effort"]').selectOption("low");
+        await chooseReasoning(panel.locator('[name="creation-effort"]'), "low");
         await panel.locator('[name="prompt"]').fill("This are a test.");
         await page.screenshot({ path: join(out, "project-" + suffix + ".png"), fullPage: true });
         await panel.locator("[data-creation-close]").click();
@@ -259,7 +260,7 @@ try {
         await review.locator('[name="editorial-runtime"]').selectOption("grok-local");
         await review.locator('[name="editorial-model"] option[value="grok-fixture"]').waitFor({ state: "attached" });
         await review.locator('[name="editorial-model"]').selectOption("grok-fixture");
-        await review.locator('[name="editorial-effort"]').selectOption("low");
+        await chooseReasoning(review.locator('[name="editorial-effort"]'), "low");
         await review.locator('[data-editorial-action="model-submit"]:enabled').click();
         await review.locator('[data-editorial-state="succeeded"]').waitFor();
         await review.locator('[data-editorial-action="model-view"]').click();

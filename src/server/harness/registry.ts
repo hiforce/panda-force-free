@@ -195,23 +195,27 @@ export class HarnessRegistry {
         await agent.close();
         throw error;
       }
-      const open = async (work: () => Promise<HarnessNativeSession>) => {
+      const open = async (work: () => Promise<HarnessNativeSession>, discoverModels = false) => {
         try {
           const session = await work();
-          this.discovered.set(id, session.info ?? info);
+          // A live ACP session reports the selected model; its snapshot cannot replace a probed catalog.
+          const usesAcpSession = runtime.kind === "claude-code" || runtime.kind === "antigravity";
+          if (!usesAcpSession || discoverModels || !this.discovered.has(id))
+            this.discovered.set(id, structuredClone(session.info ?? info));
           this.failures.delete(id);
           return session;
         } catch (error) {
-          this.failures.set(
-            id,
-            error instanceof HarnessError && error.code === "authentication" ? "authentication" : "unavailable",
-          );
+          if (!(error instanceof HarnessError && error.code === "capabilityUnavailable"))
+            this.failures.set(
+              id,
+              error instanceof HarnessError && error.code === "authentication" ? "authentication" : "unavailable",
+            );
           throw error;
         }
       };
       const scoped: HarnessAgent = {
         initialize: async () => info,
-        create: (cwd, options) => open(() => agent.create(cwd, options)),
+        create: (cwd, options) => open(() => agent.create(cwd, options), options?.discoverModels),
         load: (nativeId, cwd, options) => open(() => agent.load(nativeId, cwd, options)),
         prompt: (session, input, emit) => agent.prompt(session, input, emit),
         cancel: (session) => agent.cancel(session),
@@ -231,7 +235,7 @@ export class HarnessRegistry {
     if (!principal.administrator) throw new HarnessError("forbidden", 403);
     const { agent } = await this.agent(principal, id, `probe-${randomUUID()}`, cwd);
     try {
-      await agent.create(cwd);
+      await agent.create(cwd, { discoverModels: true });
       return await this.catalog(principal);
     } finally {
       await agent.close();

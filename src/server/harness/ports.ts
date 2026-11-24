@@ -100,10 +100,16 @@ export interface HarnessPrompt {
   operationId: string;
 }
 /** Native protocols terminate at these ports; application history never stores vendor RPC envelopes. */
+export interface HarnessOpenOptions {
+  permissionMode?: HarnessPermissionMode;
+  model?: string | null;
+  discoverModels?: boolean;
+}
+
 export interface HarnessAgent {
   initialize(): Promise<HarnessAgentInfo>;
-  create(cwd: string, options?: { permissionMode?: HarnessPermissionMode }): Promise<HarnessNativeSession>;
-  load(id: string, cwd: string, options?: { permissionMode?: HarnessPermissionMode }): Promise<HarnessNativeSession>;
+  create(cwd: string, options?: HarnessOpenOptions): Promise<HarnessNativeSession>;
+  load(id: string, cwd: string, options?: HarnessOpenOptions): Promise<HarnessNativeSession>;
   prompt(
     session: HarnessNativeSession,
     input: HarnessPrompt,

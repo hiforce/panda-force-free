@@ -1,6 +1,6 @@
 # Add a reviewed Google CLI release to the matching Rocky dependency bases.
-ARG BUILD_BASE=hiforceai/panda-force-build-base@sha256:50226fbc3e63b5477e4b56326d67eee962845ad464d0aee4aa09ee5eff185668
-ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base@sha256:a8a889237d44c1bbea1f94b581d5075138b038ac07808eb666b8ccb28315d13e
+ARG BUILD_BASE=hiforceai/panda-force-build-base@sha256:963bf3d085b78419caec7f5a2a53323c012956e334c716e3754cd744bfb4b1e3
+ARG RUNTIME_BASE=hiforceai/panda-force-runtime-base@sha256:ce564a38e60c4119cd4addd7f9cda11fd3accefa72a4fb7ad6978800a37a86ba
 FROM ${RUNTIME_BASE} AS antigravity
 USER root
 COPY antigravity-runtime.lock.json cli_linux_x64.tar.gz /tmp/antigravity-inputs/

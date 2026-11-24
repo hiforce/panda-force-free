@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { connect, type Socket } from "node:net";
 import { StringDecoder } from "node:string_decoder";
 import { HarnessError, type HarnessErrorCode } from "../../../shared/harness/contracts.js";
 import { isRecord } from "../../../shared/records.js";
@@ -13,16 +14,20 @@ export class HarnessTransportError extends HarnessError {
     super(code, 503);
   }
 }
-export interface HarnessStdioOptions {
+interface ProcessConnection {
   command: string;
   args: readonly string[];
   cwd: string;
   env: NodeJS.ProcessEnv;
+}
+interface TransportEvents {
   protocol?: "jsonrpc" | "zcode";
   onNotification?(method: string, params: Record<string, unknown>): Promise<void> | void;
   onRequest?(method: string, params: Record<string, unknown>): Promise<unknown>;
   onDisconnect?(error: HarnessTransportError): void;
 }
+export type HarnessStdioOptions = ProcessConnection & TransportEvents;
+export type HarnessNativeConnection = ProcessConnection | { socketPath: string; cwd: string };
 interface Pending {
   method: string;
   resolve(value: unknown): void;
@@ -34,6 +39,7 @@ const MAX_FRAME_BYTES = 4 * 1024 * 1024;
 /** Bounded bidirectional JSON-RPC; inbound request IDs never collide with outbound response pairing. */
 export class HarnessStdioTransport {
   private child: ChildProcessWithoutNullStreams | null = null;
+  private socket: Socket | null = null;
   private sequence = 0;
   private pending = new Map<number, Pending>();
   private buffer = "";
@@ -44,14 +50,16 @@ export class HarnessStdioTransport {
   private starting: Promise<void> | null = null;
   private stopped = false;
   private failure: HarnessTransportError | null = null;
-  constructor(private readonly options: HarnessStdioOptions) {}
+  constructor(private readonly options: HarnessNativeConnection & TransportEvents) {}
   start(): Promise<void> {
     if (this.starting) return this.starting;
     if (this.stopped) return Promise.reject(new HarnessTransportError("unavailable", false));
+    if ("socketPath" in this.options) return (this.starting = this.startSocket(this.options.socketPath));
+    const { command, args, cwd, env } = this.options;
     this.starting = new Promise<void>((resolve, reject) => {
-      const child = spawn(this.options.command, [...this.options.args], {
-        cwd: this.options.cwd,
-        env: this.options.env,
+      const child = spawn(command, [...args], {
+        cwd,
+        env,
         stdio: ["pipe", "pipe", "pipe"],
         shell: false,
         detached: process.platform !== "win32",
@@ -70,6 +78,23 @@ export class HarnessStdioTransport {
       child.stdin.on("error", () => this.fail(new HarnessTransportError("deliveryUncertain", true)));
     });
     return this.starting;
+  }
+  private startSocket(path: string) {
+    return new Promise<void>((resolve, reject) => {
+      const socket = connect(path);
+      this.socket = socket;
+      const unavailable = new HarnessTransportError("unavailable", false);
+      socket.once("connect", resolve);
+      socket.on("data", (data: Buffer) => this.receive(this.decoder.write(data)));
+      socket.on("error", () => {
+        reject(unavailable);
+        this.fail(new HarnessTransportError("deliveryUncertain", true));
+      });
+      socket.once("close", () => {
+        reject(unavailable);
+        this.fail(new HarnessTransportError("deliveryUncertain", true));
+      });
+    });
   }
   private receive(chunk: string) {
     if (this.failure || this.stopped) return;
@@ -117,7 +142,7 @@ export class HarnessStdioTransport {
             this.fail(new HarnessTransportError("invalidProtocol", true));
             return;
           }
-          if (this.notificationBytes > MAX_FRAME_BYTES / 4) this.child?.stdout.pause();
+          if (this.notificationBytes > MAX_FRAME_BYTES / 4) (this.socket ?? this.child?.stdout)?.pause();
           this.notifications = this.notifications
             .then(async () => {
               if (!this.stopped) await this.options.onNotification?.(frame.method as string, params);
@@ -128,7 +153,7 @@ export class HarnessStdioTransport {
             })
             .finally(() => {
               this.notificationBytes -= bytes;
-              if (this.notificationBytes < MAX_FRAME_BYTES / 8) this.child?.stdout.resume();
+              if (this.notificationBytes < MAX_FRAME_BYTES / 8) (this.socket ?? this.child?.stdout)?.resume();
             });
         }
       } else if (typeof frame.id === "number") {
@@ -180,11 +205,11 @@ export class HarnessStdioTransport {
     }
   }
   private write(frame: object) {
-    if (!this.child || this.failure || this.stopped)
-      throw this.failure ?? new HarnessTransportError("unavailable", false);
+    const writer = this.socket ?? this.child?.stdin;
+    if (!writer || this.failure || this.stopped) throw this.failure ?? new HarnessTransportError("unavailable", false);
     const bytes = JSON.stringify(this.options.protocol === "zcode" ? frame : { jsonrpc: "2.0", ...frame }) + "\n";
     if (Buffer.byteLength(bytes) > MAX_FRAME_BYTES) throw new HarnessTransportError("invalidInput", false);
-    this.child.stdin.write(bytes);
+    writer.write(bytes);
   }
   async request(
     method: string,
@@ -230,6 +255,7 @@ export class HarnessStdioTransport {
       item.reject(new HarnessTransportError(error.code, item.dispatched));
     }
     this.pending.clear();
+    this.socket?.destroy();
     this.options.onDisconnect?.(error);
     if (this.child?.pid) {
       try {
@@ -246,6 +272,8 @@ export class HarnessStdioTransport {
       item.reject(new HarnessTransportError("deliveryUncertain", item.dispatched));
     }
     this.pending.clear();
+    this.socket?.destroy();
+    this.socket = null;
     const child = this.child;
     if (child && child.exitCode === null) {
       child.stdin.end();

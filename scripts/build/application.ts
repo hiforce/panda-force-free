@@ -36,6 +36,16 @@ const creativeToolchain = existsSync(creativeInputs)
   : undefined;
 if (creativeToolchain && creativeToolchain.inputsSha256 !== inputDigest(creativeInputs))
   throw new Error("Creative toolchain inputs changed; rebuild both Rocky bases before packaging.");
+const claudeLock = "/opt/panda-claude/runtime.lock.json";
+const claudeRuntimeLockSha256 = existsSync(claudeLock)
+  ? createHash("sha256").update(readFileSync(claudeLock)).digest("hex")
+  : undefined;
+if (
+  claudeRuntimeLockSha256 &&
+  claudeRuntimeLockSha256 !==
+    createHash("sha256").update(readFileSync("scripts/build/claude-tools/runtime.lock.json")).digest("hex")
+)
+  throw new Error("Build base Claude runtime differs from the reviewed lock.");
 if (!["none", "full", "brand", "cdn"].includes(profile)) throw new Error("Unknown verification profile: " + profile);
 rmSync(".build-info", { recursive: true, force: true });
 const source = sourceIdentity();
@@ -63,6 +73,7 @@ writeFileSync(
         buildBase: process.env.PANDA_FORCE_BUILD_BASE || expected.buildBase,
         runtimeBase: process.env.PANDA_FORCE_RUNTIME_BASE || expected.runtimeBase,
         ...(creativeToolchain ? { creativeToolchain } : {}),
+        ...(claudeRuntimeLockSha256 ? { claudeRuntimeLockSha256 } : {}),
       },
       verification:
         profile === "none"

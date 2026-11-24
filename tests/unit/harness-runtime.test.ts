@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, readdir, rm, writeFile, mkdir, symlink, rename } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile, mkdir, symlink, rename, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -11,6 +11,7 @@ import { HarnessStdioTransport } from "../../src/server/harness/adapters/stdio.j
 import type { HarnessAgent, HarnessAgentEvent, HarnessAgentInfo } from "../../src/server/harness/ports.js";
 import { HarnessError, type HarnessPermissionMode } from "../../src/shared/harness/contracts.js";
 import { HarnessDiagnostics } from "../../src/server/harness/diagnostics.js";
+import { serveHostAgent } from "../../src/server/harness/host.js";
 const directories: string[] = [];
 const cleanups: Array<() => Promise<unknown>> = [];
 async function temporary() {
@@ -23,6 +24,198 @@ afterEach(async () => {
   for (const directory of directories.splice(0)) await rm(directory, { recursive: true, force: true });
 });
 const administrator = { owner: "one", administrator: true };
+
+test("host Harness sockets run and resume native sessions with the credentials owned on the host", async () => {
+  const directory = await temporary();
+  await writeFile(join(directory, "signed-in"), "");
+  await writeFile(join(directory, "auth.json"), JSON.stringify({ fixture: { access_token: "fixture" } }));
+  const provider = join(directory, "zcode-provider.json");
+  await writeFile(provider, "{}");
+  const command = (name: string) => join(import.meta.dir, `../support/${name}.mjs`);
+  const baseEnv = { PATH: process.env.PATH, HOME: directory };
+  const engines = [
+    [
+      "claude-code",
+      "antigravity-acp-fixture",
+      [],
+      {
+        ...baseEnv,
+        CLAUDE_CODE_EXECUTABLE: command("antigravity-acp-fixture"),
+        CLAUDE_AGENT_ACP_PROTOCOL: "v1",
+        CLAUDE_CONFIG_DIR: join(directory, ".claude"),
+      },
+      "Claude reply",
+    ],
+    ["antigravity", "antigravity-acp-fixture", ["acp"], baseEnv, "Antigravity reply"],
+    ["grok-build", "grok-acp-fixture", ["agent", "stdio"], { ...baseEnv, GROK_HOME: directory }, "Grok fixture reply"],
+    [
+      "zcode",
+      "zcode-stdio-fixture",
+      ["app-server", "--stdio"],
+      { ...baseEnv, ZCODE_PERSONAL_PROVIDER_CONFIG_FILE: provider },
+      "Fixture ZCode",
+    ],
+  ] as const;
+  const profiles = await Promise.all(
+    engines.map(async ([kind, name, args, env, reply]) => {
+      const socketPath = join(directory, kind + ".sock");
+      const service = await serveHostAgent({ socketPath, command: command(name), args: [...args], env });
+      cleanups.push(service.close);
+      expect((await stat(socketPath)).mode & 0o777).toBe(0o600);
+      return {
+        id: kind + "-host",
+        name: kind,
+        kind,
+        socketPath,
+        reply,
+        ...(kind === "zcode" ? { providerId: "fixture", model: "zcode-fixture" } : {}),
+      };
+    }),
+  );
+  const { harnessProfiles } = await import("../../src/server/harness/profiles.js");
+  const metadata = new SQLiteHarnessMetadata(join(directory, "host.sqlite"));
+  cleanups.push(async () => metadata.close());
+  const registry = new HarnessRegistry(
+    metadata,
+    harnessProfiles(directory, {} as Parameters<typeof harnessProfiles>[1], {
+      PANDA_FORCE_HOST_HARNESS_PROFILES: JSON.stringify(profiles),
+    }),
+  );
+  await registry.initialize();
+  expect((await registry.catalog({ owner: "member", administrator: false })).runtimes).toEqual([]);
+  for (const { id, reply } of profiles) {
+    expect(registry.supportsApplication(id)).toBe(false);
+    const first = await registry.agent(administrator, id, "conversation", directory);
+    let session: Awaited<ReturnType<typeof first.agent.create>>;
+    try {
+      session = await first.agent.create(directory);
+      let output = "";
+      await first.agent.prompt(
+        session,
+        { text: "Test host mode", attachments: [], model: null, effort: null, operationId: "host" },
+        async (event) => {
+          if (event.type === "text") output += event.text;
+        },
+      );
+      expect(output).toContain(reply);
+    } finally {
+      await first.agent.close();
+    }
+    const second = await registry.agent(administrator, id, "conversation", directory);
+    try {
+      expect((await second.agent.load(session.id, directory)).id).toBe(session.id);
+    } finally {
+      await second.agent.close();
+    }
+  }
+});
+
+test("Claude Code uses its native account, reports sign-in and resumes a conversation with approvals", async () => {
+  const directory = await temporary();
+  const accountHome = join(directory, "claude-account");
+  await mkdir(accountHome, { mode: 0o700 });
+  const { harnessProfiles } = await import("../../src/server/harness/profiles.js");
+  const command = join(import.meta.dir, "../support/antigravity-acp-fixture.mjs");
+  const metadata = new SQLiteHarnessMetadata(join(directory, "claude.sqlite"));
+  cleanups.push(async () => metadata.close());
+  const registry = new HarnessRegistry(
+    metadata,
+    harnessProfiles(directory, {} as Parameters<typeof harnessProfiles>[1], {
+      PATH: process.env.PATH,
+      ANTHROPIC_API_KEY: "fixture-key-that-must-not-be-inherited",
+      CLAUDE_CODE_OAUTH_TOKEN: "fixture-token-that-must-not-be-inherited",
+      PANDA_FORCE_CLAUDE_CODE_HARNESS_PROFILES: JSON.stringify([
+        { id: "claude-code", name: "Claude Code", command, claudeCommand: command, accountHome },
+      ]),
+    }),
+  );
+  await registry.initialize();
+  expect(registry.supportsApplication("claude-code")).toBe(false);
+  await expect(registry.require({ owner: "member", administrator: false }, "claude-code")).rejects.toMatchObject({
+    code: "notFound",
+  });
+  await expect(registry.probe(administrator, "claude-code", directory)).rejects.toMatchObject({
+    code: "authentication",
+  });
+  expect((await registry.catalog(administrator)).runtimes.find((value) => value.id === "claude-code")?.status).toBe(
+    "authentication",
+  );
+  await writeFile(join(accountHome, "signed-in"), "");
+  const catalog = await registry.probe(administrator, "claude-code", directory);
+  expect(catalog.runtimes.find((value) => value.id === "claude-code")).toMatchObject({
+    kind: "claude-code",
+    status: "ready",
+    capabilities: { permissionModes: ["ask", "accept-edits", "plan"] },
+    models: [
+      { id: "claude-fixture", isDefault: true, efforts: [{ id: "low" }, { id: "high" }] },
+      { id: "claude-fixture-pro", isDefault: false, efforts: [{ id: "medium" }, { id: "high" }] },
+    ],
+  });
+  const denied = await registry.agent(administrator, "claude-code", "conversation", directory);
+  cleanups.push(() => denied.agent.close());
+  await expect(denied.agent.create(directory, { permissionMode: "full-access" })).rejects.toMatchObject({
+    code: "capabilityUnavailable",
+  });
+  await denied.agent.close();
+
+  for (const [file, permissionMode, nativeMode] of [
+    ["native-edit", "accept-edits", "acceptEdits"],
+    ["native-plan", "plan", "plan"],
+    ["native-auto", "always-approve", "auto"],
+    ["native-deny", "deny-unapproved", "dontAsk"],
+    ["native-full", "full-access", "bypassPermissions"],
+  ] as const) {
+    await writeFile(join(accountHome, file), "");
+    const discovered = (await registry.probe(administrator, "claude-code", directory)).runtimes.find(
+      ({ id }) => id === "claude-code",
+    )!;
+    expect(discovered.capabilities?.permissionModes).toContain(permissionMode);
+    const opened = await registry.agent(administrator, "claude-code", "conversation", directory);
+    cleanups.push(() => opened.agent.close());
+    const model = "claude-fixture-pro";
+    const session = await opened.agent.create(directory, { permissionMode, model });
+    expect(session.info?.models.find(({ id }) => id === model)?.efforts.map(({ id }) => id)).toEqual([
+      "medium",
+      "high",
+    ]);
+    await expect(
+      opened.agent.prompt(
+        session,
+        { text: "claude.mode", attachments: [], model, effort: "medium", operationId: file },
+        async (event) => expect(event).toEqual({ type: "text", text: nativeMode }),
+      ),
+    ).resolves.toMatchObject({ stopReason: "complete" });
+    await opened.agent.close();
+  }
+  const first = await registry.agent(administrator, "claude-code", "conversation", directory);
+  cleanups.push(() => first.agent.close());
+  const session = await first.agent.create(directory);
+  const input = {
+    text: "claude.approval",
+    attachments: [],
+    model: "claude-fixture",
+    effort: "low",
+    operationId: "first",
+  };
+  const events: HarnessAgentEvent[] = [];
+  await expect(
+    first.agent.prompt(session, input, async (event) => {
+      events.push(event);
+      if (event.type === "permission") await first.agent.respondPermission(event.id, "yes");
+    }),
+  ).resolves.toMatchObject({ stopReason: "complete", usage: { totalTokens: 25 } });
+  expect(events.at(-1)).toEqual({ type: "text", text: "Fixture approval received." });
+  await first.agent.close();
+  const next = await registry.agent(administrator, "claude-code", "conversation", directory);
+  cleanups.push(() => next.agent.close());
+  const resumed = await next.agent.load(session.id, directory);
+  expect(resumed.id).toBe(session.id);
+  await expect(
+    next.agent.prompt(resumed, { ...input, text: "Follow-up" }, async (event) => {
+      expect(event).toEqual({ type: "text", text: "Claude reply (low)." });
+    }),
+  ).resolves.toMatchObject({ stopReason: "complete" });
+});
 
 test("Antigravity profiles isolate account homes and resume approved ACP turns with measured usage", async () => {
   const directory = await temporary();

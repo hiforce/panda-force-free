@@ -127,3 +127,7 @@ The 0.1.4 Rocky build and runtime bases include the headless **ZCode CLI 0.17.1*
 ## Google Antigravity
 
 PandaForce includes an ACP adapter for the operator-provided Google Antigravity CLI. Downloadable Google software is governed by [Google's terms](https://policies.google.com/terms) and the [Antigravity terms](https://antigravity.google/terms). The official archive is obtained from Google when an operator prepares the optional local image.
+
+## Anthropic Claude Code and Claude Agent ACP
+
+Claude Code support uses the operator's original [Claude Code CLI](https://github.com/anthropics/claude-code) and the [Claude Agent ACP adapter](https://github.com/agentclientprotocol/claude-agent-acp). The public images ship the installation script and dependency locks. The operator obtains the CLI and adapter from their upstream distributions. Their own licenses and [Anthropic's Claude Code terms](https://code.claude.com/docs/en/legal-and-compliance) apply.

@@ -1,5 +1,5 @@
 type Choice = { id: string; label: string };
-const levels = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"];
+const levels = ["", "default", "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"];
 
 /** Native discrete steps retain keyboard/touch behavior and only expose supported choices. */
 export function mountReasoningSlider(
@@ -8,6 +8,7 @@ export function mountReasoningSlider(
   selected: string,
   label: string,
   onChange: (value: string) => void,
+  disabled = false,
 ) {
   const options = [...new Map(choices.map((item) => [item.id, item])).values()].sort(
     (a, b) => (levels.indexOf(a.id) + 1 || 99) - (levels.indexOf(b.id) + 1 || 99),
@@ -37,13 +38,14 @@ export function mountReasoningSlider(
       options.findIndex((item) => item.id === selected),
     ),
   );
-  input.disabled = options.length === 1;
+  input.disabled = disabled || options.length === 1;
   input.setAttribute("aria-label", label);
   ticks.className = "wb-range-ticks";
   ticks.setAttribute("aria-hidden", "true");
   for (const option of options) {
     const tick = document.createElement("span");
     tick.title = option.label;
+    tick.dataset.effort = option.id;
     ticks.append(tick);
   }
   endpoints.className = "wb-range-endpoints";

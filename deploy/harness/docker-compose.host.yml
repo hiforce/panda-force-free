@@ -1,0 +1,19 @@
+services:
+  panda-force:
+    environment:
+      PANDA_FORCE_HOST_HARNESS_PROFILES: ${PANDA_FORCE_HOST_HARNESS_PROFILES:?set the JSON array of host Harness profiles}
+      PANDA_FORCE_CWD: ${PANDA_FORCE_HOST_HARNESS_WORKSPACE:?set the shared host workspace}
+      PANDA_FORCE_REVIEW_ROOT: ${PANDA_FORCE_HOST_HARNESS_WORKSPACE:?set the shared host workspace}
+      PANDA_FORCE_PROJECTS_ROOT: ${PANDA_FORCE_HOST_HARNESS_WORKSPACE:?set the shared host workspace}/projects
+    volumes:
+      - type: bind
+        source: ${PANDA_FORCE_HOST_HARNESS_SOCKET_DIR:?set the host socket directory}
+        target: /run/panda-host-harness
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${PANDA_FORCE_HOST_HARNESS_WORKSPACE:?set the shared host workspace}
+        target: ${PANDA_FORCE_HOST_HARNESS_WORKSPACE:?set the shared host workspace}
+        bind:
+          create_host_path: false

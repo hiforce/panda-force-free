@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, constants } from "node:fs";
-import { chmod, mkdir, readFile, open, realpath, mkdtemp, rm, unlink, rename } from "node:fs/promises";
+import { chmod, mkdir, readFile, open, realpath, mkdtemp, rm, unlink, rename, stat } from "node:fs/promises";
 import { join, resolve, isAbsolute } from "node:path";
 import { homedir, tmpdir } from "node:os";
-import { HarnessError } from "../../shared/harness/contracts.js";
+import { HARNESS_PERMISSION_MODES, HarnessError, type HarnessPermissionMode } from "../../shared/harness/contracts.js";
 import { isRecord } from "../../shared/records.js";
 import type { EngineDriver } from "../../shared/engine/contracts.js";
 import type { HarnessProfile } from "./registry.js";
@@ -15,6 +15,7 @@ import type { HarnessCredentialLease } from "./auth/contracts.js";
 import { createCodexDriver } from "../engines/codex.js";
 import { ZCodeHarnessAgent } from "./adapters/zcode.js";
 import { AntigravityHarnessAgent } from "./adapters/antigravity.js";
+import { AcpSessionAgent } from "./adapters/acp-session.js";
 
 function profileEntries(value: string | undefined): Record<string, unknown>[] {
   if (!value) return [];
@@ -39,6 +40,67 @@ function profileIdentity(profile: Record<string, unknown>) {
 function operatorPath(value: unknown): string {
   if (typeof value !== "string" || !isAbsolute(value)) throw new HarnessError("invalidInput");
   return value;
+}
+
+function operatorSocketPath(value: unknown) {
+  const path = operatorPath(value);
+  if (Buffer.byteLength(path) > 100) throw new HarnessError("invalidInput");
+  return path;
+}
+
+function codexSocketFactory(socketPath: string): HarnessProfile["factory"] {
+  return {
+    create: async (_runtime, { cwd }) => {
+      let shuttingDown = false;
+      const isolated = createCodexDriver({
+        connection: { mode: "shared", socketPath },
+        defaultCwd: cwd,
+        version: "1",
+        isShuttingDown: () => shuttingDown,
+      });
+      return new CodexHarnessAgent(isolated, () => {
+        shuttingDown = true;
+        isolated.cancelRestart();
+        isolated.stop();
+      });
+    },
+  };
+}
+
+function zcodeSelection(profile: Record<string, unknown>) {
+  const { providerId, model, efforts, defaultEffort } = profile;
+  if (typeof providerId !== "string" || !providerId.trim() || typeof model !== "string" || !model.trim())
+    throw new HarnessError("invalidInput");
+  if (
+    (efforts !== undefined &&
+      (!Array.isArray(efforts) ||
+        efforts.length > 16 ||
+        !efforts.every((value) => typeof value === "string" && value.trim()))) ||
+    (defaultEffort !== undefined &&
+      (typeof defaultEffort !== "string" || !Array.isArray(efforts) || !efforts.includes(defaultEffort)))
+  )
+    throw new HarnessError("invalidInput");
+  return { providerId, model, efforts, defaultEffort };
+}
+
+const claudeNativeModes = {
+  ask: "default",
+  "accept-edits": "acceptEdits",
+  plan: "plan",
+  "always-approve": "auto",
+  "deny-unapproved": "dontAsk",
+  "full-access": "bypassPermissions",
+} as const satisfies Record<HarnessPermissionMode, string>;
+
+function claudeAgent(connection: ConstructorParameters<typeof AcpSessionAgent>[0]) {
+  return new AcpSessionAgent(connection, {
+    args: [],
+    effortId: "effort",
+    permissionMode: "ask",
+    permissionModes: [...HARNESS_PERMISSION_MODES],
+    nativeModes: claudeNativeModes,
+    checkAuthStatus: true,
+  });
 }
 
 function runtimeHome(stateRoot: string, ...scope: string[]) {
@@ -68,29 +130,12 @@ export function harnessProfiles(
     },
   ];
   for (const profile of profileEntries(env.PANDA_FORCE_CODEX_HARNESS_PROFILES)) {
-    const identity = profileIdentity(profile),
-      socketPath = operatorPath(profile.socketPath);
     profiles.push({
-      ...identity,
+      ...profileIdentity(profile),
       kind: "codex",
       deployment: "local",
       conversationOnly: true,
-      factory: {
-        create: async (_runtime, { cwd }) => {
-          let shuttingDown = false;
-          const isolated = createCodexDriver({
-            connection: { mode: "shared", socketPath },
-            defaultCwd: cwd,
-            version: "1",
-            isShuttingDown: () => shuttingDown,
-          });
-          return new CodexHarnessAgent(isolated, () => {
-            shuttingDown = true;
-            isolated.cancelRestart();
-            isolated.stop();
-          });
-        },
-      },
+      factory: codexSocketFactory(operatorSocketPath(profile.socketPath)),
     });
   }
   for (const profile of profileEntries(env.PANDA_FORCE_ZCODE_HARNESS_PROFILES)) {
@@ -98,18 +143,7 @@ export function harnessProfiles(
       command = operatorPath(profile.command),
       builtinConfig = operatorPath(profile.builtinConfig),
       providerConfig = operatorPath(profile.providerConfig);
-    const { providerId, model, efforts, defaultEffort } = profile;
-    if (typeof providerId !== "string" || !providerId.trim() || typeof model !== "string" || !model.trim())
-      throw new HarnessError("invalidInput");
-    if (
-      (efforts !== undefined &&
-        (!Array.isArray(efforts) ||
-          efforts.length > 16 ||
-          !efforts.every((value) => typeof value === "string" && value.trim()))) ||
-      (defaultEffort !== undefined &&
-        (typeof defaultEffort !== "string" || !Array.isArray(efforts) || !efforts.includes(defaultEffort)))
-    )
-      throw new HarnessError("invalidInput");
+    const selection = zcodeSelection(profile);
     profiles.push({
       ...identity,
       kind: "zcode",
@@ -135,10 +169,7 @@ export function harnessProfiles(
             command,
             cwd,
             env: nativeEnv,
-            providerId,
-            model,
-            efforts,
-            defaultEffort,
+            ...selection,
             cleanup: async () => {
               if (/^(catalog|ping|probe)-/.test(scopeId)) await rm(home, { recursive: true, force: true });
             },
@@ -177,6 +208,75 @@ export function harnessProfiles(
         },
       },
     });
+  }
+  for (const profile of profileEntries(env.PANDA_FORCE_CLAUDE_CODE_HARNESS_PROFILES)) {
+    const identity = profileIdentity(profile),
+      command = operatorPath(profile.command),
+      claudeCommand = operatorPath(profile.claudeCommand),
+      accountHome = resolve(operatorPath(profile.accountHome));
+    const deployment = profile.deployment ?? "local";
+    if (deployment !== "local" && deployment !== "container") throw new HarnessError("invalidInput");
+    profiles.push({
+      ...identity,
+      kind: "claude-code",
+      deployment,
+      conversationOnly: true,
+      factory: {
+        create: async (_runtime, { cwd }) => {
+          const account = await stat(accountHome).catch(() => null);
+          if (!account) throw new HarnessError("unavailable", 503);
+          if (
+            !account.isDirectory() ||
+            (account.mode & 0o077) !== 0 ||
+            (process.getuid && account.uid !== process.getuid()) ||
+            (await realpath(accountHome)) !== accountHome
+          )
+            throw new HarnessError("forbidden", 403);
+          const nativeEnv: NodeJS.ProcessEnv = {
+            HOME: accountHome,
+            CLAUDE_CONFIG_DIR: join(accountHome, ".claude"),
+            CLAUDE_CODE_EXECUTABLE: claudeCommand,
+            CLAUDE_AGENT_ACP_PROTOCOL: "v1",
+            DISABLE_AUTOUPDATER: "1",
+          };
+          for (const key of ["PATH", "LANG", "LC_ALL", "SSL_CERT_FILE", "SSL_CERT_DIR"])
+            if (env[key]) nativeEnv[key] = env[key];
+          return claudeAgent({ command, cwd, env: nativeEnv });
+        },
+      },
+    });
+  }
+  for (const profile of profileEntries(env.PANDA_FORCE_HOST_HARNESS_PROFILES)) {
+    const { kind } = profile;
+    const socketPath = operatorSocketPath(profile.socketPath);
+    let factory: HarnessProfile["factory"];
+    switch (kind) {
+      case "codex":
+        factory = codexSocketFactory(socketPath);
+        break;
+      case "grok-build":
+        factory = { create: async (_runtime, { cwd }) => new GrokHarnessAgent({ socketPath, cwd }) };
+        break;
+      case "antigravity":
+        factory = {
+          create: async (_runtime, { cwd, permissionMode }) =>
+            new AntigravityHarnessAgent({ socketPath, cwd }, permissionMode),
+        };
+        break;
+      case "claude-code":
+        factory = { create: async (_runtime, { cwd }) => claudeAgent({ socketPath, cwd }) };
+        break;
+      case "zcode": {
+        const selection = zcodeSelection(profile);
+        factory = {
+          create: async (_runtime, { cwd }) => new ZCodeHarnessAgent({ socketPath, cwd, ...selection }),
+        };
+        break;
+      }
+      default:
+        throw new HarnessError("invalidInput");
+    }
+    profiles.push({ ...profileIdentity(profile), kind, deployment: "local", conversationOnly: true, factory });
   }
   let grok: GrokProfileConfig[] = [];
   if (env.PANDA_FORCE_HARNESS_PROFILES) {

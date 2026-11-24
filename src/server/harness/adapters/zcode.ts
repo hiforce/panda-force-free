@@ -39,12 +39,14 @@ export class ZCodeHarnessAgent implements HarnessAgent {
   private readonly approvals = new Map<string, { choices: Map<string, string>; finish(decision: string): void }>();
 
   constructor(
-    private readonly options: Pick<HarnessStdioOptions, "command" | "cwd" | "env"> & {
+    private readonly options: (
+      Pick<HarnessStdioOptions, "command" | "cwd" | "env"> | { socketPath: string; cwd: string }
+    ) & {
       providerId: string;
       model: string;
       efforts?: string[];
       defaultEffort?: string;
-      cleanup(): Promise<void>;
+      cleanup?(): Promise<void>;
     },
   ) {
     this.info = {
@@ -72,8 +74,7 @@ export class ZCodeHarnessAgent implements HarnessAgent {
       commands: [],
     };
     this.transport = new HarnessStdioTransport({
-      ...options,
-      args: ["app-server", "--stdio"],
+      ...("socketPath" in options ? options : { ...options, args: ["app-server", "--stdio"] }),
       protocol: "zcode",
       onNotification: (method, params) => this.notification(method, params),
       onRequest: (method, params) => this.request(method, params),
@@ -283,7 +284,7 @@ export class ZCodeHarnessAgent implements HarnessAgent {
       try {
         await this.transport.close();
       } finally {
-        await this.options.cleanup();
+        await this.options.cleanup?.();
       }
     })());
   }
