@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hiforce/panda-force-free/tags"><img src="https://img.shields.io/github/v/tag/hiforce/panda-force-free?sort=semver&amp;label=Release" alt="Latest version tag" /></a>
+  <a href="https://github.com/hiforce/panda-force-free/releases/tag/v0.1.11"><img src="./panda-docs/static/img/readme-release-v0.1.11.svg" width="105" height="20" alt="Release v0.1.11" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/hiforce/panda-force-free?label=License" alt="MIT license" /></a>
   <a href="./src"><img src="https://img.shields.io/badge/TypeScript%20%2B%20JS-3178C6?logo=typescript&amp;logoColor=white" alt="Languages: TypeScript and JavaScript" /></a>
   <a href="https://hub.docker.com/r/hiforceai/panda-force/tags"><img src="https://img.shields.io/badge/Docker-Linux%20amd64-2496ED?logo=docker&amp;logoColor=white" alt="Docker Hub image for Linux amd64" /></a>
@@ -14,7 +14,7 @@ PandaForce is an open-source, self-hosted web workspace for **Codex**, **ZCode**
 
 **Works in desktop and mobile browsers.** Use HTTPS and sign in to your own instance to pick up your work wherever you have a connection.
 
-[Install with Docker Compose](#install-0110) · [Set up Harness runtimes](./panda-docs/docs/harness-runtimes.md) · [Secure remote access](./panda-docs/docs/security.md) · [简体中文](./README-zh.md)
+[Install with Docker Compose](#install-0111) · [Set up Harness runtimes](./panda-docs/docs/harness-runtimes.md) · [Secure remote access](./panda-docs/docs/security.md) · [简体中文](./README-zh.md)
 
 ![PandaForce desktop conversation demo showing a request to add search to Trail Notes, the test command, and the Codex reply.](./panda-docs/static/img/conversation-en.webp)
 

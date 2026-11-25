@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hiforce/panda-force-free/tags"><img src="https://img.shields.io/github/v/tag/hiforce/panda-force-free?sort=semver&amp;label=Release" alt="最新版本标签" /></a>
+  <a href="https://github.com/hiforce/panda-force-free/releases/tag/v0.1.11"><img src="./panda-docs/static/img/readme-release-v0.1.11.svg" width="105" height="20" alt="发行版 v0.1.11" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/hiforce/panda-force-free?label=License" alt="MIT 许可证" /></a>
   <a href="./src"><img src="https://img.shields.io/badge/TypeScript%20%2B%20JS-3178C6?logo=typescript&amp;logoColor=white" alt="开发语言：TypeScript 和 JavaScript" /></a>
   <a href="https://hub.docker.com/r/hiforceai/panda-force/tags"><img src="https://img.shields.io/badge/Docker-Linux%20amd64-2496ED?logo=docker&amp;logoColor=white" alt="Docker Hub 镜像，支持 Linux amd64" /></a>
@@ -14,7 +14,7 @@ PandaForce 是一个可自行部署的开源 Web 工作台，支持 **Codex**、
 
 **支持电脑和手机浏览器。** 通过 HTTPS 访问自己的实例并登录账号，有网络时就能随时随地继续工作。
 
-[Docker Compose 安装](#安装-0110) · [配置 Harness 运行实例](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md) · [远程访问与安全](./panda-docs/docs/security.md) · [English](./README.md)
+[Docker Compose 安装](#安装-0111) · [配置 Harness 运行实例](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md) · [远程访问与安全](./panda-docs/docs/security.md) · [English](./README.md)
 
 ![PandaForce 桌面对话演示。用户请 Codex 为徒步笔记添加搜索，界面显示测试命令和代理回复。](./panda-docs/static/img/conversation-zh-CN.webp)
 

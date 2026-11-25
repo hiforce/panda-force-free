@@ -137,14 +137,14 @@
     },
     {
       "path": "README-zh.md",
-      "bytes": 19807,
-      "sha256": "15553533660366a87ffabcf21723999b48170a486cf745c286bb82a5852223cd",
+      "bytes": 19806,
+      "sha256": "649120e54985ed426cc1b1e8eb9a8fbc3ac6ba4a236f12ca8471d7d991441660",
       "mode": "100644"
     },
     {
       "path": "README.md",
-      "bytes": 20279,
-      "sha256": "d1e74fd62cd03a99b5c176ca06b02d94554f7d7abf03614cb18848831249762d",
+      "bytes": 20276,
+      "sha256": "14cbcef9ae816fe4aff61613034635ed1fff2efbd3a6761dcc342c2745f6814f",
       "mode": "100644"
     },
     {
@@ -874,6 +874,12 @@
       "mode": "100644"
     },
     {
+      "path": "panda-docs/static/img/readme-release-v0.1.11.svg",
+      "bytes": 568,
+      "sha256": "537cf0c4a89ce0ddc2b885115c6adc11ba431f3c812796fb18d1e4f251975c50",
+      "mode": "100644"
+    },
+    {
       "path": "panda-docs/static/img/skills-en.webp",
       "bytes": 125100,
       "sha256": "1a78db1fcda0a6fa673003f702b99f9eb6c63a7ed094dae7db8c0b8592a55fc8",
@@ -1595,14 +1601,14 @@
     },
     {
       "path": "release/community/README-zh.md",
-      "bytes": 19807,
-      "sha256": "15553533660366a87ffabcf21723999b48170a486cf745c286bb82a5852223cd",
+      "bytes": 19806,
+      "sha256": "649120e54985ed426cc1b1e8eb9a8fbc3ac6ba4a236f12ca8471d7d991441660",
       "mode": "100644"
     },
     {
       "path": "release/community/README.md",
-      "bytes": 20279,
-      "sha256": "d1e74fd62cd03a99b5c176ca06b02d94554f7d7abf03614cb18848831249762d",
+      "bytes": 20276,
+      "sha256": "14cbcef9ae816fe4aff61613034635ed1fff2efbd3a6761dcc342c2745f6814f",
       "mode": "100644"
     },
     {
@@ -1637,8 +1643,8 @@
     },
     {
       "path": "release/community/public-files.json",
-      "bytes": 182057,
-      "sha256": "359dbceea578de7a6b8c4933476a86a5b345b39f7bfcd1279f07b2d1b31ed152",
+      "bytes": 182111,
+      "sha256": "dcbedfb27fe3aa36133b6ccb77ab4f9e9290ca83150ab5e7eaa40cd9d2a78256",
       "mode": "100644"
     },
     {
@@ -23854,5 +23860,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "8751327e8b9c938fe7f2d5df9efde100f71278eabb6248bfc781572bdf2adf06"
+  "contentSha256": "38383402f43d728d2f5b679ea77156708c314c521055149771f028cc2e3b06b2"
 }
