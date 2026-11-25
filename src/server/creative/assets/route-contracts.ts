@@ -9,7 +9,13 @@ export interface CreativeAssetRouteServices {
   write(owner: string, project: string): Promise<FileCreativeAssets>;
   canWrite?(owner: string, project: string): boolean | Promise<boolean>;
   capabilities?(owner: string, project: string): Promise<{ contribute: boolean; originals?: boolean }>;
-  list?(owner: string, project: string, cursor?: string, state?: CreativeAsset["state"]): Promise<CreativeAssetPage>;
+  list?(
+    owner: string,
+    project: string,
+    cursor?: string,
+    state?: CreativeAsset["state"],
+    kind?: CreativeAsset["kind"],
+  ): Promise<CreativeAssetPage>;
 }
 export type CreativeAssetRouteProtection = (
   handler: (context: RouteContext, signal: AbortSignal) => unknown | Promise<unknown>,

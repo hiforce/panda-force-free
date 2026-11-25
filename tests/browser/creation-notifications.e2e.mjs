@@ -133,7 +133,7 @@ for (const kind of ["document", "image"]) {
           assert.equal(route.searchParams.get("project"), saved.artifact.projectId);
           assert.equal(route.searchParams.get("document"), saved.artifact.documentId);
         } else {
-          const viewer = page.locator("#notificationDeliveryViewer:visible");
+          const viewer = page.locator("[data-personal-reader]:visible");
           await viewer.locator("a[download]").first().waitFor();
           const image = viewer.locator("img[data-asset-native]");
           await waitFor(() =>

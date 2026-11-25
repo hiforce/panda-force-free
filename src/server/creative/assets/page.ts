@@ -20,6 +20,7 @@ export async function creativePage(
   project: string,
   cursor?: string,
   state: CreativeAsset["state"] = "saved",
+  kind?: CreativeAsset["kind"],
 ) {
   const entries = creativeEntries(view),
     head = creativeDigest(JSON.stringify(entries));
@@ -34,10 +35,11 @@ export async function creativePage(
     }
     if (
       !Array.isArray(decoded) ||
-      decoded.length !== 4 ||
+      decoded.length !== (kind ? 5 : 4) ||
       decoded[0] !== project ||
       decoded[1] !== head ||
       decoded[3] !== state ||
+      decoded[4] !== kind ||
       Buffer.from(JSON.stringify(decoded)).toString("base64url") !== cursor
     )
       throw new ProjectContentError("conflict");
@@ -45,17 +47,21 @@ export async function creativePage(
     if (found < 0) throw new ProjectContentError("conflict");
     offset = found + 1;
   }
-  const selected = entries.slice(offset, offset + limits.page),
+  const end = Math.min(entries.length, offset + limits.page * (kind ? 4 : 1)),
     assets: CreativeAsset[] = [];
-  for (const row of selected) {
+  while (offset < end && assets.length < limits.page) {
+    const row = entries[offset++]!;
     const asset = await creativeMetadata(view, project, row.id, true);
-    if (asset.state === state || (state === "trashed" && asset.state === "purging")) assets.push(asset);
+    if ((!kind || asset.kind === kind) && (asset.state === state || (state === "trashed" && asset.state === "purging")))
+      assets.push(asset);
   }
   return {
     assets,
     nextCursor:
-      offset + selected.length < entries.length
-        ? Buffer.from(JSON.stringify([project, head, selected.at(-1)!.id, state])).toString("base64url")
+      offset < entries.length
+        ? Buffer.from(
+            JSON.stringify([project, head, entries[offset - 1]!.id, state, ...(kind ? [kind] : [])]),
+          ).toString("base64url")
         : null,
   };
 }

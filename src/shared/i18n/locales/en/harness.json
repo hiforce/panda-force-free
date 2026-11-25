@@ -12,6 +12,12 @@
   "save": "Save runtime",
   "back": "All runtimes",
   "enabled": "Enabled",
+  "botEnabled": "Allow Bots to use this runtime",
+  "botUnsupported": "This adapter currently supports conversations only.",
+  "remove": "Delete runtime",
+  "removeConfirm": "Delete {name}? Existing conversations and Bots keep their history. Choose another runtime to continue using them.",
+  "removed": "Runtime deleted.",
+  "removeDefaultHint": "Set another runtime as the default before deleting this one.",
   "makeDefault": "Use as default for new chats",
   "inheritedWorkspace": "Uses the working directory selected in PandaForce.",
   "connectionHint": "Select a runtime first, then configure its model and connection.",
@@ -81,5 +87,5 @@
   "selectionHint": "Choose a runtime first, then its model and reasoning level. Applies to the next message or task.",
   "selectionUnavailable": "The saved selection is unavailable. It is preserved until you change it.",
   "selectionError": "This runtime, model or reasoning level is unavailable. Check your selection and retry.",
-  "mediaHint": "Image and video generation use the configured media renderers."
+  "mediaHint": "Creation uses the selected runtime. PandaForce saves finished files returned by that runtime."
 }

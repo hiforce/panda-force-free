@@ -13,6 +13,7 @@ export interface CreationRendering {
     task: CreationTaskSpec;
     input: CreationInputSnapshot;
     signal: AbortSignal;
+    readNativeFile?(filename: string): Promise<Buffer>;
     execution(call: ApplicationToolCall): CreationExecution;
     active(call: ApplicationToolCall): Promise<void>;
     assert(call: ApplicationToolCall): Promise<CreationExecution>;

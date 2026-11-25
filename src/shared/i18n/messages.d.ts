@@ -1704,7 +1704,10 @@ export interface MessageParameters {
   "creation.progressFailed": {  };
   "creation.progressFindDestination": {  };
   "creation.progressFindDirectory": {  };
+  "creation.progressImportArtifact": {  };
   "creation.progressMessage": {  };
+  "creation.progressNativeWork": {  };
+  "creation.progressNativeWrite": {  };
   "creation.progressPreparing": {  };
   "creation.progressReadContext": {  };
   "creation.progressReadGoal": {  };
@@ -1775,7 +1778,11 @@ export interface MessageParameters {
   "creation.unavailable": {  };
   "creation.unavailableSkill": {  };
   "creation.unsupportedSkill": {  };
+  "creation.updateClosed": {  };
+  "creation.updateHint": {  };
+  "creation.updateTask": {  };
   "creation.useSkill": {  };
+  "creation.useUpdateNextRound": {  };
   "creation.videoDocumentOnly": {  };
   "creation.viewAll": {  };
   "creation.viewBrief": {  };
@@ -1822,6 +1829,7 @@ export interface MessageParameters {
   "creative.assetLoadMore": {  };
   "creative.assetMoreAvailable": {  };
   "creative.assetNativeHint": {  };
+  "creative.assetNextSlide": {  };
   "creative.assetNoMatches": {  };
   "creative.assetNoText": {  };
   "creative.assetOpenFailed": {  };
@@ -1832,6 +1840,7 @@ export interface MessageParameters {
   "creative.assetPreviewFailed": {  };
   "creative.assetPreviewTruncated": {  };
   "creative.assetPreviewUnavailable": {  };
+  "creative.assetPreviousSlide": {  };
   "creative.assetPurgeCheck": {  };
   "creative.assetPurgeComplete": {  };
   "creative.assetPurgeFailed": {  };
@@ -1840,13 +1849,15 @@ export interface MessageParameters {
   "creative.assetPurging": {  };
   "creative.assetReadableText": {  };
   "creative.assetRefreshNeeded": {  };
+  "creative.assetRenderingSlides": {  };
   "creative.assetReplace": {  };
   "creative.assetRestore": {  };
   "creative.assetRetryCover": {  };
   "creative.assetSaveVersion": {  };
   "creative.assetSearchLoaded": {  };
   "creative.assetSlide": { "index": number };
-  "creative.assetSlideHint": {  };
+  "creative.assetSlidePosition": { "index": number; "total": number };
+  "creative.assetSlideRenderFailed": {  };
   "creative.assetStaticHint": {  };
   "creative.assetStaticPreview": {  };
   "creative.assetTitle": {  };
@@ -1864,6 +1875,7 @@ export interface MessageParameters {
   "creative.channelLayoutHint": {  };
   "creative.channelTemplates": {  };
   "creative.chooseProject": {  };
+  "creative.closeContent": {  };
   "creative.connected": {  };
   "creative.connections": {  };
   "creative.content": {  };
@@ -1881,11 +1893,13 @@ export interface MessageParameters {
   "creative.document": {  };
   "creative.documentOnlyProject": {  };
   "creative.empty": {  };
+  "creative.emptyCategory": {  };
   "creative.extensions": {  };
   "creative.file": {  };
   "creative.formats": {  };
   "creative.history": {  };
   "creative.image": {  };
+  "creative.libraryCategories": {  };
   "creative.manage": {  };
   "creative.myWork": {  };
   "creative.new": {  };
@@ -1895,6 +1909,7 @@ export interface MessageParameters {
   "creative.objectsHint": {  };
   "creative.open": {  };
   "creative.openDocuments": {  };
+  "creative.otherFiles": {  };
   "creative.partialError": {  };
   "creative.pendingCreation": {  };
   "creative.personal": {  };
@@ -1906,6 +1921,7 @@ export interface MessageParameters {
   "creative.promptHint": {  };
   "creative.publish": {  };
   "creative.recent": {  };
+  "creative.recycleBin": {  };
   "creative.rednote": {  };
   "creative.rednoteHint": {  };
   "creative.research": {  };
@@ -1913,6 +1929,8 @@ export interface MessageParameters {
   "creative.saved": {  };
   "creative.search": {  };
   "creative.selectProjects": {  };
+  "creative.showWorksCards": {  };
+  "creative.showWorksList": {  };
   "creative.site": {  };
   "creative.siteSkills": {  };
   "creative.siteThemeHint": {  };
@@ -2727,6 +2745,8 @@ export interface MessageParameters {
   "harness.authentication": {  };
   "harness.automatic": {  };
   "harness.back": {  };
+  "harness.botEnabled": {  };
+  "harness.botUnsupported": {  };
   "harness.cancel": {  };
   "harness.checking": {  };
   "harness.connecting": {  };
@@ -2789,6 +2809,10 @@ export interface MessageParameters {
   "harness.profile": {  };
   "harness.ready": {  };
   "harness.recover": {  };
+  "harness.remove": {  };
+  "harness.removeConfirm": { "name": string };
+  "harness.removed": {  };
+  "harness.removeDefaultHint": {  };
   "harness.responding": {  };
   "harness.save": {  };
   "harness.saved": {  };

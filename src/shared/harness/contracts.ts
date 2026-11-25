@@ -22,6 +22,8 @@ export interface HarnessRuntime {
   kind: HarnessKind;
   profileId: string;
   enabled: boolean;
+  botEnabled?: boolean;
+  archivedAt?: number;
   revision: number;
   defaultModel: string | null;
   defaultEffort: string | null;
@@ -49,6 +51,7 @@ export interface HarnessCapabilities {
   imageGeneration: "unknown" | "verified";
 }
 export interface HarnessRuntimeView extends HarnessRuntime {
+  botSupported?: boolean;
   deployment: HarnessDeployment;
   status: HarnessStatus;
   isDefault: boolean;

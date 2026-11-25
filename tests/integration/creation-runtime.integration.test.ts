@@ -135,17 +135,38 @@ test("a creation can clarify, answer a follow-up without saving, then revise the
         });
       expect(input.tools.some((tool) => tool.name === "panda_creation_turn")).toBe(true);
       if (input.prompt.startsWith("Why")) {
-        await expect(f.save(callbacks, scope, "This write must be blocked.")).rejects.toThrow("conflict");
+        const blocked = await f.save(callbacks, scope, "This write must be blocked.");
+        expect(blocked.success).toBe(false);
+        expect(JSON.parse(blocked.text)).toMatchObject({ error: "deliveryRequired" });
         await turn("reply", "The first draft used the classification from its brief.");
       } else {
         if (input.prompt.startsWith("Prepare")) {
           const answer = await turn("clarify", "Who will read it?");
-          expect(answer.text).toContain("Students");
+          const clarified = JSON.parse(answer.text);
+          expect(Object.values(clarified.answers)).toEqual([{ answers: ["Students"] }]);
+          expect(clarified.next).toContain('{"action":"deliver"}');
+          const blocked = await f.save(callbacks, scope, "Must not be saved before delivery is selected.");
+          expect(blocked.success).toBe(false);
+          expect(JSON.parse(blocked.text)).toMatchObject({ error: "deliveryRequired", retryable: true });
+          expect(JSON.parse(blocked.text).action).toContain('{"action":"deliver"}');
+          expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(0);
         } else {
           expect(input.prompt).toContain("The first draft used the classification from its brief.");
         }
         await turn("deliver");
-        await f.save(callbacks, scope, input.prompt.startsWith("Prepare") ? "Original" : "Revised");
+        expect(
+          (
+            await callbacks.call({
+              ...scope,
+              callId: randomUUID(),
+              name: "panda_creation_context",
+              arguments: {},
+            })
+          ).success,
+        ).toBe(true);
+        expect(
+          (await f.save(callbacks, scope, input.prompt.startsWith("Prepare") ? "Original" : "Revised")).success,
+        ).toBe(true);
       }
     });
     const { body } = await f.files.call("/api/document-creations/options");
@@ -160,6 +181,7 @@ test("a creation can clarify, answer a follow-up without saving, then revise the
       profileId: "codex",
       selections: [body.defaultWorkflow],
       dialogue: true,
+      outputType: "auto",
     });
     expect(start.status).toBe(202);
     const pending = await f.until(first, (task) => !!task.question);

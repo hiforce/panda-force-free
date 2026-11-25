@@ -1,4 +1,8 @@
-import type { CreationRequest } from "../../shared/creation/contracts.js";
+import {
+  creationUpdateGeneration,
+  type CreationRequest,
+  type CreationSkillSelection,
+} from "../../shared/creation/contracts.js";
 import { defaultCreationOutput } from "../../shared/creation/default-output.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import type { CreationSessionDomain, SessionControlView } from "../contracts/session-workspace.js";
@@ -7,6 +11,7 @@ import { storage } from "../storage.js";
 import { CreationApiError, creationApiFor } from "./api.js";
 import type { CreationWorkspaceBridge } from "./session-port.js";
 import type { CreationSessionState } from "./session-state.js";
+import { creationCanUpdate } from "./state.js";
 
 export interface CommandPorts {
   t: Translate;
@@ -71,7 +76,7 @@ export class CreationSessionCommands {
       if (
         request.prompt !== prompt ||
         JSON.stringify(request.attachments) !== JSON.stringify(attachments) ||
-        JSON.stringify(request.selections) !== JSON.stringify(input.selections)
+        JSON.stringify(request.selections ?? []) !== JSON.stringify(input.selections)
       ) {
         this.port.renderPending();
         throw new Error(this.port.t("creation.pendingSubmission"));
@@ -79,11 +84,18 @@ export class CreationSessionCommands {
     }
     await this.whileSending(route.key, async () => {
       if (!this.state.pending) {
+        const update = this.state.updateTarget,
+          task = this.state.task;
+        if (
+          update &&
+          (!creationCanUpdate(task) || task?.id !== update.id || creationUpdateGeneration(task) !== update.generation)
+        )
+          throw new Error(this.port.t("creation.updateClosed"));
         const control = this.port.controls(),
           id = crypto.randomUUID(),
           locale = document.documentElement.lang || "en";
         const [runtimeId, target] = await Promise.all([
-          control.runtimeId || this.defaultRuntime(),
+          update ? undefined : control.runtimeId || this.defaultRuntime(),
           route.id
             ? this.state.task?.artifact && this.state.task.state === "succeeded"
               ? this.port
@@ -101,15 +113,20 @@ export class CreationSessionCommands {
         if (epoch !== this.state.epoch) return;
         this.state.pending = {
           id,
+          taskId: update?.id || task?.id || route.id || undefined,
           request: {
             id,
             prompt,
-            selections: [...input.selections],
+            ...(!update || input.selections.length ? { selections: [...input.selections] } : {}),
             attachments,
             dialogue: true,
-            ...(runtimeId ? { runtimeId } : {}),
-            ...(control.model ? { model: control.model } : {}),
-            ...(control.effort ? { effort: control.effort } : {}),
+            ...(update
+              ? { updateGeneration: update.generation }
+              : {
+                  ...(runtimeId ? { runtimeId } : {}),
+                  ...(control.model ? { model: control.model } : {}),
+                  ...(control.effort ? { effort: control.effort } : {}),
+                }),
             ...target,
           },
         };
@@ -153,19 +170,21 @@ export class CreationSessionCommands {
       const request = { ...pending.request, id: pending.id };
       if ("runtimeId" in request && request.runtimeId === "") Reflect.deleteProperty(request, "runtimeId");
       const result = route.id
-        ? await api.message(this.state.task?.id || route.id, request)
+        ? await api.message(pending.taskId || this.state.task?.id || route.id, request)
         : await api.submit(request as CreationRequest);
+      const sameRound = route.id && (result.task.id === route.id || result.task.id === pending.taskId);
       clearPending();
       if (epoch === this.state.epoch && this.state.pending?.id === pending.id) this.state.pending = undefined;
       const materials = (pending.request.attachments || []) as readonly { materialId: string }[];
       this.port.bridge.accepted(
         route.key,
-        `creation:${route.scope}:${result.task.id}`,
+        sameRound ? route.key : `creation:${route.scope}:${result.task.id}`,
         String(pending.request.prompt),
         materials.map((entry) => entry.materialId),
+        pending.request.selections as readonly CreationSkillSelection[] | undefined,
       );
       if (epoch !== this.state.epoch) return;
-      if (result.task.id === route.id) void this.port.refresh();
+      if (sameRound) void this.port.refresh();
       else this.port.navigate("/creation/" + encodeURIComponent(result.task.id) + "?creationScope=" + route.scope);
     } catch (error) {
       if (
@@ -177,6 +196,7 @@ export class CreationSessionCommands {
         clearPending();
         if (epoch === this.state.epoch && this.state.pending?.id === pending.id) this.state.pending = undefined;
         if (this.destination?.epoch === epoch) this.destination = undefined;
+        if (epoch === this.state.epoch && error.status === 409) void this.port.refresh();
       }
       throw error;
     }

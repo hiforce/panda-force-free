@@ -32,7 +32,15 @@ export function createBotWorkspaceFeature(options: {
     service = new BotChatService(
       options.store,
       options.chatContext,
-      options.runtimes ? (owner, bot) => options.runtimes!.resolve(owner, bot) : undefined,
+      options.runtimes
+        ? async (owner, bot) => {
+            try {
+              return await options.runtimes!.resolve(owner, bot, "bots");
+            } catch {
+              throw new BotError("runtimeSelectionUnavailable", 409);
+            }
+          }
+        : undefined,
     ),
     worker = new BotChatWorker(
       options.store,

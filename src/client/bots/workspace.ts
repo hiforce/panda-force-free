@@ -81,6 +81,7 @@ export function createBotWorkspace(t: Translate) {
           botBusy: "cli.botAssistantBusy",
           chatBusy: "bots.chatBusy",
           chatContextUnavailable: "bots.chatContextUnavailable",
+          runtimeSelectionUnavailable: "bots.runtimeSelectionUnavailable",
           staleConversation: "bots.staleConversation",
           idempotencyConflict: "bots.idempotencyConflict",
           invalidInput: "bots.invalidInput",

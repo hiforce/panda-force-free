@@ -1,4 +1,4 @@
-import type { Translate } from "../../../shared/i18n/messages.js";
+import type { MessageId, Translate } from "../../../shared/i18n/messages.js";
 import { setMessageHtml, messageHtml } from "../../i18n.js";
 import { escapeHtml } from "../../../shared/html.js";
 
@@ -16,7 +16,7 @@ export class AuthoringHeader {
     this.breadcrumb = this.root.querySelector("#authoringBreadcrumb");
     this.refresh = this.root.querySelector('[data-authoring-action="refresh-tree"]');
   }
-  update(path: string[], mobile: boolean) {
+  update(path: string[], mobile: boolean, rootLabel: MessageId = "documents.rootFolder") {
     const context = this.root.querySelector(".document-authoring-context"),
       slot = this.root.querySelector(".document-editor-breadcrumb-slot"),
       utilities = this.root.querySelector(".authoring-directory-utilities");
@@ -27,8 +27,7 @@ export class AuthoringHeader {
       if (key !== this.pathKey) {
         setMessageHtml(
           this.breadcrumb,
-          messageHtml("documents.rootFolder", undefined, this.t) +
-            (path.length ? " / " + path.map(escapeHtml).join(" / ") : ""),
+          messageHtml(rootLabel, undefined, this.t) + (path.length ? " / " + path.map(escapeHtml).join(" / ") : ""),
         );
         this.breadcrumb.title = path.join(" / ");
         this.pathKey = key;

@@ -11,6 +11,7 @@ import {
   type CreativeByteSelection,
 } from "./inline.js";
 import { CreativeAssetCovers } from "./covers.js";
+import { CreativeSlidePreviews } from "./slide-previews.js";
 import type { Route, RouteContext } from "../../http/router.js";
 import { readJsonBody } from "../../http/body.js";
 import { respondJson } from "../../http/respond.js";
@@ -21,14 +22,15 @@ import { fileChoice, fileDigest, fileRecord, fileText } from "../../project-cont
 import { projectContentId } from "../../project-content/paths.js";
 import { ProjectContentError } from "../../project-content/errors.js";
 import { CREATIVE_ASSET_LIMITS as limits } from "../../../shared/creative/assets.js";
-import { creativeAssetId } from "./codec.js";
+import { creativeAssetId, creativeDigest } from "./codec.js";
 import type { CreativeAssetRouteServices } from "./route-contracts.js";
 import { creativeWebBundleRoutes } from "./web-bundle-routes.js";
 
 /** Root selection is an application authorization decision, never a path, package type or client-supplied owner. */
 export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[] {
   const slots = new CreativeAssetSlots(),
-    covers = new CreativeAssetCovers();
+    slidePreviews = new CreativeSlidePreviews(),
+    covers = new CreativeAssetCovers(slidePreviews);
   const protect = (
     handler: (context: RouteContext, signal: AbortSignal) => unknown | Promise<unknown>,
     heavy = false,
@@ -114,13 +116,16 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
           ? fileChoice(ctx.url.searchParams.get("state"), ["saved", "trashed"])
           : "saved";
         const owner = options.owner(ctx),
-          cursor = ctx.url.searchParams.get("cursor") ?? undefined;
+          cursor = ctx.url.searchParams.get("cursor") ?? undefined,
+          kind = ctx.url.searchParams.has("kind")
+            ? fileChoice(ctx.url.searchParams.get("kind"), CREATIVE_ASSET_KINDS)
+            : undefined;
         respondJson(
           ctx.res,
           200,
           options.list
-            ? await options.list(owner, project, cursor, state)
-            : await (await options.read(owner, project)).list(project, cursor, state),
+            ? await options.list(owner, project, cursor, state, kind)
+            : await (await options.read(owner, project)).list(project, cursor, state, kind),
         );
       }),
     },
@@ -250,6 +255,23 @@ export function creativeAssetRoutes(options: CreativeAssetRouteServices): Route[
           value.resource.digest,
           selection!,
         );
+      }, true),
+    },
+    {
+      path: "/api/creative-assets/slide-preview",
+      method: "GET",
+      handler: protect(async (ctx, signal) => {
+        const query = ctx.url.searchParams;
+        const index = query.get("page");
+        if (!index || !/^[1-9][0-9]{0,2}$/.test(index)) throw new DocumentError("invalidInput");
+        const owner = options.owner(ctx),
+          project = projectContentId(query.get("project")),
+          id = creativeAssetId(query.get("id")),
+          version = fileDigest(query.get("version")),
+          service = await options.read(owner, project),
+          slide = await slidePreviews.read(owner, service, project, id, version, Number(index), signal);
+        ctx.res.setHeader("x-panda-slide-count", slide.pages);
+        respondCreativeInline(ctx, slide.bytes, "image/png", "slide-" + index + ".png", creativeDigest(slide.bytes));
       }, true),
     },
     {

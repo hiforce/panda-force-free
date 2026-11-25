@@ -33,6 +33,7 @@ export interface CreationMessagePayload {
   prompt: string;
   profile: CreationEngineProfile;
   skills: SkillCapture | null;
+  inheritSkills?: true;
   materials: readonly CreationMaterial[];
 }
 

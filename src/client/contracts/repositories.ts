@@ -12,6 +12,7 @@ export interface ComposerDraft {
   mentions: readonly Suggestion[];
   attachments: readonly ComposerAttachment[];
   skills?: readonly import("../../shared/creation/contracts.js").CreationSkillSelection[];
+  creationSkillsVersion?: 1;
 }
 export interface HistoryEntry {
   text: string;

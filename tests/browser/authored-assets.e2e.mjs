@@ -54,7 +54,10 @@ try {
       page.on("pageerror", (e) => errors.push(e.message));
       const ready = async () => {
         await page.waitForFunction(
-          () => document.querySelector("[data-creative-grid]")?.getAttribute("aria-busy") === "false",
+          () =>
+            document
+              .querySelector("[data-creative-grid], [data-personal-files] .authoring-files")
+              ?.getAttribute("aria-busy") === "false",
         );
       };
       const snap = async (name) => {
@@ -62,11 +65,11 @@ try {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, name);
         await page.screenshot({ path: `${out}/${name}-${width}.png` });
       };
-      await page.goto(app.base + "/create?view=works");
+      await page.goto(app.base + "/create?view=works&category=web");
       await ready();
       const title = "Release plan " + width + " <V2>";
       const importFile = async (name, buffer, newTitle) => {
-        await page.locator("[data-creative-import]").click();
+        await page.locator('[data-file-action="import"]').click();
         const dialog = page.locator("dialog.creative-asset-dialog[open]");
         await dialog.waitFor();
         await dialog
@@ -86,29 +89,29 @@ try {
       };
       const saved = await importFile("launch.html", html(width), title);
       assert.equal(saved.kind, "web");
-      await page.locator(`[data-creative-asset="${saved.id}"]`).first().click();
-      let dialog = page.locator("dialog.creative-asset-dialog[open]");
-      await dialog.locator("[data-asset-frame]").waitFor();
-      assert.equal(await dialog.locator("header h2").innerText(), title);
-      assert.equal(await dialog.locator("[data-asset-frame]").getAttribute("sandbox"), "");
-      assert.equal(await dialog.frameLocator("[data-asset-frame]").locator("h1").innerText(), "Release plan " + width);
+      await page.locator(`[data-file-id="${saved.id}"]`).click();
+      const inline = page.locator("[data-personal-reader]");
+      const dialog = page.locator("dialog.creative-asset-dialog[open]");
+      await inline.locator("[data-asset-frame]").waitFor();
+      assert.equal(await inline.locator("[data-personal-reader-title]").innerText(), title);
+      assert.equal(await inline.locator("[data-asset-frame]").getAttribute("sandbox"), "");
+      assert.equal(await inline.frameLocator("[data-asset-frame]").locator("h1").innerText(), "Release plan " + width);
       assert.equal(await page.evaluate(() => window.__nativeAssetExecuted), undefined);
       assert.equal(outsideRequests, 0);
       await snap("web-preview");
       const download = page.waitForEvent("download");
-      await dialog.locator("a[download]").click();
+      await inline.locator("a[download]").click();
       const file = await download;
       assert.deepEqual(await readFile(await file.path()), html(width));
-      await dialog.locator("[data-asset-copy]").click();
-      dialog = page.locator("dialog.creative-asset-dialog[open]");
+      await inline.locator(".personal-asset-more > summary").click();
+      await inline.locator("[data-asset-copy]").click();
       await dialog.locator(`[name="project-${project}"]`).check();
       await dialog.locator("button[type=submit]").click();
       await dialog.waitFor({ state: "hidden" });
       const copied = (await api("/api/creative-assets?project=" + project)).assets.find((a) => a.title === title);
       assert.equal(copied.copiedFrom.version, saved.version);
-      await page.locator(`[data-creative-asset="${saved.id}"]`).first().click();
-      dialog = page.locator("dialog.creative-asset-dialog[open]");
-      await dialog.locator("[data-asset-replace]").click();
+      await inline.locator(".personal-asset-more > summary").click();
+      await inline.locator("[data-asset-replace]").click();
       await dialog
         .locator("[name=document-source]")
         .setInputFiles({ name: "launch.html", mimeType: "text/html", buffer: html(width, true) });
@@ -125,47 +128,50 @@ try {
       await page.goto(app.base + "/project?id=" + project);
       await ready();
       await page.locator(`[data-creative-asset="${copied.id}"]`).first().click();
-      dialog = page.locator("dialog.creative-asset-dialog[open]");
       await dialog.locator("[data-asset-frame]").waitFor();
       assert.equal(await dialog.frameLocator("[data-asset-frame]").locator("h1").innerText(), "Release plan " + width);
       await dialog.locator("[data-doc-close]").click();
       await snap("project");
-      await page.goto(app.base + "/create?view=works");
+      await page.goto(app.base + "/create?view=works&category=slides");
       await ready();
       const deck = officeFixture({ slides: 2 }).bytes(),
         slides = await importFile("architecture.pptx", Buffer.from(deck), "Architecture " + width);
       await snap("mixed");
-      await page.locator(`[data-creative-asset="${slides.id}"]`).first().click();
-      dialog = page.locator("dialog.creative-asset-dialog[open]");
-      await dialog.locator(".creative-asset-sections section").nth(1).waitFor();
-      assert.equal(await dialog.locator(".creative-asset-sections section").count(), 2);
-      assert.match(await dialog.locator(".creative-asset-sections").innerText(), /Hello world/);
+      await page.locator(`[data-file-id="${slides.id}"]`).click();
+      const slideText = inline.locator("[data-slide-text]");
+      if ((await slideText.getAttribute("open")) === null) await slideText.locator("summary").click();
+      await inline.locator(".creative-asset-sections section").nth(1).waitFor();
+      assert.equal(await inline.locator(".creative-asset-sections section").count(), 2);
+      assert.match(await inline.locator(".creative-asset-sections").innerText(), /Hello world/);
       await snap("slides");
       const deckDownload = page.waitForEvent("download");
-      await dialog.locator("a[download]").click();
+      await inline.locator("a[download]").click();
       assert.deepEqual(await readFile(await (await deckDownload).path()), Buffer.from(deck));
-      await dialog.locator("[data-asset-trash]").click();
+      await inline.locator(".personal-asset-more > summary").click();
+      await inline.locator("[data-asset-trash]").click();
       await dialog.locator("button[type=submit]").click();
       await dialog.waitFor({ state: "hidden" });
+      const choose = async (category) => {
+        if (width < 700) await page.locator('[data-personal-list] [data-authoring-action="directory"]').click();
+        await page.locator(`[data-personal-category="${category}"]`).click();
+      };
+      await choose("trash");
+      await page.locator('[data-personal-trash="files"]').click();
       await ready();
-      await page.locator("[data-creative-filter=trash]").click();
-      await ready();
-      await page.locator(`[data-creative-asset="${slides.id}"]`).first().waitFor();
+      await page.locator(`[data-file-id="${slides.id}"]`).waitFor();
       await snap("trash");
-      await page.locator(`[data-creative-asset="${slides.id}"]`).first().click();
-      dialog = page.locator("dialog.creative-asset-dialog[open]");
-      await dialog.locator("button[type=submit]").click();
+      await page.locator(`[data-file-id="${slides.id}"]`).click();
+      await dialog.locator("button[type=submit]:enabled").click();
       await dialog.waitFor({ state: "hidden" });
+      await choose("slides");
       await ready();
-      await page.locator("[data-creative-filter=slides]").click();
-      await ready();
-      await page.locator(`[data-creative-asset="${slides.id}"]`).first().waitFor();
-      assert.equal(await page.locator(".creative-card[data-creative-kind=web]").count(), 0);
+      await page.locator(`[data-file-id="${slides.id}"]`).waitFor();
+      assert.equal(await page.locator(`[data-file-id="${saved.id}"]`).count(), 0);
       const controls = await page
-        .locator(".creative-filters button,[data-creative-import]")
-        .evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().height));
+        .locator('[data-personal-category]:visible,[data-file-action="import"]')
+        .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height));
       assert.ok(
-        controls.every((h) => h >= (width < 768 ? 44 : 40)),
+        controls.every((height) => height >= (width < 700 ? 44 : 40)),
         JSON.stringify(controls),
       );
       if (width === 390) {

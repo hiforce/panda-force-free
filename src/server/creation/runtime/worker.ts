@@ -49,6 +49,7 @@ export class CreationWorker {
     const lease = { ...claim.lease },
       controller = new AbortController(),
       signal = controller.signal;
+    let nativeOutput: ((filename: string) => Promise<Buffer>) | undefined;
     let execution: CreationExecution | null = null,
       waiting = 0;
     let maintenance: Promise<void> | null = null;
@@ -71,8 +72,12 @@ export class CreationWorker {
         const value: CreationProgress = {
           ...identity,
           generation: lease.generation,
-          stage: event.kind === "message" ? "message" : "usage",
-          ...(event.kind === "message" ? { text: event.text, streaming: !event.complete } : { usage: event.usage }),
+          stage: event.kind,
+          ...(event.kind === "message"
+            ? { text: event.text, streaming: !event.complete, phase: event.phase }
+            : event.kind === "activity"
+              ? { operation: event.operation, status: event.status }
+              : { usage: event.usage }),
         };
         messages = messages.then(async () => {
           try {
@@ -128,6 +133,7 @@ export class CreationWorker {
       const input = await this.inputs.read(claim.task.spec),
         directory = await this.workspaces?.open(claim.task.spec),
         history = await this.questions.history(lease.owner, lease.taskId),
+        initialGoal = await this.goals?.read(lease.owner, lease.taskId),
         engine = this.engines.select(input.profile, lease.owner),
         dialogue = creationDialogue(input.dialogue === true),
         tools = documentCreationTools(
@@ -187,6 +193,10 @@ export class CreationWorker {
                 input,
                 signal,
                 execution: boundExecution,
+                readNativeFile: async (filename) => {
+                  if (!nativeOutput) throw new CreationError("unavailable");
+                  return nativeOutput(filename);
+                },
                 active,
                 assert: async (call) => {
                   await active(call);
@@ -221,6 +231,13 @@ export class CreationWorker {
         {
           signal,
           ...(directory ? { directory } : {}),
+          ...(media?.definitions.some(({ name }) => name === "panda_artifacts_import_file")
+            ? {
+                nativeFiles: (read: (filename: string) => Promise<Buffer>) => {
+                  nativeOutput = read;
+                },
+              }
+            : {}),
           started: async (scope) => {
             execution = await tools.started(scope);
             await record("started");
@@ -234,21 +251,24 @@ export class CreationWorker {
           event: (event) => {
             if (event.kind === "message" && dialogue.answer()) return;
             if (event.kind === "message") snapshotMessages = true;
-            snapshots.set(event.kind === "message" ? event.id : "usage", structuredClone(event));
+            snapshots.set(event.kind === "usage" ? "usage" : event.kind + ":" + event.id, structuredClone(event));
             if (event.kind === "message" && event.complete) return flushSnapshots();
             if (!snapshotTimer) snapshotTimer = setTimeout(() => void flushSnapshots(), 250);
           },
           control: (control) => {
-            let observedGoal = 0;
+            let observedGoal = initialGoal?.at ?? 0;
             if (!this.userMessages && !this.goals) return;
-            const deliver = async () => {
+            const deliver = async (scheduled: () => void) => {
               if (signal.aborted) return;
               const goal = await this.goals?.read(lease.owner, lease.taskId);
               if (goal && goal.at > observedGoal) {
                 observedGoal = goal.at;
-                await control.steer(
+                const sent = control.steer(
                   "The creation goal changed. Read panda_creation_context and apply its current goal before continuing or saving. A cleared goal removes that guidance without undoing the document or user requirements.",
                 );
+                scheduled();
+                await sent;
+                return;
               }
               if (!this.userMessages) return;
               const message = await this.userMessages.claim(lease);
@@ -256,29 +276,37 @@ export class CreationWorker {
               try {
                 const payload = await this.userMessages!.read(message);
                 signal.throwIfAborted();
-                await control.steer(
+                const sent = control.steer(
                   "Accepted user update " +
                     message.id +
                     ". Read panda_creation_context for current skills and attachments before saving. User text:\n" +
                     payload.prompt,
                 );
+                scheduled();
+                await sent;
                 await this.userMessages!.settle(lease, message.id, "delivered");
               } catch (error) {
                 await this.userMessages!.settle(lease, message.id, "uncertain");
                 if (!signal.aborted) this.diagnostic(error);
               }
             };
+            let scheduling = Promise.resolve();
             const pump = () => {
-              if (!dispatching)
-                dispatching = deliver()
-                  .catch(this.diagnostic)
-                  .finally(() => {
-                    dispatching = undefined;
-                  });
+              if (dispatching) return scheduling;
+              const scheduled = Promise.withResolvers<void>();
+              scheduling = scheduled.promise;
+              dispatching = deliver(scheduled.resolve)
+                .catch(this.diagnostic)
+                .finally(() => {
+                  dispatching = undefined;
+                  scheduled.resolve();
+                });
+              return scheduling;
             };
-            dispatchTimer = setInterval(pump, 400);
+            dispatchTimer = setInterval(() => void pump(), 400);
             dispatchTimer.unref();
-            pump();
+            void pump();
+            return { poll: pump };
           },
           call: async (call) => {
             await this.authorize(lease.owner, claim.task.spec.projectId);
@@ -295,15 +323,18 @@ export class CreationWorker {
               lease,
               call.name,
               async () => {
-                if (media?.definitions.some((tool) => tool.name === call.name)) {
-                  if (call.name !== "panda_creation_original_read" && !dialogue.delivering())
-                    throw new CreationError("conflict");
-                  if (call.name === "panda_artifacts_save") await record("saving");
-                  return media.call(call);
+                const mediaTool = media?.definitions.some((tool) => tool.name === call.name) ? media : undefined;
+                if (call.name === CREATE_DOCUMENT_TOOL || (mediaTool && call.name !== "panda_creation_original_read")) {
+                  const blocked = dialogue.blockedDelivery();
+                  if (blocked) return blocked;
+                }
+                if (mediaTool) {
+                  if (["panda_artifacts_save", "panda_artifacts_import_file"].includes(call.name))
+                    await record("saving");
+                  return mediaTool.call(call);
                 }
                 if ([DOCUMENT_DESTINATIONS_TOOL, FILE_DIRECTORY_TOOL].includes(call.name)) return tools.call(call);
                 if (call.name !== CREATE_DOCUMENT_TOOL) return interaction.call(call);
-                if (!dialogue.delivering()) throw new CreationError("conflict");
                 await record("saving");
                 return tools.call(call);
               },

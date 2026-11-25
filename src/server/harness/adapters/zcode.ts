@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { allowsHarnessOutputWrite } from "../workspaces.js";
 import { HarnessError, HarnessPromptError, type HarnessPermissionMode } from "../../../shared/harness/contracts.js";
 import { isRecord } from "../../../shared/records.js";
 import { tokenUsage } from "../../../shared/engine/usage.js";
@@ -7,6 +8,7 @@ import type {
   HarnessAgent,
   HarnessAgentEvent,
   HarnessAgentInfo,
+  HarnessApplicationPolicy,
   HarnessNativeSession,
   HarnessPrompt,
 } from "../ports.js";
@@ -46,6 +48,7 @@ export class ZCodeHarnessAgent implements HarnessAgent {
       model: string;
       efforts?: string[];
       defaultEffort?: string;
+      application?: HarnessApplicationPolicy;
       cleanup?(): Promise<void>;
     },
   ) {
@@ -98,12 +101,20 @@ export class ZCodeHarnessAgent implements HarnessAgent {
   }
 
   private async open(cwd: string, id?: string, permissionMode: HarnessPermissionMode = "ask") {
-    if (permissionMode !== "ask" && permissionMode !== "full-access")
+    const application = this.options.application;
+    if (
+      permissionMode !== "ask" &&
+      permissionMode !== "full-access" &&
+      !(application && permissionMode === "always-approve")
+    )
       throw new HarnessError("capabilityUnavailable", 409);
+    if (application && (id || permissionMode === "full-access")) throw new HarnessError("capabilityUnavailable", 409);
     if (resolve(cwd) !== resolve(this.options.cwd)) throw new HarnessError("workspaceUnavailable", 409);
     await this.initialize();
     const workspace = { workspacePath: cwd, workspaceKey: cwd };
     const model = this.selection();
+    const tools = application?.toolNames?.map((name) => `mcp__${application.mcpServer.name}__${name}`) ?? [];
+    if (application?.nativeOutput) tools.push("Write");
     const result = record(
       await (id
         ? this.transport.request("session/resume", { sessionId: id, workspace })
@@ -113,6 +124,13 @@ export class ZCodeHarnessAgent implements HarnessAgent {
             mode: "build",
             persistence: "immediate",
             titleGenerationEnabled: false,
+            ...(application
+              ? {
+                  mcpServers: [{ ...application.mcpServer, alwaysLoad: true }],
+                  // A nonempty list keeps discovery sessions closed to native tools as well.
+                  toolAllowlist: tools.length ? tools : ["pandaforce_no_tools"],
+                }
+              : {}),
           })),
     );
     const native = record(result.session),
@@ -203,10 +221,23 @@ export class ZCodeHarnessAgent implements HarnessAgent {
   }
 
   private async request(method: string, params: Record<string, unknown>) {
-    if (method === "session/requestRuntimePreferences") return { nativeSearchEnhancementsEnabled: false };
+    if (method === "session/requestRuntimePreferences")
+      return this.options.application
+        ? { nativeSearchEnhancementsEnabled: false, memoryEnabled: false, toolSearchMode: "off" }
+        : { nativeSearchEnhancementsEnabled: false };
     if (method !== "interaction/requestPermission") throw new HarnessError("capabilityUnavailable");
     if (!this.turn || this.cancelled || params.sessionId !== this.session?.id || this.approvals.size >= 16)
       return { decision: "deny" };
+    if (this.options.application?.nativeOutput && params.toolName === "Write") {
+      const permitted = await allowsHarnessOutputWrite(this.options.cwd, record(params.input).file_path);
+      const once =
+        Array.isArray(params.options) &&
+        params.options.some((value) => {
+          const option = record(value);
+          return option.kind === "allow_once" && record(option.response).decision === "allow";
+        });
+      return { decision: permitted && once ? "allow" : "deny" };
+    }
     const id = text(params.requestId),
       choices = new Map<string, string>();
     if (!id || this.approvals.has(id)) return { decision: "deny" };
@@ -231,6 +262,7 @@ export class ZCodeHarnessAgent implements HarnessAgent {
 
   async prompt(session: HarnessNativeSession, input: HarnessPrompt, emit: Turn["emit"]) {
     if (this.turn || session.id !== this.session?.id) throw new HarnessPromptError("busy", false, 409);
+    if (input.continuation) this.cancelled = false;
     if (
       input.attachments.length ||
       (input.effort && !this.options.efforts?.includes(input.effort)) ||
@@ -247,7 +279,9 @@ export class ZCodeHarnessAgent implements HarnessAgent {
       const result = record(
         await this.transport.request("session/send", {
           sessionId: session.id,
-          content: input.text,
+          content: this.options.application
+            ? `${this.options.application.instructions}\n\nTask input (JSON string):\n${JSON.stringify(input.text)}`
+            : input.text,
           inputId: input.operationId,
           modelSelection: this.selection(input.effort ?? undefined),
         }),

@@ -82,6 +82,7 @@ export interface CreationProgress {
   text?: string;
   id?: string;
   streaming?: boolean;
+  phase?: "commentary" | "final_answer";
   usage?: TokenUsage;
   operation?: import("./progress.js").CreationOperation;
   status?: "running" | "completed" | "failed";
@@ -156,6 +157,11 @@ export interface CreationNotification {
   kind: CreationOutputType;
   artifact: CreationArtifact;
 }
+/** A queued round takes its generation when a worker claims it. */
+export function creationUpdateGeneration(task: { state: string; generation: number }): number {
+  return task.state === "queued" ? task.generation + 1 : task.generation;
+}
+
 export interface CreationTaskDetail extends CreationTaskView {
   workspaceDirectory?: string;
   goalVersion?: number;

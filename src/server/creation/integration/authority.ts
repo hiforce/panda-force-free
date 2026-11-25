@@ -25,7 +25,8 @@ export function creationAuthority(options: {
       await options.authorize(owner, input.projectId);
       if (input.outputType !== undefined && input.outputType !== "document" && input.outputType !== "auto") {
         const types = (await options.rendering?.available()) ?? [];
-        if (!types.includes(input.outputType)) throw new CreationError("unavailable");
+        if (!types.includes(input.outputType) && !(input.runtimeId && options.rendering))
+          throw new CreationError("unavailable");
       }
       if (input.previousTaskId) return;
       const tree = await options.documents.tree(input.projectId);

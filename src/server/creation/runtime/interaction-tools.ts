@@ -201,9 +201,8 @@ export function creationInteractionTools(
       }
       if (args.offset !== undefined) throw new CreationError("invalidInput");
       const goal = await goals?.read(lease.owner, lease.taskId);
-      const skills = updates.length
-        ? updates.at(-1)!.payload.skills?.composition.skills || []
-        : input.skills.composition.skills;
+      const selected = updates.findLast(({ payload }) => !payload.inheritSkills);
+      const skills = selected ? selected.payload.skills?.composition.skills || [] : input.skills.composition.skills;
       const text = stableJson({
         ...(input.outputType === undefined ? {} : { requestedOutputType: input.outputType }),
         ...(input.previousAsset ? { previousAsset: input.previousAsset } : {}),

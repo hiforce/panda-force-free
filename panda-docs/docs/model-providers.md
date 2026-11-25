@@ -2,7 +2,7 @@
 title: Model providers
 ---
 
-PandaForce 0.1.10 supports Codex and Grok Build through separate Harness Runtimes. [Container setup](harness-runtimes.md) explains runtime selection and Grok login/renewal. This page covers the Codex-compatible provider configuration; configure that CLI before choosing its model in the browser. Website sign-in and model-provider authentication are separate. This guide covers Zhipu GLM, Ollama and DeepSeek. Run `codex --version` in the execution environment to check its CLI version.
+PandaForce 0.1.11 supports Codex and Grok Build through separate Harness Runtimes. [Container setup](harness-runtimes.md) explains runtime selection and Grok login/renewal. This page covers the Codex-compatible provider configuration; configure that CLI before choosing its model in the browser. Website sign-in and model-provider authentication are separate. This guide covers Zhipu GLM, Ollama and DeepSeek. Run `codex --version` in the execution environment to check its CLI version.
 
 ## Configuration directory
 
@@ -75,7 +75,7 @@ spec:
     fsGroup: 1000
   containers:
     - name: panda-force
-      image: hiforceai/panda-force:0.1.10
+      image: hiforceai/panda-force:0.1.11
       env:
         - name: CODEX_HOME
           value: /home/codex/.codex

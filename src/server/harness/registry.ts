@@ -1,3 +1,9 @@
+import type {
+  ApplicationRuntimePurpose,
+  ApplicationRuntimeSelection,
+  ApplicationRuntimeScope,
+} from "../engines/application-tools/runtime-port.js";
+import type { ApplicationToolEngine } from "../../shared/engine/application-tools.js";
 import { randomUUID } from "node:crypto";
 import {
   HarnessError,
@@ -19,6 +25,13 @@ import { decode, save } from "./records.js";
 export interface HarnessProfile extends HarnessProfileView {
   factory: HarnessAgentFactory;
   conversationOnly?: boolean;
+  applicationScopes?: readonly ApplicationRuntimeScope[];
+  isolatedApplicationWorkspace?: boolean;
+  applicationEngine?(
+    selection: ApplicationRuntimeSelection,
+    directory: string,
+    purpose: ApplicationRuntimePurpose,
+  ): ApplicationToolEngine;
   hostSocket?: boolean;
 }
 export interface HarnessPrincipal {
@@ -69,7 +82,12 @@ export class HarnessRegistry {
   }
   async require(principal: HarnessPrincipal, id: string) {
     const runtime = decode<HarnessRuntime>(await this.metadata.read(runtimeKey(id)));
-    if (!runtime || !runtime.enabled || (!principal.administrator && runtime.access !== "members"))
+    if (
+      !runtime ||
+      runtime.archivedAt ||
+      !runtime.enabled ||
+      (!principal.administrator && runtime.access !== "members")
+    )
       throw new HarnessError("notFound", 404);
     if (!this.profiles.has(runtime.profileId)) throw new HarnessError("unavailable", 503);
     return runtime;
@@ -83,17 +101,40 @@ export class HarnessRegistry {
       canManage: principal.administrator,
       profiles: principal.administrator
         ? [...this.profiles.values()].map(
-            ({ factory: _factory, conversationOnly: _scope, hostSocket: _socket, ...view }) => view,
+            ({
+              factory: _factory,
+              conversationOnly: _scope,
+              applicationScopes: _applicationScopes,
+              isolatedApplicationWorkspace: _isolated,
+              applicationEngine: _applicationEngine,
+              hostSocket: _socket,
+              ...view
+            }) => view,
           )
         : [],
       runtimes: values
-        .filter((runtime) => principal.administrator || (runtime.enabled && runtime.access === "members"))
+        .filter(
+          (runtime) =>
+            !runtime.archivedAt && (principal.administrator || (runtime.enabled && runtime.access === "members")),
+        )
         .map((runtime) => this.view(runtime, defaults?.runtimeId)),
     };
   }
-  supportsApplication(profileId: string) {
+  supportsApplication(profileId: string, scope?: ApplicationRuntimeScope) {
     const profile = this.profiles.get(profileId);
-    return !!profile && !profile.conversationOnly;
+    return (
+      !!profile &&
+      (!profile.conversationOnly || (scope !== undefined && profile.applicationScopes?.includes(scope) === true))
+    );
+  }
+  allowsApplication(runtime: HarnessRuntime, scope?: ApplicationRuntimeScope) {
+    return this.supportsApplication(runtime.profileId, scope) && (scope !== "bots" || runtime.botEnabled !== false);
+  }
+  applicationEngine(profileId: string) {
+    return this.profiles.get(profileId)?.applicationEngine;
+  }
+  isolatesApplicationWorkspace(profileId: string) {
+    return this.profiles.get(profileId)?.isolatedApplicationWorkspace === true;
   }
   usesHostSocket(profileId: string) {
     return this.profiles.get(profileId)?.hostSocket === true;
@@ -104,6 +145,8 @@ export class HarnessRegistry {
       error = this.failures.get(runtime.id);
     return {
       ...runtime,
+      botEnabled: runtime.botEnabled !== false,
+      botSupported: this.supportsApplication(runtime.profileId, "bots"),
       deployment: profile?.deployment ?? "local",
       isDefault: runtime.id === defaultId,
       status: error ?? (profile ? (info ? "ready" : "unknown") : "unavailable"),
@@ -120,6 +163,7 @@ export class HarnessRegistry {
       name: string;
       profileId: string;
       enabled: boolean;
+      botEnabled?: boolean;
       defaultModel: string | null;
       defaultEffort: string | null;
       access: HarnessRuntime["access"];
@@ -133,7 +177,8 @@ export class HarnessRegistry {
       !input.name.trim() ||
       input.name.length > 80 ||
       input.access !== "administrators" ||
-      typeof input.enabled !== "boolean"
+      typeof input.enabled !== "boolean" ||
+      (input.botEnabled !== undefined && typeof input.botEnabled !== "boolean")
     )
       throw new HarnessError("invalidInput");
     const id = input.id || randomUUID();
@@ -147,6 +192,7 @@ export class HarnessRegistry {
     if (input.defaultEffort && !input.defaultModel) throw new HarnessError("invalidInput");
     await this.metadata.transaction(async (tx) => {
       const previous = decode<HarnessRuntime>(await tx.get(runtimeKey(id)));
+      if (previous?.archivedAt) throw new HarnessError("notFound", 404);
       if ((previous?.revision ?? 0) !== (input.revision ?? 0)) throw new HarnessError("conflict", 409);
       if (previous && previous.profileId !== profile.id) throw new HarnessError("conflict", 409);
       const defaults = decode<Defaults>(await tx.get("defaults"))!;
@@ -157,6 +203,7 @@ export class HarnessRegistry {
         profileId: profile.id,
         kind: profile.kind,
         enabled: input.enabled,
+        botEnabled: input.botEnabled ?? previous?.botEnabled ?? true,
         defaultModel: input.defaultModel,
         defaultEffort: input.defaultEffort,
         access: input.access,
@@ -172,6 +219,29 @@ export class HarnessRegistry {
     this.failures.delete(id);
     return this.catalog(principal);
   }
+  async remove(principal: HarnessPrincipal, id: string, revision: number) {
+    if (!principal.administrator) throw new HarnessError("forbidden", 403);
+    await this.metadata.transaction(async (tx) => {
+      const current = decode<HarnessRuntime>(await tx.get(runtimeKey(id)));
+      if (!current) throw new HarnessError("notFound", 404);
+      if (current.archivedAt && current.revision === revision + 1) return;
+      const defaults = decode<Defaults>(await tx.get("defaults"))!;
+      if (current.revision !== revision || defaults.runtimeId === id || current.archivedAt)
+        throw new HarnessError("conflict", 409);
+      const now = Date.now();
+      await save(tx, runtimeKey(id), "runtime", "application", {
+        ...current,
+        archivedAt: now,
+        enabled: false,
+        revision: current.revision + 1,
+        updatedAt: now,
+      });
+      await save(tx, "defaults", "defaults", "application", { ...defaults, revision: defaults.revision + 1 });
+    });
+    this.discovered.delete(id);
+    this.failures.delete(id);
+    return this.catalog(principal);
+  }
   async agent(
     principal: HarnessPrincipal,
     id: string,
@@ -184,7 +254,8 @@ export class HarnessRegistry {
   ) {
     const runtime = await this.require(principal, id),
       profile = this.profiles.get(runtime.profileId)!;
-    if (application && profile.conversationOnly) throw new HarnessError("capabilityUnavailable", 409);
+    if (application && !this.allowsApplication(runtime, application.scope))
+      throw new HarnessError("capabilityUnavailable", 409);
     try {
       const agent = await profile.factory.create(runtime, {
         owner: principal.owner,

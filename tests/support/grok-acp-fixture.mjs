@@ -117,6 +117,21 @@ createInterface({ input: process.stdin }).on(
             )
           )
             throw Error("Application tools were not isolated");
+          if (text === "fixture: hold for creation update") {
+            session.heldForUpdate = true;
+            update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Organizing the brief." } });
+            return;
+          }
+          if (text.includes("fixture: apply creation update")) {
+            if (!session.heldForUpdate) throw Error("Continuation used a different session");
+            update({
+              sessionUpdate: "agent_message_chunk",
+              content: { type: "text", text: "Added the requested detail." },
+            });
+            send({ id: frame.id, result: { stopReason: "end_turn" } });
+            active = null;
+            return;
+          }
           const server = session.mcpServers[0],
             headers = Object.fromEntries(server.headers.map(({ name, value }) => [name, value]));
           let sequence = 0;

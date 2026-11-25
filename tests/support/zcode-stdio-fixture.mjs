@@ -1,16 +1,37 @@
 #!/usr/bin/env bun
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 
 const settings = JSON.parse(readFileSync(process.env.ZCODE_PERSONAL_PROVIDER_CONFIG_FILE, "utf8"));
 const send = (message) => process.stdout.write(JSON.stringify(message) + "\n");
-let session;
+let session, taskTools;
 for await (const line of createInterface({ input: process.stdin })) {
   const { id, method, params } = JSON.parse(line);
   if (method === "runtime/capabilities") {
     send({ id, result: { sessionWorkspaceRouting: true } });
   } else if (method === "session/create" || method === "session/resume") {
+    if (settings.applicationProbe && params.mcpServers) {
+      if (params.mode !== "build" || params.mcpServers.length !== 1 || params.mcpServers[0].name !== "panda")
+        throw Error("Unexpected scoped ZCode session");
+      const [server] = params.mcpServers;
+      const rpc = async (method, params) => {
+        const reply = await fetch(server.url, {
+          method: "POST",
+          headers: Object.fromEntries(server.headers.map(({ name, value }) => [name, value])),
+          body: JSON.stringify({ jsonrpc: "2.0", id: crypto.randomUUID(), method, params }),
+        });
+        const body = await reply.json();
+        if (!reply.ok || body.error) throw Error("MCP fixture request failed");
+        return body.result;
+      };
+      const { tools } = await rpc("tools/list");
+      const names = tools.map((tool) => `mcp__panda__${tool.name}`);
+      if (tools.some(({ name }) => name === "panda_artifacts_import_file")) names.push("Write");
+      if (JSON.stringify(params.toolAllowlist) !== JSON.stringify(names.length ? names : ["pandaforce_no_tools"]))
+        throw Error("Expected an exact tool allowlist");
+      taskTools = { tools, rpc };
+    }
     session = {
       sessionId: params.sessionId ?? crypto.randomUUID(),
       workspace: params.workspace,
@@ -33,6 +54,38 @@ for await (const line of createInterface({ input: process.stdin })) {
       send({ method: "session/event", params: { sessionId, turnId: nativeTurn, type, payload } });
     send({ id, result: { accepted: true, sessionId } });
     event("turn.started", { inputId });
+    if (taskTools?.tools.length && settings.nativeCreationFile && params.content.includes("Produce the native file.")) {
+      if (taskTools.tools.some(({ name }) => name === "panda_images_render")) throw Error("Borrowed image renderer");
+      const file = params.content.includes("Produce the native image.")
+        ? settings.nativeCreationImage
+        : settings.nativeCreationFile;
+      writeFileSync(join(session.workspace.workspacePath, file.name), Buffer.from(file.content, file.encoding));
+      await taskTools.rpc("tools/call", {
+        name: "panda_creation_turn",
+        arguments: { action: "deliver" },
+      });
+      await taskTools.rpc("tools/call", { name: "panda_creation_context", arguments: {} });
+      const save = async (filename) =>
+        taskTools.rpc("tools/call", {
+          name: "panda_artifacts_import_file",
+          arguments: { kind: file.kind, filename, title: "Native artifact proof" },
+        });
+      if (!(await save("../" + file.name)).isError) throw Error("Native output traversal was accepted");
+      if ((await save(file.name)).isError) throw Error("Native output could not be saved");
+    } else if (taskTools?.tools.length && settings.creationReply) {
+      await taskTools.rpc("tools/call", {
+        name: "panda_creation_turn",
+        arguments: { action: "reply", text: settings.creationReply },
+      });
+    } else if (taskTools?.tools.length) {
+      if (settings.expectedInstruction && !params.content.includes(settings.expectedInstruction))
+        throw Error("Missing task instructions");
+      for (const { name } of taskTools.tools)
+        await taskTools.rpc("tools/call", {
+          name,
+          arguments: name === "panda_bot_chat_reply" ? { text: "Scoped ZCode Bot reply." } : {},
+        });
+    }
     if (settings.progressDirectory) {
       const waitFor = async (name) => {
         const file = join(settings.progressDirectory, name);

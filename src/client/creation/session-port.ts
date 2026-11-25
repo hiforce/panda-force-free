@@ -9,7 +9,13 @@ export interface CreationWorkspaceBridge {
   clear(): void;
   restoreDraft(): void;
   saveDraft(scope?: string): void;
-  accepted(scope: string, nextScope: string, prompt: string, materialIds: readonly string[]): void;
+  accepted(
+    scope: string,
+    nextScope: string,
+    prompt: string,
+    materialIds: readonly string[],
+    selections?: Readonly<NonNullable<CreationTaskDetail["selections"]>>,
+  ): void;
   seedDraft(text: string, selections: NonNullable<CreationTaskDetail["selections"]>, allowEmpty?: boolean): void;
   render(item: EngineItem, turnId: string): void;
   preserve(render: () => void): void;

@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
 import { createAppFixture, waitFor } from "../support/app-fixture.mjs";
-const out = ".artifacts/creation-history-browser";
+const out = process.env.PANDA_CREATION_HISTORY_PROOF || ".artifacts/creation-history-browser";
 await mkdir(out, { recursive: true });
 const app = await createAppFixture({
+    startupTimeoutMs: 60000,
     applicationCreation: true,
     models: [
       {
@@ -55,9 +56,48 @@ try {
         assert(r.ok(), await r.text());
         return r.json();
       };
+      const verifyShortcuts = async () => {
+        const shortcuts = page.locator(".creation-session-shortcuts > a");
+        await shortcuts.last().waitFor();
+        await page.waitForFunction(() => {
+          const navigation = document.querySelector(".creation-session-shortcuts");
+          return navigation && getComputedStyle(navigation).display === "grid";
+        });
+        const items = await shortcuts.evaluateAll((nodes) =>
+          nodes.map((node) => {
+            const { x, y, width, height } = node.getBoundingClientRect();
+            const label = node.querySelector("span:not(.icon-slot)");
+            return {
+              x,
+              y,
+              width,
+              height,
+              withIcon: !!node.querySelector("svg"),
+              withLabel: !!label?.getClientRects().length,
+              name: node.getAttribute("aria-label"),
+              title: node.getAttribute("title"),
+            };
+          }),
+        );
+        assert.equal(items.length, 2);
+        assert.equal(items[0].width, items[1].width);
+        assert.equal(items[0].height, items[1].height);
+        assert.equal(items[0].y, items[1].y);
+        assert(items[0].x + items[0].width < items[1].x);
+        assert(items.every((item) => item.withIcon && item.name && item.title === item.name));
+        assert(items.every((item) => item.withLabel === width >= 768));
+        if (width < 768) assert(items.every((item) => item.width === item.height && item.width >= 44));
+      };
       const prefix = "/api/personal/document-creations";
       await api(prefix + "/history/clear", { id: crypto.randomUUID() });
       await page.goto(app.base + "/create");
+      await page.locator("#composer").waitFor();
+      await verifyShortcuts();
+      await page.screenshot({ path: `${out}/shortcuts-${locale}-${width}.png` });
+      const works = page.locator("[data-creation-works]");
+      await works.press("Enter");
+      await page.locator("[data-personal-list]").waitFor();
+      await page.goBack();
       await page.locator("#composer").waitFor();
       await fillComposer(page, "Write the requirements document. " + locale);
       const submitted = page.waitForResponse((r) => r.url().endsWith(prefix) && r.request().method() === "POST");
@@ -200,6 +240,7 @@ try {
       for (const id of [second, third, fourth, fifth]) await api(prefix + "/cancel", { id });
       await page.goto(app.base + "/creation/" + latest + "?creationScope=personal");
       await page.locator(".creation-session-status .user-input-card").waitFor();
+      await verifyShortcuts();
       await fillComposer(page, "Retain the draft while clearing sidebar history.");
       if (!(await page.locator("#sessionInspector").isVisible())) await page.locator("#sessionInfoButton").click();
       const inspector = page.locator("#sessionInspector");

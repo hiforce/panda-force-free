@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { creativeKindMatchesName } from "../../../shared/creative/file-types.js";
 import { stableJson } from "../../../shared/stable-json.js";
 import type { ApplicationToolDefinition } from "../../../shared/engine/application-tools.js";
 import type { CreationRendering } from "../runtime/rendering.js";
@@ -15,7 +16,11 @@ import { renderedCreationOutput } from "./typed-output.js";
 import { ImageRenderJournal, imageRenderIntent } from "./rendering/image-journal.js";
 import { ImageRenderError, type ImageRenderRequest } from "./rendering/image-contracts.js";
 import { imageDigest } from "./rendering/image-result.js";
-import { CreationCandidateChanged, type CreationGeneratedOriginals } from "./rendering/generated-originals.js";
+import {
+  CreationCandidateChanged,
+  type CreationGeneratedOriginals,
+  type GeneratedKind,
+} from "./rendering/generated-originals.js";
 import type { CreationArtifactGenerator } from "./rendering/generators.js";
 import { creationRenderSlots, RenderingBusyError } from "./rendering/slots.js";
 import {
@@ -28,6 +33,23 @@ import { OfficePresentationError } from "../../../shared/slides/contracts.js";
 
 export const RENDER_IMAGE_TOOL = "panda_images_render";
 export const SAVE_ARTIFACT_TOOL = "panda_artifacts_save";
+export const IMPORT_ARTIFACT_TOOL = "panda_artifacts_import_file";
+const nativeArtifactKinds = ["image", "slides", "video", "web"] as const;
+const importDefinition: ApplicationToolDefinition = {
+  name: IMPORT_ARTIFACT_TOOL,
+  description:
+    "Save one finished image, presentation, video or HTML file produced by this Harness in its current workspace. Supply just the filename and the actual artifact kind. This preserves the native original and returns its saved receipt.",
+  inputSchema: {
+    type: "object",
+    additionalProperties: false,
+    required: ["kind", "filename", "title"],
+    properties: {
+      kind: { type: "string", enum: nativeArtifactKinds },
+      filename: { type: "string", minLength: 1, maxLength: 200 },
+      title: { type: "string", minLength: 1, maxLength: 200 },
+    },
+  },
+};
 const definitions: ApplicationToolDefinition[] = [
   {
     name: RENDER_IMAGE_TOOL,
@@ -100,7 +122,9 @@ export function creationImageTools(options: {
       return [...new Set([...(image ? ["image" as const] : []), ...available.flat()])];
     },
     open(context) {
-      const task = context.task;
+      const task = context.task,
+        profile = context.input.profile,
+        usesImageRenderer = profile.engineId === "codex" || !!profile.media;
       const sources = new CreationOriginalSources(
         context.input,
         options.assets,
@@ -119,7 +143,10 @@ export function creationImageTools(options: {
               ? [structuredClone(originalReadDefinition)]
               : []
             : [
-                ...structuredClone(primaryDefinitions),
+                ...structuredClone(
+                  primaryDefinitions.filter((tool) => tool.name !== RENDER_IMAGE_TOOL || usesImageRenderer),
+                ),
+                ...(options.generated && context.readNativeFile ? [structuredClone(importDefinition)] : []),
                 structuredClone(originalReadDefinition),
                 ...generators
                   .filter((g) => task.kind === "auto" || task.kind === g.kind)
@@ -130,21 +157,56 @@ export function creationImageTools(options: {
           const bound = context.execution(call);
           context.signal.throwIfAborted();
           try {
-            if (call.name === SAVE_ARTIFACT_TOOL) {
+            if (call.name === SAVE_ARTIFACT_TOOL || call.name === IMPORT_ARTIFACT_TOOL) {
               const current = await options.tasks.get(task.owner, task.id);
               if (current.generation !== bound.generation) throw new CreationError("leaseLost");
               if (current.artifact) return { success: true, text: stableJson(current.artifact) };
               const execution = await context.assert(call),
-                args = creationRecord(call.arguments, ["kind", "handle", "title"]);
-              if (!kinds.includes(String(args.kind))) throw new CreationError("invalidOutput");
+                importing = call.name === IMPORT_ARTIFACT_TOOL,
+                args = creationRecord(call.arguments, ["kind", importing ? "filename" : "handle", "title"]),
+                title = creationText(args.title, 200),
+                kind = args.kind as "image" | GeneratedKind;
+              let handle: string;
+              if (importing) {
+                const name = creationText(args.filename, 200);
+                if (
+                  !options.generated ||
+                  !context.readNativeFile ||
+                  !nativeArtifactKinds.includes(kind) ||
+                  !creativeKindMatchesName(kind, name)
+                )
+                  throw new CreationError("invalidInput");
+                const bytes = await context.readNativeFile(name).catch(() => {
+                  throw new CreationError("invalidOutput");
+                });
+                const signature = imageDigest(stableJson({ name, digest: imageDigest(bytes) }));
+                handle = await options.generated.render(
+                  {
+                    owner: task.owner,
+                    taskId: task.id,
+                    kind,
+                    slot: 1,
+                    signature,
+                    contextDigest: imageDigest(
+                      stableJson({ purpose: "native-creation-output", input: task.inputDigest, signature }),
+                    ),
+                  },
+                  async () => ({ kind, name, bytes }),
+                  () => context.active(call),
+                );
+              } else {
+                if (!kinds.includes(String(kind))) throw new CreationError("invalidOutput");
+                handle = creationDigest(args.handle);
+              }
               const saved = await options.outputs.invoke(
                 execution,
                 renderedCreationOutput({
                   owner: task.owner,
                   taskId: task.id,
-                  kind: args.kind,
-                  handle: creationDigest(args.handle),
-                  title: creationText(args.title, 200),
+                  kind,
+                  handle,
+                  title,
+                  ...(importing ? { origin: "native" } : {}),
                 }),
               );
               if (!saved.artifact) throw new CreationError("unavailable");
@@ -204,7 +266,7 @@ export function creationImageTools(options: {
               }
               if (call.name !== RENDER_IMAGE_TOOL) throw new CreationError("invalidInput");
               const execution = await context.assert(call);
-              if (!(await options.available())) throw new CreationError("unavailable");
+              if (!usesImageRenderer || !(await options.available())) throw new CreationError("unavailable");
               const args = creationRecord(call.arguments, ["slot", "prompt", "materialIds", "previousImage"]),
                 updates = (await options.messages?.context(task.owner, task.id)) ?? [],
                 materials = new Map((context.input.materials ?? []).map((m) => [m.id, m]));
@@ -269,9 +331,7 @@ export function creationImageTools(options: {
                   ),
                   slot: creationInteger(args.slot),
                   prompt: creationPrompt(args.prompt),
-                  profile: context.input.profile.media
-                    ? { id: "codex", engineId: "codex", ...context.input.profile.media }
-                    : context.input.profile,
+                  profile: profile.media ? { id: "codex", engineId: "codex", ...profile.media } : profile,
                   images,
                 },
                 intent = await imageRenderIntent(request);
@@ -338,6 +398,16 @@ export function creationImageTools(options: {
                   retryable: true,
                   action:
                     "Retry the same slot and unchanged input after the active render finishes. No primary artifact has been saved.",
+                }),
+              };
+            if (error instanceof DocumentError && call.name === IMPORT_ARTIFACT_TOOL)
+              return {
+                success: false,
+                text: stableJson({
+                  error: "invalidOutput",
+                  saved: false,
+                  action:
+                    "Use a valid finished file with the expected format. Only an original file in this run's workspace can be saved.",
                 }),
               };
             if (error instanceof CreationError && error.code === "conflict")

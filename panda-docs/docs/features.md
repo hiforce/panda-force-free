@@ -162,7 +162,7 @@ Explore the [anonymous product-publishing use case](https://github.com/hiforce/p
 
 ## Installation, builds and CDN
 
-- Install with Docker/Compose using `hiforceai/panda-force:0.1.10`; the Rocky Linux 9 image includes Codex CLI, Grok Build, ZCode CLI and the creative toolchain. Linux amd64 is the documented image target.
+- Install with Docker/Compose using `hiforceai/panda-force:0.1.11`; the Rocky Linux 9 image includes Codex CLI, Grok Build, ZCode CLI and the creative toolchain. Linux amd64 is the documented image target.
 - Use the matching release configuration. Source contributions and custom builds are covered in the [development guide](building.md).
 - Use independently configured build/preview executors and optional Compose overlays for documents, search and previews.
 - Override images, registry credentials and pull policies, including private registries, without placing credentials in application source.

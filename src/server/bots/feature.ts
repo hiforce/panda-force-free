@@ -89,11 +89,15 @@ export function createBotFeature(options: {
       return;
     const switched = value.runtimeId !== undefined && value.runtimeId !== (previous?.runtimeId ?? "codex");
     try {
-      await options.runtimes.resolve(owner, {
-        runtimeId: String(value.runtimeId ?? previous?.runtimeId ?? "codex"),
-        model: String(value.model ?? (switched ? "" : previous?.model) ?? ""),
-        effort: String(value.effort ?? (switched ? "" : previous?.effort) ?? ""),
-      });
+      await options.runtimes.resolve(
+        owner,
+        {
+          runtimeId: String(value.runtimeId ?? previous?.runtimeId ?? "codex"),
+          model: String(value.model ?? (switched ? "" : previous?.model) ?? ""),
+          effort: String(value.effort ?? (switched ? "" : previous?.effort) ?? ""),
+        },
+        "bots",
+      );
     } catch {
       throw new BotError("runtimeSelectionUnavailable", 409);
     }

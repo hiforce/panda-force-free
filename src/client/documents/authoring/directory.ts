@@ -30,7 +30,7 @@ export class AuthoringDirectory {
   set(open: boolean, restore = false) {
     this.root.classList.toggle("directory-open", open);
     const aside = this.root.querySelector<HTMLElement>("#authoringDirectory"),
-      surface = this.root.querySelector<HTMLElement>("#documentEditor");
+      surface = this.root.querySelector<HTMLElement>(".personal-library-surface, #documentEditor");
     if (surface) surface.inert = open && this.mobile.matches;
     if (aside) {
       if (open && this.mobile.matches) {
@@ -41,7 +41,9 @@ export class AuthoringDirectory {
         aside.removeAttribute("aria-modal");
       }
     }
-    this.root.querySelector('[data-authoring-action="directory"]')?.setAttribute("aria-expanded", String(open));
+    this.root
+      .querySelectorAll('[data-authoring-action="directory"]')
+      .forEach((button) => button.setAttribute("aria-expanded", String(open)));
     if (open && this.mobile.matches)
       this.root
         .querySelector<HTMLButtonElement>('[data-authoring-action="directory-dismiss"]')

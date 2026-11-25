@@ -234,7 +234,13 @@ export interface ModelsPort {
 }
 
 export interface ComposerPort {
-  acceptCreationSubmission(scope: string, nextScope: string, prompt: string, materialIds: readonly string[]): void;
+  acceptCreationSubmission(
+    scope: string,
+    nextScope: string,
+    prompt: string,
+    materialIds: readonly string[],
+    selections?: readonly import("../../shared/creation/contracts.js").CreationSkillSelection[],
+  ): void;
   selectComposerSkill: (selection: import("../../shared/creation/contracts.js").CreationSkillSelection) => void;
   readComposerSkills: () => import("../../shared/creation/contracts.js").CreationSkillSelection[];
   renderComposerSkills: () => void;

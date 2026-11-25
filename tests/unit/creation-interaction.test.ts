@@ -11,12 +11,20 @@ test("an acknowledgement preserves new text, new uploads and changed skill choic
       { id: "old", materialId: "sent", name: "sent.txt", kind: "file" as const, status: "ready" as const },
       { id: "new", materialId: "next", name: "next.txt", kind: "file" as const, status: "ready" as const },
     ],
-    skills: [],
+    skills: [
+      { packageId: "example", version: "1.0", digest: "original", id: "used", parameters: {} },
+      { packageId: "example", version: "1.0", digest: "original", id: "changed", parameters: { detail: "new" } },
+    ],
   };
-  const next = creationDraftAfterAcknowledgement(draft, "Submitted text", ["sent"]);
+  const next = creationDraftAfterAcknowledgement(
+    draft,
+    "Submitted text",
+    ["sent"],
+    [draft.skills[0]!, { ...draft.skills[1]!, parameters: { detail: "old" } }],
+  );
   expect(next.text).toBe("A newer draft");
   expect(next.attachments.map((file) => file.id)).toEqual(["new"]);
-  expect(next.skills).toEqual([]);
+  expect(next.skills).toEqual([draft.skills[1]!]);
   expect(draft.attachments).toHaveLength(2);
   expect(
     creationDraftAfterAcknowledgement({ ...draft, text: " Submitted text " }, "Submitted text", ["sent"]).text,

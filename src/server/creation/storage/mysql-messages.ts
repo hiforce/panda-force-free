@@ -1,3 +1,4 @@
+import { creationUpdateGeneration } from "../../../shared/creation/contracts.js";
 import { mysqlInteger } from "../../database/mysql-model.js";
 import { CreationError } from "../contracts.js";
 import type { CreationMessageRecord, CreationMessageStore } from "../messages/contracts.js";
@@ -36,7 +37,7 @@ export class MySQLCreationMessages {
           !["queued", "running"].includes(task.state) ||
           task.cancelRequested ||
           task.outputDigest ||
-          task.generation !== value.generation
+          (task.generation !== value.generation && creationUpdateGeneration(task) !== value.generation)
         )
           throw new CreationError("conflict");
         const [count] = await this.context

@@ -16,9 +16,11 @@ function payload(value: unknown): CreationMessagePayload {
     "prompt",
     "profile",
     "skills",
+    "inheritSkills",
     "materials",
   ]);
-  if (row.schema !== 1) throw new CreationError("invalidInput");
+  if (row.schema !== 1 || (row.inheritSkills !== undefined && (row.inheritSkills !== true || row.skills !== null)))
+    throw new CreationError("invalidInput");
   const result: CreationMessagePayload = {
     schema: 1,
     id: creationUuid(row.id),
@@ -27,6 +29,7 @@ function payload(value: unknown): CreationMessagePayload {
     requestDigest: creationDigest(row.requestDigest),
     prompt: creationPrompt(row.prompt),
     profile: creationEngineProfile(row.profile),
+    ...(row.inheritSkills === true ? { inheritSkills: true } : {}),
     skills: row.skills === null ? null : decodeSkillCapture(row.skills, { workflowRequired: false }),
     materials: decodeCreationMaterials(row.materials),
   };

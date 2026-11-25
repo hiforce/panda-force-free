@@ -281,6 +281,7 @@ export function createBotHumanChat(
           [
             "invalidInput",
             "chatContextUnavailable",
+            "runtimeSelectionUnavailable",
             "chatBusy",
             "staleConversation",
             "idempotencyConflict",

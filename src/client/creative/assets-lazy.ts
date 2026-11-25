@@ -77,6 +77,37 @@ export class LazyCreativeAssetsPanel {
       if (this.ready(epoch)) throw error;
     }
   }
+  async readInline(
+    asset: Pick<CreativeAsset, "project" | "id" | "title">,
+    host: HTMLElement,
+    title: HTMLElement,
+    toolbar: HTMLElement,
+    changed: () => Promise<void>,
+    version?: string,
+  ) {
+    this.close();
+    const epoch = this.epoch;
+    const loading = document.createElement("p");
+    loading.setAttribute("role", "status");
+    loading.textContent = this.t("creative.assetOpening");
+    host.replaceChildren(loading);
+    toolbar.replaceChildren();
+    try {
+      const loaded = await runtime.load();
+      if (epoch !== this.epoch) return;
+      this.panel ??= new loaded.CreativeAssetsPanel(this.t, this.id, this.identity, this.frame);
+      return await this.panel.readInline({ ...asset, state: "saved" }, changed, host, title, toolbar, version);
+    } catch {
+      if (epoch !== this.epoch) return;
+      loading.textContent = this.t("creative.assetOpenFailed");
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "wb-button";
+      retry.textContent = this.t("common.retry");
+      retry.onclick = () => void this.readInline(asset, host, title, toolbar, changed, version);
+      host.append(retry);
+    }
+  }
   close() {
     this.epoch++;
     this.preparing = null;

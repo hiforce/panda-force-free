@@ -1,9 +1,11 @@
 import { resolve } from "node:path";
+import { randomUUID } from "node:crypto";
 import { HarnessError, HarnessPromptError, type HarnessPermissionMode } from "../../../shared/harness/contracts.js";
 import { tokenUsage } from "../../../shared/engine/usage.js";
 import type {
   HarnessAgent,
   HarnessAgentInfo,
+  HarnessApplicationPolicy,
   HarnessNativeSession,
   HarnessOpenOptions,
   HarnessPrompt,
@@ -20,6 +22,10 @@ interface AcpSessionOptions {
   permissionModes: HarnessPermissionMode[];
   nativeModes?: Readonly<Partial<Record<HarnessPermissionMode, string>>>;
   checkAuthStatus?: boolean;
+  application?: HarnessApplicationPolicy;
+  applicationTransport?: "http";
+  applicationMeta?: Record<string, unknown>;
+  allowApplicationTool?(tool: Record<string, unknown>): boolean | Promise<boolean>;
 }
 
 /** An ACP subprocess owns its native model configuration and session state. */
@@ -50,6 +56,7 @@ export class AcpSessionAgent implements HarnessAgent {
   private readonly discoveredModels = new Map<string, HarnessAgentInfo["models"][number]>();
   private defaultModel: string | null = null;
   private permissionMode: HarnessPermissionMode = "ask";
+  private readonly mcpServerId = randomUUID();
 
   constructor(
     private readonly launch: AcpLaunchOptions,
@@ -59,7 +66,7 @@ export class AcpSessionAgent implements HarnessAgent {
     this.transport = new HarnessStdioTransport({
       ...("socketPath" in launch ? launch : { ...launch, args: settings.args }),
       onNotification: (method, params) => this.notification(method, params),
-      onRequest: (method, params) => this.events.request(method, params, this.session?.id, this.emit),
+      onRequest: (method, params) => this.request(method, params),
     });
   }
 
@@ -75,6 +82,11 @@ export class AcpSessionAgent implements HarnessAgent {
       if (result.protocolVersion !== 1) throw new HarnessError("invalidProtocol", 503);
       const capabilities = record(result.agentCapabilities);
       const prompts = record(capabilities.promptCapabilities);
+      if (
+        this.settings.application &&
+        record(capabilities.mcpCapabilities)[this.settings.applicationTransport ?? "acp"] !== true
+      )
+        throw new HarnessError("capabilityUnavailable", 409);
       if (this.settings.checkAuthStatus) {
         if (!("status" in record(capabilities.auth))) throw new HarnessError("invalidProtocol", 503);
         const { state } = record(await this.transport.request("auth/status"));
@@ -89,7 +101,10 @@ export class AcpSessionAgent implements HarnessAgent {
   }
 
   private async open(cwd: string, id: string | undefined, options: HarnessOpenOptions = {}) {
-    const { permissionMode = "ask", model, discoverModels } = options;
+    const { model, discoverModels } = options;
+    const application = this.settings.application;
+    const permissionMode = application ? "ask" : (options.permissionMode ?? "ask");
+    if (application && id) throw new HarnessError("capabilityUnavailable", 409);
     if (this.session || resolve(cwd) !== resolve(this.launch.cwd)) throw new HarnessError("workspaceUnavailable", 409);
     if (
       this.settings.nativeModes
@@ -102,7 +117,12 @@ export class AcpSessionAgent implements HarnessAgent {
     const result = record(
       await this.transport.request(id ? "session/resume" : "session/new", {
         cwd,
-        mcpServers: [],
+        mcpServers: !application
+          ? []
+          : this.settings.applicationTransport === "http"
+            ? [application.mcpServer]
+            : [{ type: "acp", name: application.mcpServer.name, serverId: this.mcpServerId }],
+        ...(this.settings.applicationMeta ? { _meta: this.settings.applicationMeta } : {}),
         ...(id ? { sessionId: id } : {}),
       }),
     );
@@ -226,6 +246,7 @@ export class AcpSessionAgent implements HarnessAgent {
 
   async prompt(session: HarnessNativeSession, input: HarnessPrompt, emit: AcpEmit) {
     if (this.emit || this.session?.id !== session.id) throw new HarnessPromptError("busy", false, 409);
+    if (input.continuation) this.cancelled = false;
     this.emit = emit;
     try {
       let prompt: Awaited<ReturnType<typeof acpPrompt>>;
@@ -280,6 +301,49 @@ export class AcpSessionAgent implements HarnessAgent {
 
   async respondPermission(id: string, optionId: string | null) {
     this.events.respond(id, optionId);
+  }
+
+  private async request(method: string, params: Record<string, unknown>) {
+    const application = this.settings.application;
+    if (!application) return this.events.request(method, params, this.session?.id, this.emit);
+    if (method === "session/request_permission") {
+      if (
+        this.emit &&
+        !this.cancelled &&
+        params.sessionId === this.session?.id &&
+        (await this.settings.allowApplicationTool?.(record(params.toolCall)))
+      ) {
+        const allow = (Array.isArray(params.options) ? params.options : [])
+          .map(record)
+          .find((option) => option.kind === "allow_once" && text(option.optionId));
+        if (allow) return { outcome: { outcome: "selected", optionId: allow.optionId } };
+      }
+      return { outcome: { outcome: "cancelled" } };
+    }
+    if (
+      this.settings.applicationTransport === "http" ||
+      method !== "mcp/message" ||
+      params.serverId !== this.mcpServerId ||
+      typeof params.requestId !== "string"
+    )
+      throw new HarnessError("forbidden", 403);
+    if (params.method === "server/discover")
+      return { result: { supportedVersions: ["2026-07-28"], capabilities: { tools: {} } } };
+    const response = await fetch(application.mcpServer.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...Object.fromEntries(application.mcpServer.headers.map(({ name, value }) => [name, value])),
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: params.requestId, method: params.method, params: params.params }),
+      signal: AbortSignal.timeout(180000),
+    });
+    if (!response.ok) throw new HarnessError("capabilityUnavailable", 409);
+    const result = record(await response.json());
+    if (result.error) return { error: result.error };
+    return {
+      result: params.method === "tools/call" ? { ...record(result.result), resultType: "complete" } : result.result,
+    };
   }
 
   async close() {

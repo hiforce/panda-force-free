@@ -1,6 +1,6 @@
 import type { Translate } from "../../../shared/i18n/messages.js";
 import type { DocumentRecord } from "../../../shared/documents/contracts.js";
-import { setMessageHtml, localizeText } from "../../i18n.js";
+import { setMessageHtml, localizeText, localizeAttribute, messageHtml } from "../../i18n.js";
 import { editor as editorView, empty, action } from "../views.js";
 import { DocumentModal } from "../modal.js";
 import { DocumentDialogs } from "../dialogs.js";
@@ -16,6 +16,7 @@ import { fileHistory } from "./history.js";
 import type { DocumentPublicationActions } from "../action-port.js";
 import type { DocumentEditorPort } from "../editor-port.js";
 import { bindDocumentEditorHost } from "../editor-bindings.js";
+import { bindReaderMore, readerIcon, readerMore } from "../../creative/reader-toolbar.js";
 
 /** This view owns one mounted document. Working generations, command receipts and source versions live in the session. */
 export class FileDocumentEditor implements DocumentEditorPort {
@@ -38,6 +39,7 @@ export class FileDocumentEditor implements DocumentEditorPort {
     private error: (error: unknown) => void,
     private changedState: () => void,
     private publishing?: DocumentPublicationActions,
+    private toolbar?: { commands: HTMLElement; title: HTMLElement },
   ) {}
   get id() {
     return this.session?.snapshot.saved.document.id || "";
@@ -63,13 +65,18 @@ export class FileDocumentEditor implements DocumentEditorPort {
     this.detach();
     this.host = host;
     this.listeners = new AbortController();
-    bindDocumentEditorHost(host, this.listeners.signal, {
+    const actions: Parameters<typeof bindDocumentEditorHost>[2] = {
       capture: () => this.capture(),
       save: () => this.act("save"),
       focus: () => this.rich?.focus(),
       action: (name) => this.act(name),
       error: this.error,
-    });
+    };
+    bindDocumentEditorHost(host, this.listeners.signal, actions);
+    if (this.toolbar) {
+      bindDocumentEditorHost(this.toolbar.commands, this.listeners.signal, actions);
+      bindReaderMore(this.toolbar.commands, this.listeners.signal);
+    }
   }
   detach() {
     this.publishing?.close();
@@ -81,6 +88,7 @@ export class FileDocumentEditor implements DocumentEditorPort {
     this.epoch++;
     clearTimeout(this.timer);
     this.listeners?.abort();
+    this.toolbar?.commands.replaceChildren();
     this.listeners = null;
     this.rich?.destroy();
     this.rich = null;
@@ -96,6 +104,7 @@ export class FileDocumentEditor implements DocumentEditorPort {
     this.rich?.destroy();
     this.rich = null;
     this.session = null;
+    this.toolbar?.commands.replaceChildren();
     if (this.host) setMessageHtml(this.host, empty(this.t, "documents.loading"));
     const session = await FileEditorSession.open(
       fileDocumentApi(this.project, id),
@@ -177,7 +186,11 @@ export class FileDocumentEditor implements DocumentEditorPort {
       api = fileDocumentApi(this.project, this.id);
     setMessageHtml(
       this.host,
-      editorView(this.t, session.snapshot.saved, session.working, { authoring: true, publishing: !!this.publishing }),
+      editorView(this.t, session.snapshot.saved, session.working, {
+        authoring: true,
+        publishing: !!this.publishing,
+        separateCommands: !!this.toolbar,
+      }),
     );
     for (const name of ["images", "import-images", "languages"])
       this.host.querySelector(`[data-doc-action="${name}"]`)?.remove();
@@ -185,13 +198,39 @@ export class FileDocumentEditor implements DocumentEditorPort {
       .querySelector(".document-rich-status span:last-child")
       ?.replaceChildren(document.createTextNode(this.t("documents.filePreviewHint")));
     this.host.dataset.fileEditor = "true";
-    const footer = document.createElement("div");
-    footer.className = "document-file-commands";
-    setMessageHtml(
-      footer,
-      `${action(this.t, "documents.saveVersion", "save", "", true)}${action(this.t, "documents.retryChanges", "retry")}`,
-    );
-    this.host.querySelector(".document-editor-actions")!.prepend(footer);
+    if (this.toolbar) {
+      const t = this.t;
+      const menu =
+        action(t, "documents.retryChanges", "retry") +
+        `<button type="button" class="wb-button" data-authoring-action="copy-content">${messageHtml("creative.copy", {}, t)}</button>` +
+        action(t, "documents.markdownExport", "export") +
+        action(t, "documents.documentProperties", "properties") +
+        action(t, "documents.history", "history") +
+        (this.publishing ? action(t, "documents.publishDocument", "publishing") : "") +
+        '<p class="creative-reader-menu-caption"><span class="document-revision"></span></p>';
+      setMessageHtml(
+        this.toolbar.commands,
+        '<span id="documentSaveState" class="sr-only" role="status"></span>' +
+          readerIcon(
+            t,
+            "documents.insertContent",
+            "plus",
+            'data-doc-action="insert-content" aria-haspopup="menu" aria-expanded="false"',
+          ) +
+          readerIcon(t, "documents.saveVersion", "save", 'data-doc-action="save"') +
+          readerIcon(t, "documents.editDocument", "pencil", 'data-doc-action="edit"') +
+          readerIcon(t, "documents.doneEditing", "check", 'data-doc-action="preview"') +
+          readerMore(t, menu, "document-editor-more"),
+      );
+    } else {
+      const footer = document.createElement("div");
+      footer.className = "document-file-commands";
+      setMessageHtml(
+        footer,
+        `${action(this.t, "documents.saveVersion", "save", "", true)}${action(this.t, "documents.retryChanges", "retry")}`,
+      );
+      this.host.querySelector(".document-editor-actions")!.prepend(footer);
+    }
     const conflict = document.createElement("aside");
     conflict.className = "document-conflict file-editor-conflict";
     conflict.hidden = true;
@@ -256,21 +295,34 @@ export class FileDocumentEditor implements DocumentEditorPort {
       undefined,
       this.t,
     );
-    localizeText(
-      this.host.querySelector('[data-doc-action="preview"]'),
-      preview ? "documents.read" : "documents.doneEditing",
-      undefined,
-      this.t,
-    );
+    if (this.toolbar) {
+      const commands = this.toolbar.commands;
+      for (const name of ["preview", "insert-content"])
+        commands.querySelector<HTMLElement>(`[data-doc-action="${name}"]`)!.hidden = preview;
+      commands.querySelector<HTMLElement>('[data-doc-action="edit"]')!.hidden = !preview;
+    } else {
+      localizeText(
+        this.host.querySelector('[data-doc-action="preview"]'),
+        preview ? "documents.read" : "documents.doneEditing",
+        undefined,
+        this.t,
+      );
+    }
     this.status();
   }
   private status() {
     const s = this.session;
     if (!s || !this.host) return;
-    const text = this.host.querySelector("#documentReadTitle");
+    const text = this.host.querySelector("#documentReadTitle"),
+      commands = this.toolbar?.commands ?? this.host;
     if (text) text.textContent = s.working.title;
+    if (this.toolbar) {
+      const label = s.working.title || s.snapshot.saved.document.title;
+      this.toolbar.title.textContent = label;
+      this.toolbar.title.title = label;
+    }
     localizeText(
-      this.host.querySelector("#documentSaveState"),
+      commands.querySelector("#documentSaveState"),
       this.failed
         ? "documents.draftFailed"
         : s.busy
@@ -284,22 +336,30 @@ export class FileDocumentEditor implements DocumentEditorPort {
       this.t,
     );
     localizeText(
-      this.host.querySelector(".document-revision"),
+      commands.querySelector(".document-revision"),
       "documents.revision",
       { number: s.snapshot.saved.document.revision },
       this.t,
     );
-    for (const button of this.host.querySelectorAll<HTMLButtonElement>('[data-doc-action="save"]')) {
-      localizeText(button, "documents.saveVersion", undefined, this.t);
+    for (const button of commands.querySelectorAll<HTMLButtonElement>('[data-doc-action="save"]')) {
       button.disabled = this.saving || s.conflict || (!s.dirty && !s.uncertain);
+      if (this.toolbar)
+        localizeAttribute(
+          button,
+          "data-tooltip",
+          !s.dirty && !s.uncertain && !s.busy ? "documents.versionSaved" : "documents.saveVersion",
+          {},
+          this.t,
+        );
+      else localizeText(button, "documents.saveVersion", undefined, this.t);
     }
-    const retry = this.host.querySelector<HTMLButtonElement>('[data-doc-action="retry"]')!;
+    const retry = commands.querySelector<HTMLButtonElement>('[data-doc-action="retry"]')!;
     retry.hidden = !s.uncertain && !this.failed;
     retry.disabled = this.saving || s.conflict;
     this.host.querySelector<HTMLElement>(".document-conflict")!.hidden = !s.conflict;
-    const insert = this.host.querySelector<HTMLButtonElement>('[data-doc-action="insert-content"]');
+    const insert = commands.querySelector<HTMLButtonElement>('[data-doc-action="insert-content"]');
     if (insert) insert.disabled = !this.rich?.ready || !this.editing;
-    const publish = this.host.querySelector<HTMLButtonElement>('[data-doc-action="publishing"]');
+    const publish = commands.querySelector<HTMLButtonElement>('[data-doc-action="publishing"]');
     if (publish) {
       publish.disabled = this.changed || this.saving;
       publish.title = this.t(this.changed ? "publishing.saveFirst" : "documents.publishDocument");
@@ -330,11 +390,15 @@ export class FileDocumentEditor implements DocumentEditorPort {
     if (name === "edit") return this.beginEditing();
     if (name === "preview") {
       this.capture();
+      const restoreFocus = !!this.toolbar?.commands.contains(document.activeElement);
       this.mode(true);
+      if (restoreFocus) this.toolbar?.commands.querySelector<HTMLElement>('[data-doc-action="edit"]')?.focus();
       return;
     }
     if (name === "insert-content") {
-      this.rich?.openInsertMenu(this.host!.querySelector<HTMLElement>('[data-doc-action="insert-content"]')!);
+      this.rich?.openInsertMenu(
+        (this.toolbar?.commands ?? this.host)!.querySelector<HTMLElement>('[data-doc-action="insert-content"]')!,
+      );
       return;
     }
     if (name === "save" || name === "retry") {

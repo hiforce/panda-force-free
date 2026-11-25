@@ -23,6 +23,7 @@ const path = (name) => join(process.env.HOME, name);
 const send = (message) => console.log(JSON.stringify({ jsonrpc: "2.0", ...message }));
 let session;
 let pending;
+let botServer;
 const available = {
   model: [
     { value: modelId, name: claude ? "Sonnet Fixture" : "Gemini Fixture" },
@@ -80,7 +81,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       result: {
         protocolVersion: 1,
         agentCapabilities: {
-          ...(claude ? { auth: { status: {} } } : {}),
+          ...(claude ? { auth: { status: {} }, mcpCapabilities: { acp: true } } : { mcpCapabilities: { http: true } }),
           sessionCapabilities: { resume: {} },
           promptCapabilities: { image: true, embeddedContext: true },
         },
@@ -96,6 +97,31 @@ for await (const line of createInterface({ input: process.stdin })) {
     if (method === "session/resume") session = JSON.parse(readFileSync(path(params.sessionId), "utf8"));
     else {
       session = { id: randomUUID(), model: modelId, [effortId]: "high", mode: claude ? "acceptEdits" : "accept-edits" };
+      botServer = params.mcpServers?.[0];
+      if (botServer && claude) {
+        const options = params._meta.claudeCode.options;
+        if (
+          botServer.type !== "acp" ||
+          options.tools.length ||
+          options.settingSources.length ||
+          !options.strictMcpConfig ||
+          options.allowDangerouslySkipPermissions ||
+          !params._meta.systemPrompt.includes("Follow Bot instructions")
+        )
+          throw Error("Missing isolated Bot tool policy");
+      } else if (botServer) {
+        const name = process.argv[process.argv.indexOf("--agent") + 1];
+        const agent = readFileSync(join(params.cwd, ".agents", "agents", name + ".md"), "utf8");
+        if (
+          botServer.type !== "http" ||
+          !process.argv.includes("--sandbox") ||
+          !process.argv.includes("--process-per-session") ||
+          !agent.includes('tools: ["send_message"]') ||
+          !agent.includes("inheritMcp: false") ||
+          !agent.includes("Follow Bot instructions")
+        )
+          throw Error("Missing isolated Antigravity Bot tool policy");
+      }
       writeFileSync(path(session.id), JSON.stringify(session));
     }
     send({ id, result: { sessionId: session.id, configOptions: config() } });
@@ -115,7 +141,17 @@ for await (const line of createInterface({ input: process.stdin })) {
       throw Error("Wrong native session or mode");
     const text = params.prompt[0].text.split("Current user message:\n").at(-1);
     pending = id;
-    if (text.includes("antigravity.approval") || text.includes("claude.approval")) {
+    if (botServer) {
+      send({
+        id: "bot-native-permission",
+        method: "session/request_permission",
+        params: {
+          sessionId: session.id,
+          toolCall: { title: "Bash" },
+          options: [{ optionId: "unsafe", kind: "allow_once" }],
+        },
+      });
+    } else if (text.includes("antigravity.approval") || text.includes("claude.approval")) {
       if (autoApprove) {
         complete("Fixture native auto-approval active.");
         continue;
@@ -148,6 +184,63 @@ for await (const line of createInterface({ input: process.stdin })) {
   } else if (method === "session/cancel") {
     if (pending !== undefined) send({ id: pending, result: { stopReason: "cancelled" } });
     pending = undefined;
+  } else if (!method && id === "bot-native-permission") {
+    if (result?.outcome?.outcome !== "cancelled") throw Error("Unexpected native approval");
+    if (claude) {
+      send({
+        id: "bot-list",
+        method: "mcp/message",
+        params: {
+          serverId: botServer.serverId,
+          requestId: "bot-list-request",
+          method: "tools/list",
+        },
+      });
+    } else {
+      send({
+        id: "bot-http-permission",
+        method: "session/request_permission",
+        params: {
+          sessionId: session.id,
+          toolCall: { kind: "other", name: "mcp_panda_panda_bot_decide", title: "Run mcp_panda_panda_bot_decide" },
+          options: [
+            { optionId: "selected", kind: "allow_once" },
+            { optionId: "persistent", kind: "allow_always" },
+          ],
+        },
+      });
+    }
+  } else if (!method && id === "bot-http-permission") {
+    if (result?.outcome?.optionId !== "selected") throw Error("Expected one-time tool authorization");
+    const response = await fetch(botServer.url, {
+      method: "POST",
+      headers: Object.fromEntries(botServer.headers.map(({ name, value }) => [name, value])),
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "bot-named-tool",
+        method: "tools/call",
+        params: { name: "panda_bot_decide", arguments: {} },
+      }),
+    });
+    if (!response.ok || (await response.json()).result?.content[0].text !== "allowed") throw Error("Wrong tool result");
+    complete("Antigravity Bot fixture finished.");
+  } else if (!method && id === "bot-list") {
+    if (result?.result?.tools?.length !== 1 || result.result.tools[0].name !== "panda_bot_decide")
+      throw Error("Wrong application tools");
+    send({
+      id: "bot-call",
+      method: "mcp/message",
+      params: {
+        serverId: botServer.serverId,
+        requestId: "bot-call-request",
+        method: "tools/call",
+        params: { name: "panda_bot_decide", arguments: {} },
+      },
+    });
+  } else if (!method && id === "bot-call") {
+    if (result?.result?.resultType !== "complete" || result.result.content[0].text !== "allowed")
+      throw Error("Invalid tool result");
+    complete("Claude Bot fixture finished.");
   } else if (!method && id === "approve" && pending !== undefined) {
     update({ sessionUpdate: "tool_call_update", toolCallId: "fixture-tool", status: "completed" });
     complete(result.outcome.outcome === "selected" ? "Fixture approval received." : "Fixture approval cancelled.");

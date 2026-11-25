@@ -5,7 +5,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { chromium, webkit } from "playwright";
 import { createAppFixture, waitFor } from "../support/app-fixture.mjs";
 
-const out = ".artifacts/creation-activity";
+const out = process.env.PANDA_CREATION_ACTIVITY_PROOF || ".artifacts/creation-activity";
 await mkdir(out, { recursive: true });
 const app = await createAppFixture({
   applicationCreation: true,
@@ -37,9 +37,12 @@ try {
         isMobile: width < 768,
         hasTouch: width < 768,
       });
-      await context.addInitScript(() => {
-        if (window === top && /^https?:$/.test(location.protocol)) localStorage.setItem("panda-force-theme", "aurora");
-      });
+      await context.addInitScript(
+        (theme) => {
+          if (window === top && /^https?:$/.test(location.protocol)) localStorage.setItem("panda-force-theme", theme);
+        },
+        locale === "en" ? "light" : "dark",
+      );
       await app.signIn(context);
       const page = await context.newPage(),
         errors = [];
@@ -70,7 +73,11 @@ try {
         .evaluate((img) => img.decode());
       await page.waitForTimeout(250);
       await page.screenshot({ path: `${out}/gallery-${locale}-${width}.png` });
-      await gallery.locator('[data-skill-id="software-prd"]').click();
+      const addSkill = gallery.locator('[data-skill-id="software-prd"]');
+      if (width < 768) await addSkill.tap();
+      else await addSkill.click();
+      assert.equal(await addSkill.getAttribute("aria-pressed"), "true");
+      assert(await addSkill.evaluate((button) => button === document.activeElement));
       const skill = page.locator('#composerSkills [data-selected-skill="software-prd"]');
       assert(await skill.isVisible());
       await openComposerSettings(page, "model");
@@ -144,7 +151,13 @@ try {
           (await accepted.text()) + " " + JSON.stringify(accepted.request().postDataJSON()),
         );
         assert.equal((await accepted.json()).task.id, task.id);
-        assert.equal(accepted.request().postDataJSON().selections.length, 2);
+        assert.deepEqual(
+          accepted
+            .request()
+            .postDataJSON()
+            .selections.map((selection) => selection.id),
+          ["research-digest"],
+        );
         await page.locator("#conversation .user-message").filter({ hasText: "supplied field mapping" }).waitFor();
         await waitFor(() =>
           app
@@ -205,26 +218,47 @@ try {
       assert(!(await page.locator("#sessionInfoButton").isVisible()));
       assert.equal(await page.locator("#conversation [data-activity-list]").count(), 0);
       const firstCard = gallery.locator(".creation-discovery-card").first();
-      const { inputMinimum, emptyInputHeight, firstCardHeight, firstCardBottom, coverWidth, viewportHeight } =
-        await page.evaluate(() => {
-          const bottom = (selector) => document.querySelector(selector).getBoundingClientRect();
-          const input = document.querySelector("#prompt");
-          return {
-            inputMinimum: Number.parseFloat(getComputedStyle(input).minHeight),
-            emptyInputHeight: input.value ? 0 : input.getBoundingClientRect().height,
-            firstCardHeight: bottom(".creation-discovery-card").height,
-            firstCardBottom: bottom(".creation-discovery-card").bottom,
-            coverWidth: bottom(".creation-discovery-card .template-cover").width,
-            viewportHeight: innerHeight,
-          };
-        });
-      assert.equal(inputMinimum, 64);
-      assert(emptyInputHeight <= 96);
-      assert(firstCardHeight <= 144);
-      assert(coverWidth >= 80);
-      assert(firstCardBottom < viewportHeight, "Skills must be actionable on the first screen");
+      const geometry = await page.evaluate(() => {
+        const rect = (selector) => document.querySelector(selector).getBoundingClientRect();
+        const input = document.querySelector("#prompt");
+        const card = rect(".creation-discovery-card");
+        const cover = rect(".creation-discovery-card .template-cover");
+        const caption = rect(".creation-discovery-caption");
+        const button = rect(".creation-discovery-add");
+        const icon = rect(".creation-discovery-add .icon-slot");
+        return {
+          inputMinimum: Number.parseFloat(getComputedStyle(input).minHeight),
+          emptyInputHeight: input.value ? 0 : input.getBoundingClientRect().height,
+          firstCardBottom: card.bottom,
+          coverFits:
+            Math.abs(cover.left - card.left - 1) < 1 &&
+            Math.abs(card.right - cover.right - 1) < 1 &&
+            Math.abs(cover.top - card.top - 1) < 1 &&
+            Math.abs(cover.height - (cover.width * 9) / 16) < 1,
+          addInCaption:
+            button.top >= cover.bottom - 1 &&
+            button.bottom <= caption.bottom &&
+            Math.abs(button.top + button.height / 2 - caption.top - caption.height / 2) < 1 &&
+            button.width >= 44 &&
+            button.height >= 44 &&
+            icon.width <= 28 &&
+            icon.height <= 28,
+          captionHeight: caption.height,
+          columns: getComputedStyle(document.querySelector(".creation-discovery-grid")).gridTemplateColumns.split(" ")
+            .length,
+          viewportHeight: innerHeight,
+        };
+      });
+      assert.equal(geometry.inputMinimum, 64);
+      assert(geometry.emptyInputHeight <= 96);
+      assert(geometry.coverFits, "Skill covers must fill the card at 16:9");
+      assert(geometry.addInCaption, "Add has a full touch target below the cover with a compact icon");
+      assert(geometry.captionHeight <= 84);
+      if (width <= 430) assert.equal(geometry.columns, 2);
+      assert(geometry.firstCardBottom < geometry.viewportHeight, "Skills must be actionable on the first screen");
       await page.screenshot({ path: `${out}/home-${locale}-${width}.png` });
-      await firstCard.locator(".creation-discovery-title").click();
+      const cover = await firstCard.locator(".template-cover").boundingBox();
+      await page.mouse.click(cover.x + cover.width / 2, cover.y + cover.height / 2);
       const detail = page.locator(".creation-skill-detail[open]");
       await detail.waitFor();
       assert((await detail.locator(".creation-skill-readme").innerText()).trim().length > 0);
@@ -240,7 +274,7 @@ try {
       await firstCard.waitFor();
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       assert.deepEqual(errors, []);
-      records.push({ locale, width, inspectorWidth, actualRoute: true, errors });
+      records.push({ locale, width, inspectorWidth, actualRoute: true, coverFits: true, addInCaption: true, errors });
     } finally {
       await browser.close();
     }

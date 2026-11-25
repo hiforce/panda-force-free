@@ -49,6 +49,33 @@ test("owned updates, skill removal, attachments and visible progress survive an 
     );
     expect(upload.status).toBe(201);
     const { attachment } = await upload.json();
+    const supplement = {
+      taskId: first.request.id,
+      id: randomUUID(),
+      prompt: "Keep the selected skill and include a short glossary.",
+      updateGeneration: 1,
+    };
+    const acceptedUpdate = await f.files.call("/api/document-creations/message", "POST", supplement);
+    expect(acceptedUpdate.status).toBe(202);
+    expect(acceptedUpdate.body.task.id).toBe(first.request.id);
+    expect(
+      (
+        await f.files.call("/api/document-creations/message", "POST", {
+          ...supplement,
+          id: randomUUID(),
+          updateGeneration: 0,
+        })
+      ).body.code,
+    ).toBe("updateClosed");
+    const firstRun = f.scopes[0]!;
+    const retained = await firstRun.callbacks.call({
+      ...firstRun.scope,
+      callId: randomUUID(),
+      name: "panda_creation_context",
+      arguments: {},
+    });
+    expect(JSON.parse(retained.text).latestSkillGuidance).not.toEqual([]);
+    expect(JSON.parse(retained.text).messages[0].id).toBe(supplement.id);
     const command = {
       taskId: first.request.id,
       id: randomUUID(),
@@ -113,7 +140,7 @@ test("owned updates, skill removal, attachments and visible progress survive an 
     await Bun.sleep(600);
     const detail = (await f.files.call("/api/document-creations/detail?id=" + first.request.id)).body
       .task as CreationTaskDetail;
-    expect(detail.messages).toHaveLength(2);
+    expect(detail.messages).toHaveLength(3);
     expect(detail.messages![0]!.selections).toEqual([]);
     expect(detail.usage?.total?.totalTokens).toBe(130);
     expect(detail.progress.filter((entry) => entry.stage === "message")).toHaveLength(1);
@@ -128,6 +155,12 @@ test("owned updates, skill removal, attachments and visible progress survive an 
     const replay = await f.files.call("/api/document-creations/message", "POST", command);
     expect(replay.status).toBe(202);
     expect(replay.body.task.id).toBe(first.request.id);
+    const late = await f.files.call("/api/document-creations/message", "POST", { ...supplement, id: randomUUID() });
+    expect(late.status).toBe(409);
+    expect(late.body.code).toBe("updateClosed");
+    expect((await f.files.call("/api/document-creations/message", "POST", supplement)).body.task.id).toBe(
+      first.request.id,
+    );
     expect(f.runs()).toBe(1);
     expect((await f.files.application().navigation.tree("project-1")).nodes).toHaveLength(1);
   } finally {

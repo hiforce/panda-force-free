@@ -18,6 +18,7 @@ import { BotChatService } from "../../src/server/bots/workspace/chat-service.js"
 import { BotChatWorker } from "../../src/server/bots/workspace/chat-worker.js";
 import { BotWorker } from "../../src/server/bots/worker.js";
 import { randomUUID } from "node:crypto";
+import type { ApplicationVisibleEvent } from "../../src/shared/engine/application-tools.js";
 import { ManualRunClock } from "../support/run-clock.js";
 const cleanups: Array<() => Promise<unknown>> = [];
 afterEach(async () => {
@@ -218,6 +219,36 @@ test("ACP application execution uses real MCP calls and configured model/effort 
   expect(codexCalls).toHaveLength(0);
   expect(engine.persistentSession).toBe(false);
 });
+test("Grok applies a live creation update in the same native session and exposes safe progress", async () => {
+  const { port, root } = await fixture();
+  const progress = Promise.withResolvers<void>();
+  const controls = Promise.withResolvers<{ steer(prompt: string): Promise<void> }>();
+  const events: ApplicationVisibleEvent[] = [];
+  const run = port
+    .engine("alice", { runtimeId: "grok-local", model: "grok-fixture", effort: "low" }, root, "creation")
+    .run(
+      { prompt: "fixture: hold for creation update", instructions: "Use scoped tools", tools: [] },
+      {
+        signal: AbortSignal.timeout(12000),
+        started() {},
+        async call() {
+          throw new Error("Unexpected tool call");
+        },
+        control: controls.resolve,
+        event(event) {
+          events.push(event);
+          if (event.kind === "message" && event.text === "Organizing the brief.") progress.resolve();
+        },
+      },
+    );
+  const control = await controls.promise;
+  await progress.promise;
+  await control.steer("fixture: apply creation update");
+  expect((await run).status).toBe("completed");
+  expect(events.some((event) => event.kind === "message" && event.complete && event.phase === "commentary")).toBe(true);
+  expect(events.at(-1)).toMatchObject({ kind: "message", text: "Added the requested detail.", phase: "final_answer" });
+  expect(events.filter((event) => event.kind === "activity" && event.status === "running")).toHaveLength(2);
+}, 15000);
 for (const outcome of ["idle-disconnect", "idle-complete", "cancelled", "disconnected", "progressing"] as const)
   test(`ACP creation execution classifies ${outcome} and keeps productive runs alive`, async () => {
     const clock = new ManualRunClock();
@@ -315,7 +346,7 @@ test("MCP callbacks reject other callers and coalesce duplicate IDs without repl
   expect(conflict.error).toBeDefined();
   expect(calls).toBe(1);
 });
-test("creation freezes runtime/model/effort and independent media configuration in the validated input profile", async () => {
+test("creation freezes the selected runtime, model and effort without borrowing another runtime for media", async () => {
   const { port } = await fixture();
   const models = async () => ({
     data: [
@@ -341,7 +372,7 @@ test("creation freezes runtime/model/effort and independent media configuration 
     "alice",
   );
   expect(selected.engineId).toBe("harness-grok-local");
-  expect(selected.media).toEqual({ model: "gpt-media", effort: "medium" });
+  expect(selected.media).toBeUndefined();
   expect(creationEngineProfile(selected)).toEqual(selected);
 });
 test("Bot chat switches runtimes with bounded visible history and never resumes another vendor's native session", async () => {

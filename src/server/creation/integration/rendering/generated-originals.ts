@@ -7,9 +7,10 @@ import { creationDigest, creationInteger, creationRecord, creationText, creation
 import { imageDigest } from "./image-result.js";
 
 export type GeneratedKind = "slides" | "web" | "video";
+type OriginalKind = "image" | GeneratedKind;
 export class CreationCandidateChanged extends Error {}
 export interface GeneratedOriginal {
-  kind: GeneratedKind;
+  kind: OriginalKind;
   name: string;
   bytes: Uint8Array;
   resources?: readonly { name: string; bytes: Uint8Array }[];
@@ -18,7 +19,7 @@ interface Intent {
   owner: string;
   taskId: string;
   contextDigest: string;
-  kind: GeneratedKind;
+  kind: OriginalKind;
   slot: number;
   signature: string;
 }
@@ -29,13 +30,13 @@ interface Receipt extends Intent {
 function intent(value: unknown): Intent {
   const r = creationRecord(value, ["owner", "taskId", "contextDigest", "kind", "slot", "signature"]),
     slot = creationInteger(r.slot);
-  if (!["slides", "web", "video"].includes(String(r.kind)) || !slot || slot > 8)
+  if (!["image", "slides", "web", "video"].includes(String(r.kind)) || !slot || slot > 8)
     throw new CreationError("invalidInput");
   return {
     owner: creationText(r.owner, 200),
     taskId: creationUuid(r.taskId),
     contextDigest: creationDigest(r.contextDigest),
-    kind: r.kind as GeneratedKind,
+    kind: r.kind as OriginalKind,
     slot,
     signature: creationDigest(r.signature),
   };
@@ -131,7 +132,7 @@ export class CreationGeneratedOriginals {
     if (saved.signature !== input.signature) throw new CreationCandidateChanged();
     return key;
   }
-  async resolve(owner: string, taskId: string, kind: GeneratedKind, key: string) {
+  async resolve(owner: string, taskId: string, kind: OriginalKind, key: string) {
     const record = await this.records.read(creationDigest(key)),
       expected = await this.intents.read(key);
     if (

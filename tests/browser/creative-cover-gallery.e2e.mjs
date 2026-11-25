@@ -18,7 +18,8 @@ try {
 }
 const records = [],
   assets = [];
-let seed = 123456;
+let project = "",
+  seed = 123456;
 const pixels = Buffer.alloc(1400 * 900 * 3);
 for (let i = 0; i < pixels.length; i++) {
   seed ^= seed << 13;
@@ -57,6 +58,13 @@ try {
         return response.json();
       };
       if (!assets.length) {
+        const catalog = await api("/api/projects");
+        const created = await api("/api/projects", {
+          name: "Gallery fixture",
+          code: "gallery-cover",
+          revision: catalog.revision,
+        });
+        project = created.projects.find((entry) => entry.code === "gallery-cover").id;
         for (const mode of ["local", "s3"]) {
           if (mode === "s3") {
             const bucket = "panda-gallery-" + randomUUID();
@@ -79,7 +87,7 @@ try {
             });
           }
           const query = new URLSearchParams({
-            project: "personal",
+            project,
             id: "c-" + randomUUID(),
             operationId: randomUUID(),
             kind: "image",
@@ -97,7 +105,7 @@ try {
           assets.push(saved);
         }
       }
-      const inventory = await api("/api/creative-assets?project=personal");
+      const inventory = await api("/api/creative-assets?project=" + project);
       assert.equal(inventory.assets.length, 2, JSON.stringify(inventory));
       const page = await context.newPage(),
         errors = [],
@@ -117,7 +125,7 @@ try {
         }
         return route.continue();
       });
-      await page.goto(app.base + "/create?view=works");
+      await page.goto(app.base + "/project?id=" + project);
       await page.locator('[data-creative-filter="image"]').click();
       const cards = page.locator('.creative-card[data-creative-kind="image"]');
       await cards
@@ -197,7 +205,7 @@ try {
         const response = await context.request.get(
           app.base +
             "/api/creative-assets/view?" +
-            new URLSearchParams({ project: "personal", id: asset.id, version: asset.version, variant: "cover" }),
+            new URLSearchParams({ project, id: asset.id, version: asset.version, variant: "cover" }),
         );
         assert(response.ok());
         assert.equal(response.headers()["cache-control"], "private, no-store");
@@ -219,7 +227,7 @@ try {
       const anon = await fetch(
         app.base +
           "/api/creative-assets/view?" +
-          new URLSearchParams({ project: "personal", id: target.id, version: target.version, variant: "cover" }),
+          new URLSearchParams({ project, id: target.id, version: target.version, variant: "cover" }),
         { redirect: "manual" },
       );
       assert.equal(anon.status, 401);

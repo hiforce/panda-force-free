@@ -10,7 +10,7 @@ import { parseWorkbenchRoute } from "../workbench-route.js";
 import { creationSessionRoute } from "../creation/session-route.js";
 
 // Owns workspace state and operations; peers are explicit application ports.
-/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "$" | "escapeHtml" | "state" | "t" | "shortPath" | "titleOf", "timeline" | "models" | "composer" | "navigation" | "projects" | "goals" | "queue", "workspace">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "$" | "escapeHtml" | "state" | "t" | "shortPath" | "titleOf", "timeline" | "models" | "composer" | "navigation" | "projects" | "goals" | "queue" | "workbench", "workspace">} options */
 export function assembleWorkspace({
   viewUpdates,
   mutations,
@@ -27,6 +27,7 @@ export function assembleWorkspace({
   projectsPort,
   goalsPort,
   queuePort,
+  workbenchPort,
 }) {
   let folderBrowse = { path: "~", parent: null, selected: null };
   const workspaceContextRequestGate = createLatestRequestGate(),
@@ -144,10 +145,15 @@ export function assembleWorkspace({
   }
   function refreshComposerPlaceholder() {
     if (creationSessionRoute()) {
+      const creation = workbenchPort.workbench?.creationSession();
       localizeAttribute(
         $("#prompt"),
         "placeholder",
-        creationSessionRoute()?.id ? "creation.sessionComposerHint" : "creation.startComposerHint",
+        creation?.canUpdate
+          ? "creation.updateHint"
+          : creationSessionRoute()?.id
+            ? "creation.sessionComposerHint"
+            : "creation.startComposerHint",
         undefined,
         t,
       );

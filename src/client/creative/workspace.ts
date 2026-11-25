@@ -4,7 +4,7 @@ import type { DocumentRecord } from "../../shared/documents/contracts.js";
 import type { ProjectDocumentTree } from "../../shared/documents/navigation.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { setMessageHtml, messageHtml, messageAttributes, localizeAttribute, getBrowserI18n } from "../i18n.js";
-import { documentJson as json, DocumentApiError } from "../documents/api.js";
+import { copyPersonalDocument } from "./document-copy.js";
 import { documentTreeApi } from "../documents/authoring/tree-api.js";
 import { DocumentModal } from "../documents/modal.js";
 import { codexIcon } from "../codex-icons.js";
@@ -309,27 +309,7 @@ export function createCreativeWorkspace(
     if (generation === epoch) notice("");
   }
   async function copy(document: DocumentRecord) {
-    const operationId = crypto.randomUUID(),
-      items = projects();
-    await modal.form(
-      t("creative.copy"),
-      `<p>${messageHtml("creative.copyHint", {}, t)}</p><p class="resource-copy-source">${e(document.title)} · v${document.revision}</p><div class="resource-copy-projects">${items.map((p) => `<label><input type="checkbox" name="project-${e(p.id)}"><span>${e(p.name)}</span></label>`).join("") || `<p>${messageHtml("workbench.noMatchingProjects", {}, t)}</p>`}</div>`,
-      t("creative.copyCount"),
-      async (fields) => {
-        const targets = items.filter((p) => fields["project-" + p.id] === "on").map((p) => p.id);
-        if (!targets.length) throw new DocumentApiError(400, { messageId: "creative.selectProjects" });
-        const result = await json<{ results: { projectId: string; state: string }[] }>("/api/personal/copy", "POST", {
-          operationId,
-          documentId: document.id,
-          revisionId: document.revisionId,
-          projects: targets,
-        });
-        if (result.results.some((r) => r.state !== "copied"))
-          throw new DocumentApiError(409, { messageId: "creative.copyFailed" });
-        notice(t("creative.copyDone"));
-        return result;
-      },
-    );
+    if (await copyPersonalDocument(modal, t, document, projects())) notice(t("creative.copyDone"));
   }
   return {
     show(target: HTMLElement, project = "personal") {

@@ -406,7 +406,10 @@ export class CreationService {
       const task = await this.tasks.get(owner, creationUuid(id));
       await this.authorize(owner, task.spec.projectId);
       if (this.messages && (await this.messages.submit(owner, id, frozen, true))) return this.view(owner, task);
-      if ((task.artifact && task.state === "succeeded") || task.state === "replied") {
+      if (
+        !(frozen && typeof frozen === "object" && Object.hasOwn(frozen, "updateGeneration")) &&
+        ((task.artifact && task.state === "succeeded") || task.state === "replied")
+      ) {
         const next = await this.submissions.followUp(owner, id, frozen);
         this.runtime.wake();
         return this.view(owner, next);

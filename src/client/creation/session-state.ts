@@ -15,7 +15,8 @@ export class CreationSessionState {
   pendingGoal?: import("../../shared/creation/contracts.js").CreationGoalCommand;
   readonly sending = new Set<string>();
   readonly stopping = new Map<string, Promise<void>>();
-  pending?: { id: string; request: CreationRequest | Record<string, unknown> };
+  updateTarget?: { id: string; generation: number };
+  pending?: { id: string; taskId?: string; request: CreationRequest | Record<string, unknown> };
   runtimeId = "";
   runtime?: HarnessRuntimeView;
   runtimePreferenceSaved = false;

@@ -162,8 +162,8 @@ export function assembleWorkbench({
       clear: () => timelinePort.clearConversationRuntime(),
       restoreDraft: () => composerPort.restoreComposerDraft(),
       saveDraft: (scope) => composerPort.saveComposerDraft(scope),
-      accepted: (scope, nextScope, prompt, materialIds) =>
-        composerPort.acceptCreationSubmission(scope, nextScope, prompt, materialIds),
+      accepted: (scope, nextScope, prompt, materialIds, selections) =>
+        composerPort.acceptCreationSubmission(scope, nextScope, prompt, materialIds, selections),
       seedDraft: (text, selections, allowEmpty = false) => {
         const draft = composerPort.getComposerDraft();
         if (
@@ -178,6 +178,7 @@ export function assembleWorkbench({
           attachments: draft?.attachments || [],
           mentions: [],
           skills: [...selections],
+          creationSkillsVersion: 1,
         });
         composerPort.restoreComposerDraft();
       },

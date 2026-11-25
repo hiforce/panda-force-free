@@ -105,7 +105,7 @@ try {
       page.setDefaultTimeout(35000);
       page.on("pageerror", (e) => errors.push(e.message));
       page.on("request", (r) => requests.push({ url: r.url(), method: r.method() }));
-      await page.goto(app.base + "/create?view=works");
+      await page.goto(app.base + "/create?view=activity");
       const activity = page.locator("[data-activity-list]");
       await activity.locator("[data-activity-task]").waitFor();
       assert.equal(await activity.locator("[data-activity-task]").count(), 1);

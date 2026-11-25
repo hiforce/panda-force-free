@@ -73,7 +73,7 @@ export function createSessionSettingsDialog({
             if (dialog.open && runtimeField)
               requireElement('#sessionSettingsForm button[type="submit"]').disabled = !runtimeField.ready();
           },
-          snapshot.permissionOwner !== "creation",
+          snapshot.permissionOwner === "creation" ? "creation" : true,
         )
       : null;
     const fields =

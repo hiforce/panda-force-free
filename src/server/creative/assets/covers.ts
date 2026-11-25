@@ -3,6 +3,8 @@ import { DocumentError } from "../../documents/errors.js";
 import type { FileCreativeAssetReader } from "./reader.js";
 import { creativeFilePreview } from "../../../shared/creative/file-types.js";
 import type { CreativeAsset, CreativeResource } from "../../../shared/creative/assets.js";
+import { CreativeSlidePreviews } from "./slide-previews.js";
+import { renderVideoCover } from "./video-cover.js";
 
 interface Cover {
   bytes: Buffer;
@@ -20,6 +22,7 @@ export class CreativeAssetCovers {
   private readonly pending = new Map<string, Pending>();
   private bytes = 0;
   private active = 0;
+  constructor(private readonly slides: Pick<CreativeSlidePreviews, "read"> = new CreativeSlidePreviews()) {}
   async read(
     owner: string,
     service: Pick<FileCreativeAssetReader, "resource">,
@@ -29,7 +32,8 @@ export class CreativeAssetCovers {
     signal: AbortSignal,
   ) {
     const validate = (asset: CreativeAsset, resource: CreativeResource) => {
-      if (["slides", "web"].includes(asset.kind) || creativeFilePreview(resource.name).kind !== "image")
+      const type = creativeFilePreview(resource.name).kind;
+      if (asset.kind !== "slides" && (asset.kind === "web" || !["image", "video"].includes(type)))
         throw new DocumentError("invalidInput");
       return { head: true };
     };
@@ -50,16 +54,26 @@ export class CreativeAssetCovers {
         this.active++;
         const controller = new AbortController();
         const value: Promise<Cover> = (async () => {
-          const value = await service.resource(project, id, {
-            version,
-            signal: AbortSignal.any([controller.signal, AbortSignal.timeout(40000)]),
-            select: (asset, resource) => {
-              validate(asset, resource);
-              return {};
-            },
-          });
+          const sourceSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(40000)]);
+          let bytesForCover: Buffer;
+          if (metadata.asset.kind === "slides") {
+            bytesForCover = (await this.slides.read(owner, service, project, id, version, 1, sourceSignal)).bytes;
+          } else {
+            const value = await service.resource(project, id, {
+              version,
+              signal: sourceSignal,
+              select: (asset, resource) => {
+                validate(asset, resource);
+                return {};
+              },
+            });
+            bytesForCover =
+              creativeFilePreview(value.resource.name).kind === "video"
+                ? await renderVideoCover(value.bytes!, value.resource.name, sourceSignal)
+                : value.bytes!;
+          }
           if (controller.signal.aborted) throw new DocumentError("unavailable", 503);
-          const image = sharp(value.bytes!, { limitInputPixels: 40_000_000 }),
+          const image = sharp(bytesForCover, { limitInputPixels: 40_000_000 }),
             info = await image.metadata(),
             rotated = (info.orientation ?? 1) >= 5,
             bytes = await image

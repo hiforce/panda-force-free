@@ -23,9 +23,9 @@ export class FileCreativeAssetReader {
   authorize(project: string) {
     return this.reads.authorize(project);
   }
-  list(project: string, cursor?: string, state: CreativeAsset["state"] = "saved") {
+  list(project: string, cursor?: string, state: CreativeAsset["state"] = "saved", kind?: CreativeAsset["kind"]) {
     return documentFileOperation(async () => {
-      const page = await this.reads.ifPresent(project, (_p, view) => creativePage(view, project, cursor, state));
+      const page = await this.reads.ifPresent(project, (_p, view) => creativePage(view, project, cursor, state, kind));
       if (!page && cursor) throw new DocumentError("conflict", 409);
       for (const asset of page?.assets ?? []) this.files.authorize(asset);
       return page ?? { assets: [], nextCursor: null };

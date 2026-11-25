@@ -60,7 +60,9 @@ export class CreationError extends Error {
       | "leaseLost"
       | "unavailable"
       | "invalidOutput"
-      | "defaultWorkflowMissing",
+      | "runtimeSelectionUnavailable"
+      | "defaultWorkflowMissing"
+      | "updateClosed",
   ) {
     super(code);
     this.name = "CreationError";

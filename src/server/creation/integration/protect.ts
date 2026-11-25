@@ -31,12 +31,14 @@ export function creationProtection(owner: (context: RouteContext) => string) {
         await run(context, actor);
       } catch (error) {
         if (error instanceof CreationError) {
+          if (error.code === "runtimeSelectionUnavailable")
+            return respondJson(context.res, 409, { ...errorPayload("harness.selectionError"), code: error.code });
           const status =
             error.code === "notFound"
               ? 404
               : error.code === "unavailable"
                 ? 503
-                : ["conflict", "leaseLost"].includes(error.code)
+                : ["conflict", "leaseLost", "updateClosed"].includes(error.code)
                   ? 409
                   : 400;
           return respondJson(context.res, status, { ...errorPayload(`creation.${error.code}`), code: error.code });

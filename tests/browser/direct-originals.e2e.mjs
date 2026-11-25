@@ -108,7 +108,6 @@ try {
         if (new URL(response.url()).pathname === "/api/creative-assets/view" && response.status() === 307)
           redirects.push(response);
       });
-      await page.goto(app.base + "/create?view=works");
       let linkRequests = 0,
         failFirst = locale === "en";
       await page.route("**/api/creative-assets/link?*", async (route) => {
@@ -121,8 +120,9 @@ try {
         return route.continue();
       });
       for (const { asset, bytes } of assets) {
-        await page.locator('[data-creative-asset="' + asset.id + '"]').click();
-        const dialog = page.locator(".creative-asset-dialog[open]"),
+        await page.goto(app.base + "/create?view=works&category=" + asset.kind);
+        await page.locator('[data-file-id="' + asset.id + '"]').click();
+        const dialog = page.locator("[data-personal-reader]:visible"),
           native = dialog.locator("[data-asset-native]");
         await native.waitFor();
         if (asset.kind === "image")
@@ -141,6 +141,7 @@ try {
         const source = await native.getAttribute("src"),
           before = linkRequests,
           get = dialog.locator("[data-asset-get-link]");
+        await dialog.locator(".personal-asset-more > summary").click();
         if (width < 768) assert((await get.boundingBox()).height >= 44);
         await get.click();
         if (locale === "en" && asset.kind === "image") {
@@ -180,16 +181,17 @@ try {
             new URLSearchParams({ project: asset.project, id: asset.id, version: asset.version }),
         );
         assert.equal(fresh.url, signed);
-        await page.keyboard.press("Escape");
+        await page.locator('[data-authoring-action="close-content"]').click();
         await dialog.waitFor({ state: "hidden" });
       }
-      await page.locator('[data-creative-asset="' + local.asset.id + '"]').click();
-      const localDialog = page.locator(".creative-asset-dialog[open]");
+      await page.goto(app.base + "/create?view=works&category=image");
+      await page.locator('[data-file-id="' + local.asset.id + '"]').click();
+      const localDialog = page.locator("[data-personal-reader]:visible");
       await waitFor(() =>
         localDialog.locator("img[data-asset-native]").evaluate((image) => image.complete && image.naturalWidth > 0),
       );
       assert.equal(await localDialog.locator("[data-asset-get-link]").count(), 0);
-      await page.keyboard.press("Escape");
+      await page.locator('[data-authoring-action="close-content"]').click();
       for (const next of [locale === "en" ? "zh-CN" : "en", locale]) {
         await page.locator(`[data-chrome-menu="${width < 768 ? "preferences" : "language"}"]`).click();
         if (width < 768) await page.locator('[data-chrome-action="menu"][data-value="language"]').click();

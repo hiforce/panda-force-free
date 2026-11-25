@@ -1,3 +1,6 @@
+import { allowsHarnessOutputWrite } from "./workspaces.js";
+import { acpRecord } from "./adapters/acp.js";
+import { createCodexApplicationEngine } from "../engines/application-tools/codex.js";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, constants } from "node:fs";
 import { chmod, mkdir, readFile, open, realpath, mkdtemp, rm, unlink, rename, stat } from "node:fs/promises";
@@ -14,7 +17,7 @@ import { brokerCredentialSource, credentialLease } from "./auth/remote.js";
 import type { HarnessCredentialLease } from "./auth/contracts.js";
 import { createCodexDriver } from "../engines/codex.js";
 import { ZCodeHarnessAgent } from "./adapters/zcode.js";
-import { AntigravityHarnessAgent } from "./adapters/antigravity.js";
+import { AntigravityHarnessAgent, antigravityApplicationAgent } from "./adapters/antigravity.js";
 import { AcpSessionAgent } from "./adapters/acp-session.js";
 
 function profileEntries(value: string | undefined): Record<string, unknown>[] {
@@ -67,6 +70,18 @@ function codexSocketFactory(socketPath: string): HarnessProfile["factory"] {
   };
 }
 
+function codexSocketApplication(socketPath: string): NonNullable<HarnessProfile["applicationEngine"]> {
+  return (selection, directory, purpose) =>
+    createCodexApplicationEngine({
+      connection: { mode: "shared", socketPath },
+      scratchDirectory: directory,
+      version: "1",
+      model: selection.model,
+      effort: selection.effort,
+      purpose,
+    });
+}
+
 function zcodeSelection(profile: Record<string, unknown>) {
   const { providerId, model, efforts, defaultEffort } = profile;
   if (typeof providerId !== "string" || !providerId.trim() || typeof model !== "string" || !model.trim())
@@ -92,7 +107,10 @@ const claudeNativeModes = {
   "full-access": "bypassPermissions",
 } as const satisfies Record<HarnessPermissionMode, string>;
 
-function claudeAgent(connection: ConstructorParameters<typeof AcpSessionAgent>[0]) {
+function claudeAgent(
+  connection: ConstructorParameters<typeof AcpSessionAgent>[0],
+  application?: ConstructorParameters<typeof AcpSessionAgent>[1]["application"],
+) {
   return new AcpSessionAgent(connection, {
     args: [],
     effortId: "effort",
@@ -100,6 +118,30 @@ function claudeAgent(connection: ConstructorParameters<typeof AcpSessionAgent>[0
     permissionModes: [...HARNESS_PERMISSION_MODES],
     nativeModes: claudeNativeModes,
     checkAuthStatus: true,
+    application,
+    ...(application
+      ? {
+          allowApplicationTool: (tool: Record<string, unknown>) =>
+            !!application.nativeOutput &&
+            tool.name === "Write" &&
+            tool.kind === "edit" &&
+            allowsHarnessOutputWrite(connection.cwd, acpRecord(tool.rawInput).file_path),
+          applicationMeta: {
+            systemPrompt: application.instructions,
+            claudeCode: {
+              options: {
+                tools: application.nativeOutput ? ["Write"] : [],
+                settingSources: [],
+                strictMcpConfig: true,
+                allowDangerouslySkipPermissions: false,
+                allowedTools: (application.toolNames ?? []).map(
+                  (name) => `mcp__${application.mcpServer.name}__${name}`,
+                ),
+              },
+            },
+          },
+        }
+      : {}),
   });
 }
 
@@ -130,12 +172,15 @@ export function harnessProfiles(
     },
   ];
   for (const profile of profileEntries(env.PANDA_FORCE_CODEX_HARNESS_PROFILES)) {
+    const socketPath = operatorSocketPath(profile.socketPath);
     profiles.push({
       ...profileIdentity(profile),
       kind: "codex",
       deployment: "local",
       conversationOnly: true,
-      factory: codexSocketFactory(operatorSocketPath(profile.socketPath)),
+      applicationScopes: ["bots", "creation"],
+      applicationEngine: codexSocketApplication(socketPath),
+      factory: codexSocketFactory(socketPath),
     });
   }
   for (const profile of profileEntries(env.PANDA_FORCE_ZCODE_HARNESS_PROFILES)) {
@@ -149,8 +194,10 @@ export function harnessProfiles(
       kind: "zcode",
       deployment: "local",
       conversationOnly: true,
+      applicationScopes: ["bots", "creation"],
+      isolatedApplicationWorkspace: true,
       factory: {
-        create: async (runtime, { owner, scopeId, cwd }) => {
+        create: async (runtime, { owner, scopeId, cwd, application }) => {
           const home = runtimeHome(stateRoot, "zcode", runtime.id, owner, scopeId);
           await mkdir(home, { recursive: true, mode: 0o700 });
           if ((await realpath(home)) !== home) throw new HarnessError("forbidden", 403);
@@ -170,8 +217,10 @@ export function harnessProfiles(
             cwd,
             env: nativeEnv,
             ...selection,
+            application,
             cleanup: async () => {
-              if (/^(catalog|ping|probe)-/.test(scopeId)) await rm(home, { recursive: true, force: true });
+              if (application || /^(catalog|ping|probe)-/.test(scopeId))
+                await rm(home, { recursive: true, force: true });
             },
           });
         },
@@ -189,8 +238,10 @@ export function harnessProfiles(
       kind: "antigravity",
       deployment,
       conversationOnly: true,
+      applicationScopes: ["bots", "creation"],
+      isolatedApplicationWorkspace: true,
       factory: {
-        create: async (_runtime, { cwd, permissionMode }) => {
+        create: async (_runtime, { cwd, permissionMode, application }) => {
           if (accountHome === resolve(homedir())) throw new HarnessError("invalidInput");
           const nativeEnv: NodeJS.ProcessEnv = { HOME: accountHome };
           for (const key of [
@@ -204,7 +255,10 @@ export function harnessProfiles(
             "NO_PROXY",
           ])
             if (env[key]) nativeEnv[key] = env[key];
-          return new AntigravityHarnessAgent({ command, cwd, env: nativeEnv }, permissionMode);
+          const launch = { command, cwd, env: nativeEnv };
+          return application
+            ? antigravityApplicationAgent(launch, application)
+            : new AntigravityHarnessAgent(launch, permissionMode);
         },
       },
     });
@@ -221,8 +275,10 @@ export function harnessProfiles(
       kind: "claude-code",
       deployment,
       conversationOnly: true,
+      applicationScopes: ["bots", "creation"],
+      isolatedApplicationWorkspace: true,
       factory: {
-        create: async (_runtime, { cwd }) => {
+        create: async (_runtime, { cwd, application }) => {
           const account = await stat(accountHome).catch(() => null);
           if (!account) throw new HarnessError("unavailable", 503);
           if (
@@ -241,7 +297,7 @@ export function harnessProfiles(
           };
           for (const key of ["PATH", "LANG", "LC_ALL", "SSL_CERT_FILE", "SSL_CERT_DIR"])
             if (env[key]) nativeEnv[key] = env[key];
-          return claudeAgent({ command, cwd, env: nativeEnv });
+          return claudeAgent({ command, cwd, env: nativeEnv }, application);
         },
       },
     });
@@ -264,7 +320,7 @@ export function harnessProfiles(
         };
         break;
       case "claude-code":
-        factory = { create: async (_runtime, { cwd }) => claudeAgent({ socketPath, cwd }) };
+        factory = { create: async (_runtime, { cwd, application }) => claudeAgent({ socketPath, cwd }, application) };
         break;
       case "zcode": {
         const selection = zcodeSelection(profile);
@@ -282,6 +338,12 @@ export function harnessProfiles(
       deployment: "local",
       conversationOnly: true,
       hostSocket: true,
+      ...(kind === "codex"
+        ? { applicationScopes: ["bots", "creation"], applicationEngine: codexSocketApplication(socketPath) }
+        : {}),
+      ...(kind === "claude-code"
+        ? { applicationScopes: ["bots", "creation"], isolatedApplicationWorkspace: true }
+        : {}),
       factory,
     });
   }

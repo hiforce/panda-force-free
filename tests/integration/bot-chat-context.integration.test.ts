@@ -12,6 +12,85 @@ import { botChatContext } from "../../src/server/bots/workspace/chat-context.js"
 import { BotChatService } from "../../src/server/bots/workspace/chat-service.js";
 import { BotChatWorker } from "../../src/server/bots/workspace/chat-worker.js";
 import { chatWrite } from "../../src/server/bots/workspace/chat-records.js";
+import { createBotWorkspaceFeature } from "../../src/server/bots/workspace/feature.js";
+import { HarnessError } from "../../src/shared/harness/contracts.js";
+
+test("Bot chat freezes a Bot-only runtime and returns a definitive rejection before enqueue", async () => {
+  const root = await mkdtemp(join(tmpdir(), "bot-chat-runtime-"));
+  const store = new BotStore(":memory:");
+  const selection = { runtimeId: "bot-only-fixture", model: "declared-model", effort: "high" };
+  const bot = store.createBot("alice", { name: "Helper", code: "fixture-helper", ...selection });
+  let available = false;
+  let replyCount = 0;
+  const feature = createBotWorkspaceFeature({
+    stateRoot: root,
+    version: "fixture",
+    connection: { mode: "isolated" },
+    store,
+    owner: () => "alice",
+    runtimes: {
+      async catalog() {
+        throw Error("Unexpected list");
+      },
+      async discover() {
+        throw Error("Unexpected discovery");
+      },
+      async resolve(owner, current, scope) {
+        expect(owner).toBe("alice");
+        expect(current.runtimeId).toBe(selection.runtimeId);
+        expect(scope).toBe("bots");
+        if (!available) throw new HarnessError("capabilityUnavailable", 409);
+        return selection;
+      },
+      engine(_, selected, __, purpose) {
+        expect(selected.runtimeId).toBe(selection.runtimeId);
+        expect(purpose).toBe("bot-chat");
+        return {
+          id: "scoped-runtime-fixture",
+          async run(_, callbacks) {
+            const run = { sessionId: "app-fixture", runId: "fixture-turn" };
+            await callbacks.started(run);
+            await callbacks.call({
+              ...run,
+              callId: "decision",
+              name: "panda_bot_chat_reply",
+              arguments: { text: "Scoped reply" },
+            });
+            replyCount++;
+            return { ...run, status: "completed" };
+          },
+        };
+      },
+    },
+  });
+  const router = createRouter(feature.routes);
+  const server = createServer((req, res) => void router({ req, res, url: new URL(req.url!, "http://localhost") }));
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const origin = "http://127.0.0.1:" + (server.address() as { port: number }).port;
+  const url = origin + "/api/bots/" + bot.id + "/chat";
+  const submit = () => fetch(url, { method: "POST", headers: { Origin: origin }, body });
+  const body = JSON.stringify({ requestId: randomUUID(), generation: 1, text: "Hello" });
+  try {
+    const rejected = await submit();
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).toEqual({ error: { code: "runtimeSelectionUnavailable" } });
+    expect((await (await fetch(url)).json()).messages).toEqual([]);
+    available = true;
+    expect((await submit()).status).toBe(202);
+    expect((await submit()).status).toBe(200);
+    const service = new BotChatService(store);
+    for (let attempt = 0; attempt < 100 && (await service.snapshot("alice", bot.id)).busy; attempt++)
+      await Bun.sleep(10);
+    const snapshot = await service.snapshot("alice", bot.id);
+    expect(snapshot.messages.map(({ text }) => text)).toEqual(["Hello", "Scoped reply"]);
+    expect(replyCount).toBe(1);
+  } finally {
+    await feature.close();
+    store.close();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("Bot chat binds real materials and immutable skill guidance to an idempotent message without document or task tools", async () => {
   const root = await mkdtemp(join(tmpdir(), "bot-chat-context-")),

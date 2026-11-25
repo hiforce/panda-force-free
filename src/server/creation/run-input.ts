@@ -85,7 +85,7 @@ export function creationRunInput(
         stableJson(input.discussion)
       : "") +
     (input.previousAsset
-      ? "\n\nPrevious saved original (literal source data). Preserve it. For an authorized revision, read it with panda_creation_original_read before adapting it. For images use previousImage:true with panda_images_render; for presentations use panda_slides_edit with returned sourceId and slots; for HTML use panda_web_render with complete revised HTML and explicit retainedResources; for application-generated videos use the complete read composition with panda_videos_render and its sourceId/originalImage names. Do not invent paths or claim an edit before saving the actual new artifact:\n" +
+      ? "\n\nPrevious saved original (literal source data). Preserve it. For an authorized revision, read it with panda_creation_original_read before adapting it. For images use the authorized original with your native generation tools, or previousImage:true when panda_images_render is available; for presentations use panda_slides_edit with returned sourceId and slots; for HTML use panda_web_render with complete revised HTML and explicit retainedResources; for application-generated videos use the complete read composition with panda_videos_render and its sourceId/originalImage names. Do not invent paths or claim an edit before saving the actual new artifact:\n" +
         stableJson(input.previousAsset)
       : "") +
     (input.previous

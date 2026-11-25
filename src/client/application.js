@@ -791,6 +791,7 @@ export function startApplication() {
       projectsPort: projects,
       goalsPort: goals,
       queuePort: queue,
+      workbenchPort: workbench,
     }),
   );
   install(
@@ -959,6 +960,7 @@ export function startApplication() {
     state: environment.stateFor("harness").state,
     subscribe: environment.stateDomains.subscribe,
     composer,
+    creation: () => workbench.workbench?.creationSession() ?? null,
     navigation,
     models,
     notices,

@@ -2,6 +2,8 @@ import { request } from "../http-client.js";
 import { localizeText, setOpaqueText } from "../i18n.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 
+const coverCard = ".creative-card, [data-creative-cover-card]";
+
 /** Workspace-owned Blob URLs survive list/filter renders, but never survive leaving the owner's workspace. */
 export class CreativeCovers {
   private root: HTMLElement | null = null;
@@ -42,7 +44,7 @@ export class CreativeCovers {
         cached = this.cache.get(key);
       img.onload = () => {
         img.hidden = false;
-        const card = img.closest<HTMLElement>(".creative-card")!;
+        const card = img.closest<HTMLElement>(coverCard)!;
         card.dataset.coverState = "ready";
         card.querySelector<HTMLButtonElement>("[data-creative-cover-retry]")!.hidden = true;
         setOpaqueText(card.querySelector<HTMLElement>("[data-creative-cover-status]")!, "");
@@ -51,7 +53,7 @@ export class CreativeCovers {
         this.drop(key);
         this.state(key, "failed");
       };
-      const retry = img.closest(".creative-card")!.querySelector<HTMLButtonElement>("[data-creative-cover-retry]")!;
+      const retry = img.closest(coverCard)!.querySelector<HTMLButtonElement>("[data-creative-cover-retry]")!;
       retry.onclick = (event) => {
         event.stopPropagation();
         this.drop(key);
@@ -91,7 +93,7 @@ export class CreativeCovers {
       this.failed.add(key);
     }
     for (const img of this.images(key)) {
-      const card = img.closest<HTMLElement>(".creative-card")!;
+      const card = img.closest<HTMLElement>(coverCard)!;
       card.dataset.coverState = state;
       img.hidden = true;
       card.querySelector<HTMLButtonElement>("[data-creative-cover-retry]")!.hidden = state !== "failed";

@@ -2,7 +2,7 @@ import type { CreationArtifact } from "../../shared/creation/contracts.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import { LazyCreativeAssetsPanel } from "../creative/assets-lazy.js";
 import type { NotificationIntentHandler } from "../notifications/controller.js";
-import { creationDocumentRoute } from "./delivery-route.js";
+import { creationDocumentRoute, personalCreationAssetRoute } from "./delivery-route.js";
 
 export function creationNotificationActions(t: Translate, identity: string, navigate: (path: string) => void) {
   const viewer = new LazyCreativeAssetsPanel(t, "notificationDeliveryViewer", identity);
@@ -14,6 +14,7 @@ export function creationNotificationActions(t: Translate, identity: string, navi
         const artifact = value as CreationArtifact;
         if (!artifact || typeof artifact.projectId !== "string") throw new Error("Invalid creation deliverable");
         if (artifact.kind === "document") navigate(creationDocumentRoute(artifact));
+        else if (artifact.projectId === "personal") navigate(personalCreationAssetRoute(artifact));
         else await viewer.follow(artifact.projectId, artifact.assetId, async () => {}, artifact.version);
       },
     },

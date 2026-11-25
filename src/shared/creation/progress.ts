@@ -15,6 +15,9 @@ export const creationOperations = {
   panda_web_render: "creation.progressRenderWeb",
   panda_videos_render: "creation.progressRenderVideo",
   panda_artifacts_save: "creation.progressSaveArtifact",
+  panda_artifacts_import_file: "creation.progressImportArtifact",
+  nativeWork: "creation.progressNativeWork",
+  nativeWrite: "creation.progressNativeWrite",
 } as const satisfies Record<string, MessageId>;
 export type CreationOperation = keyof typeof creationOperations;
 export function creationOperation(value: unknown): value is CreationOperation {

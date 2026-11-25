@@ -1,5 +1,5 @@
 import type { CreationTaskDetail } from "../../shared/creation/contracts.js";
-import { creationDocumentArtifact } from "../../shared/creation/contracts.js";
+import { creationDocumentArtifact, creationUpdateGeneration } from "../../shared/creation/contracts.js";
 import { creativeKindIcons } from "../../shared/creative/file-types.js";
 import type { RuntimeSelection } from "../../shared/engine/runtime-selection.js";
 import { defaultRuntimeModel, runtimeModels } from "../../shared/engine/runtime-selection.js";
@@ -38,8 +38,8 @@ import { creationSessionRoute } from "./session-route.js";
 import { CreationSessionSections } from "./session-sections.js";
 import { CreationSessionState } from "./session-state.js";
 import { CreationSkillDiscovery } from "./skill-discovery.js";
-import { creationStateMessage } from "./state.js";
-import { creationDocumentRoute } from "./delivery-route.js";
+import { creationCanUpdate, creationStateMessage } from "./state.js";
+import { creationDocumentRoute, personalCreationAssetRoute } from "./delivery-route.js";
 
 export type { CreationWorkspaceBridge } from "./session-port.js";
 
@@ -67,6 +67,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   private cards?: CreationCards;
   private readonly status = document.createElement("div");
   private readonly notice = document.createElement("p");
+  private readonly updateNotice = document.createElement("div");
   constructor(
     private readonly t: Translate,
     private readonly identity: string,
@@ -135,6 +136,23 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.notice.className = "creation-session-notice";
     this.notice.setAttribute("role", "status");
     this.status.className = "creation-session-status";
+    this.updateNotice.className = "creation-update-notice";
+    this.updateNotice.hidden = true;
+    this.dock.prepend(this.updateNotice);
+    const message = document.createElement("span"),
+      useNext = document.createElement("button");
+    message.setAttribute("role", "status");
+    localizeText(message, "creation.updateClosed", {}, t);
+    useNext.type = "button";
+    useNext.className = "wb-button";
+    localizeText(useNext, "creation.useUpdateNextRound", {}, t);
+    useNext.onclick = () => {
+      this.state.updateTarget = undefined;
+      this.persist();
+      this.renderUpdateNotice();
+      document.querySelector<HTMLTextAreaElement>("#prompt")?.focus();
+    };
+    this.updateNotice.append(message, useNext);
     for (const section of [this.sectionView.selectedDocument, this.sectionView.versions, this.sectionView.brief])
       section.className = "session-section";
   }
@@ -143,6 +161,20 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   }
   get running() {
     return Boolean(this.state.task && creationActive(this.state.task));
+  }
+  get canUpdate() {
+    return creationCanUpdate(this.state.task);
+  }
+  observeDraft(present: boolean) {
+    if (!this.state.route?.id || this.state.pending) return;
+    if (present && !this.state.updateTarget && this.canUpdate && this.state.task) {
+      this.state.updateTarget = { id: this.state.task.id, generation: creationUpdateGeneration(this.state.task) };
+      this.persist();
+    } else if (!present && this.state.updateTarget) {
+      this.state.updateTarget = undefined;
+      this.persist();
+      this.renderUpdateNotice();
+    }
   }
   get sending() {
     return this.state.sending.has(this.key);
@@ -164,14 +196,20 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     if (!this.dock.isConnected) root.closest(".conversation-shell")!.append(this.dock);
     this.hide();
     this.state.route = route;
-    const saved = storage.getJson(this.preferenceKey(), { runtimeId: "", model: "", effort: "", pending: null });
+    const saved = storage.getJson(this.preferenceKey(), {
+      runtimeId: "",
+      model: "",
+      effort: "",
+      pending: null,
+      updateTarget: null,
+    });
     this.state.runtimeId = typeof saved.runtimeId === "string" ? saved.runtimeId : "";
     this.state.runtimePreferenceSaved = !!this.state.runtimeId;
     this.state.runtime = undefined;
     if (route.id && !this.state.runtimeId) this.state.runtimeId = "codex";
     this.defaultRuntime = this.state.runtimeId
       ? undefined
-      : runtimeModelCatalog(this.t)
+      : runtimeModelCatalog(this.t, "creation")
           .list()
           .then((catalog) => catalog.defaultRuntimeId)
           .catch(() => "");
@@ -179,6 +217,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.state.model = typeof saved.model === "string" ? saved.model : "";
     this.state.effort = typeof saved.effort === "string" ? saved.effort : "";
     this.state.pending = saved.pending || undefined;
+    this.state.updateTarget = saved.updateTarget || undefined;
+    this.renderUpdateNotice();
     this.state.pendingGoal = storage.getJson(this.preferenceKey() + ":goal", null) || undefined;
     this.bridge.clear();
     this.bridge.reset(!route.id);
@@ -216,7 +256,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
         () => this.openDocument(),
         () => {},
         this.api,
-        { brief: false, openAction: false, progressDetails: false },
+        { brief: false, openAction: false, progressDetails: "stages", supplement: true },
       );
       this.restoreSnapshot();
       void this.refresh();
@@ -243,6 +283,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.sectionView.root.replaceChildren();
     this.actions.remove();
     this.state.task = undefined;
+    this.state.updateTarget = undefined;
+    this.updateNotice.hidden = true;
     this.state.pendingGoal = undefined;
     this.state.goalWriting = false;
     this.state.route = null;
@@ -259,7 +301,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
   private async loadRuntime() {
     const current = ++this.state.catalogEpoch;
     try {
-      const catalog = runtimeModelCatalog(this.t);
+      const catalog = runtimeModelCatalog(this.t, "creation");
       let id = this.state.runtimeId;
       if (!id) id = (await this.defaultRuntime) || "";
       if (!id || current !== this.state.catalogEpoch) return;
@@ -397,6 +439,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       model: this.state.model,
       effort: this.state.effort,
       pending: this.state.pending || null,
+      updateTarget: this.state.updateTarget || null,
     });
   }
   private renderActions() {
@@ -416,20 +459,15 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     setMessageHtml(
       this.actions,
       `${this.state.route.id ? `<a class="icon-button" href="/create" data-creation-new>${codexIcon("plus")}</a>` : ""}
-      <a class="${this.state.route.id ? "icon-button" : "wb-button"}" href="/create?view=activity" data-creation-history ${messageAttributes("aria-label", "creation.activityTitle", {}, this.t)} ${messageAttributes("title", "creation.activityTitle", {}, this.t)}>${codexIcon("clock")}${this.state.route.id ? "" : `<span>${messageHtml("creation.activityTitle", {}, this.t)}</span>`}</a>
-      <a class="icon-button" href="/create?view=works" data-creation-works ${messageAttributes("title", "creative.assetLibrary", {}, this.t)}>${codexIcon("folderOpen")}</a>${this.state.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.state.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon(artifact && artifact.kind !== "document" ? creativeKindIcons[artifact.kind] : "file")}<span>${messageHtml(openLabel, {}, this.t)}</span></button>` : ""}`,
+      <div class="creation-session-shortcuts">
+        <a class="wb-button" href="/create?view=activity" data-creation-history ${messageAttributes("aria-label", "creation.activityTitle", {}, this.t)} ${messageAttributes("title", "creation.activityTitle", {}, this.t)}>${codexIcon("clock")}<span>${messageHtml("creation.activityTitle", {}, this.t)}</span></a>
+        <a class="wb-button" href="/create?view=works" data-creation-works ${messageAttributes("aria-label", "creative.assetLibrary", {}, this.t)} ${messageAttributes("title", "creative.assetLibrary", {}, this.t)}>${codexIcon("folderOpen")}<span>${messageHtml("creative.assetLibrary", {}, this.t)}</span></a>
+      </div>${this.state.task?.document || this.savedDocument()?.artifact ? `<button type="button" class="session-button primary" data-creation-open${this.state.task?.documentStatus === "unavailable" ? " disabled" : ""}>${codexIcon(artifact && artifact.kind !== "document" ? creativeKindIcons[artifact.kind] : "file")}<span>${messageHtml(openLabel, {}, this.t)}</span></button>` : ""}`,
     );
     localizeAttribute(
       this.actions.querySelector("[data-creation-new]"),
       "aria-label",
       "creation.newCreation",
-      {},
-      this.t,
-    );
-    localizeAttribute(
-      this.actions.querySelector("[data-creation-works]"),
-      "aria-label",
-      "creative.assetLibrary",
       {},
       this.t,
     );
@@ -443,6 +481,10 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       artifact = round?.artifact;
     if (!round || !artifact) return;
     if (artifact.kind !== "document") {
+      if (artifact.projectId === "personal") {
+        this.navigate(personalCreationAssetRoute(artifact));
+        return;
+      }
       this.assetViewer ??= new LazyCreativeAssetsPanel(this.t, "creationArtifactViewer", this.identity);
       const epoch = this.state.epoch;
       try {
@@ -474,6 +516,10 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     const saved = this.savedDocument();
     const artifact = saved?.artifact;
     if (artifact && artifact.kind !== "document") {
+      if (artifact.projectId === "personal") {
+        this.navigate(personalCreationAssetRoute(artifact));
+        return;
+      }
       this.assetViewer ??= new LazyCreativeAssetsPanel(this.t, "creationArtifactViewer", this.identity);
       const epoch = this.state.epoch;
       void this.assetViewer
@@ -629,14 +675,25 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     if (!this.state.effort && task.effort) this.state.effort = task.effort;
     this.renderPending();
     for (const round of rounds) this.state.previous.set(round.id, { task: round, at: Date.now() });
-    if (task.selections !== undefined) this.bridge.seedDraft("", task.selections);
     this.presenter.render(task, rounds, this.cards);
     if (newlyCompleted) window.dispatchEvent(new Event("panda-force:notifications-changed"));
     this.renderActions();
     this.bridge.changed();
   }
 
+  private renderUpdateNotice() {
+    const target = this.state.updateTarget,
+      task = this.state.task;
+    this.updateNotice.hidden = Boolean(
+      !target ||
+      !task ||
+      this.state.pending ||
+      (this.canUpdate && target.id === task.id && target.generation === creationUpdateGeneration(task)),
+    );
+  }
+
   private renderPending() {
+    this.renderUpdateNotice();
     this.notice.classList.toggle("sr-only", this.sending);
     if (this.sending) {
       if (this.notice.dataset.phase !== "sending") {

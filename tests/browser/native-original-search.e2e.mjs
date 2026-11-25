@@ -129,6 +129,8 @@ try {
       await page.goto(
         app.base + "/project?" + new URLSearchParams({ id: project, asset: slides.id, assetVersion: slides.version }),
       );
+      const slideText = dialog.locator("[data-slide-text]");
+      if ((await slideText.getAttribute("open")) === null) await slideText.locator("summary").click();
       await dialog.locator(".creative-asset-sections").waitFor();
       assert.match(await dialog.locator(".creative-asset-sections").innerText(), /Hello world/);
       assert.equal(await dialog.locator(".creative-asset-sections section").count(), 2);
@@ -136,13 +138,14 @@ try {
       await page.goto(
         app.base + "/create?" + new URLSearchParams({ asset: personal.id, assetVersion: personal.version }),
       );
-      await dialog.locator("[data-asset-frame]").waitFor();
+      const personalReader = page.locator("[data-personal-reader]");
+      await personalReader.locator("[data-asset-frame]").waitFor();
       assert.equal(
-        await dialog.frameLocator("[data-asset-frame]").locator("h1").innerText(),
+        await personalReader.frameLocator("[data-asset-frame]").locator("h1").innerText(),
         "Citron personal insight",
       );
       await page.reload();
-      await dialog.locator("[data-asset-frame]").waitFor();
+      await personalReader.locator("[data-asset-frame]").waitFor();
       await snap("personal-result");
       assert.deepEqual(errors, []);
     } finally {

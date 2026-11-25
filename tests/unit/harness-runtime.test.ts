@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, readdir, rm, writeFile, mkdir, symlink, rename, stat } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile, mkdir, symlink, link, rename, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -12,7 +12,11 @@ import type { HarnessAgent, HarnessAgentEvent, HarnessAgentInfo } from "../../sr
 import { HarnessError, type HarnessPermissionMode } from "../../src/shared/harness/contracts.js";
 import { HarnessDiagnostics } from "../../src/server/harness/diagnostics.js";
 import { applicationRuntimes } from "../../src/server/harness/application.js";
-import { createHarnessWorkspace } from "../../src/server/harness/workspaces.js";
+import {
+  allowsHarnessOutputWrite,
+  createHarnessWorkspace,
+  harnessOutputReader,
+} from "../../src/server/harness/workspaces.js";
 import { serveHostAgent } from "../../src/server/harness/host.js";
 const directories: string[] = [];
 const cleanups: Array<() => Promise<unknown>> = [];
@@ -26,6 +30,27 @@ afterEach(async () => {
   for (const directory of directories.splice(0)) await rm(directory, { recursive: true, force: true });
 });
 const administrator = { owner: "one", administrator: true };
+
+test("native output readers return only bounded originals within the captured runtime workspace", async () => {
+  const root = await temporary();
+  const directory = join(root, "workspace");
+  await mkdir(directory);
+  const read = await harnessOutputReader(directory);
+  await writeFile(join(directory, "proof.html"), "<p>Native original</p>");
+  await writeFile(join(root, "other.html"), "Private unrelated file");
+  await symlink(join(root, "other.html"), join(directory, "symlink.html"));
+  await link(join(root, "other.html"), join(directory, "hardlink.html"));
+  expect((await read("proof.html")).toString()).toBe("<p>Native original</p>");
+  expect(await allowsHarnessOutputWrite(directory, "native.png")).toBe(true);
+  for (const name of ["../other.html", "symlink.html", "hardlink.html", join(root, "other.html")]) {
+    await expect(read(name)).rejects.toThrow();
+    expect(await allowsHarnessOutputWrite(directory, name)).toBe(false);
+  }
+  await rename(directory, join(root, "retired"));
+  await mkdir(directory);
+  await writeFile(join(directory, "proof.html"), "Substitute file");
+  await expect(read("proof.html")).rejects.toMatchObject({ code: "workspaceUnavailable" });
+});
 
 test("host Harness sockets run and resume native sessions with the credentials owned on the host", async () => {
   const directory = await temporary();
@@ -135,6 +160,37 @@ test("host Harness sockets run and resume native sessions with the credentials o
   }
 });
 
+async function verifyScopedBotDecision(registry: HarnessRegistry, directory: string, runtimeId: string, model: string) {
+  const application = applicationRuntimes({
+    registry,
+    scratchRoot: join(directory, "applications"),
+    principal: async () => administrator,
+    codex() {
+      throw Error("Unexpected Codex execution");
+    },
+  });
+  const calls: string[] = [];
+  const outcome = await application
+    .engine(administrator.owner, { runtimeId, model, effort: "high" }, directory, "bots")
+    .run(
+      {
+        instructions: "Follow Bot instructions",
+        prompt: "Make one scoped decision.",
+        tools: [{ name: "panda_bot_decide", description: "Decide", inputSchema: { type: "object" } }],
+      },
+      {
+        signal: new AbortController().signal,
+        started() {},
+        async call({ name }) {
+          calls.push(name);
+          return { success: true, text: "allowed" };
+        },
+      },
+    );
+  expect(outcome.status).toBe("completed");
+  expect(calls).toEqual(["panda_bot_decide"]);
+}
+
 test("Claude Code uses its native account, reports sign-in and resumes a conversation with approvals", async () => {
   const directory = await temporary();
   const accountHome = join(directory, "claude-account");
@@ -176,6 +232,7 @@ test("Claude Code uses its native account, reports sign-in and resumes a convers
       { id: "claude-fixture-pro", isDefault: false, efforts: [{ id: "medium" }, { id: "high" }] },
     ],
   });
+  await verifyScopedBotDecision(registry, directory, "claude-code", "claude-fixture");
   const denied = await registry.agent(administrator, "claude-code", "conversation", directory);
   cleanups.push(() => denied.agent.close());
   await expect(denied.agent.create(directory, { permissionMode: "full-access" })).rejects.toMatchObject({
@@ -277,6 +334,7 @@ test("Antigravity profiles isolate account homes and resume approved ACP turns w
     code: "authentication",
   });
 
+  await verifyScopedBotDecision(registry, directory, "google-primary", "gemini-fixture");
   const first = await registry.agent(administrator, "google-primary", "conversation", directory);
   cleanups.push(() => first.agent.close());
   const session = await first.agent.create(directory);
@@ -1076,6 +1134,110 @@ describe("Harness source history and materials", () => {
       resolver.resolve(administrator, ["https://unrelated.example/file"], conversation),
     ).rejects.toMatchObject({ code: "forbidden" });
   });
+});
+
+test("ZCode runs scoped Bot and creation tools with independent access", async () => {
+  const { harnessProfiles } = await import("../../src/server/harness/profiles.js");
+  const root = await temporary();
+  const providerConfig = join(root, "provider.json");
+  await writeFile(
+    providerConfig,
+    JSON.stringify({ applicationProbe: true, expectedInstruction: "Follow operator instructions." }),
+  );
+  const profile = {
+    id: "zcode-fixture",
+    name: "ZCode",
+    command: new URL("../support/zcode-stdio-fixture.mjs", import.meta.url).pathname,
+    providerConfig,
+    builtinConfig: providerConfig,
+    providerId: "fixture",
+    model: "glm-fixture",
+    efforts: ["high"],
+    defaultEffort: "high",
+  };
+  const metadata = new SQLiteHarnessMetadata(":memory:");
+  cleanups.push(async () => metadata.close());
+  const driver = {} as Parameters<typeof harnessProfiles>[1];
+  const registry = new HarnessRegistry(
+    metadata,
+    harnessProfiles(root, driver, {
+      PATH: process.env.PATH,
+      PANDA_FORCE_ZCODE_HARNESS_PROFILES: JSON.stringify([profile]),
+    }),
+  );
+  await registry.initialize();
+  const scope = join(root, "scratch");
+  const port = applicationRuntimes({
+    registry,
+    scratchRoot: scope,
+    principal: async () => administrator,
+    codex() {
+      throw Error("Unexpected Codex execution");
+    },
+  });
+  expect((await port.catalog(administrator.owner)).runtimes.map(({ id }) => id)).not.toContain(profile.id);
+  expect((await port.catalog(administrator.owner, "bots")).runtimes.map(({ id }) => id)).toContain(profile.id);
+  expect((await port.catalog(administrator.owner, true)).runtimes.map(({ id }) => id)).toContain(profile.id);
+  expect((await port.catalog(administrator.owner, "creation")).runtimes.map(({ id }) => id)).toContain(profile.id);
+  const selection = { runtimeId: profile.id, model: profile.model, effort: "high" };
+  await expect(port.resolve(administrator.owner, selection)).rejects.toMatchObject({ code: "capabilityUnavailable" });
+  expect(await port.resolve(administrator.owner, selection, "bots")).toEqual(selection);
+  const calls: string[] = [];
+  for (const [purpose, tool] of [
+    ["bots", "panda_bot_decide"],
+    ["bot-chat", "panda_bot_chat_reply"],
+    ["creation", "panda_creation_turn"],
+  ] as const) {
+    const result = await port.engine(administrator.owner, selection, root, purpose).run(
+      {
+        instructions: "Follow operator instructions.",
+        prompt: "Untrusted task data",
+        tools: [{ name: tool, description: "Scoped tool", inputSchema: { type: "object" } }],
+      },
+      {
+        signal: new AbortController().signal,
+        started() {},
+        async call({ name }) {
+          calls.push(name);
+          return { success: true, text: "ok" };
+        },
+      },
+    );
+    expect(result.status).toBe("completed");
+  }
+  expect(calls).toEqual(["panda_bot_decide", "panda_bot_chat_reply", "panda_creation_turn"]);
+  expect(await readdir(scope)).toEqual([]);
+  const runtime = await registry.require(administrator, profile.id);
+  await registry.configure(administrator, {
+    ...runtime,
+    botEnabled: false,
+  });
+  expect((await port.catalog(administrator.owner, "bots")).runtimes.map(({ id }) => id)).not.toContain(profile.id);
+  expect((await port.catalog(administrator.owner, "creation")).runtimes.map(({ id }) => id)).toContain(profile.id);
+  expect(await port.resolve(administrator.owner, selection, "creation")).toEqual(selection);
+  expect((await port.catalog(administrator.owner, true)).runtimes.map(({ id }) => id)).toContain(profile.id);
+  await expect(port.resolve(administrator.owner, selection, "bots")).rejects.toMatchObject({
+    code: "capabilityUnavailable",
+  });
+  await expect(port.discover(administrator.owner, selection.runtimeId, "bots")).rejects.toMatchObject({
+    code: "capabilityUnavailable",
+  });
+  const { botEnabled: _botEnabled, ...current } = await registry.require(administrator, profile.id);
+  await registry.configure(administrator, { ...current, name: "Renamed ZCode" });
+  expect((await registry.require(administrator, profile.id)).botEnabled).toBe(false);
+  const other = "second-zcode";
+  await registry.configure(administrator, {
+    ...current,
+    id: other,
+    revision: 0,
+    name: "Second ZCode",
+  });
+  expect((await port.catalog(administrator.owner, "bots")).runtimes.map(({ id }) => id)).toContain(other);
+  await expect(registry.remove(administrator, other, 0)).rejects.toMatchObject({ code: "conflict" });
+  const removed = await registry.remove(administrator, other, 1);
+  expect(removed.runtimes.map(({ id }) => id)).not.toContain(other);
+  expect(await registry.remove(administrator, other, 1)).toEqual(removed);
+  await expect(registry.require(administrator, other)).rejects.toMatchObject({ code: "notFound" });
 });
 
 test("ZCode verifies native access before each new or resumed session can run", async () => {

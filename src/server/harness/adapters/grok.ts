@@ -225,6 +225,7 @@ export class GrokHarnessAgent implements HarnessAgent {
   }
   async prompt(session: HarnessNativeSession, input: HarnessPrompt, emit: (event: HarnessAgentEvent) => Promise<void>) {
     if (this.emit || this.session?.id !== session.id) throw new HarnessPromptError("busy", false, 409);
+    if (input.continuation) this.cancelled = false;
     let prompt: Array<Record<string, unknown>>;
     try {
       await this.credentials?.prepare();

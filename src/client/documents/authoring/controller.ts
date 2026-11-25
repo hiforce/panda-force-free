@@ -1,6 +1,8 @@
 import type { Translate } from "../../../shared/i18n/messages.js";
 import type { DocumentTreeMutation } from "../../../shared/documents/navigation.js";
-import { setMessageHtml, setOpaqueText, localizeText, errorText } from "../../i18n.js";
+import type { CreativeAsset } from "../../../shared/creative/assets.js";
+import { setMessageHtml, setOpaqueText, localizeText, errorText, getBrowserI18n, messageHtml } from "../../i18n.js";
+import { escapeHtml as e } from "../../../shared/html.js";
 
 import { FileDocumentEditor } from "../files/editor.js";
 import { documentJson } from "../api.js";
@@ -29,6 +31,9 @@ import { AuthoringAssetDirectory } from "./asset-directory.js";
 import { DocumentTemplatePicker } from "./template-picker.js";
 import { LazyDocumentCreationPanel } from "../../creation/lazy-panel.js";
 import { KnowledgePanel, KnowledgeRecordView } from "../../knowledge/lazy.js";
+import { LazyCreativeAssetsPanel } from "../../creative/assets-lazy.js";
+import { copyPersonalDocument } from "../../creative/document-copy.js";
+import { PersonalCreationLibrary, personalCategory, type PersonalCategory } from "./personal-library.js";
 
 /** The workspace coordinates feature lifetimes. Tree, source editing and connected sources own separate state. */
 export function createProjectDocumentWorkspace(options: {
@@ -36,6 +41,7 @@ export function createProjectDocumentWorkspace(options: {
   identityKey: string;
   sources: { show(host: HTMLElement, project: string): void; hide(): void };
   publishing: DocumentPublicationActions;
+  projects?: () => readonly { id: string; name: string }[];
   onDocumentFocusChanged?: (active: boolean) => void;
 }) {
   const { t } = options,
@@ -68,11 +74,21 @@ export function createProjectDocumentWorkspace(options: {
     view = new DocumentTreeView(t, options.identityKey);
   const directory = new AuthoringDirectory(root, controls);
   const header = new AuthoringHeader(root, t);
-  const files = new AuthoringAssetDirectory(t, options.identityKey, () => {
-    if (directory.mobile.matches) directory.set(false, true);
-    menu.close();
-    drag?.cancel();
-  });
+  const inlineAsset = new LazyCreativeAssetsPanel(t, "personalCreationAssetActions", options.identityKey);
+  const files = new AuthoringAssetDirectory(
+    t,
+    options.identityKey,
+    () => {
+      if (directory.mobile.matches && root.classList.contains("directory-open")) directory.set(false, true);
+      menu.close();
+      drag?.cancel();
+    },
+    (asset) => void openPersonalAsset(asset, asset.version, true),
+    (available) => personal?.setImportAvailable(available),
+  );
+  let personal: PersonalCreationLibrary | null = null,
+    personalKey = "",
+    personalListKey = "";
   const session = new DocumentTreeSession(documentTreeApi, treeRecovery(options.identityKey), renderTree);
   const onSaved = (record: import("../../../shared/documents/contracts.js").DocumentRecord) => {
     session.update(record);
@@ -148,11 +164,13 @@ export function createProjectDocumentWorkspace(options: {
         (["trash-document"].includes(action) && !canChange([editor.id]));
       if (["new-template", "new-ai", "ai-tasks", "knowledge"].includes(action)) node.hidden = !fileMode;
       if (action === "knowledge") node.disabled = !workspaceReady || session.loading;
+      if (action === "close-content") node.disabled = editor.saving;
       if (action === "new") node.classList.toggle("primary", !fileMode);
     }
     header.update(
       index.ancestors(editor.id).map((node) => node.document.title),
       directory.mobile.matches,
+      personal ? "creative.myWork" : "documents.rootFolder",
     );
     const search = get<HTMLInputElement>("#documentSearch");
     if (search) search.disabled = !workspaceReady;
@@ -190,6 +208,18 @@ export function createProjectDocumentWorkspace(options: {
   function renderTree() {
     if (sourceView) return;
     index = new DocumentTreeIndex(session.snapshot);
+    if (personal) {
+      personal.update();
+      files.setCardView(personal.view === "cards");
+      personal.documents(
+        index,
+        get<HTMLInputElement>("#documentSearch")?.value || "",
+        session.loading,
+        !workspaceReady || session.busy || opening,
+      );
+      controls();
+      return;
+    }
     const host = get("#documentTree");
     if (host) {
       const top = host.scrollTop,
@@ -203,7 +233,36 @@ export function createProjectDocumentWorkspace(options: {
     }
     controls();
   }
-  function address(id: string) {
+  function personalLocation() {
+    const url = new URL(location.href);
+    return (url.pathname === "/documents" && url.searchParams.get("project") === "personal") ||
+      (url.pathname === "/create" && (url.searchParams.get("view") === "works" || url.searchParams.has("asset")))
+      ? url
+      : null;
+  }
+  function personalRouteKey(url: URL) {
+    return JSON.stringify(["category", "document", "asset", "assetVersion"].map((key) => url.searchParams.get(key)));
+  }
+  function personalAddress(id = "", asset = "", version?: string, push = false) {
+    const url = personalLocation();
+    if (!url || !personal) return;
+    // Keep the works alias recognizable after closing an asset-only deep link.
+    if (url.pathname === "/create") url.searchParams.set("view", "works");
+    url.searchParams.set("category", personal.category);
+    for (const [key, value] of [
+      ["document", id],
+      ["asset", asset],
+      ["assetVersion", version],
+      ["edit", ""],
+    ] as const) {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    }
+    personalKey = personalRouteKey(url);
+    history[push ? "pushState" : "replaceState"](history.state, "", url);
+  }
+  function address(id: string, fromList = false) {
+    if (personal) return personalAddress(id, "", undefined, fromList);
     const url = new URL(location.href);
     if (url.pathname !== "/documents" || url.searchParams.get("project") !== projectId) return;
     if (id) url.searchParams.set("document", id);
@@ -211,13 +270,19 @@ export function createProjectDocumentWorkspace(options: {
     history.replaceState(history.state, "", url);
     lastRequested = id;
   }
-  async function select(id: string, edit = false) {
+  async function select(id: string, edit = false, fromList = false) {
     if (!workspaceReady) return;
     const node = index.byId.get(id);
     if (!node) return;
     const generation = epoch,
       selection = ++selectionEpoch;
     opening = true;
+    if (personal) {
+      inlineAsset.close();
+      showPersonalCategory("document");
+      personal.read("document", id, node.document.title, fromList);
+      setMessageHtml(get("[data-personal-asset] [data-asset-detail]"), "");
+    }
     menu.close();
     trash.close();
     controls();
@@ -227,7 +292,7 @@ export function createProjectDocumentWorkspace(options: {
       if (editor.id !== id) return;
       view.remember(id);
       view.reveal(index, id);
-      address(id);
+      address(id, fromList);
       directory.set(false);
       if (edit) {
         editor.beginEditing();
@@ -236,12 +301,104 @@ export function createProjectDocumentWorkspace(options: {
         title?.select();
       }
       renderTree();
+      if (personal && !edit) get<HTMLElement>("[data-personal-reader-title]")?.focus({ preventScroll: true });
+    } catch (error) {
+      if (!personal || generation !== epoch || selection !== selectionEpoch) throw error;
+      setMessageHtml(
+        get("#documentEditor"),
+        empty(t, "documents.unavailable") +
+          `<button type="button" class="wb-button" data-personal-document="${e(id)}">${messageHtml("common.retry", {}, t)}</button>`,
+      );
+      report(error);
     } finally {
       if (generation === epoch && selection === selectionEpoch) {
         opening = false;
         controls();
       }
     }
+  }
+  function showPersonalCategory(category: PersonalCategory, trashFiles = false) {
+    if (!personal) return;
+    const key = category + (trashFiles ? ":files" : ""),
+      changed = personalListKey !== key;
+    personal.category = category;
+    personal.trashFiles = trashFiles;
+    if (changed) {
+      personalListKey = key;
+      get<HTMLInputElement>("#documentSearch")!.value = "";
+      trash.close();
+      if (category === "document" || (category === "trash" && !trashFiles)) files.close();
+      else files.open(projectId, category === "trash" ? { state: "trashed" } : { state: "saved", kind: category });
+      if (category === "trash" && !trashFiles)
+        void trash.show(get<HTMLElement>("[data-personal-deleted-documents]")!).catch(report);
+    }
+    renderTree();
+  }
+  function closePersonal(restore = true) {
+    if (!personal || editor.saving) return;
+    selectionEpoch++;
+    opening = false;
+    editor.mount(get<HTMLElement>("#documentEditor")!);
+    inlineAsset.close();
+    setMessageHtml(get("[data-personal-asset] [data-asset-detail]"), "");
+    renderTree();
+    personal.showList(restore);
+  }
+  async function openPersonalAsset(
+    asset: Pick<CreativeAsset, "id" | "title" | "project">,
+    version?: string,
+    fromList = false,
+  ) {
+    if (!personal || !workspaceReady || editor.saving || asset.project !== projectId) return;
+    const generation = epoch,
+      selection = ++selectionEpoch;
+    opening = false;
+    editor.mount(get<HTMLElement>("#documentEditor")!);
+    directory.set(false);
+    personal.read("asset", asset.id, asset.title, fromList);
+    const title = get<HTMLElement>("[data-personal-reader-title]")!;
+    personalAddress("", asset.id, version, fromList);
+    controls();
+    title.focus({ preventScroll: true });
+    const openedAsset = await inlineAsset.readInline(
+      asset,
+      get<HTMLElement>("[data-personal-asset] [data-asset-detail]")!,
+      title,
+      get<HTMLElement>("[data-personal-asset-commands]")!,
+      async () => {
+        if (generation !== epoch || selection !== selectionEpoch) return;
+        closePersonal();
+        personalAddress();
+        await files.refresh();
+      },
+      version,
+    );
+    if (openedAsset && generation === epoch && selection === selectionEpoch && personal.category !== openedAsset.kind) {
+      showPersonalCategory(openedAsset.kind);
+      personalAddress("", asset.id, version);
+    }
+  }
+  async function syncPersonalRoute(documentId = "") {
+    const url = personalLocation();
+    if (!personal || !url || !workspaceReady || editor.saving) return;
+    const key = personalRouteKey(url);
+    if (key === personalKey) return;
+    personalKey = key;
+    const asset = url.searchParams.get("asset");
+    const category = documentId ? "document" : personalCategory(url.searchParams.get("category"));
+    showPersonalCategory(category);
+    if (documentId) {
+      if (!index.byId.has(documentId)) {
+        report(new DocumentApiError(404, { messageId: "documents.unavailable" }));
+        return;
+      }
+      await select(documentId, url.searchParams.get("edit") === "1");
+    } else if (asset) {
+      await openPersonalAsset(
+        { id: asset, project: "personal", title: t("creative.file") },
+        url.searchParams.get("assetVersion") || undefined,
+      );
+    } else closePersonal(true);
   }
   async function completed(result: DocumentTreeMutation, kind: string) {
     if (sourceView || result.tree.projectId !== projectId) return;
@@ -255,7 +412,8 @@ export function createProjectDocumentWorkspace(options: {
       return;
     }
     if (kind === "trash" && result.operation.affectedDocumentIds.includes(editor.id)) {
-      editor.mount(get<HTMLElement>("#documentEditor")!);
+      if (personal) closePersonal();
+      else editor.mount(get<HTMLElement>("#documentEditor")!);
       address("");
     }
     if (kind === "rename") {
@@ -305,6 +463,10 @@ export function createProjectDocumentWorkspace(options: {
     templatePicker.close();
     creation.close();
     files.close();
+    inlineAsset.close();
+    personal = null;
+    personalKey = "";
+    personalListKey = "";
     knowledge.close();
     recordView.close();
     lastKnowledge = "";
@@ -312,7 +474,7 @@ export function createProjectDocumentWorkspace(options: {
     editor.detach();
     dialogs.close();
     document.body.classList.remove("document-focus-editing");
-    root.classList.remove("document-open", "is-editing");
+    root.classList.remove("document-open", "is-editing", "personal-content-open");
   }
   function enterSources() {
     clear();
@@ -342,6 +504,17 @@ export function createProjectDocumentWorkspace(options: {
     const capabilityController = new AbortController();
     capabilityRead = capabilityController;
     setMessageHtml(root, authoringFrame(t, project));
+    root.classList.toggle("personal-creation-library", project === "personal");
+    if (project === "personal") {
+      personal = new PersonalCreationLibrary(root, t, options.identityKey);
+      personal.update();
+      get("[data-personal-files]")!.append(files.element);
+      get<HTMLButtonElement>("[data-personal-import]")!.onclick = () => void files.importFile();
+      get<HTMLButtonElement>("[data-personal-toggle-view]")!.onclick = () => {
+        personal?.toggleView();
+        renderTree();
+      };
+    }
     header.mount();
     setMessageHtml(get("#documentEditor"), empty(t, "documents.loading"));
     view.open(project);
@@ -352,16 +525,17 @@ export function createProjectDocumentWorkspace(options: {
       menu.close();
       drag?.cancel();
     };
-    drag = new DocumentTreeDrag(
-      get<HTMLElement>("#documentTree")!,
-      () => index,
-      () => !session.busy && !session.loading && !session.pending && !opening,
-      (id) => {
-        view.expand(id);
-        renderTree();
-      },
-      (id, target) => void execute(() => actions.move(id, target)),
-    );
+    if (!personal)
+      drag = new DocumentTreeDrag(
+        get<HTMLElement>("#documentTree")!,
+        () => index,
+        () => !session.busy && !session.loading && !session.pending && !opening,
+        (id) => {
+          view.expand(id);
+          renderTree();
+        },
+        (id, target) => void execute(() => actions.move(id, target)),
+      );
     try {
       const [capabilities] = await Promise.all([
         documentJson<{ storage: "files" | "legacy"; websiteConfiguration?: boolean }>(
@@ -389,14 +563,27 @@ export function createProjectDocumentWorkspace(options: {
             report,
             controls,
             capabilities.websiteConfiguration ? options.publishing : undefined,
+            personal
+              ? {
+                  commands: get<HTMLElement>("[data-personal-doc-commands]")!,
+                  title: get<HTMLElement>("[data-personal-reader-title]")!,
+                }
+              : undefined,
           )
         : legacyEditor();
       editor.mount(get<HTMLElement>("#documentEditor")!);
       workspaceReady = true;
       if (fileMode) {
         root.querySelector('[data-authoring-action="sources"]')?.remove();
-        files.open(project);
-        get("#documentTree")!.append(files.element);
+        if (!personal) {
+          files.open(project);
+          get("#documentTree")!.append(files.element);
+        }
+      }
+      if (personal) {
+        await syncPersonalRoute(documentId);
+        controls();
+        return;
       }
       const selected =
         documentId ||
@@ -419,14 +606,25 @@ export function createProjectDocumentWorkspace(options: {
     } catch (error) {
       if (generation !== epoch) return;
       const failure = empty(t, "documents.unavailable") + button(t, "common.retry", "reload-workspace");
-      setMessageHtml(get("#documentEditor"), failure);
-      if (!index.tree.nodes.length) setMessageHtml(get("#documentTree"), empty(t, "documents.unavailable"));
+      setMessageHtml(get(personal ? "[data-personal-documents]" : "#documentEditor"), failure);
+      if (!personal && !index.tree.nodes.length)
+        setMessageHtml(get("#documentTree"), empty(t, "documents.unavailable"));
       report(error);
       controls();
     }
   }
   async function act(action: string) {
     if (action === "reload-workspace") return load(projectId, lastRequested);
+    if (action === "close-content" && personal) {
+      closePersonal();
+      personalAddress();
+      return;
+    }
+    if (action === "copy-content" && personal && editor.record) {
+      if (await copyPersonalDocument(modal, t, editor.record, options.projects?.() ?? []))
+        notice(t("creative.copyDone"));
+      return;
+    }
     if (action === "knowledge") {
       if (!fileMode || !workspaceReady) return;
       directory.set(false);
@@ -456,7 +654,15 @@ export function createProjectDocumentWorkspace(options: {
           if (generation === epoch) await select(id);
         },
         async openArtifact(artifact) {
-          if (generation === epoch) await files.follow(artifact.projectId, artifact.assetId, artifact.version);
+          if (generation === epoch) {
+            if (personal) {
+              showPersonalCategory(artifact.kind);
+              await openPersonalAsset(
+                { id: artifact.assetId, title: artifact.title, project: artifact.projectId },
+                artifact.version,
+              );
+            } else await files.follow(artifact.projectId, artifact.assetId, artifact.version);
+          }
         },
         manual: (parentId) => execute(() => actions.create(parentId)),
       });
@@ -515,6 +721,14 @@ export function createProjectDocumentWorkspace(options: {
     if (action === "trash-document") return actions.run("trash", editor.id);
     if (action === "trash") {
       directory.set(false);
+      if (personal) {
+        if (editor.saving) return;
+        closePersonal(false);
+        showPersonalCategory("trash");
+        personalAddress();
+        personal.focusList();
+        return;
+      }
       editor.mount(get<HTMLElement>("#documentEditor")!);
       address("");
       controls();
@@ -522,6 +736,24 @@ export function createProjectDocumentWorkspace(options: {
     }
   }
   root.addEventListener("click", (event) => {
+    const item = (event.target as Element).closest<HTMLButtonElement>(
+      "[data-personal-document],[data-personal-category],[data-personal-trash]",
+    );
+    if (personal && item && !item.disabled && !editor.saving) {
+      const id = item.dataset.personalDocument;
+      if (id) void execute(() => select(id, false, !!get("[data-personal-list]")?.contains(item)));
+      else {
+        closePersonal(false);
+        directory.set(false);
+        showPersonalCategory(
+          personalCategory(item.dataset.personalCategory ?? "trash"),
+          item.dataset.personalTrash === "files",
+        );
+        personalAddress();
+        if (!item.dataset.personalTrash || directory.mobile.matches) personal.focusList();
+      }
+      return;
+    }
     const trigger = (event.target as Element).closest<HTMLButtonElement>("[data-authoring-action],[data-tree-action]");
     if (!trigger || trigger.disabled) return;
     const action = trigger.dataset.treeAction,
@@ -556,8 +788,12 @@ export function createProjectDocumentWorkspace(options: {
       if (id && action === "move") void execute(() => actions.run("move", id));
       return;
     }
-    const more = trigger.closest<HTMLDetailsElement>(".document-workspace-more");
-    if (more) more.open = false;
+    const more = trigger.closest<HTMLDetailsElement>(".document-workspace-more,.creative-reader-more");
+    if (more) {
+      more.open = false;
+      if (more.classList.contains("creative-reader-more"))
+        more.querySelector("summary")?.focus({ preventScroll: true });
+    }
     void execute(() => act(trigger.dataset.authoringAction || ""));
   });
   root.addEventListener("keydown", (event) => {
@@ -592,10 +828,14 @@ export function createProjectDocumentWorkspace(options: {
         ?.focus({ preventScroll: false });
   });
   window.addEventListener("pagehide", () => editor.flush());
+  getBrowserI18n().subscribe(() => {
+    if (personal && root.isConnected) renderTree();
+  });
   return {
     show(host: HTMLElement, project: string, documentId = "", knowledgeId = "") {
       if (root.parentElement === host && projectId === project) {
-        if (sourceView && (knowledgeId || documentId)) void load(project, documentId);
+        if (personal) void execute(() => syncPersonalRoute(documentId));
+        else if (sourceView && (knowledgeId || documentId)) void load(project, documentId);
         else if (lastRequested !== documentId && documentId) {
           if (!workspaceReady || !index.byId.has(documentId)) void load(project, documentId);
           else void execute(() => select(documentId));

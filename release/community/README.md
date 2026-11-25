@@ -29,7 +29,7 @@ _Simulated conversation captured in the real interface. The project, messages, a
 
 You can also [create illustrations, slides, web pages, and documents with skills](#create-something-fun) and [hand repeatable tasks off to Bots through the API](#meet-your-bot).
 
-> **PandaForce 0.1.10** fixes Full access in new Claude Code conversations and restores model discovery and test messages for host runtimes. [Install the release →](#install-0110) · [Release notes →](./panda-docs/docs/releases.md#0110) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
+> **PandaForce 0.1.11** lets Bots use configured Harness runtimes by default and fixes sending Bot chat messages with those runtimes, and makes creation skills and saved works easier to browse. [Install the release →](#install-0111) · [Release notes →](./panda-docs/docs/releases.md#0111) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
 
 ## Create something fun
 
@@ -164,13 +164,13 @@ PandaForce also includes streaming AI conversations and coding, a terminal for a
 
 ## Multiple Harness Runtimes
 
-The 0.1.10 image contains **Codex CLI 0.171.0**, **Grok Build 1.0.89**, and **ZCode CLI 0.17.1**. In conversations, assistants/Bots and supported creation settings, choose **Harness Runtime → model → reasoning level**. Finish the current turn before switching a conversation; selected context is handed over and files remain in the workspace. See the [multi-runtime guide](./panda-docs/docs/harness-runtimes.md#use-several-named-runtimes) for account isolation and the optional Antigravity setup.
+The 0.1.11 image contains **Codex CLI 0.171.0**, **Grok Build 1.0.89**, and **ZCode CLI 0.17.1**. In conversations, assistants/Bots and supported creation settings, choose **Harness Runtime → model → reasoning level**. Finish the current turn before switching a conversation; selected context is handed over and files remain in the workspace. See the [multi-runtime guide](./panda-docs/docs/harness-runtimes.md#use-several-named-runtimes) for account isolation and the optional Antigravity setup.
 
 Codex starts through the application's app-server connection. Grok uses on-demand ACP processes; its optional account service handles native credential renewal. No host Grok/tmux session is required. Provider logins remain separate from the PandaForce administrator. [Container roles, login, persistence and recovery →](./panda-docs/docs/harness-runtimes.md)
 
-## Install 0.1.10
+## Install 0.1.11
 
-Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.1.10`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes all three Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
+Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.1.11`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes all three Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
 
 ```bash
 git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
@@ -198,7 +198,7 @@ docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
   run --rm grok-auth grok --no-auto-update login --device-auth
 ```
 
-Open **Settings → Harness Runtimes**, check Grok Build, and select its model/effort. The explicit **hi** test sends a real small request using your model account. The application and Grok helper services use the same 0.1.10 image by default. [Detailed setup and account volumes →](./panda-docs/docs/harness-runtimes.md)
+Open **Settings → Harness Runtimes**, check Grok Build, and select its model/effort. The explicit **hi** test sends a real small request using your model account. The application and Grok helper services use the same 0.1.11 image by default. [Detailed setup and account volumes →](./panda-docs/docs/harness-runtimes.md)
 
 **ZCode conversation runtime (experimental)**
 

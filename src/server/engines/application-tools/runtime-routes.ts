@@ -15,14 +15,15 @@ export function applicationRuntimeRoutes(
       async handler(context) {
         try {
           const id = context.url.searchParams.get("runtimeId"),
-            conversation = context.url.searchParams.get("scope") === "conversation";
+            scope = context.url.searchParams.get("scope"),
+            catalogScope = scope === "bots" || scope === "creation" ? scope : scope === "conversation";
           if (id !== null && !/^[a-zA-Z0-9-]{1,64}$/.test(id)) throw new HarnessError("invalidInput");
           respondJson(
             context.res,
             200,
             id
-              ? { runtime: await port.discover(owner(context), id, conversation) }
-              : await port.catalog(owner(context), conversation),
+              ? { runtime: await port.discover(owner(context), id, catalogScope) }
+              : await port.catalog(owner(context), catalogScope),
           );
         } catch (error) {
           const known = error instanceof HarnessError ? error : new HarnessError("unavailable", 503);

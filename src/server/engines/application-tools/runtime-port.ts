@@ -6,15 +6,23 @@ export interface ApplicationRuntimeSelection {
   model?: string;
   effort?: string;
 }
+export type ApplicationRuntimePurpose = "bots" | "bot-chat" | "creation" | "knowledge" | "editorial";
+export type ApplicationRuntimeScope = "bots" | "creation";
+export type ApplicationCatalogScope = boolean | ApplicationRuntimeScope;
+
 /** Domains select installed execution identities, never executable commands or provider endpoints. */
 export interface ApplicationRuntimePort {
-  catalog(owner: string, conversation?: boolean): Promise<HarnessCatalog>;
-  discover(owner: string, runtimeId: string, conversation?: boolean): Promise<HarnessRuntimeView>;
-  resolve(owner: string, selection: ApplicationRuntimeSelection): Promise<Required<ApplicationRuntimeSelection>>;
+  catalog(owner: string, scope?: ApplicationCatalogScope): Promise<HarnessCatalog>;
+  discover(owner: string, runtimeId: string, scope?: ApplicationCatalogScope): Promise<HarnessRuntimeView>;
+  resolve(
+    owner: string,
+    selection: ApplicationRuntimeSelection,
+    scope?: ApplicationRuntimeScope,
+  ): Promise<Required<ApplicationRuntimeSelection>>;
   engine(
     owner: string,
     selection: ApplicationRuntimeSelection,
     directory: string,
-    purpose: "bots" | "bot-chat" | "creation" | "knowledge" | "editorial",
+    purpose: ApplicationRuntimePurpose,
   ): ApplicationToolEngine;
 }

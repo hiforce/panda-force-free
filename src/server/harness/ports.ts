@@ -98,6 +98,7 @@ export interface HarnessPrompt {
   model: string | null;
   effort: string | null;
   operationId: string;
+  continuation?: true;
 }
 /** Native protocols terminate at these ports; application history never stores vendor RPC envelopes. */
 export interface HarnessOpenOptions {
@@ -135,5 +136,8 @@ export interface HarnessAgentFactory {
 /** Operator-owned application policy cannot be supplied by conversation input. */
 export interface HarnessApplicationPolicy {
   instructions: string;
+  scope?: import("../engines/application-tools/runtime-port.js").ApplicationRuntimeScope;
+  nativeOutput?: boolean;
+  toolNames?: readonly string[];
   mcpServer: { type: "http"; name: string; url: string; headers: Array<{ name: string; value: string }> };
 }

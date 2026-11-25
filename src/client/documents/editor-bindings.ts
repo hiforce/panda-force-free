@@ -49,7 +49,11 @@ export function bindDocumentEditorHost(host: HTMLElement, signal: AbortSignal, a
         event.target instanceof ElementClass ? event.target.closest<HTMLButtonElement>("[data-doc-action]") : null;
       if (!trigger || trigger.disabled) return;
       const menu = trigger.closest<HTMLDetailsElement>(".document-editor-more");
-      if (menu) menu.open = false;
+      if (menu) {
+        menu.open = false;
+        if (menu.classList.contains("creative-reader-more"))
+          menu.querySelector("summary")?.focus({ preventScroll: true });
+      }
       void actions.action(trigger.dataset.docAction || "").catch(actions.error);
     },
     { signal },

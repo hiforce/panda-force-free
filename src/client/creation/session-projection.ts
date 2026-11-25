@@ -34,7 +34,7 @@ export function creationRoundItems(round: CreationTaskDetail, t: Translate) {
               id: turn + "-" + (entry.id || index),
               type: "agentMessage",
               text,
-              ...(!message ? { phase: "commentary" } : {}),
+              phase: entry.stage === "reply" ? "final_answer" : entry.phase || "commentary",
               status: entry.streaming && creationActive(round) ? "inProgress" : "completed",
               receivedAt: entry.at / 1000,
             },

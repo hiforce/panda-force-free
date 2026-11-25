@@ -1,6 +1,10 @@
 import { runtimeModelCatalog as loadRuntimeCatalog } from "./model-catalog.js";
+import type { CreationSessionDomain } from "../contracts/session-workspace.js";
 import type { HarnessBrowserBoundary } from "../contracts/harness.js";
-import { runtimeModelCatalog as projectRuntimeCatalog } from "../../shared/engine/runtime-selection.js";
+import {
+  changeRuntimeSelection,
+  runtimeModelCatalog as projectRuntimeCatalog,
+} from "../../shared/engine/runtime-selection.js";
 import { escapeHtml } from "../../shared/html.js";
 import { isRecord } from "../../shared/records.js";
 import { harnessId, harnessPresentation, harnessSummary } from "../../shared/harness/presentation.js";
@@ -28,6 +32,7 @@ export function createHarnessController(options: {
   state: StateReader<"harness">;
   subscribe: StateStore["subscribe"];
   composer: ComposerPort;
+  creation(): CreationSessionDomain | null;
   navigation: NavigationPort;
   models: ModelsPort;
   notices: NoticesPort;
@@ -37,6 +42,7 @@ export function createHarnessController(options: {
   const { t, state } = options,
     api = harnessApi(t),
     runtimeCatalog = loadRuntimeCatalog(t, true),
+    creationRuntimeCatalog = loadRuntimeCatalog(t, "creation"),
     trigger = document.querySelector<HTMLButtonElement>("#harnessButton")!;
   const panel = document.createElement("div");
   panel.className = "harness-menu composer-panel";
@@ -50,6 +56,8 @@ export function createHarnessController(options: {
   const discoveries = new Map<string, Promise<HarnessRuntimeView>>();
   const discoveredUntil = new Map<string, number>();
   let catalog: HarnessCatalog | null = null,
+    creationCatalog: HarnessCatalog | null = null,
+    creationCatalogRequest: Promise<void> | undefined,
     selected = "",
     selectedExplicitly = false,
     previousActive = "",
@@ -101,15 +109,41 @@ export function createHarnessController(options: {
     restoreSessionMenu(panel);
     trigger.setAttribute("aria-expanded", "false");
   }
+  const pickerContext = () => creationSessionRoute()?.key ?? context();
+  const pickerCatalog = () => (creationSessionRoute() ? creationCatalog : catalog);
+  const pickerRuntimeId = () => (creationSessionRoute() ? options.creation()?.controls().runtimeId : runtime()?.id);
+  function syncPicker() {
+    const creation = creationSessionRoute(),
+      domain = creation ? options.creation() : null,
+      source = pickerCatalog(),
+      { page } = parseWorkbenchRoute(),
+      value = source?.runtimes.find((entry) => entry.id === (pickerRuntimeId() || source.defaultRuntimeId)),
+      switching = source?.runtimes.find((entry) => entry.id === switchingId),
+      label =
+        busy && switching ? `${switching.name} · ${t("harness.switching")}` : (value?.name ?? t("harness.select"));
+    trigger.hidden = creation
+      ? !domain || domain.key !== creation.key
+      : !source?.runtimes.length || (page !== "new" && page !== "task");
+    if (scope && (trigger.hidden || scope !== pickerContext())) close();
+    trigger.disabled =
+      busy ||
+      (domain
+        ? domain.running || domain.sending
+        : state.active?.turns?.some((turn) => turn.status === "inProgress") === true);
+    trigger.setAttribute("aria-busy", String(busy));
+    trigger.title = t("harness.select");
+    trigger.setAttribute("aria-label", `${t("harness.select")} · ${label}`);
+    setMessageHtml(
+      trigger,
+      `${codexIcon("plug")}<span class="harness-label">${escapeHtml(label)}</span>${codexIcon("chevronDown")}`,
+    );
+  }
   function syncRoute() {
-    const { page } = parseWorkbenchRoute();
-    trigger.hidden = !catalog?.runtimes.length || (page !== "new" && page !== "task");
-    if (scope && (trigger.hidden || scope !== context())) close();
+    syncPicker();
+    if (creationSessionRoute() && !creationCatalog) void loadCreationCatalog().catch(() => {});
   }
   function sync() {
-    const value = runtime(),
-      switching = catalog?.runtimes.find((entry) => entry.id === switchingId),
-      label = busy && switching ? `${switching.name} · ${t("harness.switching")}` : (value?.name ?? "Harness");
+    const value = runtime();
     if (value) {
       const managed = !!current() || (!state.active && selected !== "codex"),
         next = managed ? `harness:${value.id}` : "codex",
@@ -120,14 +154,6 @@ export function createHarnessController(options: {
       }
     }
     syncRoute();
-    trigger.disabled = busy || state.active?.turns?.some((turn) => turn.status === "inProgress") === true;
-    trigger.setAttribute("aria-busy", String(busy));
-    trigger.title = t("harness.select");
-    trigger.setAttribute("aria-label", `${t("harness.select")} · ${label}`);
-    setMessageHtml(
-      trigger,
-      `${codexIcon("plug")}<span class="harness-label">${escapeHtml(label)}</span>${codexIcon("chevronDown")}`,
-    );
   }
   async function loadCatalog() {
     catalog = await api<HarnessCatalog>("/api/harness-runtimes");
@@ -135,23 +161,39 @@ export function createHarnessController(options: {
       selected = catalog.defaultRuntimeId;
     sync();
   }
-  async function ensureRuntime(id: string) {
-    const target = catalog?.runtimes.find((entry) => entry.id === id && entry.enabled);
+  async function loadCreationCatalog() {
+    if (creationCatalogRequest) return creationCatalogRequest;
+    const work = creationRuntimeCatalog.list().then((value) => {
+      if (disposed) return;
+      creationCatalog = value;
+      syncPicker();
+    });
+    creationCatalogRequest = work;
+    try {
+      await work;
+    } finally {
+      creationCatalogRequest = undefined;
+    }
+  }
+  async function ensureRuntime(id: string, creation = false) {
+    const currentCatalog = () => (creation ? creationCatalog : catalog);
+    const target = currentCatalog()?.runtimes.find((entry) => entry.id === id && entry.enabled);
     if (!target) throw Error(t("harness.errorNotFound"));
-    const key = JSON.stringify([id, target.revision]),
+    const key = JSON.stringify([creation, id, target.revision]),
       previous = discoveries.get(key);
     if (target.status === "ready" && target.models.length && (discoveredUntil.get(key) ?? 0) > Date.now())
       return target;
     if (previous) return previous;
-    const work = runtimeCatalog.discover(id).then((discovered) => {
+    const work = (creation ? creationRuntimeCatalog : runtimeCatalog).discover(id).then((discovered) => {
       if (disposed) return discovered;
-      const current = catalog?.runtimes.find((entry) => entry.id === id && entry.enabled);
+      const source = currentCatalog();
+      const current = source?.runtimes.find((entry) => entry.id === id && entry.enabled);
       if (!current || current.revision !== target.revision || discovered.revision !== target.revision)
         throw Error(t("harness.errorConflict"));
-      catalog!.runtimes = catalog!.runtimes.map((entry) => (entry.id === id ? discovered : entry));
+      source!.runtimes = source!.runtimes.map((entry) => (entry.id === id ? discovered : entry));
       discoveredUntil.set(key, Date.now() + 300000);
       if (discoveredUntil.size > 64) discoveredUntil.delete(discoveredUntil.keys().next().value!);
-      if (!busy && !panel.hidden) {
+      if (!busy && !panel.hidden && creation === Boolean(creationSessionRoute())) {
         const status = panel.querySelector(`[data-harness-select="${CSS.escape(id)}"] small`);
         if (status)
           status.textContent =
@@ -167,47 +209,95 @@ export function createHarnessController(options: {
     }
   }
   function warmRuntime(id: string) {
-    if (busy || discoveries.size || id === runtime()?.id) return;
+    if (busy || discoveries.size || id === pickerRuntimeId()) return;
     // Focus/hover expresses selection intent; discovery sends no model prompt.
-    void ensureRuntime(id).catch(() => {});
+    void ensureRuntime(id, Boolean(creationSessionRoute())).catch(() => {});
   }
-  function renderMenu() {
-    if (!catalog) return;
-    const selectedId = runtime()?.id;
+  function renderMenu(state: "loading" | "error" | "ready" = "ready") {
+    const source = pickerCatalog(),
+      selectedId = pickerRuntimeId() || source?.defaultRuntimeId,
+      choices = source?.runtimes.filter((entry) => entry.enabled) ?? [],
+      status =
+        state === "ready"
+          ? choices.length
+            ? null
+            : "harness.empty"
+          : state === "loading"
+            ? "common.loadingModels"
+            : "harness.errorUnavailable";
     setMessageHtml(
       panel,
-      `<header class="composer-panel-heading"><h2>${escapeHtml(t("harness.select"))}</h2><button class="composer-panel-action" type="button" data-harness-close aria-label="${escapeHtml(t("common.close"))}">${codexIcon("x")}</button></header><div class="harness-options">${catalog.runtimes
-        .filter((runtime) => runtime.enabled)
+      `<header class="composer-panel-heading"><h2>${escapeHtml(t("harness.select"))}</h2><button class="composer-panel-action" type="button" data-harness-close aria-label="${escapeHtml(t("common.close"))}">${codexIcon("x")}</button></header><div class="harness-options">${choices
         .map(
           (runtime) =>
             `<button type="button" class="composer-settings-row" data-harness-select="${escapeHtml(runtime.id)}" ${busy ? "disabled" : ""}><span><strong>${escapeHtml(runtime.name)}</strong><small${busy && switchingId === runtime.id ? ' role="status"' : ""}>${escapeHtml(t(busy && switchingId === runtime.id ? "harness.switching" : `harness.${runtime.status}`))}${runtime.isDefault ? ` · ${escapeHtml(t("harness.default"))}` : ""}</small></span>${runtime.id === selectedId ? codexIcon("check") : ""}</button>`,
         )
-        .join("")}</div><p class="harness-hint">${escapeHtml(t("harness.handoffHint"))}</p>`,
+        .join(
+          "",
+        )}${status ? `<p class="harness-hint" role="status">${escapeHtml(t(status))}</p>` : ""}${state === "error" ? `<button type="button" class="composer-settings-row" data-harness-retry>${escapeHtml(t("sessions.retryLoadingModels"))}</button>` : ""}</div><p class="harness-hint">${escapeHtml(t(creationSessionRoute() ? "creation.nextRoundSettings" : "harness.handoffHint"))}</p>`,
     );
     panel.querySelector<HTMLButtonElement>("[data-harness-close]")!.onclick = close;
+    const retry = panel.querySelector<HTMLButtonElement>("[data-harness-retry]");
+    if (retry) retry.onclick = () => void refreshCreationMenu();
     for (const button of panel.querySelectorAll<HTMLButtonElement>("[data-harness-select]")) {
       button.onpointerenter = button.onfocus = () => warmRuntime(button.dataset.harnessSelect!);
       button.onclick = () =>
         void choose(button.dataset.harnessSelect!).catch((error) => options.notices.addPersistentError(error));
     }
   }
+  async function refreshCreationMenu() {
+    const captured = scope;
+    renderMenu("loading");
+    try {
+      await loadCreationCatalog();
+      if (scope === captured && !panel.hidden) {
+        renderMenu();
+        panel.querySelector<HTMLButtonElement>("[data-harness-select]")?.focus();
+      }
+    } catch {
+      if (scope === captured && !panel.hidden) {
+        renderMenu("error");
+        panel.querySelector<HTMLButtonElement>("[data-harness-retry]")?.focus();
+      }
+    }
+  }
   async function choose(id: string) {
-    if (id === runtime()?.id) {
+    const creation = creationSessionRoute() ? options.creation() : null;
+    if (id === pickerRuntimeId()) {
       close();
       return context();
     }
-    if (busy || state.active?.turns?.some((turn) => turn.status === "inProgress")) throw Error(t("harness.errorBusy"));
+    if (
+      busy ||
+      (creation
+        ? creation.running || creation.sending
+        : state.active?.turns?.some((turn) => turn.status === "inProgress"))
+    )
+      throw Error(t("harness.errorBusy"));
     busy = true;
     switchingId = id;
-    const captured = context();
+    const captured = pickerContext();
     let adopted: string | null = null;
     scope = captured;
     sync();
     renderMenu();
     options.composer.saveComposerDraft();
     try {
-      await ensureRuntime(id);
-      if (captured !== context()) throw Error(t("sessionview.sessionChanged"));
+      const discovered = await ensureRuntime(id, Boolean(creation));
+      if (captured !== pickerContext()) throw Error(t("sessionview.sessionChanged"));
+      if (creation) {
+        const previous = creation.controls();
+        creation.applyRuntimeSelection(
+          changeRuntimeSelection(
+            { runtimeId: previous.runtimeId || "", model: previous.model, effort: previous.effort },
+            discovered,
+          ),
+          discovered,
+        );
+        close();
+        options.notices.toast(t("harness.switched"));
+        return captured;
+      }
       const conversationId = current();
       if (conversationId) {
         const before = await snapshot(conversationId);
@@ -586,12 +676,18 @@ export function createHarnessController(options: {
     ready = true;
     trigger.onclick = () => {
       if (!panel.hidden) return close();
-      scope = context();
-      renderMenu();
+      scope = pickerContext();
+      const waiting = Boolean(creationSessionRoute() && !creationCatalog);
+      renderMenu(waiting ? "loading" : "ready");
       panel.hidden = false;
       mountSessionMenu(panel, trigger, close);
       trigger.setAttribute("aria-expanded", "true");
-      panel.querySelector<HTMLButtonElement>("[data-harness-select]")?.focus();
+      if (waiting) void refreshCreationMenu();
+      else
+        (
+          panel.querySelector<HTMLButtonElement>("[data-harness-select]") ??
+          panel.querySelector<HTMLButtonElement>("[data-harness-close]")
+        )?.focus();
     };
     bindMenuDismiss(panel, trigger, close);
     document.addEventListener("click", (event) => {
@@ -610,6 +706,8 @@ export function createHarnessController(options: {
       }
     });
     window.addEventListener("panda-force:harness-runtimes-updated", () => {
+      creationCatalog = null;
+      if (!panel.hidden && creationSessionRoute()) void refreshCreationMenu();
       void loadCatalog().catch(() => {});
     });
     void loadCatalog().catch(() => {});

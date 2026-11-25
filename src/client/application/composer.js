@@ -98,6 +98,7 @@ export function assembleComposer({
         mentions: canonicalData(state.composerMentions),
         attachments: canonicalData(state.composerAttachments),
         skills: canonicalData(state.composerSkills),
+        ...(scope.startsWith("creation:") ? { creationSkillsVersion: 1 } : {}),
       });
       return;
     }
@@ -117,7 +118,13 @@ export function assembleComposer({
           })),
       ),
     );
-    const draft = getComposerDraft();
+    const creation = creationSessionRoute();
+    let draft = getComposerDraft();
+    // Old acknowledgements left a skill-only draft indistinguishable from a new selection.
+    if (creation && draft && !draft.creationSkillsVersion && !draft.text.trim() && !draft.attachments.length) {
+      draft = { ...draft, creationSkillsVersion: 1, skills: [] };
+      setComposerDraft(creation.key, draft);
+    }
     $("#prompt").value = draft?.text || "";
     mutations.set("composerMentions", draft?.mentions || []);
     mutations.set("composerAttachments", [...(draft?.attachments || [])]);
@@ -126,7 +133,7 @@ export function assembleComposer({
       .filter((item) => item.type === "userMessage")
       .at(-1)?.content;
     mutations.set("composerSkills", [
-      ...(draft?.skills ?? sessionSkillsFromInput(previousInput).map((skill) => skill.selection)),
+      ...(draft?.skills ?? (creation ? [] : sessionSkillsFromInput(previousInput).map((skill) => skill.selection))),
     ]);
     renderComposerSkills();
     uploadsPort.renderComposerAttachments();
@@ -163,6 +170,7 @@ export function assembleComposer({
     const sending = creation?.sending ?? deliveryPort.isSending(deliveryPort.pendingMessageOwner());
     const managedActive = Boolean(turnId) && !canQueuePrompt();
     const hasDraft = Boolean($("#prompt").value.trim() || state.composerAttachments.length);
+    creation?.observeDraft(hasDraft);
     const wait = $("#composerTurnWait");
     const showWait = managedActive && hasDraft;
     if (wait.hidden === showWait) {
@@ -182,7 +190,9 @@ export function assembleComposer({
           : mode === "stop"
             ? "common.stop"
             : mode === "steer"
-              ? "sessions.steer"
+              ? creation
+                ? "creation.updateTask"
+                : "sessions.steer"
               : "common.sendMessage";
     // Preserve the pressed element when polling refreshes an unchanged control.
     if (button.dataset.submitMode !== mode || !button.firstElementChild)
@@ -240,20 +250,21 @@ export function assembleComposer({
     setComposerDraft(threadId, { text: "", mentions: [], attachments: [], skills: [...selected] });
   }
   return {
-    acceptCreationSubmission(scope, nextScope, prompt, materialIds) {
+    acceptCreationSubmission(scope, nextScope, prompt, materialIds, selections) {
       const current = creationSessionRoute()?.key === scope;
       if (current) persistComposerDraft();
       const draft = getComposerDraft(scope);
       if (!draft) return;
-      const next = creationDraftAfterAcknowledgement(draft, prompt, materialIds);
+      const next = creationDraftAfterAcknowledgement(draft, prompt, materialIds, selections);
       const existing = nextScope === scope ? null : getComposerDraft(nextScope);
-      const occupied = Boolean(existing?.text || existing?.attachments.length);
+      const occupied = Boolean(existing?.text || existing?.attachments.length || existing?.skills?.length);
       setComposerDraft(
         scope,
-        nextScope === scope || occupied ? next : { text: "", mentions: [], attachments: [], skills: next.skills },
+        nextScope === scope || occupied
+          ? next
+          : { text: "", mentions: [], attachments: [], skills: [], creationSkillsVersion: 1 },
       );
-      if (nextScope !== scope && !occupied)
-        setComposerDraft(nextScope, { ...next, skills: existing?.skills ?? next.skills });
+      if (nextScope !== scope && !occupied) setComposerDraft(nextScope, next);
       if (current) restoreComposerDraft();
     },
     selectComposerSkill(selection) {

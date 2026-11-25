@@ -79,7 +79,11 @@ export function createWorkbench({
   creationBridge,
 }) {
   createWorkbenchFrame(t);
-  const notifications = new NotificationCenter(t, identityKey, creationNotificationActions(t, identityKey, (path) => navigate(path)));
+  const notifications = new NotificationCenter(
+    t,
+    identityKey,
+    creationNotificationActions(t, identityKey, (path) => navigate(path)),
+  );
   const shell = requireElement(".conversation-shell"),
     viewport = requireElement(".conversation-viewport"),
     dock = requireElement(".composer-dock"),
@@ -111,6 +115,7 @@ export function createWorkbench({
   const documents = createProjectDocumentWorkspace({
     t,
     identityKey,
+    projects: () => catalog.projects(),
     onDocumentFocusChanged: (active) => {
       document.body.dataset.documentNavigationFocus = String(active);
       dispatchEvent(new CustomEvent("panda-force:document-focus-changed", { detail: active }));
@@ -128,15 +133,6 @@ export function createWorkbench({
       },
     }),
   });
-  const creationLibrary = createLazyContentWorkspace(
-    "create",
-    t,
-    identityKey,
-    () => catalog.projects(),
-    (path) => navigate(path),
-    undefined,
-    (host, project, closed, options) => composerMount(host, project, closed, options),
-  );
   const projectDocuments = createLazyContentWorkspace("directory", t, identityKey, () => catalog.projects(), navigate);
   const projectContent = createLazyContentWorkspace(
     "project",
@@ -181,7 +177,10 @@ export function createWorkbench({
   navigation.className = "workbench-navigation workbench-primary-navigation";
   localizeAttribute(navigation, "aria-label", "workbench.workspaceNavigation", undefined, t);
   const tools = createWorkspaceToolNavigation(
-    t, identityKey, () => ({ restricted: globalThis.__pandaForceIdentity?.role === "member" }), (path) => navigate(path),
+    t,
+    identityKey,
+    () => ({ restricted: globalThis.__pandaForceIdentity?.role === "member" }),
+    (path) => navigate(path),
   );
   requireElement(".sidebar-top").append(navigation, tools.nav);
   const connection = document.createElement("button");
@@ -288,9 +287,10 @@ export function createWorkbench({
     connections: "plug",
     settings: "settings",
   };
-  const pageLabel = () => route.page === "tools"
-    ? tools.label(route.id) || "remoteTools.unavailableTitle"
-    : labels[route.page] || "common.workspace";
+  const pageLabel = () =>
+    route.page === "tools"
+      ? tools.label(route.id) || "remoteTools.unavailableTitle"
+      : labels[route.page] || "common.workspace";
   const {
     button,
     allProjects,
@@ -360,7 +360,7 @@ export function createWorkbench({
     status,
   });
   const composerMount = systemComposerMount(gadgetRegistry, gadgetCapabilities, t, () => i18n.locale);
-  const creative = createCreationHome(t, creationLibrary, identityKey, () => catalog.projects(), navigate);
+  const creative = createCreationHome(t, identityKey, () => catalog.projects(), navigate);
   const gadgetHome = new GadgetWorkspace(
     t,
     () => i18n.locale,
@@ -382,19 +382,23 @@ export function createWorkbench({
     syncConversationSurfaces(conversation);
     renderPage(conversation);
     renderNavigation();
-    if (!conversation)
-      localizeText(requireElement("#threadTitle"), pageLabel(), undefined, t);
+    if (!conversation) localizeText(requireElement("#threadTitle"), pageLabel(), undefined, t);
     if (!conversation) setOpaqueText(requireElement("#threadPath"), "");
     renderProjectContext();
     renderPreparation();
     onViewChange();
     restoreRenderFocus(view, focus);
   }
+  function personalWorks() {
+    if (route.page !== "create" || creationSessionRoute()) return false;
+    const params = new URL(location.href).searchParams;
+    return params.get("view") === "works" || (params.get("view") !== "activity" && params.has("asset"));
+  }
   function hideInactiveWorkspaces() {
     if (route.page !== "workspace") gadgetHome.hide();
     if (!creationSessionRoute()) creationWorkspace.hide();
-    if (route.page !== "documents") documents.hide();
-    if (route.page !== "create" || creationSessionRoute()) creative.hide();
+    if (route.page !== "documents" && !personalWorks()) documents.hide();
+    if (route.page !== "create" || creationSessionRoute() || personalWorks()) creative.hide();
     if (
       route.page !== "project" ||
       ["sessions", "documents"].includes(new URL(location.href).searchParams.get("tab") || "")
@@ -453,6 +457,9 @@ export function createWorkbench({
           } else if (new URL(location.href).searchParams.get("tab") === "documents")
             projectDocuments.show(content, route.id);
           else projectContent.show(content, route.id);
+        } else if (personalWorks() || (route.page === "documents" && route.projectId === "personal")) {
+          const params = new URL(location.href).searchParams;
+          documents.show(content, "personal", params.get("document") || "", params.get("knowledge") || "");
         } else if (route.page === "documents")
           documents.show(
             content,
@@ -485,13 +492,15 @@ export function createWorkbench({
       ([page]) => globalThis.__pandaForceIdentity?.role !== "member" || ["create", "projects", "skills"].includes(page),
     );
     const activePage =
-      ["project", "documents"].includes(route.page) || (route.page === "publish" && route.projectId)
-        ? "projects"
-        : route.page === "creation"
-          ? "create"
-          : route.page === "task"
-            ? "tasks"
-            : route.page;
+      route.page === "documents" && route.projectId === "personal"
+        ? "create"
+        : ["project", "documents"].includes(route.page) || (route.page === "publish" && route.projectId)
+          ? "projects"
+          : route.page === "creation"
+            ? "create"
+            : route.page === "task"
+              ? "tasks"
+              : route.page;
     const menu = nav
       .map(
         ([key, label]) =>

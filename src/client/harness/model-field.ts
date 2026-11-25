@@ -4,7 +4,7 @@ import type { HarnessCatalog, HarnessRuntimeView } from "../../shared/harness/co
 import type { RuntimeSelection } from "../../shared/engine/runtime-selection.js";
 import { changeRuntimeSelection, defaultRuntimeModel } from "../../shared/engine/runtime-selection.js";
 import { messageHtml, localizeText, setOpaqueText } from "../i18n.js";
-import { runtimeModelCatalog } from "./model-catalog.js";
+import { runtimeModelCatalog, type RuntimeModelCatalogScope } from "./model-catalog.js";
 import { mountReasoningSlider } from "../session-controls/reasoning-slider.js";
 
 /** A form owns its selection; late discovery never replaces another runtime's catalog or draft. */
@@ -12,9 +12,9 @@ export function createRuntimeModelField(
   t: Translate,
   prefix: string,
   changed: () => void = () => {},
-  conversation = false,
+  scope: RuntimeModelCatalogScope = false,
 ) {
-  const catalog = runtimeModelCatalog(t, conversation);
+  const catalog = runtimeModelCatalog(t, scope);
   let host: HTMLElement | null = null,
     epoch = 0,
     pending = false,

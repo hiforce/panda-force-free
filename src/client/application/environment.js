@@ -66,6 +66,7 @@ export function assembleEnvironment() {
       mentions: [...composerState.composerMentions],
       attachments: [...composerState.composerAttachments],
       skills: [...composerState.composerSkills],
+      ...(creationSessionRoute() ? { creationSkillsVersion: /** @type {const} */ (1) } : {}),
     }),
   });
   // Seed the static shell before route rendering replaces its empty-state DOM.

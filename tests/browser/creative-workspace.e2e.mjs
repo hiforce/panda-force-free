@@ -91,7 +91,7 @@ try {
         .waitFor({ state: "hidden" })
         .catch(() => {});
       await snap("create");
-      await p.locator("[data-creative-new]").click();
+      await p.locator("[data-personal-new]").click();
       await p
         .locator("#documentTitle")
         .waitFor({ timeout: 15000 })
@@ -101,13 +101,14 @@ try {
         });
       await snap("editor");
       await p.goto(fixture.base + "/create?view=works");
-      await p.locator(".creative-card").first().waitFor();
+      await p.locator("[data-personal-document]").first().waitFor();
       await snap("create-saved");
-      assert.equal(await p.locator("[data-creative-more]").isVisible(), false);
-      await p.locator("[data-creative-copy]").first().click();
-      await p.locator(`#creativeActionDialog input[name="project-${project.id}"]`).check();
-      await p.locator("#creativeActionDialog [type=submit]").click();
-      await p.locator("#creativeActionDialog").waitFor({ state: "hidden" });
+      await p.locator("[data-personal-document]").first().click();
+      await p.locator(".document-editor-more > summary").click();
+      await p.locator('[data-authoring-action="copy-content"]').click();
+      await p.locator(`#authoringDocumentDialog input[name="project-${project.id}"]`).check();
+      await p.locator("#authoringDocumentDialog [type=submit]").click();
+      await p.locator("#authoringDocumentDialog").waitFor({ state: "hidden" });
       await p.goto(fixture.base + "/project?id=" + project.id);
       await p.locator(".creative-card").first().waitFor();
       await p.locator("[data-creative-heading]").filter({ hasText: project.name }).waitFor();

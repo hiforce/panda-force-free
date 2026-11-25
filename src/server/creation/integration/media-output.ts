@@ -22,11 +22,16 @@ interface MediaOutput {
   kind: "image" | GeneratedKind;
   title: string;
   handle: string;
+  origin?: "native";
 }
 function output(value: unknown): MediaOutput {
-  const row = creationRecord(value, ["owner", "taskId", "kind", "title", "handle"]),
+  const row = creationRecord(value, ["owner", "taskId", "kind", "title", "handle", "origin"]),
     title = creationText(row.title, 200).trim();
-  if (!["image", "slides", "web", "video"].includes(String(row.kind)) || !title)
+  if (
+    !["image", "slides", "web", "video"].includes(String(row.kind)) ||
+    !title ||
+    (row.origin !== undefined && row.origin !== "native")
+  )
     throw new CreationError("invalidOutput");
   return {
     owner: creationText(row.owner, 200),
@@ -34,6 +39,7 @@ function output(value: unknown): MediaOutput {
     kind: row.kind as MediaOutput["kind"],
     title,
     handle: creationDigest(row.handle),
+    ...(row.origin === "native" ? { origin: "native" as const } : {}),
   };
 }
 const hash = (value: unknown) => createHash("sha256").update(stableJson(value)).digest("hex");
@@ -98,7 +104,7 @@ export class FileCreationMediaOutput implements CreationOutputContent, CreationA
   }
   private async prepared(task: CreationTaskSpec, saved: MediaOutput) {
     let original: { name: string; bytes: Uint8Array; resources?: { name: string; bytes: Uint8Array }[] };
-    if (saved.kind === "image") {
+    if (saved.kind === "image" && saved.origin !== "native") {
       const { receipt } = await this.images.resolve(task.owner, task.id, saved.handle),
         extension = receipt.mime === "image/jpeg" ? "jpg" : receipt.mime === "image/webp" ? "webp" : "png";
       original = { name: "image-" + task.id + "." + extension, bytes: receipt.bytes };

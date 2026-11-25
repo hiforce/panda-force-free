@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.10` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.11` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -38,6 +38,17 @@ bun scripts/release/prepare-update.mjs \
 ```
 
 Three-way application preserves independent public changes and stops on conflicts. The tool neither commits nor pushes. Do not merge private Git branches into the public repository. New commercial material in an existing filename still needs explicit review; a path whitelist cannot make that licensing decision.
+
+## 0.1.11
+
+Use Git tag `v0.1.11` and `hiforceai/panda-force:0.1.11` on Linux amd64. [Install](installation.md) or [upgrade](updates.md).
+
+- Enabled Harness runtimes are available to Bots by default. In Settings → Harness Runtimes, turn off Bot access for an individual runtime to keep it out of the Bot picker.
+- Bot chat resolves the runtime and model from the same catalog used by Bot settings. If the selection becomes unavailable, the message stays in the composer so you can choose another runtime and retry.
+- Configured ZCode, Claude Code and Antigravity runtimes can handle Bot chat and tasks. Use the [Harness setup guide](harness-runtimes.md) for the required CLI and account connection.
+- Creation skills use full-width covers with a compact add button next to the title.
+- The creations library has category lists and thumbnail cards for images, slides and videos, with an in-page viewer for saved PowerPoint files.
+- Creation uses the selected runtime to save native outputs. You can send additional instructions while a creation is active, and the composer clears skills that were already submitted.
 
 ## 0.1.8
 

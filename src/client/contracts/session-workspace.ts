@@ -38,6 +38,8 @@ export interface CreationSessionDomain {
   readonly key: string;
   readonly running: boolean;
   readonly sending: boolean;
+  readonly canUpdate: boolean;
+  observeDraft(present: boolean): void;
   read(): SessionWorkspaceView;
   controls(): SessionControlView;
   applyModel(model: string, effort: string): void;

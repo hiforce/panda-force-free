@@ -10,6 +10,9 @@ export const creationStateLabels = {
   failed: "creation.failed",
   cancelled: "creation.cancelled",
 } as const satisfies Record<CreationTaskState, MessageId>;
+export function creationCanUpdate(task?: CreationTaskView): boolean {
+  return Boolean(task && !task.cancelRequested && (task.state === "queued" || task.state === "running"));
+}
 export function creationStateMessage(task: CreationTaskView): MessageId {
   if (task.goal?.status === "paused") return "common.goalPaused";
   if (task.question) return "creation.waiting";

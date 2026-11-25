@@ -10,9 +10,10 @@ import { documentJson, DocumentApiError } from "../documents/api.js";
 import { request } from "../http-client.js";
 
 export const creativeAssetsApi = {
-  list: (project: string, cursor?: string, signal?: AbortSignal, state = "saved") =>
+  list: (project: string, cursor?: string, signal?: AbortSignal, state = "saved", kind?: CreativeAsset["kind"]) =>
     documentJson<CreativeAssetPage>(
-      "/api/creative-assets?" + new URLSearchParams({ project, state, ...(cursor ? { cursor } : {}) }),
+      "/api/creative-assets?" +
+        new URLSearchParams({ project, state, ...(cursor ? { cursor } : {}), ...(kind ? { kind } : {}) }),
       "GET",
       undefined,
       signal,
@@ -35,6 +36,12 @@ export const creativeAssetsApi = {
     "/api/creative-assets/content?" + new URLSearchParams({ project, id, version }),
   view: (project: string, id: string, version: string) =>
     "/api/creative-assets/view?" + new URLSearchParams({ project, id, version }),
+  cover: (asset: CreativeAsset) =>
+    "/api/creative-assets/view?" +
+    new URLSearchParams({ project: asset.project, id: asset.id, version: asset.version, variant: "cover" }),
+  slidePreview: (asset: CreativeAsset, page: number) =>
+    "/api/creative-assets/slide-preview?" +
+    new URLSearchParams({ project: asset.project, id: asset.id, version: asset.version, page: String(page) }),
   link: (asset: CreativeAsset, signal?: AbortSignal) =>
     documentJson<{ url: string; expiresAt: number }>(
       "/api/creative-assets/link?" +

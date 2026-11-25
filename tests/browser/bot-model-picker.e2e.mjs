@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { chooseReasoning, reasoningSteps } from "../support/reasoning-slider.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { writeFileSync } from "node:fs";
 import { chromium, webkit } from "playwright";
 import { createAppFixture, waitFor } from "../support/app-fixture.mjs";
 
@@ -15,7 +16,31 @@ const models = [
     (reasoningEffort) => ({ reasoningEffort }),
   ),
 }));
-const fixture = await createAppFixture({ models, applicationChat: true, startupTimeoutMs: 60000 });
+const fixtureZCode = "zcode-bot-fixture";
+const fixture = await createAppFixture({
+  models,
+  applicationChat: true,
+  startupTimeoutMs: 60000,
+  extraEnvironment({ dir }) {
+    const providerConfig = join(dir, "zcode-provider.json");
+    writeFileSync(providerConfig, JSON.stringify({ applicationProbe: true, expectedInstruction: "speaking directly" }));
+    return {
+      PANDA_FORCE_ZCODE_HARNESS_PROFILES: JSON.stringify([
+        {
+          id: fixtureZCode,
+          name: "ZCode · GLM-5.3-Flash",
+          command: new URL("../support/zcode-stdio-fixture.mjs", import.meta.url).pathname,
+          providerId: "fixture",
+          model: "glm-5.3-flash",
+          efforts: ["high"],
+          defaultEffort: "high",
+          providerConfig,
+          builtinConfig: providerConfig,
+        },
+      ]),
+    };
+  },
+});
 const artifacts = process.env.PANDA_BOT_MODEL_ARTIFACTS || ".artifacts/bot-model-picker";
 await mkdir(artifacts, { recursive: true });
 const records = [];
@@ -37,6 +62,7 @@ try {
       try {
         await fixture.signIn(context);
         await context.route("**/api/model-catalog?runtimeId=*", async (route) => {
+          assert.equal(new URL(route.request().url()).searchParams.get("scope"), "bots");
           if (failModels) {
             await route.fulfill({ status: 503, json: { error: "Fixture catalog unavailable" } });
           } else await route.continue();
@@ -256,6 +282,88 @@ try {
         assert.equal(bots.find((bot) => bot.id === legacyBot.id).effort, "retained-effort");
         assert.equal(bots.find((bot) => bot.id === createdBot.id).effort, "xhigh");
         assert.equal(bots.find((bot) => bot.code === "default-bot-" + suffix).model, "");
+        await page.locator(`[data-edit="${createdBot.id}"]`).click();
+        const runtime = page.locator('select[name="pf-bot-runtime"]');
+        await runtime.selectOption(fixtureZCode);
+        await select.selectOption("glm-5.3-flash");
+        await chooseReasoning(effort, "high");
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        await page.screenshot({ path: join(artifacts, "zcode-" + suffix + ".png") });
+        const zcodeSave = page.waitForResponse(
+          (response) =>
+            response.url().endsWith("/api/bots/" + createdBot.id) && response.request().method() === "PATCH",
+        );
+        await page.locator('[data-create-bot] button[type="submit"]').click();
+        const savedZCode = await zcodeSave;
+        assert.equal(savedZCode.status(), 200);
+        const zcodeBot = (await savedZCode.json()).bot;
+        assert.deepEqual(
+          [zcodeBot.runtimeId, zcodeBot.model, zcodeBot.effort],
+          [fixtureZCode, "glm-5.3-flash", "high"],
+        );
+        assert.deepEqual(zcodeBot.callbackHosts, updatedBot.callbackHosts);
+        const runtimeSettings = fixture.base + "/settings/agent";
+        const runtimeRow = page.locator(`[data-runtime-id="${fixtureZCode}"]`);
+        const allowBots = page.locator('input[name="botEnabled"]');
+        async function saveBotAccess(allowed) {
+          await allowBots.setChecked(allowed);
+          const updated = page.waitForResponse(
+            (response) =>
+              response.url().endsWith("/api/harness-runtimes/" + fixtureZCode) &&
+              response.request().method() === "PATCH",
+          );
+          await allowBots.locator("xpath=ancestor::form").locator('button[type="submit"]').click();
+          assert.equal((await updated).status(), 200);
+          await runtimeRow.waitFor();
+          await page.waitForLoadState("networkidle");
+        }
+        await page.goto(runtimeSettings);
+        await runtimeRow.click();
+        assert.equal(await allowBots.isChecked(), true);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+        await page.screenshot({ path: join(artifacts, "bot-access-" + suffix + ".png") });
+        await saveBotAccess(false);
+        await page.goto(fixture.base + "/settings/bots");
+        await page.locator("[data-new-bot]").click();
+        await runtime.locator('option[value="codex"]').waitFor({ state: "attached" });
+        assert.equal(await runtime.locator(`option[value="${fixtureZCode}"]`).count(), 0);
+        await page.goto(runtimeSettings);
+        await runtimeRow.click();
+        assert.equal(await allowBots.isChecked(), false);
+        assert.equal(await page.locator('input[name="enabled"]').isChecked(), true);
+        await saveBotAccess(true);
+        await page.locator("[data-harness-add]").click();
+        const extraName = "Second ZCode " + suffix;
+        await page.locator('input[name="runtimeName"]').fill(extraName);
+        await page.locator('select[name="profileId"]').selectOption(fixtureZCode);
+        assert.equal(await allowBots.isChecked(), true);
+        const extraSaved = page.waitForResponse(
+          (response) => response.url().endsWith("/api/harness-runtimes") && response.request().method() === "POST",
+        );
+        await allowBots.locator("xpath=ancestor::form").locator('button[type="submit"]').click();
+        const createdRuntime = await extraSaved;
+        assert.equal(createdRuntime.status(), 201);
+        const extraId = (await createdRuntime.json()).runtimes.find(({ name }) => name === extraName).id;
+        const extraRow = page.locator(`[data-runtime-id="${extraId}"]`);
+        await extraRow.waitFor();
+        await page.waitForLoadState("networkidle");
+        await page.goto(fixture.base + "/settings/bots");
+        await page.locator("[data-new-bot]").click();
+        await runtime.locator(`option[value="${fixtureZCode}"]`).waitFor({ state: "attached" });
+        await runtime.locator(`option[value="${extraId}"]`).waitFor({ state: "attached" });
+        await page.goto(runtimeSettings);
+        await extraRow.click();
+        await page.locator("[data-harness-remove]").click();
+        await page.locator("dialog.confirmation-dialog[open]").waitFor();
+        const removed = page.waitForResponse(
+          (response) =>
+            response.url().endsWith("/api/harness-runtimes/" + extraId) && response.request().method() === "DELETE",
+        );
+        await page.locator("dialog.confirmation-dialog[open] button.danger").click();
+        assert.equal((await removed).status(), 200);
+        await runtimeRow.waitFor();
+        assert.equal(await extraRow.count(), 0);
+        await page.waitForLoadState("networkidle");
         assert.deepEqual(errors, []);
         records.push({
           width,
@@ -264,6 +372,9 @@ try {
           reasoningEffortPersistsAndFollowsModelCapabilities: true,
           failureAndRetryPreserveForm: true,
           botChoiceDoesNotChangeSession: true,
+          zcodeBotRuntimeAndReasoningPersist: true,
+          botAccessFollowsRuntimeSettings: true,
+          sameAdapterInstancesRemainIndependent: true,
           explicitAndDefaultModelsPersist: true,
           editPersistsCallbackHostsAndModel: true,
           invalidEditPreservesBufferAndCancelDiscards: true,

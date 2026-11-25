@@ -239,7 +239,8 @@ export function creationProgress(event: CreationProgress): CreationProgress {
       ? !creationOperation(event.operation) || !["running", "completed", "failed"].includes(event.status ?? "")
       : event.operation !== undefined || event.status !== undefined) ||
     (event.text !== undefined && (typeof event.text !== "string" || event.text.length > 65536)) ||
-    (event.streaming !== undefined && typeof event.streaming !== "boolean")
+    (event.streaming !== undefined && typeof event.streaming !== "boolean") ||
+    (event.phase !== undefined && (event.stage !== "message" || !["commentary", "final_answer"].includes(event.phase)))
   )
     throw new Error("Invalid creation progress");
   return {
@@ -249,6 +250,7 @@ export function creationProgress(event: CreationProgress): CreationProgress {
     ...(event.text ? { text: event.text } : {}),
     ...(event.id === undefined ? {} : { id: creationUuid(event.id) }),
     ...(event.streaming === undefined ? {} : { streaming: event.streaming }),
+    ...(event.phase === undefined ? {} : { phase: event.phase }),
     ...(event.usage === undefined ? {} : { usage: visibleTokenUsage(event.usage) }),
     ...(event.stage === "activity" ? { operation: event.operation, status: event.status } : {}),
   };

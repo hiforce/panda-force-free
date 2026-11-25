@@ -12,6 +12,12 @@
   "save": "儲存執行個體",
   "back": "所有執行個體",
   "enabled": "啟用",
+  "botEnabled": "允許助理使用這個執行個體",
+  "botUnsupported": "此配接器目前只適用於對話。",
+  "remove": "刪除執行個體",
+  "removeConfirm": "要刪除「{name}」嗎？現有對話及助理會保留紀錄。如要繼續使用，請改用其他執行個體。",
+  "removed": "已刪除執行個體。",
+  "removeDefaultHint": "請先將其他執行個體設為預設，再刪除此個體。",
   "makeDefault": "設為新對話的預設執行個體",
   "inheritedWorkspace": "使用 PandaForce 中選擇的工作目錄。",
   "connectionHint": "先選擇執行個體，再設定其模型及連線。",
@@ -81,5 +87,5 @@
   "selectionHint": "先選擇執行個體，再選擇模型和思考強度。套用於下一則訊息或任務。",
   "selectionUnavailable": "已儲存的選擇目前無法使用，修改前會保留原值。",
   "selectionError": "此執行個體、模型或思考強度無法使用，請檢查選擇後重試。",
-  "mediaHint": "圖片和影片產生使用已設定的媒體產生服務。"
+  "mediaHint": "創作由所選執行個體處理。PandaForce 會儲存該個體傳回的原檔。"
 }

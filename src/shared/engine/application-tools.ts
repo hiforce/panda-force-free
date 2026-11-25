@@ -3,7 +3,13 @@ import type { TokenUsage } from "./types.js";
 
 export type ApplicationVisibleEvent =
   | { kind: "message"; id: string; text: string; complete: boolean; phase?: "commentary" | "final_answer" }
-  | { kind: "usage"; usage: TokenUsage };
+  | { kind: "usage"; usage: TokenUsage }
+  | {
+      kind: "activity";
+      id: string;
+      operation: "nativeWork" | "nativeWrite";
+      status: "running" | "completed" | "failed";
+    };
 
 export interface ApplicationToolDefinition {
   name: string;
@@ -28,13 +34,16 @@ export type ApplicationQuestionAnswers = Record<string, { answers: string[] }>;
 export interface ApplicationRunCallbacks {
   signal: AbortSignal;
   directory?: { readonly path: string; verify(): Promise<void> };
+  nativeFiles?(read: (filename: string) => Promise<Buffer>): void;
   session?(sessionId: string): void | Promise<void>;
   started(scope: ApplicationRunScope): void | Promise<void>;
   call(value: ApplicationToolCall): Promise<ApplicationToolResult>;
   question?(scope: ApplicationRunScope, questions: readonly EngineQuestion[]): Promise<ApplicationQuestionAnswers>;
   message?(text: string): void | Promise<void>;
   event?(event: ApplicationVisibleEvent): void | Promise<void>;
-  control?(control: { steer(prompt: string): Promise<void> }): void | Promise<void>;
+  control?(control: {
+    steer(prompt: string): Promise<void>;
+  }): { poll(): Promise<void> } | void | Promise<{ poll(): Promise<void> } | void>;
 }
 export interface ApplicationToolEngine {
   readonly id: string;

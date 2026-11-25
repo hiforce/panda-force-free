@@ -42,7 +42,7 @@ try {
         destination = Promise.withResolvers();
       let posts = 0,
         destinationReads = 0;
-      await page.route("**/api/model-catalog", async (route) => {
+      await page.route("**/api/model-catalog?scope=creation", async (route) => {
         await catalog.promise;
         await route.continue();
       });

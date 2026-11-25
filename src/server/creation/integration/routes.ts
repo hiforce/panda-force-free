@@ -116,6 +116,7 @@ export function creationRoutes(
           "runtimeId",
           "model",
           "effort",
+          "updateGeneration",
         ]);
         const { taskId, ...input } = value;
         respondJson(res, 202, { task: await service.message(actor, creationText(taskId), input) });

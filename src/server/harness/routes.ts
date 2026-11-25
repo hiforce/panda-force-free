@@ -40,7 +40,7 @@ export function harnessRoutes(options: {
   return [
     route(
       (path) => /^\/api\/harness-runtimes(?:\/[^/]+(?:\/(?:probe|ping))?)?$/.test(path),
-      ["GET", "POST", "PATCH"],
+      ["GET", "POST", "PATCH", "DELETE"],
       async (context, principal) => {
         const segments = context.url.pathname.split("/").filter(Boolean),
           id = segments[2];
@@ -53,6 +53,10 @@ export function harnessRoutes(options: {
           return options.registry.probe(principal, id!, options.defaultCwd);
         }
         const input = await readJsonBody(context.req);
+        if (context.req.method === "DELETE") {
+          if (!id || segments[3] || !Number.isSafeInteger(input.revision)) throw new HarnessError("invalidInput");
+          return options.registry.remove(principal, id, Number(input.revision));
+        }
         if (segments[3] === "ping") {
           if (context.req.method !== "POST" || typeof input.requestId !== "string")
             throw new HarnessError("invalidInput");
@@ -64,6 +68,7 @@ export function harnessRoutes(options: {
           typeof input.name !== "string" ||
           typeof input.profileId !== "string" ||
           typeof input.enabled !== "boolean" ||
+          (input.botEnabled !== undefined && typeof input.botEnabled !== "boolean") ||
           !["administrators", "members"].includes(String(input.access)) ||
           (input.revision !== undefined && !Number.isSafeInteger(input.revision)) ||
           (input.makeDefault !== undefined && typeof input.makeDefault !== "boolean") ||
@@ -77,6 +82,7 @@ export function harnessRoutes(options: {
           name: input.name,
           profileId: input.profileId,
           enabled: input.enabled,
+          ...(input.botEnabled === undefined ? {} : { botEnabled: input.botEnabled }),
           access: input.access as "administrators" | "members",
           defaultModel: input.defaultModel as string | null,
           defaultEffort: input.defaultEffort as string | null,

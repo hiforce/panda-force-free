@@ -1,3 +1,4 @@
+import { creationUpdateGeneration } from "../../../shared/creation/contracts.js";
 import type { SkillCapture } from "../../../shared/skills/registry.js";
 import type { CreationTask, CreationLease } from "../contracts.js";
 import type { CreationInputs } from "../input.js";
@@ -10,7 +11,7 @@ import type {
 import type { CreationMaterialPort } from "../materials.js";
 import { CreationError } from "../contracts.js";
 import { creationRequest, creationRequestDigest } from "../requests.js";
-import { creationId, creationRecord, creationUuid } from "../validation.js";
+import { creationId, creationInteger, creationRecord, creationUuid } from "../validation.js";
 
 /** Accepted commands are durable before dispatch; uncertain native acknowledgements are never replayed automatically. */
 export class CreationMessages {
@@ -41,6 +42,7 @@ export class CreationMessages {
         "effort",
         "outputType",
         "dialogue",
+        "updateGeneration",
       ]);
     const request = creationRequest({
       id: row.id,
@@ -59,7 +61,13 @@ export class CreationMessages {
       ...(row.model === undefined ? {} : { model: row.model }),
       ...(row.effort === undefined ? {} : { effort: row.effort }),
     });
-    const requestDigest = creationRequestDigest({ taskId, request }),
+    const updateGeneration = row.updateGeneration === undefined ? undefined : creationInteger(row.updateGeneration),
+      inheritSkills = updateGeneration !== undefined && row.selections === undefined;
+    const requestDigest = creationRequestDigest({
+        taskId,
+        request,
+        ...(updateGeneration === undefined ? {} : { updateGeneration, inheritSkills }),
+      }),
       prior = await this.store.find(owner, request.id);
     if (prior) {
       if (prior.requestDigest !== requestDigest || prior.taskId !== taskId) throw new CreationError("conflict");
@@ -69,9 +77,13 @@ export class CreationMessages {
     if (request.runtimeId && request.runtimeId !== (source.profile.runtimeId ?? "codex"))
       throw new CreationError("conflict");
     if (request.outputType !== source.outputType) throw new CreationError("conflict");
-    if (!["queued", "running"].includes(task.state) || task.outputDigest || task.cancelRequested)
-      throw new CreationError("conflict");
-    const capture = await this.capture(owner, request, requestDigest);
+    const canUpdate = (current: CreationTask) =>
+      ["queued", "running"].includes(current.state) &&
+      !current.outputDigest &&
+      !current.cancelRequested &&
+      (updateGeneration === undefined || updateGeneration === creationUpdateGeneration(current));
+    if (!canUpdate(task)) throw new CreationError(updateGeneration === undefined ? "conflict" : "updateClosed");
+    const capture = inheritSkills ? null : await this.capture(owner, request, requestDigest);
     if (request.attachments?.length && !this.materials) throw new CreationError("unavailable");
     const materials = request.attachments?.length ? await this.materials!.prepare(owner, request.attachments) : [];
     const frozen: CreationMessagePayload = {
@@ -83,23 +95,35 @@ export class CreationMessages {
       prompt: request.prompt,
       profile: source.profile,
       skills: capture,
+      ...(inheritSkills ? { inheritSkills } : {}),
       materials,
     };
     const payloadDigest = await this.files.put(frozen);
     await this.authorize(owner, task.spec.projectId);
     const now = Date.now();
-    return this.store.accept({
-      id: request.id,
-      owner,
-      taskId,
-      generation: task.generation,
-      requestDigest,
-      payloadDigest,
-      state: "received",
-      dispatchGeneration: null,
-      createdAt: now,
-      updatedAt: now,
-    });
+    try {
+      return await this.store.accept({
+        id: request.id,
+        owner,
+        taskId,
+        generation: updateGeneration ?? task.generation,
+        requestDigest,
+        payloadDigest,
+        state: "received",
+        dispatchGeneration: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (error) {
+      if (
+        updateGeneration !== undefined &&
+        error instanceof CreationError &&
+        error.code === "conflict" &&
+        !canUpdate(await this.tasks.get(owner, taskId))
+      )
+        throw new CreationError("updateClosed");
+      throw error;
+    }
   }
   async list(owner: string, taskId: string) {
     const task = await this.tasks.get(owner, taskId);
@@ -144,8 +168,9 @@ export class CreationMessages {
     await this.authorize(owner, task.spec.projectId);
     if (inherited.length + own.length > 1024) throw new CreationError("unavailable");
     const all = [...inherited, ...own];
+    const selected = all.findLastIndex(({ payload }) => !payload.inheritSkills);
     return all.map((entry, index) =>
-      index === all.length - 1 ? entry : { ...entry, payload: { ...entry.payload, skills: null } },
+      index === selected ? entry : { ...entry, payload: { ...entry.payload, skills: null } },
     );
   }
   claim(lease: CreationLease) {

@@ -1,6 +1,7 @@
 /* Desktop authoring is a full-height workspace with one aligned header band. */
 @media (min-width: 701px) {
-  body[data-workbench-page="documents"] .workbench-view:has(.project-document-authoring) {
+  body[data-workbench-page="documents"] .workbench-view:has(.project-document-authoring),
+  .workbench-view:has(.personal-creation-library) {
     max-width: none;
     padding: 0;
     overflow: hidden;
@@ -152,7 +153,7 @@
   .authoring-directory-utilities .wb-button > span:not(.icon-slot) {
     display: none;
   }
-  .project-document-authoring #documentSearch {
+  .project-document-authoring #authoringDirectory #documentSearch {
     min-height: 32px;
     height: 32px;
     padding: 6px 10px;

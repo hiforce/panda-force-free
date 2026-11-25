@@ -1,3 +1,4 @@
+import { creationUpdateGeneration } from "../../../shared/creation/contracts.js";
 import type { Database } from "bun:sqlite";
 import type { CreationLease } from "../contracts.js";
 import type { CreationMessageRecord, CreationMessageStore } from "../messages/contracts.js";
@@ -29,7 +30,7 @@ export class SQLiteCreationMessages implements CreationMessageStore {
           !["queued", "running"].includes(task.state) ||
           task.cancelRequested ||
           task.outputDigest ||
-          value.generation !== task.generation
+          (value.generation !== task.generation && creationUpdateGeneration(task) !== value.generation)
         )
           throw new CreationError("conflict");
         const count = this.db

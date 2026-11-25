@@ -1,3 +1,5 @@
+import { bindSlidePreview } from "./slides-preview.js";
+import { bindReaderMore } from "./reader-toolbar.js";
 import type { Translate } from "../../shared/i18n/messages.js";
 import type { CreativeAsset } from "../../shared/creative/assets.js";
 import { escapeHtml as e } from "../../shared/html.js";
@@ -80,23 +82,81 @@ export class CreativeAssetsPanel {
     void closed.then(() => {
       if (scope.epoch === this.epoch) this.controller?.abort();
     });
+    await this.readSurface(
+      asset,
+      changed,
+      this.modal.element.querySelector<HTMLElement>("[data-asset-detail]")!,
+      this.modal.element.querySelector<HTMLElement>("header h2")!,
+      scope,
+      () => this.read(asset, changed, expectedVersion),
+      expectedVersion,
+    );
+  }
+  async readInline(
+    asset: AssetReadTarget,
+    changed: () => Promise<void>,
+    body: HTMLElement,
+    title: HTMLElement,
+    toolbar: HTMLElement,
+    expectedVersion?: string,
+  ): Promise<CreativeAsset | undefined> {
+    const scope = this.begin();
+    return this.readSurface(
+      asset,
+      changed,
+      body,
+      title,
+      scope,
+      () => this.readInline(asset, changed, body, title, toolbar, expectedVersion),
+      expectedVersion,
+      toolbar,
+    );
+  }
+  private async readSurface(
+    asset: AssetReadTarget,
+    changed: () => Promise<void>,
+    body: HTMLElement,
+    title: HTMLElement,
+    scope: { epoch: number; signal: AbortSignal },
+    retry: () => Promise<unknown>,
+    expectedVersion?: string,
+    toolbar?: HTMLElement,
+  ) {
+    const t = this.t;
     try {
       const [value, access] = await Promise.all([
         creativeAssetsApi.detail(asset.project, asset.id, scope.signal),
         creativeAssetsApi.capabilities(asset.project, scope.signal),
       ]);
       if (scope.epoch !== this.epoch || scope.signal.aborted) return;
-      const body = this.modal.element.querySelector<HTMLElement>("[data-asset-detail]")!;
-      const title = this.modal.element.querySelector("header h2")!;
       title.textContent = value.asset.title;
+      if (toolbar) title.title = value.asset.title;
       title.setAttribute("data-i18n-ignore", "");
       if (expectedVersion && expectedVersion !== value.asset.version) {
         body.textContent = t("creative.assetVersionChanged");
-        return;
+        return value.asset;
       }
-      setMessageHtml(body, creativeAssetDetail(t, value, access.contribute));
-      bindAssetLink(body, value.asset, t, scope.signal);
-      this.bindRetry(body, asset, changed, expectedVersion);
+      const presentation = creativeAssetDetail(t, value, access.contribute, !!toolbar),
+        surface = toolbar?.closest<HTMLElement>("[data-personal-reader]") ?? body;
+      if (toolbar) {
+        setMessageHtml(toolbar, presentation.toolbar);
+        const actions = toolbar.querySelector<HTMLDetailsElement>(".personal-asset-more")!;
+        actions.addEventListener("click", (event) => {
+          if (
+            (event.target as Element).closest(
+              "[data-asset-copy],[data-asset-replace],[data-asset-trash],[data-asset-knowledge]",
+            )
+          ) {
+            actions.open = false;
+            actions.querySelector("summary")?.focus({ preventScroll: true });
+          }
+        });
+        bindReaderMore(toolbar, scope.signal);
+      }
+      setMessageHtml(body, presentation.body);
+      bindAssetLink(surface, value.asset, t, scope.signal);
+      bindSlidePreview(body, value.asset, t, scope.signal);
+      this.bindRetry(body, retry);
       for (const element of body.querySelectorAll("[data-asset-native]"))
         element.addEventListener("error", () => {
           const notice = body.querySelector<HTMLElement>("[data-asset-view-error]");
@@ -113,16 +173,16 @@ export class CreativeAssetsPanel {
         frame.srcdoc = value.previewHtml;
         preview.append(frame);
       }
-      body.querySelector<HTMLButtonElement>("[data-asset-copy]")!.onclick = () => {
+      surface.querySelector<HTMLButtonElement>("[data-asset-copy]")!.onclick = () => {
         void this.copy(value.asset);
       };
-      body.querySelector<HTMLButtonElement>("[data-asset-replace]")?.addEventListener("click", () => {
+      surface.querySelector<HTMLButtonElement>("[data-asset-replace]")?.addEventListener("click", () => {
         void this.import(asset.project, changed, value.asset);
       });
-      body.querySelector<HTMLButtonElement>("[data-asset-trash]")?.addEventListener("click", () => {
+      surface.querySelector<HTMLButtonElement>("[data-asset-trash]")?.addEventListener("click", () => {
         void this.trash(value.asset, changed);
       });
-      body.querySelector<HTMLButtonElement>("[data-asset-knowledge]")?.addEventListener("click", () => {
+      surface.querySelector<HTMLButtonElement>("[data-asset-knowledge]")?.addEventListener("click", () => {
         const kind = value.asset.kind;
         if (kind !== "web" && kind !== "slides") return;
         void this.knowledge.open({
@@ -131,25 +191,25 @@ export class CreativeAssetsPanel {
           selected: [value.asset.id],
         });
       });
+      return value.asset;
     } catch (error) {
       if (scope.epoch !== this.epoch || scope.signal.aborted) return;
       const message = errorText(error instanceof DocumentApiError ? error.payload : null, t, "documents.unavailable");
-      const body = this.modal.element.querySelector<HTMLElement>("[data-asset-detail]")!,
-        version = expectedVersion ?? ("version" in asset ? asset.version : undefined),
+      const version = expectedVersion ?? ("version" in asset ? asset.version : undefined),
         download = version && (!(error instanceof DocumentApiError) || ![403, 404, 409].includes(error.status));
       setMessageHtml(
         body,
         `<p role="status">${e(message)}</p><button type="button" class="wb-button" data-asset-view-retry>${e(t("common.retry"))}</button>${download ? `<a class="wb-button" href="${e(creativeAssetsApi.content(asset.project, asset.id, version!))}" download>${e(t("creative.assetDownload"))}</a>` : ""}`,
       );
-      this.bindRetry(body, asset, changed, expectedVersion);
+      this.bindRetry(body, retry);
     }
   }
-  private bindRetry(body: HTMLElement, asset: AssetReadTarget, changed: () => Promise<void>, expectedVersion?: string) {
+  private bindRetry(body: HTMLElement, read: () => Promise<unknown>) {
     const retry = body.querySelector<HTMLButtonElement>("[data-asset-view-retry]");
     if (retry)
       retry.onclick = () => {
         retry.disabled = true;
-        void this.read(asset, changed, expectedVersion);
+        void read();
       };
   }
   private async trash(asset: CreativeAsset, changed: () => Promise<void>) {

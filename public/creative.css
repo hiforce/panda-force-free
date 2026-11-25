@@ -2266,3 +2266,42 @@
   inline-size: 100%;
   max-block-size: 70dvh;
 }
+
+.creative-slide-reader {
+  display: grid;
+  gap: var(--pf-space-2);
+}
+.creative-slide-stage {
+  min-width: 0;
+}
+.creative-slide-stage [data-slide-status] {
+  margin: var(--pf-space-2) 0;
+  color: var(--pf-muted);
+}
+.creative-slide-image:not([hidden]) {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(var(--app-viewport-height, 100dvh) - 216px);
+  margin-inline: auto;
+  object-fit: contain;
+}
+.creative-slide-pages:not([hidden]) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pf-space-2);
+  color: var(--pf-muted);
+}
+.creative-slide-turn {
+  min-width: var(--pf-touch-target);
+  min-height: var(--pf-touch-target);
+}
+.creative-slide-text > summary {
+  width: fit-content;
+  min-height: var(--pf-touch-target);
+  padding-block: var(--pf-space-2);
+  color: var(--pf-muted);
+  cursor: pointer;
+}

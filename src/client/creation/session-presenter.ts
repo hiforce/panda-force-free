@@ -27,12 +27,12 @@ export class CreationSessionPresenter {
         for (const entry of entries) this.message(entry.item, turn);
         const stream = document.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turn)}"] .turn-event-stream`);
         if (stream)
-          for (const [index, entry] of entries.entries()) {
+          for (const [index, entry] of entries.filter(({ item }) => item.phase !== "final_answer").entries()) {
             const node = document.querySelector<HTMLElement>(
                 `#conversation [data-item-id="${CSS.escape(String(entry.item.id))}"]`,
               ),
               before = stream.children[index] || null;
-            if (node && before !== node) stream.insertBefore(node, before);
+            if (node?.parentElement === stream && before !== node) stream.insertBefore(node, before);
           }
       }
       const root = document.querySelector<HTMLElement>("#conversation")!;
@@ -50,7 +50,8 @@ export class CreationSessionPresenter {
       }
       this.status.hidden = task.state === "replied";
       if (!this.status.hidden) cards?.render([task]);
-      document.querySelector("#conversation")!.append(this.status);
+      // Reappending an already mounted status would blur a focused answer field.
+      if (root.lastChild !== this.status) root.append(this.status);
     });
   }
   private message(item: EngineItem, turn: string) {

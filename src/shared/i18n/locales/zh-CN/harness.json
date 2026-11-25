@@ -12,6 +12,12 @@
   "save": "保存运行实例",
   "back": "全部运行实例",
   "enabled": "启用",
+  "botEnabled": "允许助理使用此运行实例",
+  "botUnsupported": "此适配器目前仅支持会话。",
+  "remove": "删除运行实例",
+  "removeConfirm": "要删除「{name}」吗？现有会话和助理会保留历史。要继续使用，请为它们选择其他运行实例。",
+  "removed": "运行实例已删除。",
+  "removeDefaultHint": "请先将其他运行实例设为默认，再删除此实例。",
   "makeDefault": "设为新对话的默认实例",
   "inheritedWorkspace": "使用 PandaForce 中选择的工作目录。",
   "connectionHint": "先选择运行实例，再设置该实例的模型与连接。",
@@ -81,5 +87,5 @@
   "selectionHint": "先选择运行实例，再选择模型和思考强度。应用于下一条消息或任务。",
   "selectionUnavailable": "已保存的选择当前不可用，修改前会保留原值。",
   "selectionError": "该运行实例、模型或思考强度不可用，请检查选择后重试。",
-  "mediaHint": "图片和视频生成使用已配置的媒体生成服务。"
+  "mediaHint": "创作由所选运行实例处理。PandaForce 保存该实例返回的原件。"
 }

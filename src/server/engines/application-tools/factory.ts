@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, lstat, realpath, rm } from "node:fs/promises";
 import { isAbsolute, join, relative, sep } from "node:path";
 import type { CodexConnection, CodexTransportFactory } from "../codex-transport.js";
 import { createCodexApplicationEngine } from "./codex.js";
+import { harnessOutputReader } from "../../harness/workspaces.js";
 import { trackApplicationDirectory, registerApplicationRoot } from "./sessions.js";
 
 export interface ApplicationEngineProfile {
@@ -72,6 +73,8 @@ export function isolatedApplicationEngines(
           const untrack = trackApplicationDirectory(scratch);
           try {
             callbacks.signal.throwIfAborted();
+            if (options.purpose === "creation" && callbacks.nativeFiles)
+              callbacks.nativeFiles(await harnessOutputReader(scratch));
             if (profile.runtimeId && options.runtimes && owner)
               return await options.runtimes.engine(owner, profile, scratch, options.purpose).run(input, callbacks);
             return await createCodexApplicationEngine(
