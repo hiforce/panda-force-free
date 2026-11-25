@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir } from "node:fs/promises";
 import { HarnessError } from "../../shared/harness/contracts.js";
 import { runtimeModels, defaultRuntimeModel, supportedEffort } from "../../shared/engine/runtime-selection.js";
 import type { ApplicationRuntimePort, ApplicationRuntimeSelection } from "../engines/application-tools/runtime-port.js";
@@ -9,11 +8,13 @@ import type { HarnessRegistry, HarnessPrincipal } from "./registry.js";
 import type { HarnessAgent } from "./ports.js";
 import { applicationMcp } from "./application-mcp.js";
 import { ActiveRunBudget, type RunBudgetClock } from "../engines/active-budget.js";
+import { createHarnessWorkspace } from "./workspaces.js";
 
 /** Resolve every application selection against the same installed runtime registry used by conversations. */
 export function applicationRuntimes(options: {
   registry: HarnessRegistry;
   scratchRoot: string;
+  hostWorkspace?(): ReturnType<typeof createHarnessWorkspace>;
   principal(owner: string): Promise<HarnessPrincipal>;
   now?: () => number;
   runClock?: RunBudgetClock;
@@ -83,27 +84,34 @@ export function applicationRuntimes(options: {
       }
       checked.delete(key);
       const work = (async () => {
-        await mkdir(options.scratchRoot, { recursive: true, mode: 0o700 });
-        const cwd = await mkdtemp(join(options.scratchRoot, "catalog-"));
-        const bridge = await applicationMcp(
-          [],
-          {
-            signal: new AbortController().signal,
-            started() {},
-            call: async () => {
-              throw new HarnessError("forbidden", 403);
-            },
-          },
-          () => null,
-        );
+        const hostSocket = options.registry.usesHostSocket(configured.profileId);
+        if (hostSocket && !options.hostWorkspace) throw new HarnessError("workspaceUnavailable", 409);
+        if (!hostSocket) await mkdir(options.scratchRoot, { recursive: true, mode: 0o700 });
+        const workspace = hostSocket
+          ? await options.hostWorkspace!()
+          : await createHarnessWorkspace(options.scratchRoot, "catalog-");
+        const { cwd } = workspace;
+        let bridge: Awaited<ReturnType<typeof applicationMcp>> | undefined;
         let agent: HarnessAgent | undefined;
         try {
+          if (scoped)
+            bridge = await applicationMcp(
+              [],
+              {
+                signal: new AbortController().signal,
+                started() {},
+                call: async () => {
+                  throw new HarnessError("forbidden", 403);
+                },
+              },
+              () => null,
+            );
           const opened = await options.registry.agent(
             principal,
             id,
             `catalog-${randomUUID()}`,
             cwd,
-            scoped
+            bridge
               ? {
                   application: {
                     instructions: "Discover runtime capabilities only. No prompt is authorized.",
@@ -118,9 +126,15 @@ export function applicationRuntimes(options: {
           if (current.revision !== configured.revision) throw new HarnessError("conflict", 409);
           return (await port.catalog(owner, conversation)).runtimes.find((runtime) => runtime.id === id)!;
         } finally {
-          await agent?.close();
-          await bridge.close();
-          await rm(cwd, { recursive: true, force: true });
+          try {
+            await agent?.close();
+          } finally {
+            try {
+              await bridge?.close();
+            } finally {
+              await workspace.cleanup();
+            }
+          }
         }
       })();
       discovering.set(requestKey, work);

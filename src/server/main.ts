@@ -277,6 +277,7 @@ const harnessFeature = await createHarnessFeature({
 const applicationRuntime = applicationRuntimes({
   registry: harnessFeature.registry,
   scratchRoot: join(config.stateRoot, "harness", "catalog"),
+  hostWorkspace: harnessFeature.hostCatalogWorkspace,
   principal: (owner) =>
     localAccountFeature?.accounts.runtimePrincipal(owner) ?? Promise.resolve({ owner, administrator: true }),
   codex: (selection, directory, purpose) =>

@@ -19,6 +19,7 @@ import { decode, save } from "./records.js";
 export interface HarnessProfile extends HarnessProfileView {
   factory: HarnessAgentFactory;
   conversationOnly?: boolean;
+  hostSocket?: boolean;
 }
 export interface HarnessPrincipal {
   owner: string;
@@ -81,7 +82,9 @@ export class HarnessRegistry {
       defaultRuntimeId: defaults?.runtimeId ?? "",
       canManage: principal.administrator,
       profiles: principal.administrator
-        ? [...this.profiles.values()].map(({ factory: _factory, conversationOnly: _scope, ...view }) => view)
+        ? [...this.profiles.values()].map(
+            ({ factory: _factory, conversationOnly: _scope, hostSocket: _socket, ...view }) => view,
+          )
         : [],
       runtimes: values
         .filter((runtime) => principal.administrator || (runtime.enabled && runtime.access === "members"))
@@ -91,6 +94,9 @@ export class HarnessRegistry {
   supportsApplication(profileId: string) {
     const profile = this.profiles.get(profileId);
     return !!profile && !profile.conversationOnly;
+  }
+  usesHostSocket(profileId: string) {
+    return this.profiles.get(profileId)?.hostSocket === true;
   }
   view(runtime: HarnessRuntime, defaultId?: string): HarnessRuntimeView {
     const info = this.discovered.get(runtime.id),

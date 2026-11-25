@@ -276,7 +276,14 @@ export function harnessProfiles(
       default:
         throw new HarnessError("invalidInput");
     }
-    profiles.push({ ...profileIdentity(profile), kind, deployment: "local", conversationOnly: true, factory });
+    profiles.push({
+      ...profileIdentity(profile),
+      kind,
+      deployment: "local",
+      conversationOnly: true,
+      hostSocket: true,
+      factory,
+    });
   }
   let grok: GrokProfileConfig[] = [];
   if (env.PANDA_FORCE_HARNESS_PROFILES) {

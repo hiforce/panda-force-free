@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.9` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.10` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -62,6 +62,14 @@ Use Git tag `v0.1.6` and `hiforceai/panda-force:0.1.6` on Linux amd64. [Install]
 - The creation home uses a compact composer and larger skill covers. Select a cover or title to read the full description. Open creation history from the header to search and return to earlier work.
 - Switching between creation and conversations refreshes the engine controls and transcript for the destination and preserves unsent drafts.
 - The optional Antigravity ACP runtime offers automatic tool approval for the next turn. New sessions ask for approval by default. See the [Antigravity setup](harness-runtimes.md#antigravity-cli).
+
+## 0.1.10
+
+Use Git tag `v0.1.10` and `hiforceai/panda-force:0.1.10` on Linux amd64. [Install](installation.md) or [upgrade](updates.md).
+
+- Open and confirm Full access from the settings of a new Claude Code conversation. Canceling keeps the current permission, and the confirmed permission takes effect on the next message.
+- Discover models and send test messages through a host runtime using the configured shared workspace.
+- Update the optional Claude Code build recipe to CLI 2.1.332 with Claude Agent ACP 0.110.1. The public application image uses the operator-supplied Claude installation. [Set up Claude Code](harness-runtimes.md).
 
 ## 0.1.5
 

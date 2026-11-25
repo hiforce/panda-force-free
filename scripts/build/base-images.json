@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "inputsSha256": "f0d8f4b3ef3e1c13140d56e844ff4d6c21314bcf0483fc76f871d03bc81d66a9",
-  "baseTag": "rocky9-creative-0.1.9",
+  "baseTag": "rocky9-creative-0.1.10",
   "platform": "linux/amd64",
-  "buildBase": "hiforceai/panda-force-build-base@sha256:963bf3d085b78419caec7f5a2a53323c012956e334c716e3754cd744bfb4b1e3",
-  "runtimeBase": "hiforceai/panda-force-runtime-base@sha256:ce564a38e60c4119cd4addd7f9cda11fd3accefa72a4fb7ad6978800a37a86ba",
+  "buildBase": "hiforceai/panda-force-build-base@sha256:fdfc05069b26233b28c68a73ba1ea2a7a07dd29b7f9f20b8700d1db144f282b6",
+  "runtimeBase": "hiforceai/panda-force-runtime-base@sha256:c8e0c1a4dc8dc3d10c81e5cfed5113a4e6b2c49bbb4a1b15a969c6355da15bfc",
   "coreBaseTag": "deps-7fc21178477adfc2",
   "coreBuildBase": "hiforceai/panda-force-build-base:deps-7fc21178477adfc2@sha256:d1b3e34b9afe1405a52181f54b233e2ad1eedc7eb45babfd58548afbdaf6adf5",
   "coreRuntimeBase": "hiforceai/panda-force-runtime-base:deps-7fc21178477adfc2@sha256:7d5b745416b1321c73ebd6cf1b08535d3757de8ddb63c7bdf67a6312265c32c8",

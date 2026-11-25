@@ -1,6 +1,6 @@
 # Configure Harness Runtimes
 
-Use the 0.1.9 release checkout and application image. Combine the normal Compose file and this overlay:
+Use the 0.1.10 release checkout and application image. Combine the normal Compose file and this overlay:
 
 ```sh
 docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml up -d
@@ -16,7 +16,7 @@ For a dedicated account, complete the official one-time device login through the
 docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml run --rm grok-auth grok --no-auto-update login --device-auth
 ```
 
-The `grok-auth` service owns the account directory. The application mounts only a named socket volume; this works with Docker Desktop as well as Linux and does not require a host daemon or Kubernetes. Private registries and explicit pull policies remain available through the normal image and pull-policy overrides. The application and both account helpers default to `hiforceai/panda-force:0.1.9`. For a local build or private registry, set `PANDA_FORCE_IMAGE` explicitly so all three services use the same selected image. When building locally, include `docker-compose.build.yml` and build `panda-force` before starting the overlay.
+The `grok-auth` service owns the account directory. The application mounts only a named socket volume; this works with Docker Desktop as well as Linux and does not require a host daemon or Kubernetes. Private registries and explicit pull policies remain available through the normal image and pull-policy overrides. The application and both account helpers default to `hiforceai/panda-force:0.1.10`. For a local build or private registry, set `PANDA_FORCE_IMAGE` explicitly so all three services use the same selected image. When building locally, include `docker-compose.build.yml` and build `panda-force` before starting the overlay.
 
 Before model discovery, connection tests and chat dispatch, the account service rereads the account file. Within five minutes of expiry it runs the installed native CLI's `models` command in an empty temporary directory, with stdin closed, automatic updates disabled and a private leader socket. This exercises native authentication without sending a model prompt. Concurrent refreshes coalesce; an account-side file lock serializes native refresh workers. The native CLI owns OAuth, its own interaction with other native CLI processes, and persistence of rotated credentials. The integration does not implement a separate OAuth client or overwrite the native account file.
 
@@ -41,7 +41,7 @@ For ZCode, use an executable that accepts `app-server --stdio` and supply its bu
 
 ### Rebuild the Rocky base images with ZCode
 
-The 0.1.9 public Rocky amd64 bases include ZCode. The source recipe adds the locked headless payload, built-in provider configuration and upstream licensing notices to the matching build and runtime bases. The container uses `/usr/local/bin/zcode` and `/opt/panda-zcode/zcode-builtin.json`. Prepare the image inputs on a Linux amd64 build machine using the official archive URL recorded in `scripts/build/zcode-runtime.lock.json`.
+The 0.1.10 public Rocky amd64 bases include ZCode. The source recipe adds the locked headless payload, built-in provider configuration and upstream licensing notices to the matching build and runtime bases. The container uses `/usr/local/bin/zcode` and `/opt/panda-zcode/zcode-builtin.json`. Prepare the image inputs on a Linux amd64 build machine using the official archive URL recorded in `scripts/build/zcode-runtime.lock.json`.
 
 ```sh
 archive_url=$(node -p 'require("./scripts/build/zcode-runtime.lock.json").archive.url')
@@ -119,7 +119,7 @@ In an Antigravity conversation, open **Conversation settings → Permissions** a
 
 ## Claude Code for a personal instance
 
-Use an unmodified Claude Code CLI and the [Claude Agent ACP adapter](https://github.com/agentclientprotocol/claude-agent-acp). The compatibility probe uses adapter `0.110.1`, Claude Code `2.1.330`, and ACP v1. The npm adapter requires Node.js 22 or later. Each account home must be owned by the PandaForce service user and private to that user (for example, mode `0700`).
+Use an unmodified Claude Code CLI and the [Claude Agent ACP adapter](https://github.com/agentclientprotocol/claude-agent-acp). The compatibility probe uses adapter `0.110.1`, Claude Code `2.1.332`, and ACP v1. The npm adapter requires Node.js 22 or later. Each account home must be owned by the PandaForce service user and private to that user (for example, mode `0700`).
 
 Complete sign-in with the original Claude CLI. The CLI manages its account state and sends model requests under your own account. PandaForce uses ACP for connection status, model and reasoning choices, conversation turns, and tool approvals. Use the runtime for your own administrator conversations, subject to the [Claude Code authentication and hosting terms](https://code.claude.com/docs/en/legal-and-compliance).
 
@@ -216,6 +216,8 @@ Keep only the profiles you operate. To add a named Codex host profile, mount the
 In **Settings → Harness Runtimes**, add each installed profile and choose **Check connection**. Then select the named runtime in a new conversation, choose its model and send a short message. If the connection is unavailable, check the service, socket permissions and common workspace path. If it requires sign-in, complete the provider's native login in the environment for the selected mode, then retry the check.
 
 In an Antigravity conversation, open **Conversation settings → Permissions** and select **Auto-approve tool requests** to use the native ACP approval override on the next turn. New conversations start with **Ask for approval**. The selected mode applies when PandaForce opens or resumes the native session. See [Antigravity ACP permissions](https://antigravity.google/docs/ide/extensions/acp#permissions) for the behavior of existing runtime rules and the terminal sandbox.
+
+Model discovery and test messages create temporary directories in the configured default workspace. For a host runtime running under a separate Linux user, use a common workspace path and grant the bridge user access through the workspace’s default ACL or group. Temporary test directories inherit those group permissions and are removed after the request.
 
 ### Claude Code models and permissions
 

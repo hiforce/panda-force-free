@@ -41,7 +41,7 @@ title: 状态、文件与备份
 
 该配置独立于静态 CDN 和会话附件存储，只覆盖创作原件及其资源；模型原生日志与渲染恢复缓存保持原存储。备份时同时保留应用元数据、项目内容和 S3 对象，确保原件位置与清理回执可恢复。删除原件不会自动清除共享引擎状态。
 
-配置、独立凭据记录与清理日志位于应用状态目录的 `original-storage` 子目录，标准 Compose 状态卷已持久化。需要自定义父目录时，设置 `PANDA_FORCE_ORIGINAL_STORAGE_PARENT` 并为该路径挂载持久存储；应用仍使用其中的专属 `original-storage` 子目录。这些能力已包含在公开的 0.1.9 应用镜像中。
+配置、独立凭据记录与清理日志位于应用状态目录的 `original-storage` 子目录，标准 Compose 状态卷已持久化。需要自定义父目录时，设置 `PANDA_FORCE_ORIGINAL_STORAGE_PARENT` 并为该路径挂载持久存储；应用仍使用其中的专属 `original-storage` 子目录。这些能力已包含在公开的 0.1.10 应用镜像中。
 
 ## 受管理的项目目录
 
@@ -53,7 +53,7 @@ title: 状态、文件与备份
 
 ## 数据卷与备份
 
-Compose 服务名为 `panda-force`，正式镜像为 `hiforceai/panda-force:0.1.9`。标准命名卷是带项目名前缀的 `panda-force-state`、`panda-force-model-state` 与 `panda-force-workspace`。Grok 叠加配置另加账户卷和 socket 卷；账户卷由账户服务持有，socket 卷只保存通信状态，不能代替账户备份。
+Compose 服务名为 `panda-force`，正式镜像为 `hiforceai/panda-force:0.1.10`。标准命名卷是带项目名前缀的 `panda-force-state`、`panda-force-model-state` 与 `panda-force-workspace`。Grok 叠加配置另加账户卷和 socket 卷；账户卷由账户服务持有，socket 卷只保存通信状态，不能代替账户备份。
 
 已有数据卷通过 `PANDA_FORCE_STATE_VOLUME_NAME`、`PANDA_FORCE_MODEL_VOLUME_NAME` 与 `PANDA_FORCE_WORKSPACE_VOLUME_NAME` 指定实际 Docker 名称。绝对宿主目录绑定使用 `PANDA_FORCE_HOME_HOST`、`PANDA_FORCE_MODEL_HOME_HOST` 与 `PANDA_FORCE_WORKSPACE_HOST`。修改默认名称不会迁移或删除旧数据；升级保持原项目名与卷名。
 

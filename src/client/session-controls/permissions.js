@@ -332,12 +332,17 @@ export function createSessionPermissionControls({
     choosePermissionMode(mode);
     if (mode === "full-access" && $("#fullAccessDialog").open) pendingFullAccessSession = sessionId;
   }
-  /** @param {string} sessionId @param {() => void} callback */
-  function confirmFullAccessSelection(sessionId, callback) {
-    if (!permissionModeAvailable("full-access") || state.active?.id !== sessionId)
-      throw new Error(t("sessionview.permissionUnavailable"));
-    pendingFullAccessSession = sessionId;
-    pendingFullAccessCallback = callback;
+  /** @param {() => boolean} isAvailable @param {() => void} callback */
+  function confirmFullAccessSelection(isAvailable, callback) {
+    if (!isAvailable()) throw new Error(t("sessionview.permissionUnavailable"));
+    pendingFullAccessSession = "";
+    pendingFullAccessCallback = () => {
+      if (!isAvailable()) {
+        toast(t("sessionview.permissionUnavailable"));
+        return;
+      }
+      callback();
+    };
     const dialog = $("#fullAccessDialog");
     if (!dialog.open) dialog.showModal();
   }

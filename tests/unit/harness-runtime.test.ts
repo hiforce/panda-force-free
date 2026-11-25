@@ -11,6 +11,8 @@ import { HarnessStdioTransport } from "../../src/server/harness/adapters/stdio.j
 import type { HarnessAgent, HarnessAgentEvent, HarnessAgentInfo } from "../../src/server/harness/ports.js";
 import { HarnessError, type HarnessPermissionMode } from "../../src/shared/harness/contracts.js";
 import { HarnessDiagnostics } from "../../src/server/harness/diagnostics.js";
+import { applicationRuntimes } from "../../src/server/harness/application.js";
+import { createHarnessWorkspace } from "../../src/server/harness/workspaces.js";
 import { serveHostAgent } from "../../src/server/harness/host.js";
 const directories: string[] = [];
 const cleanups: Array<() => Promise<unknown>> = [];
@@ -83,8 +85,31 @@ test("host Harness sockets run and resume native sessions with the credentials o
   );
   await registry.initialize();
   expect((await registry.catalog({ owner: "member", administrator: false })).runtimes).toEqual([]);
+  let catalogDirectory = "";
+  const port = applicationRuntimes({
+    registry,
+    scratchRoot: join(directory, "private-catalog"),
+    async hostWorkspace() {
+      const workspace = await createHarnessWorkspace(directory, "host-catalog-", true);
+      catalogDirectory = workspace.cwd;
+      return workspace;
+    },
+    principal: async (owner) => ({ owner, administrator: owner === administrator.owner }),
+    codex: () => {
+      throw Error("No Codex engine expected");
+    },
+  });
+  const catalog = await port.discover(administrator.owner, "claude-code-host", true);
+  expect(catalog.models.map(({ id }) => id)).toContain("claude-fixture");
+  expect(catalogDirectory).toStartWith(join(directory, "host-catalog-"));
+  await expect(stat(catalogDirectory)).rejects.toMatchObject({ code: "ENOENT" });
+  await expect(port.discover("member", "claude-code-host", true)).rejects.toMatchObject({ code: "notFound" });
   for (const { id, reply } of profiles) {
     expect(registry.supportsApplication(id)).toBe(false);
+    expect(registry.usesHostSocket(id)).toBe(true);
+    const view = (await registry.catalog(administrator)).profiles.find((profile) => profile.id === id);
+    expect(view).toBeDefined();
+    expect(view).not.toHaveProperty("hostSocket");
     const first = await registry.agent(administrator, id, "conversation", directory);
     let session: Awaited<ReturnType<typeof first.agent.create>>;
     try {
@@ -620,12 +645,16 @@ describe("Harness runtime ownership, transactions and portable context", () => {
   test("explicit diagnostic messages coalesce repeats and keep workspaces and replies outside chat history", async () => {
     const f = await fixture();
     let cleaned = 0;
-    const diagnostics = new HarnessDiagnostics(f.registry, async () => ({
-      cwd: join(f.directory, "isolated-ping"),
-      cleanup: async () => {
-        cleaned++;
-      },
-    }));
+    const diagnostics = new HarnessDiagnostics(f.registry, async (runtime) => {
+      expect(runtime.profileId).toBe("grok-build");
+      expect(f.registry.usesHostSocket(runtime.profileId)).toBe(false);
+      return {
+        cwd: join(f.directory, "isolated-ping"),
+        cleanup: async () => {
+          cleaned++;
+        },
+      };
+    });
     cleanups.push(() => diagnostics.close());
     const requestId = randomUUID();
     const [first, second] = await Promise.all([

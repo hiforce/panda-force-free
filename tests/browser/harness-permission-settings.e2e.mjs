@@ -16,7 +16,21 @@ const app = await createAppFixture({
     writeFileSync(join(account, "auth.json"), '{"fixture":{"access_token":"fixture-only"}}');
     const zcodeSettings = join(dir, "zcode-provider.json");
     writeFileSync(zcodeSettings, "{}");
+    const claude = join(dir, "claude-draft-account");
+    const claudeAdapter = new URL("../support/antigravity-acp-fixture.mjs", import.meta.url).pathname;
+    mkdirSync(claude, { mode: 0o700, recursive: true });
+    writeFileSync(join(claude, "signed-in"), "");
+    writeFileSync(join(claude, "native-full"), "");
     return {
+      PANDA_FORCE_CLAUDE_CODE_HARNESS_PROFILES: JSON.stringify([
+        {
+          id: "claude-draft",
+          name: "Claude Code",
+          command: claudeAdapter,
+          claudeCommand: claudeAdapter,
+          accountHome: claude,
+        },
+      ]),
       PANDA_FORCE_HARNESS_PROFILES: JSON.stringify([
         {
           id: "grok-settings",
@@ -86,6 +100,25 @@ try {
         await permissionRow.click();
         await page.locator('#permissionMenu:not([hidden]) [data-permission-mode="default"]').waitFor();
         await page.keyboard.press("Escape");
+        await page.locator("#harnessButton").click();
+        await page.locator('[data-harness-select="claude-draft"]').click();
+        await page.waitForFunction(() =>
+          document.querySelector("#composerSettingModel")?.textContent?.includes("Sonnet Fixture"),
+        );
+        await choose("full-access");
+        const confirmation = page.locator("#fullAccessDialog");
+        await confirmation.waitFor({ state: "visible" });
+        await confirmation.locator('[value="cancel"]').click();
+        await open();
+        assert(await page.locator('input[name="session-permission"][value="ask"]').isChecked());
+        await page.locator("[data-settings-dismiss]").first().click();
+        await choose("full-access");
+        await confirmation.waitFor({ state: "visible" });
+        await page.screenshot({ path: `${out}/claude-full-access-${locale}-${width}.png`, scale: "css" });
+        await page.locator("#confirmFullAccess").click();
+        await send("claude.mode");
+        await page.locator("#conversation").getByText("bypassPermissions", { exact: true }).waitFor();
+        await page.goto(app.base + "/new");
         await page.locator("#harnessButton").click();
         await page.locator('[data-harness-select="grok-settings"]').click();
         await page.waitForFunction(() =>

@@ -340,8 +340,18 @@ export function assembleModels({
           .applyHarnessPermission(sessionId, mode)
           .catch((error) => noticesPort.addPersistentError(error));
       };
-      if (mode === "full-access") confirmFullAccessSelection(sessionId, apply);
-      else apply();
+      if (mode === "full-access") {
+        const { runtimeId } = transportPort.harnessControls(sessionControlView());
+        confirmFullAccessSelection(() => {
+          const view = transportPort.harnessControls(sessionControlView());
+          return (
+            transportPort.harnessManaged() &&
+            view.sessionId === sessionId &&
+            view.runtimeId === runtimeId &&
+            view.permissions.some((permission) => permission.id === mode && permission.allowed)
+          );
+        }, apply);
+      } else apply();
     },
     loadPermissionProfiles,
     renderContextUsage,

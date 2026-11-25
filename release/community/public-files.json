@@ -1857,6 +1857,7 @@
   "src/server/harness/storage/mysql.ts",
   "src/server/harness/storage/sqlite.ts",
   "src/server/harness/storage/time-index.ts",
+  "src/server/harness/workspaces.ts",
   "src/server/http/account-routes.ts",
   "src/server/http/assets-routes.ts",
   "src/server/http/binary-download.ts",

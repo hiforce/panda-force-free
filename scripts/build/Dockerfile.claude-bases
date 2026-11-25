@@ -7,6 +7,7 @@ USER root
 COPY claude-runtime.mjs /tmp/claude-runtime.mjs
 COPY tools/ /opt/panda-claude/
 RUN . /etc/os-release && test "$ID" = rocky && test "${VERSION_ID%%.*}" = 9 && test "$(uname -m)" = x86_64 \
+    && chmod -R a+rX /opt/panda-claude/node_modules \
     && node /tmp/claude-runtime.mjs verify /opt/panda-claude \
     && HOME=/tmp /opt/panda-claude/claude --version | grep -qFx "$(node -p 'require("/opt/panda-claude/runtime.lock.json").claude.version') (Claude Code)" \
     && HOME=/tmp /opt/panda-claude/node_modules/.bin/claude-agent-acp --version | grep -Fx "$(node -p 'require("/opt/panda-claude/runtime.lock.json").adapter.version')" \

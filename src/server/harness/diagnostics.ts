@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { HarnessError, HarnessPromptError, type HarnessPingResult } from "../../shared/harness/contracts.js";
+import {
+  HarnessError,
+  HarnessPromptError,
+  type HarnessPingResult,
+  type HarnessRuntime,
+} from "../../shared/harness/contracts.js";
 import type { HarnessAgent } from "./ports.js";
 import { HarnessRegistry, type HarnessPrincipal } from "./registry.js";
 
@@ -14,7 +19,7 @@ export class HarnessDiagnostics {
   private closed = false;
   constructor(
     private readonly registry: HarnessRegistry,
-    private readonly workspace: () => Promise<{ cwd: string; cleanup(): Promise<void> }>,
+    private readonly workspace: (runtime: HarnessRuntime) => Promise<{ cwd: string; cleanup(): Promise<void> }>,
     private readonly timeoutMs = 60000,
   ) {}
   async ping(principal: HarnessPrincipal, runtimeId: string, requestId: string): Promise<HarnessPingResult> {
@@ -65,7 +70,7 @@ export class HarnessDiagnostics {
     });
     try {
       const runtime = await this.registry.require(principal, runtimeId);
-      workspace = await this.workspace();
+      workspace = await this.workspace(runtime);
       ({ agent } = await this.registry.agent(principal, runtimeId, `ping-${requestId}`, workspace.cwd));
       this.agents.add(agent);
       if (this.closed) throw new HarnessError("unavailable", 503);

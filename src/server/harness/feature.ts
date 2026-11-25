@@ -5,7 +5,7 @@ import type { CreationMaterialPort } from "../creation/materials.js";
 import { existsSync } from "node:fs";
 import { dirname } from "node:path";
 import { join } from "node:path";
-import { realpath, stat, mkdtemp, rm } from "node:fs/promises";
+import { realpath, stat } from "node:fs/promises";
 import { HarnessError } from "../../shared/harness/contracts.js";
 import { isRecord } from "../../shared/records.js";
 import type { HarnessMetadata } from "./ports.js";
@@ -24,6 +24,7 @@ import { harnessRoutes } from "./routes.js";
 import { readHarnessSourcePage } from "./source-history.js";
 import { ensureAttachmentWorkspace } from "../workspace/attachment-workspace.js";
 import { attachmentWorkspaceContext } from "../../shared/attachment-workspace.js";
+import { createHarnessWorkspace } from "./workspaces.js";
 export async function createHarnessFeature(options: {
   stateRoot: string;
   defaultCwd: string;
@@ -95,11 +96,13 @@ export async function createHarnessFeature(options: {
     instructions: (conversation) =>
       `${attachmentWorkspaceContext(ensureAttachmentWorkspace(conversation.cwd, options.browseRoots, conversation.id))}\n\n`,
   });
-  const diagnostics = new HarnessDiagnostics(registry, async () => {
+  const workspace = (prefix: string, shared: boolean) => {
     if (!options.directoryPolicy.allowsPath(options.defaultCwd)) throw new HarnessError("forbidden", 403);
-    const cwd = await mkdtemp(join(options.defaultCwd, ".panda-harness-ping-"));
-    return { cwd, cleanup: () => rm(cwd, { recursive: true, force: true }) };
-  });
+    return createHarnessWorkspace(options.defaultCwd, prefix, shared);
+  };
+  const diagnostics = new HarnessDiagnostics(registry, (runtime) =>
+    workspace(".panda-harness-ping-", registry.usesHostSocket(runtime.profileId)),
+  );
   const routes = harnessRoutes({
     registry,
     conversations,
@@ -120,6 +123,7 @@ export async function createHarnessFeature(options: {
   return {
     registry,
     conversations,
+    hostCatalogWorkspace: () => workspace(".panda-harness-catalog-", true),
     projectSessions: {
       get: (context: RouteContext, id: string) => conversations.summary(principal(context), id),
       list: async (context: RouteContext) => {
