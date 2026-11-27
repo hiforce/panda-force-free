@@ -19,6 +19,8 @@ import { createCodexDriver } from "../engines/codex.js";
 import { ZCodeHarnessAgent } from "./adapters/zcode.js";
 import { AntigravityHarnessAgent, antigravityApplicationAgent } from "./adapters/antigravity.js";
 import { AcpSessionAgent } from "./adapters/acp-session.js";
+import { managedCodexFactory } from "./codex-profile.js";
+import { resolveAppServerConnection } from "../bridge/app-server-connection.js";
 
 function profileEntries(value: string | undefined): Record<string, unknown>[] {
   if (!value) return [];
@@ -51,9 +53,18 @@ function operatorSocketPath(value: unknown) {
   return path;
 }
 
-function codexSocketFactory(socketPath: string): HarnessProfile["factory"] {
+function codexSocketFactory(
+  socketPath: string,
+  sharedSocket: string | undefined,
+  managed: HarnessProfile["factory"],
+): HarnessProfile["factory"] {
   return {
-    create: async (_runtime, { cwd }) => {
+    create: async (runtime, scope) => {
+      const { cwd, persistentConversation } = scope;
+      if (persistentConversation && sharedSocket) {
+        const [selected, shared] = await Promise.all([stat(socketPath), stat(sharedSocket)]);
+        if (selected.dev === shared.dev && selected.ino === shared.ino) return managed.create(runtime, scope);
+      }
       let shuttingDown = false;
       const isolated = createCodexDriver({
         connection: { mode: "shared", socketPath },
@@ -61,11 +72,15 @@ function codexSocketFactory(socketPath: string): HarnessProfile["factory"] {
         version: "1",
         isShuttingDown: () => shuttingDown,
       });
-      return new CodexHarnessAgent(isolated, () => {
-        shuttingDown = true;
-        isolated.cancelRestart();
-        isolated.stop();
-      });
+      return new CodexHarnessAgent(
+        isolated,
+        () => {
+          shuttingDown = true;
+          isolated.cancelRestart();
+          isolated.stop();
+        },
+        persistentConversation,
+      );
     },
   };
 }
@@ -162,13 +177,17 @@ export function harnessProfiles(
   driver: EngineDriver,
   env: NodeJS.ProcessEnv = process.env,
 ): HarnessProfile[] {
+  const managedCodex = managedCodexFactory(stateRoot, driver, env);
+  const connection = resolveAppServerConnection(env, env.HOME || homedir());
+  const sharedSocket = connection.mode === "shared" ? connection.socketPath : undefined;
   const profiles: HarnessProfile[] = [
     {
       id: "codex",
       name: "Codex",
       kind: "codex",
       deployment: "local",
-      factory: { create: async () => new CodexHarnessAgent(driver) },
+      applicationScopes: ["project-memory"],
+      factory: managedCodex,
     },
   ];
   for (const profile of profileEntries(env.PANDA_FORCE_CODEX_HARNESS_PROFILES)) {
@@ -178,9 +197,9 @@ export function harnessProfiles(
       kind: "codex",
       deployment: "local",
       conversationOnly: true,
-      applicationScopes: ["bots", "creation"],
+      applicationScopes: ["bots", "creation", "project-memory"],
       applicationEngine: codexSocketApplication(socketPath),
-      factory: codexSocketFactory(socketPath),
+      factory: codexSocketFactory(socketPath, sharedSocket, managedCodex),
     });
   }
   for (const profile of profileEntries(env.PANDA_FORCE_ZCODE_HARNESS_PROFILES)) {
@@ -194,7 +213,7 @@ export function harnessProfiles(
       kind: "zcode",
       deployment: "local",
       conversationOnly: true,
-      applicationScopes: ["bots", "creation"],
+      applicationScopes: ["bots", "creation", "project-memory"],
       isolatedApplicationWorkspace: true,
       factory: {
         create: async (runtime, { owner, scopeId, cwd, application }) => {
@@ -238,7 +257,7 @@ export function harnessProfiles(
       kind: "antigravity",
       deployment,
       conversationOnly: true,
-      applicationScopes: ["bots", "creation"],
+      applicationScopes: ["bots", "creation", "project-memory"],
       isolatedApplicationWorkspace: true,
       factory: {
         create: async (_runtime, { cwd, permissionMode, application }) => {
@@ -275,7 +294,7 @@ export function harnessProfiles(
       kind: "claude-code",
       deployment,
       conversationOnly: true,
-      applicationScopes: ["bots", "creation"],
+      applicationScopes: ["bots", "creation", "project-memory"],
       isolatedApplicationWorkspace: true,
       factory: {
         create: async (_runtime, { cwd, application }) => {
@@ -308,7 +327,7 @@ export function harnessProfiles(
     let factory: HarnessProfile["factory"];
     switch (kind) {
       case "codex":
-        factory = codexSocketFactory(socketPath);
+        factory = codexSocketFactory(socketPath, sharedSocket, managedCodex);
         break;
       case "grok-build":
         factory = { create: async (_runtime, { cwd }) => new GrokHarnessAgent({ socketPath, cwd }) };
@@ -339,10 +358,13 @@ export function harnessProfiles(
       conversationOnly: true,
       hostSocket: true,
       ...(kind === "codex"
-        ? { applicationScopes: ["bots", "creation"], applicationEngine: codexSocketApplication(socketPath) }
+        ? {
+            applicationScopes: ["bots", "creation", "project-memory"],
+            applicationEngine: codexSocketApplication(socketPath),
+          }
         : {}),
       ...(kind === "claude-code"
-        ? { applicationScopes: ["bots", "creation"], isolatedApplicationWorkspace: true }
+        ? { applicationScopes: ["bots", "creation", "project-memory"], isolatedApplicationWorkspace: true }
         : {}),
       factory,
     });
@@ -387,6 +409,7 @@ export function harnessProfiles(
       id: profile.id,
       name: profile.name,
       kind: "grok-build",
+      applicationScopes: ["project-memory"],
       deployment: profile.deployment ?? "local",
       factory: {
         create: async (runtime, scope) => {

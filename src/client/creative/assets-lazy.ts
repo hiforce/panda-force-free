@@ -1,5 +1,5 @@
 import type { Translate } from "../../shared/i18n/messages.js";
-import type { CreativeAsset } from "../../shared/creative/assets.js";
+import type { CreativeAsset, CreativeAssetKind } from "../../shared/creative/assets.js";
 import type { CreativeAssetsPanel } from "./assets-panel.js";
 import { DocumentRuntimeLoader } from "../documents/runtime-loader.js";
 import { prepareDocumentModule } from "../documents/module-transfer.js";
@@ -53,13 +53,14 @@ export class LazyCreativeAssetsPanel {
     project: string,
     asset: CreativeAsset | undefined,
     changed: () => Promise<void>,
+    kind?: CreativeAssetKind,
   ) {
     const epoch = this.begin();
     try {
       const loaded = await runtime.load();
       if (!this.ready(epoch)) return;
       this.panel ??= new loaded.CreativeAssetsPanel(this.t, this.id, this.identity, this.frame);
-      if (action === "import") await this.panel.import(project, changed, asset);
+      if (action === "import") await this.panel.import(project, changed, asset, kind);
       else if (asset && action === "read") await this.panel.read(asset, changed);
       else if (asset) await this.panel.copy(asset);
     } catch (error) {

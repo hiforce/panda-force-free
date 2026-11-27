@@ -1,11 +1,15 @@
-import type { OriginalStorageSettings, OriginalStorageProfile } from "../../shared/storage/contracts.js";
-import { CREATIVE_ASSET_KINDS, type CreativeAssetKind } from "../../shared/creative/assets.js";
+import {
+  originalStorageKinds,
+  type OriginalStorageKind,
+  type OriginalStorageSettings,
+  type OriginalStorageProfile,
+} from "../../shared/storage/contracts.js";
 import { creativeKindMessages } from "../../shared/creative/file-types.js";
 import type { Translate, MessageId } from "../../shared/i18n/messages.js";
 import { escapeHtml as e } from "../../shared/html.js";
 export interface OriginalStorageForm {
   mode: "local" | "s3";
-  kinds: CreativeAssetKind[];
+  kinds: OriginalStorageKind[];
   profileId: string;
   label: string;
   bucket: string;
@@ -62,7 +66,7 @@ export function readOriginalStorageForm(root: HTMLElement, previous: OriginalSto
     else if (key !== "kinds" && key !== "forcePathStyle") form[key] = control.value;
   }
   const kinds = [...root.querySelectorAll<HTMLInputElement>("[data-storage-kind]:checked")].map(
-    (control) => control.dataset.storageKind as CreativeAssetKind,
+    (control) => control.dataset.storageKind as OriginalStorageKind,
   );
   if (root.querySelector("[data-storage-kind]")) form.kinds = kinds;
   return form;
@@ -94,7 +98,7 @@ export function originalStorageHtml(
     <p class="original-storage-notice" data-storage-notice role="status" aria-live="polite"></p>
     <div class="original-storage-recovery" ${pending ? "" : "hidden"}><p>${e(t("storage.unknownSave"))}</p><div class="original-storage-actions"><button type="button" class="wb-button" data-storage-action="check">${e(t("storage.checkSave"))}</button>${retry ? `<button type="button" class="wb-button" data-storage-action="retry">${e(t("storage.retrySave"))}</button>` : ""}<button type="button" class="wb-button" data-storage-action="current">${e(t("storage.useCurrent"))}</button></div></div>
     <div data-storage-configuration ${settings ? "" : "hidden"}><form class="wb-form" data-storage-form="configure"><fieldset data-storage-fields><label class="wb-field"><span>${e(t("storage.mode"))}</span><select data-storage-field="mode" name="pf-original-mode"><option value="local" ${form.mode === "local" ? "selected" : ""}>${e(t("storage.local"))}</option><option value="s3" ${form.mode === "s3" ? "selected" : ""}>${e(t("storage.s3"))}</option></select></label>
-      <div class="original-storage-s3" data-storage-s3 ${form.mode === "s3" ? "" : "hidden"}><fieldset><legend>${e(t("storage.kinds"))}</legend><div class="original-storage-kinds">${CREATIVE_ASSET_KINDS.map((kind) => `<label class="wb-choice"><input type="checkbox" data-storage-kind="${kind}" name="pf-original-kind-${kind}" ${form.kinds.includes(kind) ? "checked" : ""}><span>${e(t(creativeKindMessages[kind]))}</span></label>`).join("")}</div></fieldset>
+      <div class="original-storage-s3" data-storage-s3 ${form.mode === "s3" ? "" : "hidden"}><fieldset><legend>${e(t("storage.kinds"))}</legend><div class="original-storage-kinds">${originalStorageKinds.map((kind) => `<label class="wb-choice"><input type="checkbox" data-storage-kind="${kind}" name="pf-original-kind-${kind}" ${form.kinds.includes(kind) ? "checked" : ""}><span>${e(t(kind === "project-memory-package" ? "storage.projectMemoryPackages" : creativeKindMessages[kind]))}</span></label>`).join("")}</div></fieldset>
       ${select("profileId", "storage.connection", true)}<div class="wb-form-grid">${field("storage.label", "label")}${field("storage.bucket", "bucket")}${field("storage.region", "region")}${field("storage.prefix", "prefix")}</div>
       <details data-storage-detail="connection"><summary>${e(t("storage.advanced"))}</summary><div class="wb-form">${field("storage.endpoint", "endpoint")}<p class="original-storage-hint">${e(t("storage.endpointHint"))}</p><label class="wb-choice"><input type="checkbox" data-storage-field="forcePathStyle" name="pf-original-forcePathStyle" ${form.forcePathStyle ? "checked" : ""}><span>${e(t("storage.pathStyle"))}</span></label></div></details>
       <details data-storage-detail="credentials" ${profile ? "" : "open"}><summary>${e(t("storage.credentials"))}</summary><div class="wb-form">${profile ? `<p>${e(t("storage.keyHint", { hint: profile.accessKeyHint }))}</p>` : ""}<div class="wb-form-grid">${field("storage.accessKeyId", "accessKeyId", true)}${field("storage.secretAccessKey", "secretAccessKey", true)}${field("storage.sessionToken", "sessionToken", true)}</div><p class="original-storage-hint">${e(t("storage.credentialHint"))}</p></div></details></div>

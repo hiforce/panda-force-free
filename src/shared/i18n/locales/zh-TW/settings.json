@@ -1,4 +1,5 @@
 {
+  "languageRegion": "語言與地區",
   "noProject": "無專案",
   "authenticatedPandaforceAccount": "已登入的 PandaForce 帳號",
   "preferences": "偏好設定",
@@ -13,5 +14,18 @@
   "shortcuts": "快速鍵",
   "pageLoading": "正在載入設定…",
   "pageLoadFailed": "設定暫時無法載入，請重試。",
-  "pageReloadRequired": "請重新載入工作區以開啟設定。"
+  "pageReloadRequired": "請重新載入工作區以開啟設定。",
+  "encryptionKeys": "加密金鑰",
+  "encryptionKeysHint": "金鑰儲存在此瀏覽器。若要在其他裝置使用，請下載以密碼保護的備份，並妥善保管備份與密碼。",
+  "encryptionKeyCreate": "產生金鑰",
+  "encryptionKeyRestore": "還原金鑰",
+  "encryptionKeyName": "金鑰名稱",
+  "encryptionKeyPassphrase": "金鑰密碼",
+  "encryptionKeyRepeatPassphrase": "再次輸入密碼",
+  "encryptionKeyBackup": "金鑰備份（.pfkey）",
+  "encryptionKeyDownload": "下載備份",
+  "encryptionKeyPassphraseMismatch": "兩次輸入的密碼不一致。",
+  "encryptionKeyError": "無法儲存或還原金鑰。請檢查備份檔案與密碼。",
+  "encryptionKeyCreated": "金鑰已產生。請妥善保管下載的備份與密碼。",
+  "encryptionKeyRestored": "金鑰已還原。"
 }

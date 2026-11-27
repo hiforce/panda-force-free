@@ -5,7 +5,7 @@ import { threadLastActivityAt } from "./conversation-policy.js";
 import { closestElement, findElement } from "./dom.js";
 import { getBrowserI18n, messageAttributes, messageHtml, setMessageHtml } from "./i18n.js";
 import { captureRenderFocus, restoreRenderFocus } from "./render-focus.js";
-import { projectOverviewHeading, projectOverviewTabs } from "./creative/project-view.js";
+import { projectOverviewHeading } from "./creative/project-view.js";
 import { createProjectDirectory } from "./projects/directory.js";
 import { formatActivityAge } from "./ui-core.js";
 import { createSessionListHistory, SESSION_PAGE_SIZE } from "./session-list-history.js";
@@ -57,16 +57,17 @@ export function createWorkbenchViews({
     if (actual?.state === "error" || thread.status?.type === "systemError") return "common.failed";
     return actual?.state === "completed" ? "sessions.completed" : "common.ready";
   }
-  function taskRows(list, projectId = "") {
+  function taskRows(list, projectId = "", showProjectFolder = false) {
+    const showLocation = !projectId || showProjectFolder;
     if (!list.length)
-      return `<div class="wb-empty"><strong>${messageHtml("workbench.noSessionsFound", undefined, t)}</strong><p>${messageHtml("workbench.createASessionOrChangeYourFiltersToGetStarted", undefined, t)}</p>${button("common.newSession", projectId ? "project-new" : "new", projectId ? `data-project-id="${escape(projectId)}"` : "", true)}</div>`;
+      return `<div class="wb-empty"><strong>${messageHtml("workbench.noSessionsFound", undefined, t)}</strong><p>${messageHtml("workbench.createASessionOrChangeYourFiltersToGetStarted", undefined, t)}</p></div>`;
     const { locale } = getBrowserI18n();
     const dateFormat = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
     const now = Date.now();
-    return `<div class="wb-task-list"><div class="wb-task-columns" aria-hidden="true">
+    return `<div class="wb-task-list${projectId ? " project-session-list" : ""}"${showProjectFolder ? " data-working-folders" : ""}><div class="wb-task-columns" aria-hidden="true">
       <span>${messageHtml("common.sessionName", undefined, t)}</span>
-      <span>${messageHtml(projectId ? "common.workingFolder" : "common.project", undefined, t)}</span>
-      <span class="wb-task-model">${messageHtml("common.model", undefined, t)}</span>
+      ${showLocation ? `<span>${messageHtml(projectId ? "common.workingFolder" : "common.project", undefined, t)}</span>` : ""}
+      ${projectId ? "" : `<span class="wb-task-model">${messageHtml("common.model", undefined, t)}</span>`}
       <span>${messageHtml("common.sessionStatus", undefined, t)}</span>
       <span>${messageHtml("sessions.recentActivity", undefined, t)}</span>
       </div><div role="list">${list
@@ -89,11 +90,15 @@ export function createWorkbenchViews({
           return `<div class="wb-session-entry" role="listitem">
           <button type="button" id="wbOpenSession-${id}" class="wb-task-row" data-wb="task" data-id="${id}">
             <strong class="wb-task-title" title="${escape(title)}" data-i18n-ignore>${escape(title)}</strong>
-            <span class="wb-task-location" title="${escape([project?.name, folder].filter(Boolean).join(" · "))}" data-i18n-ignore>
+            ${
+              showLocation
+                ? `<span class="wb-task-location" title="${escape([project?.name, folder].filter(Boolean).join(" · "))}" data-i18n-ignore>
               ${project ? `<span class="wb-task-project">${escape(project.name)}</span>` : projectId ? "" : `<span class="wb-task-unassigned">${escape(t("common.unassigned"))}</span>`}
               <span class="wb-task-folder">${escape(shortFolder)}</span>
-            </span>
-            <span class="wb-task-model" title="${escape(model)}" data-i18n-ignore>${escape(model)}</span>
+            </span>`
+                : ""
+            }
+            ${projectId ? "" : `<span class="wb-task-model" title="${escape(model)}" data-i18n-ignore>${escape(model)}</span>`}
             <span class="wb-task-state" data-status="${state}">${messageHtml(state, undefined, t)}</span>
             ${time}
           </button>
@@ -110,10 +115,13 @@ export function createWorkbenchViews({
       content,
       `<header class="wb-page-heading wb-sessions-toolbar">
         <div class="wb-sessions-title"><h1>${messageHtml("common.sessions", undefined, t)}</h1><div id="wbSessionCount"></div></div>
+        <button type="button" class="wb-button primary wb-session-create" data-wb="new" ${messageAttributes("aria-label", "common.newSession", undefined, t)} ${messageAttributes("title", "common.newSession", undefined, t)}>
+          ${codexIcon("plus")}${messageHtml("common.newSession", undefined, t)}
+        </button>
         <div class="wb-form wb-session-filters">
           <label class="wb-field"><span class="wb-control-with-icon">${codexIcon("search")}<input id="wbTaskSearch" type="search" ${messageAttributes("placeholder", "workbench.searchSessions", undefined, t)} ${messageAttributes("aria-label", "common.searchSessions", undefined, t)} value="${escape(viewState.query)}"></span></label>
           <select class="wb-select" id="wbTaskFilter" ${messageAttributes("aria-label", "common.sessionStatus", undefined, t)}>${["all", "common.inProgress", "workbench.needsReview", "common.failed", "common.ready", "sessions.completed"].map((value) => `<option value="${value}" data-pf-message="${value === "all" ? "common.allSessions" : value}" ${value === viewState.filter ? "selected" : ""}>${escape(t(value === "all" ? "common.allSessions" : value))}</option>`).join("")}</select>
-        </div>${button("common.newSession", "new", "", true)}
+        </div>
       </header><div id="wbTaskResults"></div>`,
     );
     renderTaskResults();
@@ -272,10 +280,23 @@ export function createWorkbenchViews({
     );
     list.sort((a, b) => threadLastActivityAt(b) - threadLastActivityAt(a) || a.id.localeCompare(b.id));
     filter.page = Math.min(filter.page, Math.max(0, Math.ceil(list.length / SESSION_PAGE_SIZE) - 1));
+    const directoryPicker = findElement("#projectSessionDirectory");
+    directoryPicker?.closest(".project-session-filter")?.toggleAttribute("data-active", filter.directory !== undefined);
+    const selectedFolder = filter.directory === undefined ? "" : filter.directory || t("common.noWorkingFolder");
+    const folderSummary = selectedFolder
+      ? `<span class="project-session-filter-value" title="${escape(selectedFolder)}" data-i18n-ignore>${escape(selectedFolder)}</span>`
+      : "";
+    setMessageHtml(
+      findElement("#projectSessionCount"),
+      messageHtml("sessions.count", { count: list.length }, t) + folderSummary,
+    );
     setMessageHtml(
       findElement("#projectSessionResults"),
-      taskRows(list.slice(filter.page * SESSION_PAGE_SIZE, (filter.page + 1) * SESSION_PAGE_SIZE), project.id) +
-        pageControls(filter.page, list.length, false),
+      taskRows(
+        list.slice(filter.page * SESSION_PAGE_SIZE, (filter.page + 1) * SESSION_PAGE_SIZE),
+        project.id,
+        Boolean(directoryPicker),
+      ) + pageControls(filter.page, list.length, false),
     );
     afterSessionListRender();
   }
@@ -328,15 +349,46 @@ export function createWorkbenchViews({
       return;
     }
     const filter = projectSessionFilter(p.id);
-    const directories = [...new Set(p.threads.map((session) => directoryKey(session.cwd || "")))].sort();
-    const workspaceInfo = p.workspace
-      ? `<details class="project-session-location"><summary>${codexIcon("folderOpen")}${messageHtml("projects.workspacePath", undefined, t)}</summary><code data-i18n-ignore>${escape(p.workspace.path)}</code>${p.workspace.state !== "ready" ? `<p role="status">${messageHtml("projects.workspacePreparing", undefined, t)}</p>` : ""}</details>`
+    const directories = [
+      ...new Set(
+        p.threads
+          .filter((session) => !catalog.wasHistorySessionRemoved(session.id))
+          .map((session) => directoryKey(session.cwd || "")),
+      ),
+    ].sort();
+    const multipleFolders = directories.length > 1;
+    if (!multipleFolders || (filter.directory !== undefined && !directories.includes(filter.directory)))
+      filter.directory = undefined;
+    const workspacePath = p.workspace?.path;
+    const sharedFolder =
+      directories.length === 1 && directories[0] !== directoryKey(workspacePath || "") ? directories[0] : "";
+    const workspaceInfo =
+      workspacePath || sharedFolder
+        ? `<details class="project-session-location"><summary>${codexIcon("folderOpen")}${messageHtml(workspacePath ? "projects.workspacePath" : "common.workingFolder", undefined, t)}</summary>${workspacePath ? `<code data-i18n-ignore>${escape(workspacePath)}</code>` : ""}${sharedFolder ? `${workspacePath ? `<span>${messageHtml("common.workingFolder", undefined, t)}</span>` : ""}<code data-i18n-ignore>${escape(sharedFolder)}</code>` : ""}${p.workspace?.state === "preparing" ? `<p role="status">${messageHtml("projects.workspacePreparing", undefined, t)}</p>` : ""}</details>`
+        : "";
+    const folderPicker = multipleFolders
+      ? `<label class="project-session-filter wb-button">${codexIcon("slidersHorizontal")}<select id="projectSessionDirectory" ${messageAttributes("aria-label", "sessions.filterByWorkingFolder", undefined, t)} ${messageAttributes("title", "sessions.filterByWorkingFolder", undefined, t)}><option value="*" data-pf-message="sessions.allDirectories">${escape(t("sessions.allDirectories"))}</option>${directories
+          .map(
+            (path) =>
+              `<option value="${escape(path)}" ${path === filter.directory ? "selected" : ""}>${escape(path || t("common.noWorkingFolder"))}</option>`,
+          )
+          .join("")}</select></label>`
       : "";
+    const projectId = escape(p.id);
     setMessageHtml(
       content,
-      `<section class="project-overview project-sessions-view">${projectOverviewHeading(t, p.id, p, button("common.linkExistingSessions", "project-link", `data-project-id="${escape(p.id)}"`) + button("common.newSession", "project-new", `data-project-id="${escape(p.id)}"`, true))}${projectOverviewTabs(t, p.id, "sessions")}
-      <header class="project-section-heading"><div><h2>${messageHtml("workbench.projectSessions", undefined, t)}</h2><p>${messageHtml("projects.sessionsHint", undefined, t)}</p></div><span class="resource-badge">${messageHtml("sessions.count", { count: p.threads.length }, t)}</span></header>
-      <div class="project-session-tools wb-form"><label class="wb-field"><span>${messageHtml("common.searchSessions", undefined, t)}</span><span class="wb-control-with-icon">${codexIcon("search")}<input id="projectSessionSearch" type="search" ${messageAttributes("placeholder", "workbench.searchSessions", undefined, t)} value="${escape(filter.search)}"></span></label><label class="wb-field"><span>${messageHtml("sessions.byDirectory", undefined, t)}</span><select id="projectSessionDirectory"><option value="*">${escape(t("sessions.allDirectories"))}</option>${directories.map((path) => `<option value="${escape(path)}" title="${escape(path)}" ${path === filter.directory ? "selected" : ""}>${escape(path || t("common.noWorkingFolder"))}</option>`).join("")}</select></label></div>${workspaceInfo}<div id="projectSessionResults"></div></section>`,
+      `<section class="project-overview project-sessions-view">${projectOverviewHeading(t, p.id, p, "", "sessions")}
+        <h2 class="sr-only">${messageHtml("workbench.projectSessions", undefined, t)}</h2>
+        <div class="project-session-tools wb-form">
+          <label class="wb-field"><span class="wb-control-with-icon">${codexIcon("search")}<input id="projectSessionSearch" type="search" ${messageAttributes("aria-label", "common.searchSessions", undefined, t)} ${messageAttributes("placeholder", "workbench.searchSessions", undefined, t)} value="${escape(filter.search)}"></span></label>
+          ${folderPicker}
+          <button type="button" class="wb-button project-session-link" data-wb="project-link" data-project-id="${projectId}" ${messageAttributes("aria-label", "common.linkExistingSessions", undefined, t)} ${messageAttributes("title", "common.linkExistingSessions", undefined, t)}>${codexIcon("link")}${messageHtml("common.linkExistingSessions", undefined, t)}</button>
+          <button type="button" class="wb-button primary project-session-new" data-wb="project-new" data-project-id="${projectId}" ${messageAttributes("aria-label", "common.newSession", undefined, t)} ${messageAttributes("title", "common.newSession", undefined, t)}>${codexIcon("plus")}${messageHtml("creative.new", undefined, t)}</button>
+        </div>
+        <p id="projectSessionCount" class="project-session-count" role="status"></p>
+        <div id="projectSessionResults"></div>
+        ${workspaceInfo}
+      </section>`,
     );
     renderProjectSessionResults();
   }

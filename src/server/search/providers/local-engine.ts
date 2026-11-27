@@ -101,7 +101,14 @@ export class LocalIndexEngine implements TextIndexProvider {
       },
     };
   }
-  async query(ref: IndexReference, query: string, analyzer: SearchAnalyzer, limit: number, signal: AbortSignal) {
+  async query(
+    ref: IndexReference,
+    query: string,
+    analyzer: SearchAnalyzer,
+    limit: number,
+    signal: AbortSignal,
+    options?: { match?: "any" },
+  ) {
     indexName(ref.name);
     if (ref.provider !== this.id || signal.aborted) throw new SearchError("unavailable", 503);
     const path = join(this.root, ref.name + ".json");
@@ -136,6 +143,7 @@ export class LocalIndexEngine implements TextIndexProvider {
     )
       throw new IndexIntegrityError("corrupt");
     const hits = cached.index.search(query, {
+      combineWith: options?.match === "any" ? "OR" : "AND",
       prefix: (term) => term.length >= 3,
       fuzzy: (term) => (term.length >= 5 ? 0.15 : false),
     });

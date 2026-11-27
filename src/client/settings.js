@@ -1,6 +1,7 @@
 import { closestElement, findElement, findElements, requireElement } from "./dom.js";
 import { localizeText, setOpaqueText } from "./i18n.js";
 
+import { mountMemoryLanguage } from "./settings-pages/memory-language.js";
 import { applyThemePreference } from "./theme.js";
 /**
  * Settings dialog: page registry, /settings routing, navigation filtering and
@@ -19,6 +20,8 @@ export function createSettingsPanel({
   syncPermissionSettings,
   pageViews = /** @type {Record<string, { show(host: HTMLElement): void; hide(): void }>} */ ({}),
 }) {
+  /** @type {AbortController | undefined} */
+  let systemMemoryLanguage;
   let settingsMobileLayout = matchMedia("(max-width:767px)").matches;
 
   const settingsPageAliases = {
@@ -29,6 +32,7 @@ export function createSettingsPanel({
   };
   const settingsPages = {
     users: { title: "users.title" },
+    "encryption-keys": { title: "settings.encryptionKeys" },
     "general-settings": { title: "settings.preferences" },
     appearance: {
       title: "creative.appearance",
@@ -47,6 +51,7 @@ export function createSettingsPanel({
     "search-settings": { title: "search.settingsTitle" },
     bots: { title: "cli.botSettingsTitle" },
     "client-access": { title: "cli.title" },
+    "memory-settings": { title: "projects.memory" },
     "keyboard-shortcuts": { title: "common.keyboardShortcuts" },
     "plugins-settings": {
       title: "creative.extensions",
@@ -116,7 +121,7 @@ export function createSettingsPanel({
   function setSettingsPage(page = "general-settings", { updateRoute = true } = {}) {
     if (
       globalThis.__pandaForceIdentity?.role === "member" &&
-      !["general-settings", "appearance", "users", "keyboard-shortcuts"].includes(page)
+      !["general-settings", "appearance", "users", "keyboard-shortcuts", "encryption-keys"].includes(page)
     )
       page = "users";
     const selected = normalizeSettingsPage(page),
@@ -137,6 +142,12 @@ export function createSettingsPanel({
     for (const content of findElements("[data-settings-content]"))
       content.hidden = content.dataset.settingsContent !== contentPage;
     if (contentPage === "placeholder") renderSettingsPlaceholder(selected);
+    systemMemoryLanguage?.abort();
+    systemMemoryLanguage = undefined;
+    if (visiblePage === "general-settings") {
+      systemMemoryLanguage = new AbortController();
+      mountMemoryLanguage(requireElement("[data-memory-system-language]"), t, systemMemoryLanguage.signal);
+    }
     for (const [name, view] of Object.entries(pageViews)) {
       if (name === selected) view.show(requireElement(`[data-settings-view="${name}"]`));
       else view.hide();
@@ -155,8 +166,11 @@ export function createSettingsPanel({
     $("#settingsContent")?.scrollTo({ top: 0 });
     if ($("#settingsDialog").open && matchMedia("(max-width:767px)").matches)
       $("#settingsDialog").dataset.mobilePage = "true";
-    if (updateRoute && settingsRoutePage())
-      history.replaceState({ ...history.state, pandaForceSettings: true }, "", `/settings/${selected}`);
+    const currentPage = settingsRoutePage();
+    if (updateRoute && currentPage) {
+      const query = selected === "memory-settings" && currentPage === selected ? location.search : "";
+      history.replaceState({ ...history.state, pandaForceSettings: true }, "", `/settings/${selected}${query}`);
+    }
     if (preferenceSection) requestAnimationFrame(() => jumpToPreference(preferenceSection));
   }
   function jumpToPreference(section) {
@@ -180,12 +194,14 @@ export function createSettingsPanel({
         const available =
             button.dataset.settingsAvailable !== "false" &&
             (globalThis.__pandaForceIdentity?.role !== "member" ||
-              ["general-settings", "users"].includes(button.dataset.settingsPage ?? "")),
+              ["general-settings", "users", "encryption-keys"].includes(button.dataset.settingsPage ?? "")),
           keywords =
             {
               "general-settings": [
                 "common.theme",
                 "common.language",
+                "settings.languageRegion",
+                "projects.memoryLanguage",
                 "common.light",
                 "common.dark",
                 "common.permissions",
@@ -258,6 +274,8 @@ export function createSettingsPanel({
     if (dialog.open) dialog.dataset.mobilePage = String(mobile);
   }
   function hideSettings() {
+    systemMemoryLanguage?.abort();
+    systemMemoryLanguage = undefined;
     for (const view of Object.values(pageViews)) view.hide();
     const dialog = $("#settingsDialog");
     if (dialog.open) dialog.close();
@@ -342,21 +360,25 @@ export function createSettingsPanel({
       target?.focus();
     });
   }
-  function openSettings(page = "general-settings") {
+  /** @param {string} [page] @param {{ route?: string }} [options] */
+  function openSettings(page = "general-settings", { route } = {}) {
     if (page === "usage") {
       openUsageSummary();
       return;
     }
     const selected = normalizeSettingsPage(page),
       current = settingsRoutePage();
+    const project =
+      selected === "memory-settings" && route ? new URL(route, location.origin).searchParams.get("project") : null;
+    const destination = `/settings/${selected}${project ? "?" + new URLSearchParams({ project }) : ""}`;
     if (!current) {
       history.pushState(
         { pandaForceSettings: true, codexSettingsReturnPath: location.pathname + location.search + location.hash },
         "",
-        `/settings/${selected}`,
+        destination,
       );
-    } else if (current !== selected) {
-      history.replaceState({ ...history.state, pandaForceSettings: true }, "", `/settings/${selected}`);
+    } else if (current !== selected || (route && destination !== location.pathname + location.search)) {
+      history.replaceState({ ...history.state, pandaForceSettings: true }, "", destination);
     }
     showSettings(selected, { updateRoute: false });
   }

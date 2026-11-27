@@ -1,7 +1,7 @@
 import { bindSlidePreview } from "./slides-preview.js";
 import { bindReaderMore } from "./reader-toolbar.js";
 import type { Translate } from "../../shared/i18n/messages.js";
-import type { CreativeAsset } from "../../shared/creative/assets.js";
+import type { CreativeAsset, CreativeAssetKind } from "../../shared/creative/assets.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { DocumentModal } from "../documents/modal.js";
 import { DocumentApiError } from "../documents/api.js";
@@ -43,10 +43,10 @@ export class CreativeAssetsPanel {
     this.controller = new AbortController();
     return { epoch: this.epoch, signal: this.controller.signal };
   }
-  async import(project: string, changed: () => Promise<void>, previous?: CreativeAsset) {
+  async import(project: string, changed: () => Promise<void>, previous?: CreativeAsset, kind?: CreativeAssetKind) {
     const scope = this.begin();
     try {
-      const result = await importCreativeAsset(this.modal, this.t, project, scope.signal, previous);
+      const result = await importCreativeAsset(this.modal, this.t, project, scope.signal, previous, kind);
       if (result && scope.epoch === this.epoch) await changed();
     } finally {
       if (scope.epoch === this.epoch) this.controller?.abort();
@@ -137,7 +137,7 @@ export class CreativeAssetsPanel {
         return value.asset;
       }
       const presentation = creativeAssetDetail(t, value, access.contribute, !!toolbar),
-        surface = toolbar?.closest<HTMLElement>("[data-personal-reader]") ?? body;
+        surface = toolbar?.closest<HTMLElement>("[data-personal-reader], [data-project-asset-reader]") ?? body;
       if (toolbar) {
         setMessageHtml(toolbar, presentation.toolbar);
         const actions = toolbar.querySelector<HTMLDetailsElement>(".personal-asset-more")!;

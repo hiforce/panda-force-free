@@ -1,3 +1,4 @@
+import { HarnessError } from "../../../shared/harness/contracts.js";
 import { DocumentError } from "../../documents/errors.js";
 import { KnowledgeTaskError } from "../../knowledge/tasks/contracts.js";
 import { KnowledgeError } from "../../../shared/knowledge/contracts.js";
@@ -11,6 +12,7 @@ export function cliContentError(error: unknown): unknown {
     return new CliError(error.code as "configuration" | "notReady" | "indexChanged", error.status);
   if (
     error instanceof DocumentError ||
+    error instanceof HarnessError ||
     error instanceof KnowledgeTaskError ||
     error instanceof KnowledgeError ||
     error instanceof SearchError

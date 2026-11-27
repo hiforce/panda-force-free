@@ -1,6 +1,10 @@
 import { createProjectMembers } from "./projects/project-members.js";
+import { MemoryMaterialStore } from "./project-memory/materials.js";
 import { createHarnessFeature } from "./harness/feature.js";
 import { applicationRuntimes } from "./harness/application.js";
+import { LocalTextIndex } from "./search/providers/local.js";
+import { harnessMemoryModels } from "./project-memory/model-review.js";
+import type { ApplicationRuntimePort } from "./engines/application-tools/runtime-port.js";
 import { applicationRuntimeRoutes } from "./engines/application-tools/runtime-routes.js";
 import { createCodexApplicationEngine } from "./engines/application-tools/codex.js";
 import { createOriginalStorageFeature } from "./object-storage/feature.js";
@@ -221,8 +225,15 @@ const documents = await createApplicationDocuments(
   (project, owner) => searchChanged(project, owner),
   originalStorage,
 );
-const { documentFeature, fileDocuments, contentAccess, projectWorkspaces, scopedDocuments, requireDocumentProject } =
-  documents;
+const {
+  documentFeature,
+  fileDocuments,
+  contentAccess,
+  projectWorkspaces,
+  scopedDocuments,
+  requireDocumentProject,
+  requireFileDocumentProject,
+} = documents;
 const { editorialFeature, publishingFeature, siteBuildFeature, sitePublicationFeature, startDelivery } =
   await createApplicationPublication(config, projects, documents, extensions, resolveOwner, () => applicationRuntime);
 const browserWire = createBrowserWire();
@@ -256,6 +267,11 @@ const {
   recovery: autoContinueRecovery,
   recoverQueue: recoverMessageQueue,
 } = installedEngine;
+const projectMemoryText = new LocalTextIndex(
+  join(config.stateRoot, "harness", "memory-index"),
+  join(config.appRoot, "src", "server", "search", "worker-entry.ts"),
+);
+const projectMemoryConnection = process.env.PANDA_FORCE_PROJECT_MEMORY_SEARCH_CONNECTION?.trim();
 const harnessFeature = await createHarnessFeature({
   stateRoot: config.stateRoot,
   defaultCwd,
@@ -271,11 +287,46 @@ const harnessFeature = await createHarnessFeature({
     await contentAccess.require(owner, project, "contribute");
     return projectWorkspaces.ensure(project);
   },
-  authorizeProject: async (owner, project) => {
-    await contentAccess.require(owner, project, "read");
+  authorizeProject: async (owner, project, access = "read") => {
+    if (project !== "personal") await projectCatalog.project(project);
+    await contentAccess.require(owner, project, access);
+  },
+  memoryMaterials: new MemoryMaterialStore(join(config.stateRoot, "data", "memory-package-materials"), (owner) =>
+    scopedDocuments(owner, "read"),
+  ),
+  memoryCopyDestination: async (owner, project, kind) => {
+    if (kind === "document") await requireFileDocumentProject(project);
+    return scopedDocuments(owner, "contribute");
+  },
+  memoryPackageStorage: {
+    memoryPackagesEnabled: () =>
+      config.authMode !== "none" && authState.browserPasswordConfigured()
+        ? originalStorage.configuration.memoryPackagesEnabled()
+        : Promise.resolve(false),
+    memoryPackageTarget: () =>
+      config.authMode !== "none" && authState.browserPasswordConfigured()
+        ? originalStorage.configuration.memoryPackageTarget()
+        : Promise.resolve(null),
+    client: (profileId, digest) => originalStorage.configuration.client(profileId, digest),
+  },
+  memorySearch: {
+    local: projectMemoryText,
+    external: projectMemoryConnection,
+    resolveExternal: (id: string) => searchFeature.projectMemoryText(id, projectMemoryText),
+  },
+  memoryModels: harnessMemoryModels((): ApplicationRuntimePort => applicationRuntime, {
+    connection: appServerConnection,
+    scratchRoot: join(config.stateRoot, "harness", "memory"),
+    version: config.version,
+    engineId: engineDriver.descriptor.id,
+  }),
+  sessionMembership: async (id) => projectCatalog.sessionMembership(id),
+  bindSession: async (project, session) => {
+    const snapshot = await projectCatalog.bindSession(project, session);
+    broadcast({ type: "project-catalog/changed", ...directoryPolicy.snapshot(snapshot) });
   },
 });
-const applicationRuntime = applicationRuntimes({
+const applicationRuntime: ApplicationRuntimePort = applicationRuntimes({
   registry: harnessFeature.registry,
   scratchRoot: join(config.stateRoot, "harness", "catalog"),
   hostWorkspace: harnessFeature.hostCatalogWorkspace,
@@ -317,8 +368,10 @@ const {
   () => (authState.administrator ? publicationOwner(authState, {}) : null),
   applicationRuntime,
 );
+harnessFeature.startProjectMemory();
 const authorizeCliProject = async (owner: string, project: string) => {
   if (owner !== publicationOwner(authState, {})) throw new DocumentError("notFound", 404);
+  if (project !== "personal") await projectCatalog.project(project);
   await contentAccess.require(owner, project, "read");
 };
 const botOptions = {
@@ -380,6 +433,7 @@ const cliFeature = createCliFeature({
   authorize: authorizeCliProject,
   commands: cliContentCommands({
     authorize: authorizeCliProject,
+    memory: harnessFeature.projectMemory,
     originals: readOriginalSources,
     documents: async (owner, project) =>
       project === "personal" ? (await personalContent.forOwner(owner)).documents : scopedDocuments(owner, "read"),
@@ -414,7 +468,10 @@ const handleEngineMessage = createEngineNotifications({
 });
 engineDriver.subscribe((event) => {
   if (event.kind === "notification" || event.kind === "approval") {
-    if (directoryPolicy.envelope(event.envelope)) handleEngineMessage(event.envelope);
+    if (directoryPolicy.envelope(event.envelope)) {
+      if (event.kind === "notification") harnessFeature.nativeMemory.observe(event.envelope);
+      handleEngineMessage(event.envelope);
+    }
   } else if (event.kind === "connected") {
     const info = event.info;
     broadcast({ type: "bridge/status", status: "connected", info, engine: engineDriver.descriptor });
@@ -917,7 +974,7 @@ function shutdown() {
   siteBuildFeature.stop();
   pluginFeature.stop();
   shuttingDown = true;
-  const harnessDrain = harnessFeature.close();
+  const harnessDrain = harnessFeature.close().finally(() => projectMemoryText.close());
   // Drain registered-client operations before closing the domain ports they use.
   void drainApplicationBackground({
     cli: cliFeature,

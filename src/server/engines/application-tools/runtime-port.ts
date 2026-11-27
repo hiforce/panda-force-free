@@ -6,8 +6,8 @@ export interface ApplicationRuntimeSelection {
   model?: string;
   effort?: string;
 }
-export type ApplicationRuntimePurpose = "bots" | "bot-chat" | "creation" | "knowledge" | "editorial";
-export type ApplicationRuntimeScope = "bots" | "creation";
+export type ApplicationRuntimePurpose = "bots" | "bot-chat" | "creation" | "knowledge" | "editorial" | "project-memory";
+export type ApplicationRuntimeScope = "bots" | "creation" | "project-memory";
 export type ApplicationCatalogScope = boolean | ApplicationRuntimeScope;
 
 /** Domains select installed execution identities, never executable commands or provider endpoints. */

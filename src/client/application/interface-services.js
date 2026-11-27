@@ -181,11 +181,13 @@ export function assembleSettings({ $, t, shortPath, modelsPort, panelsPort, view
     pageViews: {
       agent: createLazySettingsPage(t, "harness"),
       users: createLazySettingsPage(t, "users"),
+      "encryption-keys": createLazySettingsPage(t, "encryptionKeys"),
       "plugins-settings": createExtensionSettings(t),
       "search-settings": createLazySettingsPage(t, "search"),
       storage: createLazySettingsPage(t, "storage"),
       bots: createLazySettingsPage(t, "bots"),
       "client-access": createLazySettingsPage(t, "clients"),
+      "memory-settings": createLazySettingsPage(t, "memory"),
     },
     state,
   });

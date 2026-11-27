@@ -1,3 +1,4 @@
+import type { MemoryRemovalImpact } from "../../shared/project-memory/contracts.js";
 import { runtimeModelCatalog as loadRuntimeCatalog } from "./model-catalog.js";
 import type { CreationSessionDomain } from "../contracts/session-workspace.js";
 import type { HarnessBrowserBoundary } from "../contracts/harness.js";
@@ -20,7 +21,7 @@ import type { StateReader, StateStore } from "../contracts/ownership.js";
 import type { ComposerPort, NavigationPort, ModelsPort, NoticesPort } from "../contracts/features.js";
 import type { BusinessProjects } from "../contracts/features.js";
 import { harnessApi, conversationsPath, type HarnessSnapshot } from "./api.js";
-import { setMessageHtml } from "../i18n.js";
+import { messageAttributes, messageHtml, setMessageHtml } from "../i18n.js";
 import { codexIcon } from "../codex-icons.js";
 import { bindMenuDismiss, mountSessionMenu, restoreSessionMenu } from "../session-controls/menu.js";
 import { creationSessionRoute } from "../creation/session-route.js";
@@ -50,6 +51,22 @@ export function createHarnessController(options: {
   panel.role = "dialog";
   panel.id = "harnessMenu";
   document.body.append(panel);
+  const memoryMode = document.createElement("div");
+  memoryMode.className = "composer-memory-mode";
+  memoryMode.hidden = true;
+  setMessageHtml(
+    memoryMode,
+    `<button type="button" role="switch" class="composer-private-switch" aria-checked="false" ${messageAttributes("aria-label", "sessions.memoryModePrivate", {}, t)} ${messageAttributes("title", "sessions.memoryModePrivate", {}, t)}>
+      <span class="pf-switch-track" aria-hidden="true"></span>
+      ${codexIcon("lockKeyhole")}
+      <span class="composer-private-label">${messageHtml("sessions.memoryModePrivate", {}, t)}</span>
+    </button><span class="composer-private-active" hidden>${codexIcon("lockKeyhole")}${messageHtml("sessions.memoryPrivateActive", {}, t)}</span><span id="privateSessionHint" class="sr-only" hidden>${messageHtml("sessions.memoryPrivateHint", {}, t)}</span>`,
+  );
+  document.querySelector("#prompt")!.before(memoryMode);
+  const privateMemory = memoryMode.querySelector<HTMLButtonElement>('[role="switch"]')!;
+  const privateStatus = memoryMode.querySelector<HTMLElement>(".composer-private-active")!;
+  const memoryHint = memoryMode.querySelector<HTMLElement>("#privateSessionHint")!;
+  let privateDraftContext: string | null = null;
   const snapshots = new Map<string, HarnessSnapshot>(),
     requests = new Map<string, string>(),
     permissionSubmissions = new Set<string>();
@@ -82,6 +99,7 @@ export function createHarnessController(options: {
   }
   const current = () => harnessId(state.active?.id);
   const context = () => state.active?.id || `new:${state.newSessionProjectId || "personal"}`;
+  const privateDraft = () => !state.active && parseWorkbenchRoute().page === "new" && privateDraftContext === context();
   const newPermissionModes = new Map<string, HarnessPermissionMode>();
   const permissionSaves = new Set<string>();
   const permissionKey = () => `${context()}:${runtime()?.id ?? "pending"}`;
@@ -141,11 +159,25 @@ export function createHarnessController(options: {
   function syncRoute() {
     syncPicker();
     if (creationSessionRoute() && !creationCatalog) void loadCreationCatalog().catch(() => {});
+    const { page } = parseWorkbenchRoute();
+    const showSwitch = !!catalog && !state.active && page === "new";
+    const activePrivate = state.active?.memoryPrivate === true && page === "task";
+    const selected = privateDraft();
+    if (!selected) privateDraftContext = null;
+    memoryMode.hidden = !showSwitch && !activePrivate;
+    privateMemory.hidden = !showSwitch;
+    privateStatus.hidden = !activePrivate;
+    privateMemory.setAttribute("aria-checked", String(selected));
+    if (selected) privateMemory.setAttribute("aria-describedby", memoryHint.id);
+    else privateMemory.removeAttribute("aria-describedby");
+    memoryHint.hidden = !selected && !activePrivate;
   }
+  const isProjectSession = (project: unknown) => typeof project === "string" && !!project && project !== "personal";
+  const managedDraft = () => !state.active && (privateDraft() || isProjectSession(state.newSessionProjectId));
   function sync() {
     const value = runtime();
     if (value) {
-      const managed = !!current() || (!state.active && selected !== "codex"),
+      const managed = !!current() || managedDraft() || (!state.active && selected !== "codex"),
         next = managed ? `harness:${value.id}` : "codex",
         previous = modelsContext;
       if (next !== previous) {
@@ -155,6 +187,10 @@ export function createHarnessController(options: {
     }
     syncRoute();
   }
+  privateMemory.onclick = () => {
+    privateDraftContext = privateDraft() ? null : context();
+    sync();
+  };
   async function loadCatalog() {
     catalog = await api<HarnessCatalog>("/api/harness-runtimes");
     if (!selectedExplicitly || !catalog.runtimes.some((value) => value.id === selected && value.enabled))
@@ -429,7 +465,8 @@ export function createHarnessController(options: {
       }
       return true;
     },
-    available: () => !!current() || (!!runtime() && runtime()!.id !== "codex" && runtime()!.status === "ready"),
+    available: () =>
+      !!current() || managedDraft() || (!!runtime() && runtime()!.id !== "codex" && runtime()!.status === "ready"),
     async rpc(method, params, next) {
       const id = harnessId(params.threadId),
         value = runtime();
@@ -454,20 +491,43 @@ export function createHarnessController(options: {
           ].sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0)),
         };
       }
-      if (method === "thread/start" && !creationSessionRoute() && selected && selected !== "codex") {
+      const privateStart =
+        method === "thread/start" &&
+        privateDraft() &&
+        (params.pandaProjectId || "personal") === (state.newSessionProjectId || "personal");
+      if (
+        method === "thread/start" &&
+        !creationSessionRoute() &&
+        (privateStart || isProjectSession(params.pandaProjectId) || (selected && selected !== "codex"))
+      ) {
         const result = await api<HarnessSnapshot>(conversationsPath, "POST", {
-          runtimeId: selected,
+          runtimeId: selected || catalog?.defaultRuntimeId,
+          ...(privateStart ? { memoryPrivate: true } : {}),
           cwd: params.cwd,
           projectId: params.pandaProjectId,
           permissionMode: newPermissionModes.get(permissionKey()) ?? "ask",
         });
         snapshots.set(result.conversation.id, result);
         newPermissionModes.delete(permissionKey());
+        if (privateStart && privateDraftContext === context()) privateDraftContext = null;
+        sync();
         return { thread: harnessPresentation(result), pandaHarness: true, pandaProjectId: params.pandaProjectId };
       }
       if (!id) return next();
+      if (method === "host/thread/memoryRemovalImpact") {
+        try {
+          return await api<MemoryRemovalImpact>(`${conversationsPath}/${id}/memory-removal-impact`);
+        } catch (error) {
+          if (isRecord(error) && error.code === "notFound") return null;
+          throw error;
+        }
+      }
       if (method === "thread/delete") {
-        await api(`${conversationsPath}/${id}`, "DELETE");
+        const query =
+          typeof params.memoryImpact === "string"
+            ? "?" + new URLSearchParams({ memoryImpact: params.memoryImpact })
+            : "";
+        await api(`${conversationsPath}/${id}${query}`, "DELETE");
         snapshots.delete(id);
         options.notices.removePersistentError("harness-read");
         if (current() === id) document.querySelector("#harnessInteractions")?.replaceChildren();

@@ -83,6 +83,7 @@ try {
         });
       const form = page.locator("[data-cli-form]");
       await form.locator('[name="pf-cli-name"]').fill("Agent " + width);
+      await form.locator("details summary").click();
       await form.locator('[name="pf-cli-kind"]').selectOption(width < 700 ? "claude" : "codex");
       const issuedResponse = page.waitForResponse(
         (response) => response.url().endsWith("/api/cli/clients") && response.request().method() === "POST",
@@ -91,6 +92,8 @@ try {
       const response = await issuedResponse;
       assert.equal(response.status(), 201);
       const issued = await response.json();
+      assert.equal(issued.projectScope, "allAccessible");
+      assert.deepEqual(issued.projects, []);
       await page.locator("[data-cli-secret]").waitFor({ state: "visible" });
       assert.equal(await page.locator("[data-cli-key]").getAttribute("type"), "password");
       assert.equal(await page.locator("[data-cli-key]").inputValue(), issued.apiKey);
@@ -125,16 +128,14 @@ try {
       await navigate("/settings/client-access");
       await page.locator("[data-cli-form]").waitFor();
       assert.equal(await page.locator("[data-cli-secret]").isVisible(), false);
-      assert.equal(await page.locator('[name="pf-cli-name"]').inputValue(), "");
+      assert.equal(await page.locator('[name="pf-cli-name"]').inputValue(), "Panda CLI");
       await page.reload();
       await page.locator("[data-cli-form]").waitFor();
       assert.equal(await page.locator("[data-cli-secret]").isVisible(), false);
-      assert.ok(
-        await page
-          .locator("[data-cli-clients]")
-          .textContent()
-          .then((text) => text.includes("Agent " + width)),
-      );
+      await page
+        .locator("[data-cli-clients]")
+        .getByText("Agent " + width, { exact: true })
+        .waitFor();
       await page.screenshot({ path: `${out}/settings-${width}.png`, fullPage: true });
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       const noKey = await fetch(app.base + "/api/cli/v1/session");

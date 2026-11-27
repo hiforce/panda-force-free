@@ -28,7 +28,8 @@ export class CodexHarnessAgent implements HarnessAgent {
   private permissionMode: HarnessPermissionMode = "ask";
   constructor(
     private readonly driver: EngineDriver,
-    private readonly disposeDriver?: () => void,
+    private readonly disposeDriver?: () => void | Promise<void>,
+    private readonly persistent = false,
   ) {
     this.unsubscribe = driver.subscribe((event) => this.event(event));
   }
@@ -42,7 +43,7 @@ export class CodexHarnessAgent implements HarnessAgent {
         tools: true,
         permissions: true,
         permissionModes: ["ask", "full-access"],
-        load: true,
+        load: this.persistent,
         models: true,
         imageGeneration: "unknown",
       },
@@ -66,18 +67,23 @@ export class CodexHarnessAgent implements HarnessAgent {
     if (permissionMode !== "ask" && permissionMode !== "full-access") throw new HarnessError("capabilityUnavailable");
     this.permissionMode = permissionMode;
     const result = id
-      ? await this.driver.sessions.resume(id)
+      ? await this.driver.sessions.resume(id).catch((error: unknown) => {
+          if (error instanceof Error && /^no rollout found for thread\b/i.test(error.message))
+            throw new HarnessError("notFound", 404);
+          throw error;
+        })
       : record(
           record(
             await this.driver.execute("session.create", {
               cwd,
-              ephemeral: true,
+              ephemeral: !this.persistent,
               approvalPolicy: permissionMode === "full-access" ? "never" : "on-request",
               sandbox: permissionMode === "full-access" ? "danger-full-access" : "workspace-write",
             }),
           ).thread,
         );
-    if (typeof result.id !== "string" || !result.id) throw new HarnessError("invalidProtocol", 503);
+    if (typeof result.id !== "string" || !result.id || (id && result.id !== id))
+      throw new HarnessError("invalidProtocol", 503);
     if (result.cwd && result.cwd !== cwd) throw new HarnessError("workspaceUnavailable", 409);
     this.session = { id: result.id, cwd };
     rememberApplicationSession(result.id);
@@ -145,6 +151,7 @@ export class CodexHarnessAgent implements HarnessAgent {
   async prompt(session: HarnessNativeSession, input: HarnessPrompt, emit: (event: HarnessAgentEvent) => Promise<void>) {
     if (this.emitter || session.id !== this.session?.id) throw new HarnessError("busy", 409);
     if (this.cancelled) return { stopReason: "cancelled" as const };
+    this.terminal = null;
     this.emitter = emit;
     const done = new Promise<{ stopReason: "complete" | "cancelled" }>((resolve, reject) => {
       this.completion = { resolve, reject };
@@ -152,6 +159,8 @@ export class CodexHarnessAgent implements HarnessAgent {
     void done.catch(() => {});
     const timer = setTimeout(() => this.completion?.reject(new HarnessError("timeout", 504)), 30 * 60 * 1000);
     try {
+      if (input.beforeDispatch) await input.beforeDispatch();
+      if (this.cancelled) return { stopReason: "cancelled" as const };
       const result = record(
         await this.driver.execute("input.start", {
           threadId: session.id,
@@ -162,6 +171,10 @@ export class CodexHarnessAgent implements HarnessAgent {
                 ? { type: "localImage", path: attachment.path }
                 : { type: "text", text: `Attached file: ${attachment.path}` },
             ),
+            ...(input.visualEvidence ?? []).map((item) => ({
+              type: "image",
+              url: `data:${item.mimeType};base64,${item.base64}`,
+            })),
           ],
           ...(input.model ? { model: input.model } : {}),
           ...(input.effort ? { effort: input.effort } : {}),
@@ -219,6 +232,6 @@ export class CodexHarnessAgent implements HarnessAgent {
     this.completion?.reject(new HarnessError("deliveryUncertain", 409));
     this.unsubscribe?.();
     this.unsubscribe = null;
-    this.disposeDriver?.();
+    await this.disposeDriver?.();
   }
 }

@@ -4,6 +4,9 @@ import { closestElement, requireElement } from "../dom.js";
 import { localizeAttribute, localizeText, setMessageHtml, setOpaqueText } from "../i18n.js";
 import { createSessionWorkspaceView } from "./view.js";
 import { renderSessionUsage } from "./usage-view.js";
+import { createSessionMemory } from "./project-memory.js";
+import { createSessionMemoryControl } from "./memory-control.js";
+import { harnessId } from "../../shared/harness/presentation.js";
 import { createSessionToolsView } from "./tools-view.js";
 
 /** Owns layout and UI navigation; session/engine data arrives as a read-only projection. */
@@ -11,13 +14,16 @@ import { createSessionToolsView } from "./tools-view.js";
 export function createSessionWorkspace(options) {
   const { t, i18n, read } = options;
   const { inspector, info, actions: actionButton, summary } = createSessionWorkspaceView(t);
+  const memory = createSessionMemory(t);
+  const memoryControl = createSessionMemoryControl(requireElement("#sessionMemoryControl"), t);
   let desktop = matchMedia("(min-width:1081px)").matches;
   let desktopOpen = false,
     desktopPreference = false,
     mobileOpen = false,
     desiredOpen = false,
     selectedTab = "overview";
-  let activeId = "",
+  let projectActionIcon = "",
+    activeId = "",
     executionSignature = "",
     controlLocation = "";
   let clock = 0;
@@ -107,6 +113,16 @@ export function createSessionWorkspace(options) {
         requireElement("#sessionInspectorTitle").focus({ preventScroll: true });
       }
     }
+    const view = read();
+    const showMemory = desiredOpen && view.contextKind !== "creation" && view.id;
+    const managedId = harnessId(view.id);
+    const linked = view.project && view.project.id !== "personal";
+    const memoryScope = view.memoryPrivate ? "private" : !linked ? "unbound" : managedId ? "managed" : "legacy";
+    memoryControl.update(
+      showMemory ? managedId || view.id : null,
+      showMemory ? memoryScope : undefined,
+      view.status?.state,
+    );
     toggleClass("session-inspector-open", inspector.open && desktop);
     info.classList.toggle("active", inspector.open);
     info.setAttribute("aria-expanded", String(inspector.open));
@@ -167,7 +183,16 @@ export function createSessionWorkspace(options) {
       button.setAttribute("aria-controls", active ? "sessionSettingsDialog" : controls);
     }
     placeControls(hasInspector);
+    const memoryActions = requireElement("#sessionMemoryActions");
+    memoryActions.hidden =
+      !hasInspector ||
+      !harnessId(view.id) ||
+      !view.project ||
+      view.project.id === "personal" ||
+      view.memoryPrivate === true;
+    if (!hasInspector || creation || !view.project || view.memoryPrivate) memory.close();
     if (view.id !== activeId || !active) {
+      memory.close();
       activeId = view.id;
       desktopOpen = desktopPreference = mobileOpen = false;
       for (const dialog of dialogs) if (dialog.open) dialog.close();
@@ -184,7 +209,17 @@ export function createSessionWorkspace(options) {
     localizeAttribute(info, "title", "sessionview.open", undefined, t);
     localizeAttribute(actionButton, "aria-label", "sessionview.sessionActions", undefined, t);
     localizeAttribute(actionButton, "title", "sessionview.sessionActions", undefined, t);
-    setOpaqueText(requireElement("#sessionHeadingProject"), view.project?.name || t("common.unassigned"));
+    const projectHeading = requireElement("#sessionHeadingProject");
+    const projectPicker = requireElement("#sessionAssociateProject");
+    const projectAction = view.project ? "projects.openAssignedProject" : "projects.linkSessionToProject";
+    for (const control of [projectHeading, projectPicker])
+      localizeAttribute(control, "title", projectAction, undefined, t);
+    const icon = view.project ? "chevronRight" : "chevronDown";
+    if (icon !== projectActionIcon) {
+      projectActionIcon = icon;
+      setMessageHtml(requireElement("#sessionProjectActionIcon"), codexIcon(icon));
+    }
+    setOpaqueText(projectHeading, view.project?.name || t("common.unassigned"));
     if (view.title) setOpaqueText(requireElement("#threadTitle"), view.title);
     else localizeText(requireElement("#threadTitle"), "common.newSession", undefined, t);
     requireElement("#threadTitle").title = view.title;
@@ -288,6 +323,19 @@ export function createSessionWorkspace(options) {
       if (!desktop) close();
       options.associateProject();
     }
+    const memoryPage = {
+      "memory-details": "details",
+      "memory-settings": "settings",
+      "memory-history": "history",
+      "memory-legacy-save": "legacy-save",
+      "memory-legacy-details": "legacy-details",
+    }[action];
+    if (memoryPage && target) {
+      const view = read();
+      const id = memoryPage.startsWith("legacy-") ? view.id : harnessId(view.id);
+      if (id && view.project && !view.memoryPrivate)
+        memory.show(id, view.project.id, memoryPage, target, memoryControl.refresh);
+    }
     if (action === "usage") openUsage();
     if (action === "pending") {
       if (!desktop) close();
@@ -370,6 +418,7 @@ export function createSessionWorkspace(options) {
         } else mobileOpen = false;
       }
       desiredOpen = false;
+      memoryControl.update(null);
       toggleClass("session-inspector-open", false);
       info.classList.remove("active");
       info.setAttribute("aria-expanded", "false");

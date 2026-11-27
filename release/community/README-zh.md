@@ -168,6 +168,8 @@ curl --fail-with-body --silent --show-error \
 
 Codex 使用应用的 app-server 连接，Grok 使用按需启动的 ACP 进程；可选账户服务负责原生命令行凭据续期，无需在宿主机保持 Grok/tmux 会话。模型账户与 PandaForce 管理员相互独立。[容器分工、登录、持久化与恢复 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
+`develop` 分支的源码版本为 **0.2.1**。请参阅 [版本变更](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md#021-源码)和[源码构建指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md)。
+
 ## 安装 0.1.11
 
 从 **`main` 分支**获取安装配置，运行正式镜像 **`hiforceai/panda-force:0.1.11`**，平台为 **Linux amd64**。镜像采用 **Rocky Linux 9**，包含三种 Harness CLI、Bun、Node.js、Python、Office、PDF/OCR、字体、图像/研究/写作库、Chromium 和 FFmpeg。宿主机准备 Git、Docker 和 Compose 即可。[基础镜像的内容与用途 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)

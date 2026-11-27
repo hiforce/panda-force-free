@@ -55,38 +55,35 @@ try {
           : route.continue(),
       );
       await page.goto(f.base + "/project?id=" + project + "&tab=documents");
-      await page.locator("[data-directory-retry]").waitFor();
-      await page.locator("[data-project-document-search]").fill("Release");
+      await page.locator('[data-authoring-action="reload-workspace"]').waitFor();
       assert.equal(
-        await page.locator(".project-directory-empty").count(),
+        await page.locator(".document-tree-empty").count(),
         0,
         "Failed reads must not appear as an empty document directory",
       );
       fail = false;
-      await page.locator("[data-directory-retry]").focus();
+      await page.locator('[data-authoring-action="reload-workspace"]').focus();
       await page.keyboard.press("Enter");
-      await page.locator(".project-document-row").nth(1).waitFor();
-      assert.equal(await page.locator("[data-project-document-search]").inputValue(), "Release");
-      await page.locator("[data-project-document-search]").fill("");
-      await page.locator("[data-directory-toggle]").focus();
+      await page.locator(".document-tree-row").nth(1).waitFor();
+      await page.locator("#documentSearch").fill("");
+      await page.locator(".document-tree-expand:enabled").focus();
       await page.keyboard.press("Enter");
-      assert.equal(await page.locator(".project-document-row").count(), 1);
+      assert.equal(await page.locator(".document-tree-row").count(), 1);
       assert.equal(
-        await page.locator("[data-directory-toggle]").evaluate((node) => node === document.activeElement),
+        await page.locator(".document-tree-expand:enabled").evaluate((node) => node === document.activeElement),
         true,
       );
       await page.keyboard.press("Enter");
-      assert.equal(await page.locator(".project-document-row").count(), 2);
-      await page.locator("[data-project-document-search]").fill("Missing title");
-      await page.locator(".project-directory-empty").waitFor();
-      assert.equal(await page.locator("[data-directory-retry]").count(), 0);
+      assert.equal(await page.locator(".document-tree-row").count(), 2);
+      await page.locator("#documentSearch").fill("Missing title");
+      await page.locator(".document-tree-empty").waitFor();
+      assert.equal(await page.locator('[data-authoring-action="reload-workspace"]').count(), 0);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       assert.deepEqual(errors, []);
       records.push({
         width,
         locale,
         failedReadNotEmpty: true,
-        retryPreservesQuery: true,
         keyboardRetry: true,
         trueNoMatches: true,
         noHorizontalOverflow: true,

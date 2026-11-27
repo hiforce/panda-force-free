@@ -29,7 +29,7 @@ export function createCodexApplicationEngine(
     effort?: string;
     timeoutMs?: number;
     budgetClock?: RunBudgetClock;
-    purpose?: "creation" | "knowledge" | "bots" | "bot-chat" | "editorial";
+    purpose?: import("./runtime-port.js").ApplicationRuntimePurpose;
   },
   factory: CodexTransportFactory = createCodexBridge,
 ): ApplicationToolEngine {
@@ -46,7 +46,11 @@ export function createCodexApplicationEngine(
         !input.prompt.trim() ||
         Buffer.byteLength(input.prompt) > 262144 ||
         Buffer.byteLength(input.instructions) > 262144 ||
-        !input.tools.length ||
+        (options.purpose === "project-memory"
+          ? input.sessionId !== undefined ||
+            input.persistent === true ||
+            input.tools.some(({ name }) => name !== "panda_memory_context" && name !== "panda_memory_submit")
+          : !input.tools.length) ||
         input.tools.length > 16 ||
         new Set(input.tools.map((tool) => tool.name)).size !== input.tools.length ||
         input.tools.some((tool) => !/^[a-z][a-z0-9_]{1,63}$/.test(tool.name) || !isRecord(tool.inputSchema))
@@ -136,7 +140,9 @@ export function createCodexApplicationEngine(
               ? "PandaForce knowledge"
               : options.purpose === "bot-chat"
                 ? "PandaForce Bot chat"
-                : "PandaForce creation",
+                : options.purpose === "project-memory"
+                  ? "PandaForce project memory"
+                  : "PandaForce creation",
           version: options.version,
         },
         isShuttingDown: () => closing,
@@ -224,6 +230,7 @@ export function createCodexApplicationEngine(
         if (stopping) throw new Error("Application engine interrupted");
         let model = options.model,
           effort: string | null | undefined = options.effort;
+        if (effort === "" && options.purpose === "project-memory") effort = undefined;
         if (effort === "") {
           const catalog = await transport.request("model/list", { limit: 100 });
           model ||= applicationDefaultModel(catalog);

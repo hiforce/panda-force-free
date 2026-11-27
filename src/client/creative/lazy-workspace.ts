@@ -20,7 +20,7 @@ const runtime = new DocumentRuntimeLoader({
 
 /** A late optional module cannot replace a different route or revive a workspace after leaving it. */
 export function createLazyContentWorkspace(
-  kind: "create" | "project" | "directory" | "skills" | "publish",
+  kind: "create" | "project" | "memory" | "skills" | "publish",
   t: Translate,
   identity: string,
   projects: () => ContentProject[],
@@ -52,16 +52,17 @@ export function createLazyContentWorkspace(
     const current = ++epoch;
     if (fatal) return failure(host, false, first, second);
     if (view) return view.show(host, first, second);
-    if (first) readAhead?.prepare(first);
+    if (first && !new URL(location.href).searchParams.has("kind")) readAhead?.prepare(first);
+    else readAhead?.cancel();
     const pending = `<p class="busy-status busy-status-panel" role="status" data-content-workspace-status>${busyStatus(t, kind === "skills" ? "creation.loadingSkill" : "common.pageLoading")}</p>`;
     setMessageHtml(
       host,
-      ["project", "directory"].includes(kind) && first
+      ["project", "memory"].includes(kind) && first
         ? projectLoadingView(
             t,
             first,
             projects().find((project) => project.id === first),
-            kind === "directory" ? "documents" : "content",
+            kind === "memory" ? "memory" : "content",
           )
         : kind === "skills"
           ? skillShell(pending, first)

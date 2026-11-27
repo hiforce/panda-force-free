@@ -1,4 +1,4 @@
-import { CREATIVE_ASSET_KINDS } from "../../shared/creative/assets.js";
+import { originalStorageKinds } from "../../shared/storage/contracts.js";
 import type { OriginalStorageMutation, OriginalStorageCredentials } from "../../shared/storage/contracts.js";
 import { isRecord } from "../../shared/records.js";
 import { ObjectStorageError } from "./contracts.js";
@@ -49,10 +49,10 @@ export function storagePrefix(value: unknown) {
   return prefix;
 }
 export function storageKinds(value: unknown) {
-  if (!Array.isArray(value) || value.length > CREATIVE_ASSET_KINDS.length) return fail();
+  if (!Array.isArray(value) || value.length > originalStorageKinds.length) return fail();
   const selected = new Set(value);
-  if (selected.size !== value.length || value.some((kind) => !CREATIVE_ASSET_KINDS.includes(kind))) return fail();
-  return CREATIVE_ASSET_KINDS.filter((kind) => selected.has(kind));
+  if (selected.size !== value.length || value.some((kind) => !originalStorageKinds.includes(kind))) return fail();
+  return originalStorageKinds.filter((kind) => selected.has(kind));
 }
 export function storageCredentials(value: unknown): OriginalStorageCredentials {
   const input = storageRecord(value, ["accessKeyId", "secretAccessKey", "sessionToken"]);

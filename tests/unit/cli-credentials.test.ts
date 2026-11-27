@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test";
+import { CliError } from "../../src/shared/cli/contracts.js";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -144,4 +145,61 @@ describe("registered CLI credentials", () => {
       db.close();
     }
   });
+});
+
+test("dynamic project grants use current account access and fixed grants retain their project list", async () => {
+  const db = openCliCredentialStore(":memory:");
+  try {
+    const service = new CliCredentials(db.store);
+    const projectAccess = new Set(["first"]);
+    const authorize = async (project: string) => {
+      if (!projectAccess.has(project)) throw new CliError("forbidden", 403);
+    };
+    const dynamic = await service.issue(
+      "owner-a",
+      "https://panda.example",
+      {
+        ...input,
+        projectScope: "allAccessible",
+        projects: [],
+        capabilities: ["memory:read"],
+      },
+      authorize,
+    );
+    const fixed = await service.issue(
+      "owner-a",
+      "https://panda.example",
+      {
+        ...input,
+        projects: ["first"],
+        capabilities: ["memory:read"],
+      },
+      authorize,
+    );
+    const access = async (issued: typeof dynamic, project: string) =>
+      executeCliCommand(
+        await service.authenticate(issued.registration.clientId, issued.apiKey),
+        { schema: 1, command: "memory.search", args: { project } },
+        {
+          async execute(owner, command, args) {
+            expect(owner).toBe("owner-a");
+            expect(command).toBe("memory.search");
+            await authorize(String(args.project));
+            return { entries: [] };
+          },
+        },
+        new AbortController().signal,
+      );
+    await expect(access(dynamic, "new-project")).rejects.toThrow("forbidden");
+    projectAccess.add("new-project");
+    await expect(access(dynamic, "new-project")).resolves.toEqual({ entries: [] });
+    await expect(access(fixed, "new-project")).rejects.toThrow("forbidden");
+    projectAccess.delete("new-project");
+    await expect(access(dynamic, "new-project")).rejects.toThrow("forbidden");
+    expect((await service.list("owner-a")).find(({ id }) => id === dynamic.registration.clientId)?.projectScope).toBe(
+      "allAccessible",
+    );
+  } finally {
+    db.close();
+  }
 });

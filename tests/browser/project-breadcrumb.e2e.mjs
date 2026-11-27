@@ -29,7 +29,7 @@ try {
         return r.json();
       };
       const initial = await api("/api/projects"),
-        snapshot = await api("/api/projects", {
+        snapshot = f.legacyProject({
           name: "PandaForce",
           code: "panda-force-breadcrumb-" + width,
           description: "围绕项目整理想法、文档与会话。",
@@ -41,19 +41,23 @@ try {
         errors = [];
       page.on("pageerror", (e) => errors.push(e.message));
       await page.goto(f.base + base);
-      await page.locator("[data-system-composer]").waitFor();
+      const openComposer = async () => {
+        await page.locator(".project-create-menu > summary").click();
+        await page.locator("[data-project-compose]").click();
+        await page.locator("#gadgetDocumentPrompt:visible").waitFor();
+      };
+      await openComposer();
       const verify = async (name) => {
         const crumb = page.locator(".project-breadcrumb"),
           heading = page.locator("[data-creative-heading]");
         assert.equal(await crumb.count(), 1);
         assert.equal(await page.locator(".project-overview-back,.project-overview-symbol").count(), 0);
-        assert.equal(await crumb.locator("[aria-current=page]").textContent(), name);
+        assert.equal(await crumb.locator("a").getAttribute("href"), "/projects");
         assert.equal(await heading.textContent(), name);
         const a = await crumb.boundingBox(),
           b = await heading.boundingBox();
-        assert.ok(a.y + a.height <= b.y + 1, "The breadcrumb belongs above the project title");
-        assert.ok(Math.abs(a.x - b.x) < 2, "Breadcrumb and project title share the page alignment");
-        assert.equal(await page.locator("[data-project-code]").textContent(), project.code);
+        assert.ok(a.x + a.width <= b.x + 1, "The project list control and title share a row");
+        assert.ok(Math.abs(a.y + a.height / 2 - b.y - b.height / 2) < 2);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       };
       await verify(project.name);
@@ -62,18 +66,18 @@ try {
       await page.keyboard.press("Enter");
       await page.locator(`.project-directory-main[href="${base}"]`).waitFor();
       await page.locator(`.project-directory-main[href="${base}"]`).click();
-      await page.locator("#gadgetDocumentPrompt").waitFor();
+      await openComposer();
       assert.equal(
         await page.locator("#gadgetDocumentPrompt").inputValue(),
         "Keep this draft while I return to the project list.",
       );
       await page.screenshot({ path: `${out}/content-${width}.png` });
       for (const [section, href, ready] of [
-        ["documents", base + "&tab=documents", ".project-documents-view"],
+        ["documents", base + "&tab=documents", ".project-creation-documents"],
         ["sessions", base + "&tab=sessions", ".project-sessions-view"],
         ["publish", "/publish?project=" + project.id, ".project-publish-view"],
       ]) {
-        await page.locator(`.resource-project-tabs a[href="${href}"]`).click();
+        await page.locator(`a[href="${href}"]`).first().click();
         await page.locator(ready).waitFor();
         await verify(project.name);
         await page.screenshot({ path: `${out}/${section}-${width}.png` });
@@ -99,8 +103,7 @@ try {
       assert.deepEqual(errors, []);
       records.push({
         width,
-        breadcrumbAboveTitle: true,
-        noStandaloneArrowOrIconTile: true,
+        backAndTitleShareRow: true,
         allProjectSections: true,
         keyboardParentNavigation: true,
         draftPreserved: true,

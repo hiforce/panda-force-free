@@ -6,6 +6,8 @@ export const CLI_CAPABILITIES = [
   "knowledge:records:read",
   "knowledge:write",
   "knowledge:approve",
+  "memory:read",
+  "memory:organize",
 ] as const;
 export type CliCapability = (typeof CLI_CAPABILITIES)[number];
 export type CliClientKind = "codex" | "claude" | "cli";
@@ -17,11 +19,13 @@ export interface CliRegistration {
   kind: CliClientKind;
   credentialRef: "credentials.json";
 }
+export type CliProjectScope = "selected" | "allAccessible";
 export interface CliGrant {
   clientId: string;
   keyId: string;
   owner: string;
   projects: string[];
+  projectScope?: CliProjectScope;
   capabilities: CliCapability[];
   expiresAt: number;
 }

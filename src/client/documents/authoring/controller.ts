@@ -1,3 +1,5 @@
+import { updateProjectHeading } from "../../creative/project-view.js";
+import { codexIcon } from "../../codex-icons.js";
 import type { Translate } from "../../../shared/i18n/messages.js";
 import type { DocumentTreeMutation } from "../../../shared/documents/navigation.js";
 import type { CreativeAsset } from "../../../shared/creative/assets.js";
@@ -43,6 +45,7 @@ export function createProjectDocumentWorkspace(options: {
   publishing: DocumentPublicationActions;
   projects?: () => readonly { id: string; name: string }[];
   onDocumentFocusChanged?: (active: boolean) => void;
+  projectFrame?: (project: string) => string;
 }) {
   const { t } = options,
     root = document.createElement("section");
@@ -61,6 +64,8 @@ export function createProjectDocumentWorkspace(options: {
     lastRequested = "",
     lastKnowledge = "",
     sourceView = false,
+    embedded = false,
+    directoryScroll = 0,
     fileMode = false,
     workspaceReady = false,
     opening = false,
@@ -139,9 +144,19 @@ export function createProjectDocumentWorkspace(options: {
     root.classList.toggle("document-open", !!editor.record);
     root.classList.toggle("is-editing", editor.editing);
     document.body.classList.toggle("document-focus-editing", root.isConnected && !sourceView && editor.editing);
-    focusDocument(root.isConnected && !sourceView);
+    document.body.classList.toggle(
+      "project-creation-reading",
+      embedded && root.isConnected && !sourceView && !!editor.record,
+    );
+    focusDocument(root.isConnected && !sourceView && !embedded);
     const more = get(".document-workspace-more"),
-      target = get(directory.mobile.matches ? ".authoring-directory-management" : ".documents-heading-actions");
+      target = get(
+        directory.mobile.matches
+          ? embedded
+            ? ".authoring-directory-utilities"
+            : ".authoring-directory-management"
+          : ".documents-heading-actions",
+      );
     if (more && target && more.parentElement !== target) target.append(more);
     for (const node of root.querySelectorAll<HTMLButtonElement>("[data-authoring-action]")) {
       const action = node.dataset.authoringAction || "",
@@ -164,7 +179,8 @@ export function createProjectDocumentWorkspace(options: {
         (["trash-document"].includes(action) && !canChange([editor.id]));
       if (["new-template", "new-ai", "ai-tasks", "knowledge"].includes(action)) node.hidden = !fileMode;
       if (action === "knowledge") node.disabled = !workspaceReady || session.loading;
-      if (action === "close-content") node.disabled = editor.saving;
+      if (action === "close-content" || action === "close-project-document") node.disabled = editor.saving || opening;
+      if (action === "close-project-document") node.hidden = !editor.record;
       if (action === "new") node.classList.toggle("primary", !fileMode);
     }
     header.update(
@@ -264,7 +280,12 @@ export function createProjectDocumentWorkspace(options: {
   function address(id: string, fromList = false) {
     if (personal) return personalAddress(id, "", undefined, fromList);
     const url = new URL(location.href);
-    if (url.pathname !== "/documents" || url.searchParams.get("project") !== projectId) return;
+    if (
+      embedded
+        ? url.pathname !== "/project" || url.searchParams.get("id") !== projectId
+        : url.pathname !== "/documents" || url.searchParams.get("project") !== projectId
+    )
+      return;
     if (id) url.searchParams.set("document", id);
     else url.searchParams.delete("document");
     history.replaceState(history.state, "", url);
@@ -274,6 +295,8 @@ export function createProjectDocumentWorkspace(options: {
     if (!workspaceReady) return;
     const node = index.byId.get(id);
     if (!node) return;
+    const scroll = root.closest(".workbench-view");
+    if (embedded && directory.mobile.matches && !editor.record) directoryScroll = scroll?.scrollTop ?? 0;
     const generation = epoch,
       selection = ++selectionEpoch;
     opening = true;
@@ -314,6 +337,12 @@ export function createProjectDocumentWorkspace(options: {
       if (generation === epoch && selection === selectionEpoch) {
         opening = false;
         controls();
+        if (embedded && directory.mobile.matches && !edit && editor.id === id) {
+          scroll?.scrollTo(0, 0);
+          get<HTMLButtonElement>("[data-project-reader-back]")?.focus({
+            preventScroll: true,
+          });
+        }
       }
     }
   }
@@ -454,6 +483,7 @@ export function createProjectDocumentWorkspace(options: {
     capabilityRead?.abort();
     workspaceReady = false;
     opening = false;
+    directoryScroll = 0;
     drag?.destroy();
     drag = null;
     menu.close();
@@ -473,7 +503,7 @@ export function createProjectDocumentWorkspace(options: {
     session.close();
     editor.detach();
     dialogs.close();
-    document.body.classList.remove("document-focus-editing");
+    document.body.classList.remove("document-focus-editing", "project-creation-reading");
     root.classList.remove("document-open", "is-editing", "personal-content-open");
   }
   function enterSources() {
@@ -491,7 +521,7 @@ export function createProjectDocumentWorkspace(options: {
     );
     options.sources.show(get<HTMLElement>("#authoringConnectedSources")!, projectId);
   }
-  async function load(project: string, documentId = "") {
+  async function load(project: string, documentId = "", query = "") {
     clear();
     options.sources.hide();
     sourceView = false;
@@ -499,11 +529,13 @@ export function createProjectDocumentWorkspace(options: {
     root.classList.add("project-document-authoring");
     projectId = project;
     lastRequested = documentId;
-    focusDocument(root.isConnected);
+    focusDocument(root.isConnected && !embedded);
     const generation = epoch;
     const capabilityController = new AbortController();
     capabilityRead = capabilityController;
-    setMessageHtml(root, authoringFrame(t, project));
+    root.classList.toggle("project-creation-documents", embedded);
+    setMessageHtml(root, authoringFrame(t, project, embedded ? options.projectFrame?.(project) : ""));
+
     root.classList.toggle("personal-creation-library", project === "personal");
     if (project === "personal") {
       personal = new PersonalCreationLibrary(root, t, options.identityKey);
@@ -518,7 +550,9 @@ export function createProjectDocumentWorkspace(options: {
     header.mount();
     setMessageHtml(get("#documentEditor"), empty(t, "documents.loading"));
     view.open(project);
+    view.query = query;
     session.open(project);
+    get<HTMLInputElement>("#documentSearch")!.value = query;
     get<HTMLInputElement>("#documentSearch")!.oninput = () => {
       view.search(get<HTMLInputElement>("#documentSearch")!.value, renderTree);
       files.search(get<HTMLInputElement>("#documentSearch")!.value);
@@ -587,8 +621,8 @@ export function createProjectDocumentWorkspace(options: {
       }
       const selected =
         documentId ||
-        (index.byId.has(view.selected) ? view.selected : "") ||
-        index.children.get(null)?.[0]?.documentId ||
+        (!embedded && index.byId.has(view.selected) ? view.selected : "") ||
+        (!embedded ? index.children.get(null)?.[0]?.documentId : "") ||
         "";
       if (selected) {
         if (!index.byId.has(selected)) throw new DocumentApiError(404, { messageId: "documents.unavailable" });
@@ -600,12 +634,12 @@ export function createProjectDocumentWorkspace(options: {
         }
         await select(selected, edit);
       } else {
-        setMessageHtml(get("#documentEditor"), empty(t, "documents.authoringEmpty", "documents.authoringEmptyHint"));
+        showDocumentWelcome();
         controls();
       }
     } catch (error) {
       if (generation !== epoch) return;
-      const failure = empty(t, "documents.unavailable") + button(t, "common.retry", "reload-workspace");
+      const failure = `<div class="project-document-load-error">${empty(t, "documents.unavailable")}${button(t, "common.retry", "reload-workspace")}</div>`;
       setMessageHtml(get(personal ? "[data-personal-documents]" : "#documentEditor"), failure);
       if (!personal && !index.tree.nodes.length)
         setMessageHtml(get("#documentTree"), empty(t, "documents.unavailable"));
@@ -613,8 +647,46 @@ export function createProjectDocumentWorkspace(options: {
       controls();
     }
   }
+  function showDocumentWelcome() {
+    const host = get("#documentEditor");
+    if (!embedded) {
+      setMessageHtml(host, empty(t, "documents.authoringEmpty", "documents.authoringEmptyHint"));
+      return;
+    }
+    const recent = [...index.tree.nodes].sort((a, b) => b.document.updatedAt - a.document.updatedAt).slice(0, 8);
+    if (!recent.length) {
+      setMessageHtml(
+        host,
+        `<section class="project-document-welcome project-document-empty">${empty(t, "documents.noDocuments", "projects.createFirstDocumentHint")}${button(t, "documents.newDocument", "new", "", true, "plus")}</section>`,
+      );
+      return;
+    }
+    const { format } = getBrowserI18n();
+    const rows = recent
+      .map(({ documentId, document }) => {
+        const date = new Date(document.updatedAt);
+        return `<li><button type="button" class="project-recent-document" data-project-recent="${e(documentId)}">${codexIcon("file")}<span data-i18n-ignore>${e(document.title)}</span>${Number.isFinite(date.getTime()) ? `<time datetime="${date.toISOString()}" data-i18n-ignore>${e(format.dateTime(date, { dateStyle: "medium" }))}</time>` : ""}${codexIcon("chevronRight")}</button></li>`;
+      })
+      .join("");
+    setMessageHtml(
+      host,
+      `<section class="project-document-welcome" aria-labelledby="projectRecentDocuments"><header><h2 id="projectRecentDocuments">${messageHtml("projects.recentDocuments", {}, t)}</h2><span>${messageHtml("projects.updated", {}, t)}</span></header><ul class="project-document-recent">${rows}</ul></section>`,
+    );
+  }
+  function closeProjectDocument() {
+    if (opening || editor.saving) return;
+    const previous = editor.id;
+    editor.mount(get<HTMLElement>("#documentEditor")!);
+    address("");
+    showDocumentWelcome();
+    renderTree();
+    const row = get<HTMLButtonElement>(`.document-tree-title[data-id="${CSS.escape(previous)}"]`);
+    root.closest(".workbench-view")?.scrollTo(0, directoryScroll);
+    (row || get<HTMLInputElement>("#documentSearch"))?.focus({ preventScroll: true });
+  }
   async function act(action: string) {
-    if (action === "reload-workspace") return load(projectId, lastRequested);
+    if (action === "close-project-document" && embedded) return closeProjectDocument();
+    if (action === "reload-workspace") return load(projectId, lastRequested, view.query);
     if (action === "close-content" && personal) {
       closePersonal();
       personalAddress();
@@ -701,6 +773,7 @@ export function createProjectDocumentWorkspace(options: {
       drag?.cancel();
       void files.refresh();
       await session.refresh();
+      if (embedded && get(".project-document-welcome")) showDocumentWelcome();
       return;
     }
     if (action === "retry-tree") {
@@ -733,9 +806,15 @@ export function createProjectDocumentWorkspace(options: {
       address("");
       controls();
       await trash.show(get<HTMLElement>("#documentEditor")!);
+      if (embedded && directory.mobile.matches) get(".document-trash")?.scrollIntoView({ block: "start" });
     }
   }
   root.addEventListener("click", (event) => {
+    const recent = (event.target as Element).closest<HTMLButtonElement>("[data-project-recent]");
+    if (recent?.dataset.projectRecent && !opening && !editor.saving) {
+      void execute(() => select(recent.dataset.projectRecent!));
+      return;
+    }
     const item = (event.target as Element).closest<HTMLButtonElement>(
       "[data-personal-document],[data-personal-category],[data-personal-trash]",
     );
@@ -788,10 +867,12 @@ export function createProjectDocumentWorkspace(options: {
       if (id && action === "move") void execute(() => actions.run("move", id));
       return;
     }
-    const more = trigger.closest<HTMLDetailsElement>(".document-workspace-more,.creative-reader-more");
+    const more = trigger.closest<HTMLDetailsElement>(
+      ".document-workspace-more,.creative-reader-more,.project-create-menu",
+    );
     if (more) {
       more.open = false;
-      if (more.classList.contains("creative-reader-more"))
+      if (more.matches(".creative-reader-more,.project-create-menu"))
         more.querySelector("summary")?.focus({ preventScroll: true });
     }
     void execute(() => act(trigger.dataset.authoringAction || ""));
@@ -830,10 +911,16 @@ export function createProjectDocumentWorkspace(options: {
   window.addEventListener("pagehide", () => editor.flush());
   getBrowserI18n().subscribe(() => {
     if (personal && root.isConnected) renderTree();
+    if (embedded && root.isConnected && get(".project-document-welcome")) showDocumentWelcome();
   });
   return {
-    show(host: HTMLElement, project: string, documentId = "", knowledgeId = "") {
-      if (root.parentElement === host && projectId === project) {
+    show(host: HTMLElement, project: string, documentId = "", knowledgeId = "", inProject = false) {
+      if (root.parentElement === host && projectId === project && embedded === inProject) {
+        if (embedded) {
+          const details = options.projects?.().find((item) => item.id === project);
+          if (details) updateProjectHeading(root, details.name);
+          if (lastRequested !== documentId && !documentId && editor.id) closeProjectDocument();
+        }
         if (personal) void execute(() => syncPersonalRoute(documentId));
         else if (sourceView && (knowledgeId || documentId)) void load(project, documentId);
         else if (lastRequested !== documentId && documentId) {
@@ -841,6 +928,7 @@ export function createProjectDocumentWorkspace(options: {
           else void execute(() => select(documentId));
         }
       } else {
+        embedded = inProject;
         host.replaceChildren(root);
         void load(project, documentId);
       }

@@ -31,11 +31,20 @@ test("projects are explicit entities and associations survive restart without ch
     db.close();
     db = new ProjectCatalog(path);
     expect(db.snapshot()).toEqual(s);
-    s = db.assign(b.id, [{ id: "native-one", name: "A", cwd: "/shared/folder" }], s.revision);
-    expect(s.assignments.filter((x) => x.id === "native-one")).toHaveLength(1);
-    expect(s.assignments.find((x) => x.id === "native-one")?.cwd).toBe("/shared/folder");
-    s = db.assign(null, [{ id: "native-one" }], s.revision);
-    expect(s.assignments.find((x) => x.id === "native-one")).toBeUndefined();
+    expect(db.sessionProject("native-one")).toBe(a.id);
+    expect(db.sessionProject("as-yet-unbound")).toBeNull();
+    expect(() => db.assign(null, [{ id: "native-one" }], s.revision)).toThrow();
+    expect(() => db.assign(b.id, [{ id: "as-yet-unbound" }, { id: "native-one" }], s.revision)).toThrow();
+    expect(db.snapshot()).toEqual(s);
+    s = db.assign(a.id, [{ id: "native-one", name: "A renamed", cwd: "/shared/folder" }], s.revision);
+    expect(s.assignments.find((x) => x.id === "native-one")).toMatchObject({
+      projectId: a.id,
+      name: "A renamed",
+      cwd: "/shared/folder",
+    });
+    s = db.bindSession(b.id, { id: "as-yet-unbound", cwd: "/different/folder" });
+    expect(db.bindSession(b.id, { id: "as-yet-unbound" })).toEqual(s);
+    expect(db.sessionProject("as-yet-unbound")).toBe(b.id);
     expect(s.projects).toHaveLength(2);
   } finally {
     db.close();

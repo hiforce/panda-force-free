@@ -126,7 +126,8 @@ export class ZCodeHarnessAgent implements HarnessAgent {
             titleGenerationEnabled: false,
             ...(application
               ? {
-                  mcpServers: [{ ...application.mcpServer, alwaysLoad: true }],
+                  mcpServers:
+                    application.scope === "project-memory" ? [] : [{ ...application.mcpServer, alwaysLoad: true }],
                   // A nonempty list keeps discovery sessions closed to native tools as well.
                   toolAllowlist: tools.length ? tools : ["pandaforce_no_tools"],
                 }
@@ -276,6 +277,8 @@ export class ZCodeHarnessAgent implements HarnessAgent {
     void done.catch(() => {});
     const timer = setTimeout(() => this.turn?.reject(new HarnessError("timeout", 504)), 30 * 60 * 1000);
     try {
+      if (input.beforeDispatch) await input.beforeDispatch();
+      if (this.cancelled) return { stopReason: "cancelled" as const };
       const result = record(
         await this.transport.request("session/send", {
           sessionId: session.id,

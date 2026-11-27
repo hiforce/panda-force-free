@@ -13,6 +13,7 @@ interface PromptOptions {
   model: string;
   effort: string | null;
   creation: boolean;
+  reportUsage: boolean;
   toolBusy(): boolean;
   onToolIdle(wake?: () => void): void;
   activity(): void;
@@ -109,6 +110,8 @@ export async function harnessApplicationPrompts(options: PromptOptions) {
       await cancellation;
       cancellation = undefined;
       signal.throwIfAborted();
+      if (options.reportUsage && response.usage)
+        await callbacks.event?.({ kind: "usage", usage: { last: response.usage } });
       if (response.stopReason === "complete") inFlight?.resolve();
       else inFlight?.reject(new HarnessError("deliveryUncertain", 409));
       inFlight = undefined;

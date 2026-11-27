@@ -43,6 +43,13 @@ The documentation build currently inherits a low-severity [deepmerge advisory](h
 
 ## Run from source
 
+Clone the `develop` branch for the 0.2.1 source:
+
+```bash
+git clone --branch develop --depth 1 https://github.com/hiforce/panda-force-free.git
+cd panda-force-free
+```
+
 For source development, install Bun 1.4.2, Node.js 22, Git, Python 3 and a C++ build toolchain. The release uses Codex CLI 0.171.0. Keep model accounts and application state outside the checkout:
 
 ```bash
@@ -77,7 +84,7 @@ Keep account and workspace volumes when rebuilding. The release Dockerfile reuse
 
 ## Container base images
 
-The 0.1.11 source defaults to the public **Rocky creative build/runtime pair** for Linux amd64. Both include Codex CLI and Grok Build plus the reviewed Office/PDF/OCR, font, image, research, writing, browser and video tools. The build image adds the application development/native compilation dependencies; the runtime image carries production dependencies. [Contents, purpose, exact inputs and self-build workflow](base-images.md) explains the pair.
+The source checkout uses the public **Rocky creative build/runtime pair** for Linux amd64. Both include Codex CLI and Grok Build plus the reviewed Office/PDF/OCR, font, image, research, writing, browser and video tools. The build image adds the application development/native compilation dependencies; the runtime image carries production dependencies. [Contents, purpose, exact inputs and self-build workflow](base-images.md) explains the pair.
 
 The Dockerfile, both Compose build overlays and `scripts/build/base-images.json` use the same actual public digests. The [development container commands](#development-container) build your checkout using that pair.
 

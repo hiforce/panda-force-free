@@ -22,19 +22,23 @@ export class CliCredentials {
     private readonly now = Date.now,
   ) {}
   async issue(owner: string, server: string, input: unknown, authorize: (project: string) => Promise<void>) {
-    const p = cliObject(input, ["name", "kind", "projects", "capabilities", "expiresInDays"]),
+    const p = cliObject(input, ["name", "kind", "projects", "projectScope", "capabilities", "expiresInDays"]),
       name = cliText(p.name, 80);
+    const projectScope = p.projectScope ?? "selected";
+    const projectInput = p.projects ?? [];
     if (
       !["codex", "claude", "cli"].includes(String(p.kind)) ||
-      !Array.isArray(p.projects) ||
-      !p.projects.length ||
-      p.projects.length > 64 ||
+      (projectScope !== "selected" && projectScope !== "allAccessible") ||
+      !Array.isArray(projectInput) ||
+      (projectScope === "allAccessible"
+        ? projectInput.length !== 0
+        : !projectInput.length || projectInput.length > 64) ||
       !Array.isArray(p.capabilities) ||
       !p.capabilities.length ||
       p.capabilities.length > CLI_CAPABILITIES.length
     )
       throw new CliError("invalidInput");
-    const projects = [...new Set(p.projects.map(cliId))],
+    const projects = [...new Set(projectInput.map(cliId))],
       capabilities = [...new Set(p.capabilities)] as CliCapability[];
     if (
       capabilities.some((c) => !CLI_CAPABILITIES.includes(c)) ||
@@ -57,6 +61,7 @@ export class CliCredentials {
         keyId,
         owner,
         projects,
+        projectScope,
         capabilities,
         expiresAt,
         digest: digest(apiKey),
@@ -73,7 +78,7 @@ export class CliCredentials {
       kind: p.kind as CliClientKind,
       credentialRef: "credentials.json",
     };
-    return { registration, apiKey, expiresAt, projects, capabilities };
+    return { registration, apiKey, expiresAt, projects, projectScope, capabilities };
   }
   async authenticate(clientId: unknown, apiKey: unknown): Promise<CliGrant> {
     if (
@@ -97,8 +102,16 @@ export class CliCredentials {
     )
       throw new CliError("authenticationRequired", 401);
     await this.store.touch(row.key.keyId, this.now());
-    const { owner, keyId, projects, capabilities, expiresAt } = row.key;
-    return { owner, keyId, clientId, projects, capabilities, expiresAt };
+    const { owner, keyId, projects, projectScope, capabilities, expiresAt } = row.key;
+    return {
+      owner,
+      keyId,
+      clientId,
+      projects,
+      ...(projectScope === "allAccessible" ? { projectScope } : {}),
+      capabilities,
+      expiresAt,
+    };
   }
   async list(owner: string) {
     return (await this.store.list(owner)).map(({ client, key }) => ({
@@ -110,6 +123,7 @@ export class CliCredentials {
       expiresAt: key.expiresAt,
       lastUsedAt: key.lastUsedAt,
       projects: key.projects,
+      projectScope: key.projectScope ?? "selected",
       capabilities: key.capabilities,
     }));
   }

@@ -59,7 +59,9 @@ test("mixed native and managed associations persist atomically and broadcasts om
     expect(() => db.assign(project.id, [{ id: "other:invalid" }], saved.revision)).toThrow();
     expect(db.snapshot().revision).toBe(saved.revision);
     expect(db.snapshot().assignments).toHaveLength(3);
-    const removed = db.assign(null, [alice], saved.revision);
+    expect(() => db.assign(null, [alice], saved.revision)).toThrow();
+    expect(db.sessionProject(one)).toBe(project.id);
+    const removed = db.forgetSession(one)!;
     expect(removed.assignments.map((session) => session.id)).not.toContain(one);
   } finally {
     db.close();

@@ -15,6 +15,8 @@ import { openSearchDatabase } from "../storage/database.js";
 import { SearchSourceRegistry } from "../storage/registry.js";
 import { AnalyzerStore } from "../analyzers/store.js";
 import { LocalTextIndex } from "../providers/local.js";
+import { ElasticsearchIndex } from "../providers/elasticsearch.js";
+import type { SearchTextProjector } from "../ports.js";
 import { SearchIndexer } from "../indexer.js";
 import { ContentSearch } from "../service.js";
 import { knowledgeReason, pathSelected } from "../snippets.js";
@@ -341,6 +343,10 @@ export async function createSearchFeature(options: {
     };
     return {
       api,
+      async projectMemoryText(connection: string, projector: SearchTextProjector) {
+        if ((await connections.get(connection)).kind !== "elasticsearch") throw new SearchError("configuration", 409);
+        return new ElasticsearchIndex(await connections.http(connection), instance, projector);
+      },
       query: (owner: string, input: unknown, signal: AbortSignal) => query(owner, input, false, signal),
       status: (owner: string, project: unknown) => readStatus(owner, project),
       routes: searchRoutes(api),

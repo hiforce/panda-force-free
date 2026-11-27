@@ -6,7 +6,8 @@ import { join } from "node:path";
 import { isolatedMySQLDatabase } from "../support/mysql-database.js";
 import { DatabaseRegistry } from "../../src/server/database/registry.js";
 import { MySQLSchemaConnection } from "../../src/server/database/mysql-schema.js";
-import { mysqlProjectsModule } from "../../src/server/database/modules/projects.js";
+import { mysqlModelModule } from "../../src/server/database/mysql-model.js";
+import { mysqlProjectsModule, projectMySQLModels } from "../../src/server/database/modules/projects.js";
 import { mysqlDataMigrationModule } from "../../src/server/database/modules/migrations.js";
 import { ProjectCatalog } from "../../src/server/projects/catalog.js";
 import { ProjectDocumentStorage } from "../../src/server/projects/document-storage.js";
@@ -38,6 +39,10 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
         [{ id: "engine-session", name: "Preserved session", cwd: project.workspace!.path, updatedAt: 1234 }],
         original.revision,
       );
+      const managedId = "harness:00000000-0000-4000-8000-000000000001";
+      const checkpoint = { throughSeq: 72, throughBytes: 123_456 };
+      source.bindSession(project.id, { id: managedId, checkpoint });
+      expect(source.sessionMembership(managedId)).toEqual({ projectId: project.id, checkpoint });
       await writeFile(join(project.workspace!.path, "user-content.txt"), "Unchanged project file");
       const before = source.snapshot(),
         snapshotPath = join(root, "snapshot.sqlite"),
@@ -47,8 +52,14 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
       } finally {
         reader.close();
       }
+      const previousVersion = mysqlModelModule("projects", projectMySQLModels.slice(0, -1), {
+        readWrite: true,
+        importFrom: ["sqlite"],
+      });
+      const connection = new MySQLSchemaConnection(f.sql);
+      await new DatabaseRegistry().register(mysqlDataMigrationModule).register(previousVersion).upgrade(connection);
+      await new DatabaseRegistry().register(mysqlDataMigrationModule).register(mysqlProjectsModule).upgrade(connection);
       const registry = new DatabaseRegistry().register(mysqlDataMigrationModule).register(mysqlProjectsModule);
-      await registry.upgrade(new MySQLSchemaConnection(f.sql));
       await migrateProjectsSnapshot({ sql: f.sql, snapshotPath, migrationId: "projects-v1" });
       const first = new MySQLProjectCatalog(f.sql),
         second = new MySQLProjectCatalog(f.sql),
@@ -56,6 +67,10 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
           await first.bindFiles(p.id);
         });
       expect(await first.snapshot()).toEqual(before);
+      expect(await first.sessionMembership("engine-session")).toEqual({ projectId: project.id, checkpoint: null });
+      expect(await second.sessionMembership(managedId)).toEqual({ projectId: project.id, checkpoint });
+      await second.bindSession(project.id, { id: managedId, checkpoint: { throughSeq: 800, throughBytes: 900 } });
+      expect(await first.sessionMembership(managedId)).toEqual({ projectId: project.id, checkpoint });
       expect(await first.files(project.id)).toBe(true);
       expect(
         await service.create(
@@ -98,7 +113,37 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
       const refreshed = await second.refreshSessions([{ id: "engine-session", name: "Renamed session" }]);
       expect(refreshed?.assignments[0]!.updatedAt).toBe(1234);
       expect(refreshed?.assignments[0]!.name).toBe("Renamed session");
+      const competingId = "harness:00000000-0000-4000-8000-000000000002";
+      const firstCheckpoint = { throughSeq: 7, throughBytes: 456 };
+      const secondCheckpoint = { throughSeq: 9, throughBytes: 789 };
+      const bindingRace = await Promise.allSettled([
+        first.bindSession(project.id, { id: competingId, cwd: "/original-directory", checkpoint: firstCheckpoint }),
+        second.bindSession(added.id, { id: competingId, cwd: "/original-directory", checkpoint: secondCheckpoint }),
+      ]);
+      expect(bindingRace.map((result) => result.status).sort()).toEqual(["fulfilled", "rejected"]);
+      const bound = await second.sessionProject(competingId);
+      const other = bound === project.id ? added.id : project.id;
+      expect([project.id, added.id]).toContain(bound);
+      expect(await first.sessionMembership(competingId)).toEqual({
+        projectId: bound,
+        checkpoint: bound === project.id ? firstCheckpoint : secondCheckpoint,
+      });
+      const afterBinding = await second.snapshot();
+      await expect(
+        first.assign(other, [{ id: "stray" }, { id: competingId }], afterBinding.revision),
+      ).rejects.toMatchObject({ status: 409, messageId: "projects.sessionProjectLocked" });
+      await expect(first.assign(null, [{ id: competingId }], afterBinding.revision)).rejects.toMatchObject({
+        status: 409,
+        messageId: "projects.sessionProjectLocked",
+      });
+      expect(await new MySQLProjectCatalog(f.sql).snapshot()).toEqual(afterBinding);
+      expect(await first.sessionProject("stray")).toBeNull();
       await first.forgetSession("engine-session");
+      await second.forgetSession(competingId);
+      await second.forgetSession(managedId);
+      expect(await first.sessionMembership(competingId)).toBeNull();
+      expect(await first.sessionMembership(managedId)).toBeNull();
+      expect(Number((await f.sql`SELECT COUNT(*) n FROM panda_force_session_project_checkpoints`)[0].n)).toBe(0);
       expect((await second.snapshot()).assignments).toEqual([]);
       expect(await registry.inspect(new MySQLSchemaConnection(f.sql))).toEqual([]);
     } finally {

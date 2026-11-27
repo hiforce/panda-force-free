@@ -151,7 +151,11 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
         pendingAssignments.delete(thread.id);
         return;
       }
-      await this.assign(id, [thread.id]);
+      try {
+        await this.assign(id, [thread.id]);
+      } catch (error) {
+        if (assignments.get(thread.id)?.projectId !== id) throw error;
+      }
       pendingAssignments.delete(thread.id);
     },
   };

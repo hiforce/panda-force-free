@@ -3,9 +3,16 @@ import type { SessionSummary, ProjectSnapshot } from "../../shared/engine/types.
 import type { ProjectDirectoryPolicy } from "./directory-policy.js";
 import { ProjectError } from "./catalog.js";
 
+import type { ProjectSessionBinding } from "./session-membership.js";
+
 export interface ManagedProjectSessions<Context> {
   get(context: Context, id: string): Promise<SessionSummary>;
   list(context: Context): Promise<SessionSummary[]>;
+  withAssignmentCheckpoints?<T>(
+    context: Context,
+    ids: readonly string[],
+    commit: (sessions: readonly ProjectSessionBinding[]) => Promise<T>,
+  ): Promise<T>;
 }
 
 /** Project associations resolve public identities through their owning conversation service. */

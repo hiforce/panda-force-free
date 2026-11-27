@@ -435,6 +435,48 @@
 .composer-settings-menu[hidden] {
   display: none;
 }
+.composer-memory-mode {
+  padding: var(--pf-space-1) var(--pf-space-3) 0;
+}
+.composer-private-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pf-space-2);
+  min-block-size: var(--pf-control-height);
+  padding-inline: var(--pf-space-2);
+  border: 0;
+  border-radius: var(--pf-radius-sm);
+  background: transparent;
+  color: var(--pf-muted);
+  font-size: var(--pf-text-label);
+  line-height: 1.25;
+  cursor: pointer;
+}
+.composer-private-switch:hover,
+.composer-private-switch[aria-checked="true"] {
+  color: var(--pf-ink);
+}
+.composer-private-switch:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: -2px;
+}
+.composer-private-active {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pf-space-2);
+  padding-inline: var(--pf-space-2);
+  color: var(--pf-muted);
+  font-size: var(--pf-text-label);
+}
+.composer-private-switch[hidden],
+.composer-private-active[hidden] {
+  display: none;
+}
+@media (max-width: 767px) {
+  .composer-private-switch {
+    min-block-size: var(--pf-touch-target);
+  }
+}
 .composer-settings-row {
   display: flex;
   align-items: center;

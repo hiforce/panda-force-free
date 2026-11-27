@@ -130,6 +130,7 @@ export interface SessionSummary {
   source?: string;
   sideTask?: boolean;
   projectless?: boolean;
+  memoryPrivate?: true;
   status?: SessionStatus;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;

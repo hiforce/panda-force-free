@@ -9,10 +9,17 @@
     flex-direction: column;
     scrollbar-gutter: auto;
   }
-  .workbench-view:has(.project-document-authoring) > :is(#workbenchHero, #workbenchComposerSlot) {
+  .workbench-view:has(.project-creation-documents, .project-gallery[data-open]) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-block: var(--pf-space-3);
+  }
+  .workbench-view:has(.project-document-authoring, .project-gallery[data-open])
+    > :is(#workbenchHero, #workbenchComposerSlot) {
     display: none;
   }
-  .workbench-view:has(.project-document-authoring) > #workbenchContent {
+  .workbench-view:has(.project-document-authoring, .project-gallery[data-open]) > #workbenchContent {
     width: 100%;
     max-width: none;
     min-height: 0;
@@ -96,10 +103,10 @@
     width: 17px;
     height: 17px;
   }
-  .project-document-authoring > .document-authoring-context {
+  .project-document-authoring .document-authoring-context {
     display: none;
   }
-  .project-document-authoring > .documents-notice {
+  .project-document-authoring .documents-notice {
     position: absolute;
     z-index: 30;
     top: 56px;
@@ -121,7 +128,61 @@
     align-self: stretch;
     max-height: none;
     min-height: 0;
-    padding: calc(var(--document-header-height) + 10px) 10px 12px;
+    padding: var(--directory-top-padding, calc(var(--document-header-height) + 10px)) 10px 12px;
+  }
+  .project-creation-documents {
+    --document-directory-width: var(--project-reader-rail-width);
+    --directory-top-padding: var(--pf-space-2);
+  }
+  .project-creation-documents .document-authoring-layout {
+    border: 1px solid var(--pf-line);
+    border-radius: var(--pf-radius);
+  }
+  .project-creation-documents.document-open {
+    --directory-top-padding: calc(var(--document-header-height) + var(--pf-space-2));
+  }
+  :is(.project-creation-documents.document-open, .project-creation-gallery:has(.project-gallery[data-open]))
+    > .project-overview-heading {
+    position: absolute;
+    z-index: 16;
+    inset-block-start: 1px;
+    inset-inline-start: calc(var(--project-category-width) + var(--project-category-gap) + 1px);
+    width: calc(var(--project-reader-rail-width) - 1px);
+    height: var(--project-reader-bar-height, var(--document-header-height));
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--pf-space-1);
+    margin: 0;
+    padding-inline: var(--pf-space-2);
+    background: var(--pf-canvas);
+    border-radius: var(--pf-radius) 0 0 0;
+  }
+  :is(.project-creation-documents.document-open, .project-creation-gallery:has(.project-gallery[data-open]))
+    > .project-overview-heading
+    .project-overview-identity {
+    max-width: none;
+  }
+  :is(.project-creation-documents.document-open, .project-creation-gallery:has(.project-gallery[data-open]))
+    > .project-overview-heading
+    h1 {
+    font-size: var(--pf-text-body);
+  }
+  :is(.project-creation-documents.document-open, .project-creation-gallery:has(.project-gallery[data-open]))
+    > .project-overview-heading
+    .resource-project-tabs {
+    display: none;
+  }
+  .project-creation-documents .authoring-directory-heading {
+    padding-block-end: var(--pf-space-1);
+  }
+  .project-creation-documents .authoring-directory-utilities .wb-button {
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+  }
+  .project-creation-documents .authoring-directory-heading strong {
+    color: var(--pf-ink);
+    font-size: var(--pf-text-label);
+    font-weight: 600;
   }
   .project-document-authoring .authoring-directory-heading {
     min-height: 28px;
@@ -230,6 +291,9 @@
     max-width: var(--workspace-document-width);
     padding: 32px 40px 8px;
   }
+  .project-creation-documents .document-authoring-editor .document-rich-title {
+    padding-block-start: var(--pf-space-5);
+  }
   .document-authoring-editor .document-rich-status {
     display: none;
   }
@@ -255,6 +319,9 @@
   .document-authoring-editor .document-toolbar-marker {
     height: 1px;
     margin-top: 23px;
+  }
+  .project-creation-documents .document-toolbar-marker {
+    margin-top: var(--pf-space-2);
   }
   .document-authoring-editor .document-toolbar-slot {
     position: sticky;

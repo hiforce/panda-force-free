@@ -126,7 +126,8 @@ try {
         return route.continue();
       });
       await page.goto(app.base + "/project?id=" + project);
-      await page.locator('[data-creative-filter="image"]').click();
+      if (width <= 700) await page.locator("#projectCreationCategory").selectOption("image");
+      else await page.locator('[data-creative-filter="image"]').click();
       const cards = page.locator('.creative-card[data-creative-kind="image"]');
       await cards
         .first()
@@ -188,9 +189,7 @@ try {
       await page.locator("[data-creative-search]").fill("");
       assert.equal(await cards.count(), 2);
       for (const next of [locale === "en" ? "zh-CN" : "en", locale]) {
-        await page.locator(`[data-chrome-menu="${width < 768 ? "preferences" : "language"}"]`).click();
-        if (width < 768) await page.locator('[data-chrome-action="menu"][data-value="language"]').click();
-        await page.locator(`[data-chrome-action="locale"][data-value="${next}"]`).click();
+        await page.evaluate((language) => window.__pandaForceI18n.setPreference(language), next);
         await waitFor(() =>
           page
             .locator("html")
@@ -215,12 +214,12 @@ try {
       await page.screenshot({ path: `${out}/gallery-${locale}-${width}.png` });
       await page.locator(`[data-creative-asset="${target.id}"]`).focus();
       await page.keyboard.press("Enter");
-      const dialog = page.locator(".creative-asset-dialog[open]");
+      const viewer = page.locator("[data-project-asset-reader]");
       await waitFor(() =>
-        dialog.locator("img[data-asset-native]").evaluate((img) => img.complete && img.naturalWidth === 1400),
+        viewer.locator("img[data-asset-native]").evaluate((img) => img.complete && img.naturalWidth === 1400),
       );
       await page.keyboard.press("Escape");
-      await dialog.waitFor({ state: "hidden" });
+      await viewer.waitFor({ state: "hidden" });
       await page.locator("[data-creative-search]").fill("local");
       await page.goto(app.base + "/workspace");
       assert.equal(await page.locator("img[data-creative-cover]").count(), 0);

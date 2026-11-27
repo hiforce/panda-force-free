@@ -435,7 +435,7 @@ export interface UsagePort {
 
 export interface SettingsPort {
   bind: () => void;
-  openSettings: (page?: string) => void;
+  openSettings: (page?: string, options?: { route?: string }) => void;
   settingsRoutePage: (pathname?: string) => string;
   hideSettings: () => void;
   showSettings: (page?: string, { updateRoute }?: { updateRoute?: boolean | undefined }) => void;

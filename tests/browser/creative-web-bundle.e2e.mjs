@@ -32,7 +32,7 @@ try {
         assert.equal(created.status(), 201);
         project = (await created.json()).projects.find((row) => row.code === "web-bundle").id;
       }
-      const path = project === "personal" ? "/create" : "/project?id=" + project,
+      const path = project === "personal" ? "/create" : "/project?id=" + project + "&kind=web",
         page = await context.newPage(),
         errors = [],
         requests = [];
@@ -42,7 +42,7 @@ try {
         if (request.url().includes("external.invalid")) requests.push(request.url());
       });
       await page.goto(app.base + path);
-      await page.locator("[data-creative-import]").click();
+      await page.locator(project === "personal" ? "[data-creative-import]" : ".project-gallery-upload").click();
       const dialog = page.locator(".creative-asset-dialog[open]"),
         file = dialog.locator('[name="document-source"]'),
         submit = dialog.locator('[type="submit"]');
@@ -113,9 +113,10 @@ try {
       assert.equal(asset.resources.length, Object.keys(files).length - 1);
       await dialog.waitFor({ state: "hidden" });
       await page.locator(`[data-creative-asset="${asset.id}"]`).click();
-      const frame = dialog.frameLocator("[data-asset-frame]");
+      const viewer = project === "personal" ? dialog : page.locator("[data-project-asset-reader]");
+      const frame = viewer.frameLocator("[data-asset-frame]");
       await frame.locator("h1").waitFor();
-      assert.equal(await dialog.locator("[data-asset-frame]").getAttribute("sandbox"), "");
+      assert.equal(await viewer.locator("[data-asset-frame]").getAttribute("sandbox"), "");
       assert.equal(await frame.locator("h1").evaluate((element) => getComputedStyle(element).color), "rgb(14, 48, 64)");
       assert.equal(
         await frame.locator("body").evaluate((element) => getComputedStyle(element).backgroundColor),
@@ -142,7 +143,7 @@ try {
       );
       assert.deepEqual(requests, []);
       await page.screenshot({ path: out + "/preview-" + width + ".png" });
-      const download = await dialog.locator('a[href*="export-bundle"]').getAttribute("href");
+      const download = await viewer.locator('a[href*="export-bundle"]').getAttribute("href");
       assert.equal(new URL(download, app.base).searchParams.get("version"), asset.version);
       const exported = await context.request.get(app.base + download);
       assert.equal(exported.status(), 200);

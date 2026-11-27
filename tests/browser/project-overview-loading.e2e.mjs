@@ -44,18 +44,22 @@ try {
       assert.equal(await page.locator(".project-overview-placeholders").isVisible(), true);
       await page.screenshot({ path: `${out}/loading-${width}.png` });
       release();
-      await page.locator(".project-overview-empty").waitFor();
+      await page.locator(".project-gallery-empty").waitFor();
       assert.equal(
         [...reads.values()].every((count) => count === 1),
         true,
         "Mount must reuse initial reads",
       );
-      assert.equal(await page.locator("[data-system-composer]").isVisible(), true);
-      assert.equal(await page.locator("[data-project-code]").textContent(), project.code);
+      assert.equal(await page.locator("[data-system-composer]").isVisible(), false);
+      assert.equal(
+        await page.locator(width <= 700 ? "#projectCreationCategory" : ".project-creation-categories").isVisible(),
+        true,
+      );
       const buttons = page.locator("[data-creative-new]");
       assert.equal(await buttons.isEnabled(), true);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       await page.screenshot({ path: `${out}/empty-${width}.png` });
+      await page.locator(".project-create-menu > summary").click();
       await buttons.click();
       await page.locator("#documentTitle").waitFor();
       assert.deepEqual(errors, []);

@@ -313,6 +313,15 @@
 [data-workbench-page="new"] .workspace-context-path {
   display: none;
 }
+.panda-workspace[data-workbench-page="new"] .workspace-context-row .thread-heading {
+  flex: 0 1 auto;
+}
+.panda-workspace[data-workbench-page="new"] #threadPath {
+  display: none;
+}
+[data-workbench-page="new"] .workspace-context-actions {
+  margin-inline-start: auto;
+}
 .panda-workspace .session-inspector {
   width: var(--session-inspector-width);
 }
@@ -497,6 +506,15 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 56px minmax(0, 1fr) var(--pf-mobile-nav-height);
   }
+  .panda-workspace.project-creation-page .app-shell {
+    grid-template-rows: 0 minmax(0, 1fr) var(--pf-mobile-nav-height);
+  }
+  .panda-workspace.project-creation-page .topbar {
+    display: none;
+  }
+  .panda-workspace.project-creation-page .workbench-view {
+    padding-block-start: var(--pf-space-1);
+  }
   .panda-workspace .topbar {
     height: 56px;
     padding: 0 10px;
@@ -622,4 +640,14 @@
 .horizontal-carousel-controls .icon-button:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+@media (max-width: 700px) {
+  .panda-workspace:is(.project-creation-page, .project-creation-reading, :has(.project-gallery[data-open])) {
+    --pf-mobile-nav-height: 0px;
+  }
+  .panda-workspace:is(.project-creation-page, .project-creation-reading, :has(.project-gallery[data-open]))
+    .workbench-mobile-nav {
+    display: none;
+  }
 }

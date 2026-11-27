@@ -39,7 +39,7 @@ export class CreativeSlidePreviews {
       });
     const source = await current(),
       key = JSON.stringify([owner, project, id, version, source.resource.digest]);
-    const deck = await this.deck(key, signal, async (preparing) => {
+    return this.readRevision(key, page, signal, current, async (preparing) => {
       const original = await service.resource(project, id, {
         version,
         signal: preparing,
@@ -50,10 +50,25 @@ export class CreativeSlidePreviews {
       });
       return renderSlideDeck(original.bytes!, preparing);
     });
+  }
+
+  /** Scope cached renders by source identity and recheck access before sending each page. */
+  async readRevision(
+    key: string,
+    page: number,
+    signal: AbortSignal,
+    authorize: () => Promise<unknown>,
+    prepare: (signal: AbortSignal) => Promise<RenderedSlideDeck>,
+  ) {
+    const deck = await this.deck(key, signal, prepare);
     if (page > deck.pages) throw new DocumentError("notFound", 404);
     const bytes = await rasterSlide(deck, page, signal);
-    await current();
+    await authorize();
     return { bytes, pages: deck.pages };
+  }
+
+  async countRevision(key: string, signal: AbortSignal, prepare: (signal: AbortSignal) => Promise<RenderedSlideDeck>) {
+    return (await this.deck(key, signal, prepare)).pages;
   }
 
   private async deck(key: string, signal: AbortSignal, prepare: (signal: AbortSignal) => Promise<RenderedSlideDeck>) {

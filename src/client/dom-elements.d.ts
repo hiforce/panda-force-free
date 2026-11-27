@@ -1,5 +1,6 @@
 // Generated from interface templates by scripts/quality/dom-types.mjs.
 export interface InterfaceElements {
+  "# ": HTMLElementTagNameMap["p"];
   "#accountAvatar": HTMLElementTagNameMap["span"];
   "#accountButton": HTMLElementTagNameMap["button"];
   "#accountFooterMeta": HTMLElementTagNameMap["small"];
@@ -173,6 +174,7 @@ export interface InterfaceElements {
   "#projectName": HTMLElementTagNameMap["span"];
   "#projectNameInput": HTMLElementTagNameMap["input"];
   "#projectPath": HTMLElementTagNameMap["span"];
+  "#projectSessionCount": HTMLElementTagNameMap["p"];
   "#projectSessionDirectory": HTMLElementTagNameMap["select"];
   "#projectSessionResults": HTMLElementTagNameMap["div"];
   "#projectSessionSearch": HTMLElementTagNameMap["input"];
@@ -212,6 +214,9 @@ export interface InterfaceElements {
   "#sessionInspectorScroll": HTMLElementTagNameMap["div"];
   "#sessionInspectorTitle": HTMLElementTagNameMap["h2"];
   "#sessionLocalTool": HTMLElementTagNameMap["div"];
+  "#sessionMemoryActions": HTMLElementTagNameMap["div"];
+  "#sessionMemoryControl": HTMLElementTagNameMap["section"];
+  "#sessionMemoryHeading": HTMLElementTagNameMap["h3"];
   "#sessionMirrorEffort": HTMLElementTagNameMap["small"];
   "#sessionMirrorModel": HTMLElementTagNameMap["strong"];
   "#sessionMirrorPermission": HTMLElementTagNameMap["strong"];
@@ -224,6 +229,8 @@ export interface InterfaceElements {
   "#sessionOverview": HTMLElementTagNameMap["section"];
   "#sessionOverviewTab": HTMLElementTagNameMap["button"];
   "#sessionPendingAction": HTMLElementTagNameMap["button"];
+  "#sessionProjectActionIcon": HTMLElementTagNameMap["span"];
+  "#sessionProjectFolderHint": HTMLElementTagNameMap["span"];
   "#sessionProjectName": HTMLElementTagNameMap["strong"];
   "#sessionProjectSelect": HTMLElementTagNameMap["select"];
   "#sessionReloadModels": HTMLElementTagNameMap["button"];
@@ -250,6 +257,7 @@ export interface InterfaceElements {
   "#settings-appearance-heading": HTMLElementTagNameMap["h2"];
   "#settings-conversation-heading": HTMLElementTagNameMap["h2"];
   "#settings-notifications-heading": HTMLElementTagNameMap["h2"];
+  "#settings-region-heading": HTMLElementTagNameMap["h2"];
   "#settings-shortcuts-heading": HTMLElementTagNameMap["h2"];
   "#settingsAccountAvatar": HTMLElementTagNameMap["span"];
   "#settingsAccountMeta": HTMLElementTagNameMap["small"];

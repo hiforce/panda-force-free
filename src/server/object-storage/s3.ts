@@ -1,3 +1,4 @@
+import { s3Multipart } from "./multipart.js";
 import type { S3Connection, S3Credentials, S3ObjectReceipt } from "./contracts.js";
 import { ObjectStorageError } from "./contracts.js";
 import { s3Query, s3UriEncode, signS3Headers, signS3Download, storageSha256 } from "./sigv4.js";
@@ -131,32 +132,41 @@ export class PrivateS3Client {
     this.connection = Object.freeze(validateS3Connection(connection));
     this.#credentials = validateS3Credentials(credentials);
   }
-  private url(key: string, versionId?: string) {
-    checkedText(key, 1024);
-    if (key.split("/").some((part) => !part || part === "." || part === "..") || key.includes("\\")) invalid();
+  private url(key: string | null, versionId?: string) {
+    if (key !== null) {
+      checkedText(key, 1024);
+      if (key.split("/").some((part) => !part || part === "." || part === "..") || key.includes("\\")) invalid();
+    }
     const url = new URL(this.connection.endpoint);
     if (!this.connection.forcePathStyle) url.hostname = this.connection.bucket + "." + url.hostname;
     url.pathname =
       "/" +
-      [...(this.connection.forcePathStyle ? [this.connection.bucket] : []), ...key.split("/")]
+      [...(this.connection.forcePathStyle ? [this.connection.bucket] : []), ...(key?.split("/") ?? [])]
         .map(s3UriEncode)
         .join("/");
     if (versionId !== undefined) url.search = s3Query([["versionId", version(versionId)]]);
     return url;
   }
   private async request(
-    method: "GET" | "HEAD" | "PUT" | "DELETE",
-    key: string,
+    method: "GET" | "HEAD" | "PUT" | "POST" | "DELETE",
+    key: string | null,
     options: {
       versionId?: string;
+      query?: Record<string, string>;
+      timeoutMs?: number;
       headers?: Record<string, string>;
       body?: Uint8Array;
       signal?: AbortSignal;
     } = {},
   ) {
-    const url = this.url(key, options.versionId),
-      body = new Uint8Array(options.body ?? []),
-      signal = AbortSignal.any([AbortSignal.timeout(30000), ...(options.signal ? [options.signal] : [])]),
+    const url = this.url(key, options.versionId);
+    for (const [name, value] of Object.entries(options.query ?? {})) url.searchParams.set(name, value);
+    url.search = s3Query(url.searchParams);
+    const body = new Uint8Array(options.body ?? []),
+      signal = AbortSignal.any([
+        AbortSignal.timeout(options.timeoutMs ?? 30000),
+        ...(options.signal ? [options.signal] : []),
+      ]),
       headers = signS3Headers({
         method,
         url,
@@ -170,7 +180,7 @@ export class PrivateS3Client {
       response = await this.transport(url, {
         method,
         headers,
-        body: method === "PUT" ? body : undefined,
+        body: method === "PUT" || method === "POST" ? body : undefined,
         redirect: "error",
         signal,
       });
@@ -190,6 +200,9 @@ export class PrivateS3Client {
       );
     }
     return { response, signal };
+  }
+  multipart() {
+    return s3Multipart(this.request.bind(this), boundedBody);
   }
   downloadUrl(
     key: string,

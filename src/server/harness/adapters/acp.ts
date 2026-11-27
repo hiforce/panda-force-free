@@ -80,5 +80,8 @@ export async function acpPrompt(input: HarnessPrompt, capabilities: HarnessCapab
       });
     } else throw new HarnessError("capabilityUnavailable", 409);
   }
+  if (capabilities.imageInput)
+    for (const item of input.visualEvidence ?? [])
+      prompt.push({ type: "image", mimeType: item.mimeType, data: item.base64 });
   return prompt;
 }

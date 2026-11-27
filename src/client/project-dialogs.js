@@ -249,20 +249,20 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
       saving = false,
       revision = catalog.revision;
     open(
-      fixedProject ? "common.linkExistingSessions" : "common.changeProject",
+      fixedProject ? "common.linkExistingSessions" : "projects.linkSessionToProject",
       `<form id="projectAssociationForm" class="project-form">
       ${fixedProject ? "" : `<label class="sr-only" for="associationProjectSearch">${messageHtml("sessionview.searchProjects", undefined, t)}</label><input id="associationProjectSearch" type="search" ${messageAttributes("placeholder", "sessionview.searchProjects", undefined, t)} />`}
-      <label for="associationProject">${messageHtml("common.project", undefined, t)}</label><select id="associationProject" ${fixedProject ? "disabled" : ""}><option value="" data-pf-message="common.unassigned">${escape(t("common.unassigned"))}</option>${catalog
+      <label for="associationProject">${messageHtml("common.project", undefined, t)}</label><select id="associationProject" ${fixedProject ? "disabled" : ""}><option value="" data-pf-message="projects.chooseProjectToLink">${escape(t("projects.chooseProjectToLink"))}</option>${catalog
         .projects()
         .map(
           (p) =>
             `<option value="${escape(p.id)}" ${p.id === projectId ? "selected" : ""}>${escape(p.name)} · ${escape(p.code)}</option>`,
         )
         .join("")}</select>
-      <p class="wb-help">${messageHtml("projects.linkingChangesOnlyTheProjectAssociationSessionContentsAndWorking", undefined, t)}</p>
+      <p class="wb-help">${messageHtml("projects.firstLinkIsPermanent", undefined, t)}</p>
       ${fixedProject ? `<label for="associationSearch">${messageHtml("common.searchSessions", undefined, t)}</label><input id="associationSearch" type="search" ${messageAttributes("placeholder", "projects.searchBySessionNameOrWorkingFolder", undefined, t)}><label for="associationDirectory">${messageHtml("sessions.byDirectory", undefined, t)}</label><select id="associationDirectory" class="project-directory-filter" disabled><option value="*">${messageHtml("sessions.loadingDirectories", undefined, t)}</option></select><p id="associationDirectoryStatus" class="wb-help" role="status"></p>` : ""}
-      <div id="associationSessions" class="project-session-picker"></div><button type="button" id="associationMore" class="wb-button" hidden>${messageHtml("projects.loadOlderSessions", undefined, t)}</button>
-      <footer><span id="associationCount"></span><button type="submit" class="wb-button primary">${messageHtml(fixedProject ? "common.linkSelectedSessions" : "common.saveAssociation", undefined, t)}</button></footer></form>`,
+      <div id="associationSessions" class="project-session-picker" ${fixedProject ? "" : "hidden"}></div><button type="button" id="associationMore" class="wb-button" hidden>${messageHtml("projects.loadOlderSessions", undefined, t)}</button>
+      <footer><span id="associationCount" ${fixedProject ? "" : "hidden"}></span><button type="submit" class="wb-button primary">${messageHtml(fixedProject ? "common.linkSelectedSessions" : "common.saveAssociation", undefined, t)}</button></footer></form>`,
     );
     const opened = generation,
       form = requireElement("form", dialog),
@@ -282,7 +282,7 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
         if (current && !entries.some((project) => project.id === value)) entries.unshift(current);
         const empty = document.createElement("option");
         empty.value = "";
-        localizeText(empty, "common.unassigned", undefined, t);
+        localizeText(empty, "projects.chooseProjectToLink", undefined, t);
         selector.replaceChildren(empty);
         for (const project of entries) {
           const option = document.createElement("option");
@@ -291,23 +291,26 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
           selector.append(option);
         }
         selector.value = value;
+        render();
       };
     function render() {
-      setMessageHtml(
-        list,
-        sessions.length
-          ? sessions
-              .map((s) => {
-                const current = catalog.projectForSession(s.id),
-                  already = fixedProject && current?.id === projectId;
-                return `<label class="project-session-option"><input type="checkbox" value="${escape(s.id)}" ${selected.has(s.id) ? "checked" : ""} ${already || saving ? "disabled" : ""}><span data-i18n-ignore><strong>${escape(s.name || s.id)}</strong><small>${escape(s.cwd || t("common.noWorkingFolder"))}</small><small>${current ? escape(t("projects.currentlyInProject", { project: current.name })) : escape(t("common.unassigned"))}${already ? " · " + escape(t("projects.alreadyLinked")) : ""}</small></span></label>`;
-              })
-              .join("")
-          : `<p class="wb-help">${messageHtml(busy ? "workbench.loadingSessions" : "common.noMatchingSessions", undefined, t)}</p>`,
-      );
+      const available = fixedProject ? sessions.filter((item) => !catalog.assignment(item.id)) : sessions;
+      if (fixedProject) for (const id of selected) if (catalog.assignment(id)) selected.delete(id);
+      if (fixedProject)
+        setMessageHtml(
+          list,
+          available.length
+            ? available
+                .map((s) => {
+                  return `<label class="project-session-option"><input type="checkbox" value="${escape(s.id)}" ${selected.has(s.id) ? "checked" : ""} ${saving ? "disabled" : ""}><span data-i18n-ignore><strong>${escape(s.name || s.id)}</strong><small>${escape(s.cwd || t("common.noWorkingFolder"))}</small></span></label>`;
+                })
+                .join("")
+            : `<p class="wb-help">${messageHtml(busy ? "workbench.loadingSessions" : "common.noMatchingSessions", undefined, t)}</p>`,
+        );
       more.hidden = !cursor;
       more.disabled = busy;
-      submit.disabled = busy || saving || selected.size === 0 || selected.size > 100;
+      const selectProject = requireElement("#associationProject", dialog);
+      submit.disabled = busy || saving || selected.size === 0 || selected.size > 100 || !selectProject.value;
       form.setAttribute("aria-busy", String(saving));
       requireElement("#associationProject", dialog).disabled = fixedProject || saving;
       localizeText(
@@ -401,14 +404,17 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
       };
       more.onclick = () => void load(true);
       void load();
-    } else render();
+    } else {
+      requireElement("#associationProject", dialog).onchange = render;
+      render();
+    }
     form.onsubmit = async (event) => {
       event.preventDefault();
-      if (saving || busy || !selected.size || selected.size > 100) return;
+      const target = fixedProject ? projectId : requireElement("#associationProject", dialog).value;
+      if (saving || busy || !target || !selected.size || selected.size > 100) return;
       saving = true;
       render();
       try {
-        const target = fixedProject ? projectId : requireElement("#associationProject", dialog).value || null;
         await catalog.assign(target, [...selected], revision);
         if (generation === opened) dialog.close();
         onAssigned?.();

@@ -19,7 +19,7 @@ export async function executeCliCommand(
   const args = cliCommandArguments(spec, p.args);
   if (!cliCommandAllowed(spec, args, grant.capabilities)) throw new CliError("forbidden", 403);
   const project = cliId(args.project);
-  if (!grant.projects.includes(project)) throw new CliError("forbidden", 403);
+  if (grant.projectScope !== "allAccessible" && !grant.projects.includes(project)) throw new CliError("forbidden", 403);
   signal.throwIfAborted();
   return commands.execute(grant.owner, spec.id, args, signal);
 }

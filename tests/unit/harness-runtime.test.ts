@@ -9,7 +9,7 @@ import { HarnessRegistry } from "../../src/server/harness/registry.js";
 import { HarnessConversations, type HarnessConversationOptions } from "../../src/server/harness/conversations.js";
 import { HarnessStdioTransport } from "../../src/server/harness/adapters/stdio.js";
 import type { HarnessAgent, HarnessAgentEvent, HarnessAgentInfo } from "../../src/server/harness/ports.js";
-import { HarnessError, type HarnessPermissionMode } from "../../src/shared/harness/contracts.js";
+import { HarnessError, HarnessPromptError, type HarnessPermissionMode } from "../../src/shared/harness/contracts.js";
 import { HarnessDiagnostics } from "../../src/server/harness/diagnostics.js";
 import { applicationRuntimes } from "../../src/server/harness/application.js";
 import {
@@ -17,6 +17,19 @@ import {
   createHarnessWorkspace,
   harnessOutputReader,
 } from "../../src/server/harness/workspaces.js";
+import { ProjectMemory } from "../../src/server/project-memory/service.js";
+import {
+  memoryFixtureOrganizer,
+  memoryFixturePolicy,
+  runDueMemory,
+  stageCompletedMemory,
+} from "../support/memory-organization.js";
+import type { ModelReviewPort } from "../../src/server/project-memory/model-review.js";
+import { conversationKey, type MemoryConversation } from "../../src/server/project-memory/records.js";
+import { decode, save } from "../../src/server/harness/records.js";
+import { ProjectCatalog } from "../../src/server/projects/catalog.js";
+import type { ProjectSessionMembership } from "../../src/server/projects/session-membership.js";
+import { harnessConversationId } from "../../src/shared/harness/presentation.js";
 import { serveHostAgent } from "../../src/server/harness/host.js";
 const directories: string[] = [];
 const cleanups: Array<() => Promise<unknown>> = [];
@@ -425,6 +438,11 @@ async function fixture(
   options: {
     fail?: boolean;
     hold?: boolean;
+    memory?: boolean;
+    projectBinding?: (id: string) => Promise<ProjectSessionMembership | null>;
+    beforeOpen?: () => Promise<void>;
+    modelReview?: ModelReviewPort;
+    memoryClock?: () => number;
     sourcePage?: HarnessConversationOptions["sourcePage"];
     initialInfo?: HarnessAgentInfo;
     sessionInfo?: HarnessAgentInfo;
@@ -440,6 +458,7 @@ async function fixture(
   const open = async (cwd: string, id = randomUUID()) => {
     opened++;
     if (options.openFailure) throw options.openFailure;
+    await options.beforeOpen?.();
     return { id, cwd, ...(options.sessionInfo ? { info: options.sessionInfo } : {}) };
   };
   let release: (() => void) | null = null;
@@ -479,9 +498,20 @@ async function fixture(
     })),
   );
   await registry.initialize();
+  const history = new JsonlHarnessHistory(join(directory, "history"));
+  const memory = new ProjectMemory(
+    metadata,
+    history,
+    async () => {},
+    undefined,
+    options.memoryClock,
+    options.projectBinding,
+    options.modelReview ?? memoryFixtureOrganizer,
+  );
   const conversations = new HarnessConversations({
     metadata,
-    history: new JsonlHarnessHistory(join(directory, "history")),
+    history,
+    memory: options.memory ? memory : undefined,
     registry,
     workspace: async () => directory,
     authorize: async () => {},
@@ -490,19 +520,499 @@ async function fixture(
   });
   cleanups.push(async () => {
     await conversations.close();
+    await memory.close();
     await metadata.close();
   });
   return {
     directory,
+    memory,
     metadata,
     registry,
     conversations,
     prompts,
     openedModes,
+    settleMemory: () => runDueMemory(metadata, memory),
     lifecycle: () => ({ opened, closed }),
     release: () => release?.(),
   };
 }
+test("project memory learns a completed user's convention, scopes recall and refreshes revoked native bindings", async () => {
+  const { conversations, memory, prompts, metadata, settleMemory } = await fixture({ memory: true });
+  const projectId = "atlas";
+  const create = async (projectId: string, runtimeId: string, principal = administrator) =>
+    (await conversations.create(principal, { projectId, runtimeId })).conversation.id;
+  const source = await create(projectId, "codex");
+  const release = await create(projectId, "grok-build");
+  const sibling = await create("another-project", "grok-build");
+  const neighbor = { owner: "neighbor", administrator: true };
+  const privateConversation = await create(projectId, "grok-build", neighbor);
+  const send = async (id: string, text: string, principal = administrator) => {
+    const response = await conversations.submit(principal, id, { requestId: randomUUID(), text });
+    await eventually(async () => (await conversations.snapshot(principal, id)).run?.status === "complete");
+    await settleMemory();
+    return response.runId;
+  };
+
+  await send(source, "Project convention [release]: cache ttl = ignored");
+  expect(await memory.catalog(administrator.owner, projectId)).toEqual([]);
+  await memory.configure(administrator.owner, projectId, {
+    revision: 0,
+    write: true,
+    recall: true,
+    model: memoryFixturePolicy,
+  });
+  await memory.configure(neighbor.owner, projectId, {
+    revision: 0,
+    write: true,
+    recall: true,
+    model: memoryFixturePolicy,
+  });
+  await memory.configure(administrator.owner, "another-project", {
+    revision: 0,
+    write: true,
+    recall: true,
+    model: memoryFixturePolicy,
+  });
+  await send(source, "Project convention [release]: cache ttl = 24 hours");
+  await eventually(async () => (await memory.catalog(administrator.owner, projectId)).length === 1);
+  await send(sibling, "What is the release cache ttl?");
+  expect(prompts.at(-1)!.text).not.toContain("24 hours");
+  await send(privateConversation, "What is the release cache ttl?", neighbor);
+  expect(prompts.at(-1)!.text).not.toContain("24 hours");
+  await send(release, "What is the normal cache ttl?");
+  expect(prompts.at(-1)!.text).not.toContain("24 hours");
+  const memoryId = (await memory.catalog(administrator.owner, projectId))[0]!.id;
+  const runId = await send(release, "What is the release cache ttl?");
+  const previous = prompts.at(-1)!;
+  expect(previous.text).toContain("24 hours");
+  expect(previous.text).toContain(source);
+  expect(previous.runtime).toBe("grok-build");
+  expect((await conversations.memoryDetails(administrator, release)).recalls).toMatchObject([
+    { runId, status: "sent" },
+  ]);
+  await send(release, "Remind me of the release cache ttl");
+  expect(prompts.at(-1)!.session).toBe(previous.session);
+  expect(prompts.at(-1)!.text).not.toContain("24 hours");
+
+  await conversations.delete(administrator, source);
+  await expect(memory.detail(administrator.owner, projectId, memoryId)).rejects.toMatchObject({ code: "notFound" });
+  expect(await memory.catalog(administrator.owner, projectId)).toEqual([]);
+  expect((await conversations.memoryDetails(administrator, release)).recalls).toMatchObject([{ references: [] }]);
+  await send(release, "Remind me of the release cache ttl");
+  expect(prompts.at(-1)!.session).not.toBe(previous.session);
+  expect(prompts.at(-1)!.text).not.toContain("24 hours");
+  expect(await metadata.list("project-memory-job")).toEqual([]);
+}, 20000);
+
+test("project archives preview changes, migrate across stores, recall with opt-in and withdraw package evidence", async () => {
+  const origin = await fixture({ memory: true });
+  const target = await fixture({ memory: true });
+  const owner = administrator.owner;
+  const authorize = async () => {};
+  const learn = async (f: typeof origin, projectId: string, value: string) => {
+    const id = (await f.conversations.create(administrator, { projectId })).conversation.id;
+    await f.conversations.submit(administrator, id, {
+      requestId: randomUUID(),
+      text: `Project convention: release cycle = ${value}`,
+    });
+    await eventually(async () => !(await f.conversations.snapshot(administrator, id)).conversation.activeRunId);
+    await f.settleMemory();
+    await eventually(async () => (await f.memory.catalog(owner, projectId)).some((entry) => entry.value === value));
+    return id;
+  };
+  await origin.memory.configure(owner, "origin", {
+    revision: 0,
+    write: true,
+    recall: false,
+    model: memoryFixturePolicy,
+  });
+  const source = await learn(origin, "origin", "7 days");
+  const archive = await origin.memory.exportArchive(owner, "origin");
+  expect(archive.records).toEqual([{ key: "release-cycle", scope: "project", values: ["7 days"] }]);
+  expect(JSON.stringify(archive)).not.toContain(source);
+  expect(JSON.stringify(archive)).not.toContain("Project convention");
+  const preview = async (project: string) => {
+    const result = await target.memory.archiveImport(owner, project, archive, undefined, authorize);
+    if (!("token" in result)) throw Error("Missing archive preview");
+    return result;
+  };
+  const commit = (project: string, token: string) =>
+    target.memory.archiveImport(owner, project, archive, token, authorize);
+
+  const initial = await preview("target");
+  expect(initial.added).toBe(1);
+  await expect(
+    target.memory.archiveImport(owner, "target", archive, initial.token, async (_owner, _project, access) => {
+      if (access === "contribute") throw new HarnessError("forbidden", 403);
+    }),
+  ).rejects.toMatchObject({ status: 403 });
+
+  expect(await target.memory.catalog(owner, "target")).toEqual([]);
+  await target.memory.configure(owner, "target", {
+    revision: 0,
+    write: true,
+    recall: false,
+    model: memoryFixturePolicy,
+  });
+  await learn(target, "target", "14 days");
+  await expect(commit("target", initial.token)).rejects.toMatchObject({ status: 409 });
+  const conflict = await preview("target");
+  expect(conflict.conflict).toBe(1);
+  const receipt = await commit("target", conflict.token);
+  expect(await commit("target", conflict.token)).toEqual(receipt);
+  expect(await target.memory.catalog(owner, "target")).toMatchObject([
+    { key: "release-cycle", state: "conflict", packages: [archive.packageId] },
+  ]);
+  expect(await target.memory.archiveImports(owner, "target")).toHaveLength(1);
+  await target.memory.withdrawArchive(owner, "target", archive.packageId);
+  expect(await target.memory.catalog(owner, "target")).toMatchObject([{ state: "active", value: "14 days" }]);
+  expect((await preview("target")).withdrawn).toBe(true);
+  await expect(commit("target", conflict.token)).rejects.toMatchObject({ status: 409 });
+
+  const copy = await preview("copy");
+  await commit("copy", copy.token);
+  const conversation = (await target.conversations.create(administrator, { projectId: "copy" })).conversation.id;
+  const ask = async () => {
+    await target.conversations.submit(administrator, conversation, {
+      requestId: randomUUID(),
+      text: "What is the release cycle?",
+    });
+    await eventually(
+      async () => !(await target.conversations.snapshot(administrator, conversation)).conversation.activeRunId,
+    );
+    return target.prompts.at(-1)!;
+  };
+  expect((await ask()).text).not.toContain("7 days");
+  await target.memory.configure(owner, "copy", { revision: 0, write: false, recall: true });
+  const recalled = await ask();
+  expect(recalled.text).toContain("7 days");
+  expect(recalled.text).toContain(archive.packageId);
+  expect((await target.conversations.memoryDetails(administrator, conversation)).recalls[0]).toMatchObject({
+    status: "sent",
+    references: [{ packages: [archive.packageId] }],
+  });
+  expect(await target.memory.catalog("another-owner", "copy")).toEqual([]);
+  await target.memory.withdrawArchive(owner, "copy", archive.packageId);
+  const withdrawn = await ask();
+  expect(withdrawn.text).not.toContain("7 days");
+  expect(withdrawn.session).not.toBe(recalled.session);
+
+  await origin.conversations.delete(administrator, source);
+  expect((await origin.memory.exportArchive(owner, "origin")).records).toEqual([]);
+  await expect(origin.memory.archiveImport(owner, "stale", archive, undefined, authorize)).rejects.toMatchObject({
+    status: 409,
+  });
+  await expect(
+    target.memory.archiveImport(owner, "forgery", { ...archive, records: [] }, undefined, authorize),
+  ).rejects.toMatchObject({ status: 400 });
+}, 30_000);
+
+test("only the catalog's project binding permits memory, and a first link does not process earlier turns", async () => {
+  const binding = new Map<string, ProjectSessionMembership>();
+  const { conversations, memory, prompts, settleMemory } = await fixture({
+    memory: true,
+    projectBinding: async (id) => binding.get(id) ?? null,
+  });
+  const projectId = "atlas";
+  const owner = administrator.owner;
+  const source = (await conversations.create(administrator, { projectId })).conversation.id;
+  const target = (await conversations.create(administrator, { projectId })).conversation.id;
+  binding.set(source, { projectId, checkpoint: null });
+  await memory.configure(owner, projectId, { revision: 0, write: true, recall: true, model: memoryFixturePolicy });
+  const send = async (id: string, text: string) => {
+    await conversations.submit(administrator, id, { requestId: randomUUID(), text });
+    await eventually(async () => (await conversations.snapshot(administrator, id)).run?.status === "complete");
+    await settleMemory();
+  };
+  await send(source, "Project convention [release]: cache ttl = 24 hours");
+  await eventually(async () => (await memory.catalog(owner, projectId)).length === 1);
+  await send(target, "What is the release cache ttl?");
+  expect(prompts.at(-1)!.text).toContain("What is the release cache ttl?");
+  expect(prompts.at(-1)!.text).not.toContain("24 hours");
+  await send(target, "Project convention [release]: pre-link token = excluded");
+  await expect(conversations.memoryDetails(administrator, target)).rejects.toMatchObject({ code: "notFound" });
+
+  binding.set(target, { projectId, checkpoint: null });
+  expect((await conversations.memoryDetails(administrator, target)).contributions.entries).toEqual([]);
+  await send(target, "What is the release cache ttl?");
+  expect(prompts.at(-1)!.text).toContain("24 hours");
+  await send(target, "Project convention [release]: cleanup interval = 3 days");
+  await eventually(async () => (await memory.catalog(owner, projectId)).length === 2);
+  expect((await memory.catalog(owner, projectId)).map(({ key }) => key).sort()).toEqual([
+    "cache-ttl",
+    "cleanup-interval",
+  ]);
+}, 20000);
+
+test("the first durable project checkpoint excludes an in-flight independent turn and rejects a pre-link outbox record", async () => {
+  const root = await temporary();
+  const path = join(root, "projects.sqlite");
+  const catalog = new ProjectCatalog(path);
+  const project = catalog.save({ name: "Atlas", code: "atlas" }, 0).projects[0]!;
+  const owner = administrator.owner;
+  const start = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  let pause = false;
+  try {
+    const { conversations, memory, metadata, prompts, settleMemory } = await fixture({
+      memory: true,
+      projectBinding: async (id) => catalog.sessionMembership(harnessConversationId(id)),
+      beforeOpen: async () => {
+        if (!pause) return;
+        start.resolve();
+        await resume.promise;
+      },
+    });
+    const bind = (id: string) =>
+      conversations.withAssignmentCheckpoints(administrator, [id], async ([session]) =>
+        catalog.bindSession(project.id, session!),
+      );
+    const complete = async (id: string) => {
+      await eventually(async () => (await conversations.snapshot(administrator, id)).run?.status === "complete");
+      await settleMemory();
+    };
+    const send = (id: string, text: string) =>
+      conversations.submit(administrator, id, { text, requestId: randomUUID() });
+    const source = (await conversations.create(administrator, {})).conversation.id;
+    const target = (await conversations.create(administrator, {})).conversation.id;
+    await memory.configure(owner, project.id, { revision: 0, write: true, recall: true, model: memoryFixturePolicy });
+    await bind(source);
+    await send(source, "Project convention [release]: cache ttl = 24 hours");
+    await complete(source);
+    await eventually(async () => (await memory.catalog(owner, project.id)).length === 1);
+
+    pause = true;
+    const question = "What is the release cache ttl?";
+    await send(target, question);
+    await start.promise;
+    const before = decode<MemoryConversation>(await metadata.read(conversationKey(target)))!;
+    await bind(target);
+    const first = {
+      projectId: project.id,
+      checkpoint: { throughSeq: before.lastSeq, throughBytes: before.historyBytes },
+    };
+    expect(catalog.sessionMembership(harnessConversationId(target))).toEqual(first);
+    expect(
+      catalog.snapshot().assignments.find((session) => session.id === harnessConversationId(target)),
+    ).not.toHaveProperty("checkpoint");
+    pause = false;
+    resume.resolve();
+    await complete(target);
+    expect(prompts.at(-1)!.text).toContain(question);
+    expect(prompts.at(-1)!.text).not.toContain("24 hours");
+    expect((await conversations.memoryDetails(administrator, target)).recalls).toEqual([]);
+
+    await send(target, question);
+    await complete(target);
+    expect(prompts.at(-1)!.text).toContain("24 hours");
+
+    const old = (await conversations.create(administrator, {})).conversation.id;
+    const statement = "Project convention [release]: private label = excluded";
+    await send(old, statement);
+    await complete(old);
+    const committed = decode<MemoryConversation>(await metadata.read(conversationKey(old)))!;
+    const oldMessage = (await conversations.snapshot(administrator, old)).messages.find(
+      (message) => message.text === statement,
+    )!;
+    await bind(old);
+    await metadata.transaction((tx) => stageCompletedMemory(tx, memory, committed, oldMessage));
+    await settleMemory();
+    expect((await memory.catalog(owner, project.id)).map(({ key }) => key)).toEqual(["cache-ttl"]);
+
+    await send(target, "Project convention [release]: deployment lock = 3 minutes");
+    await complete(target);
+    await eventually(async () => (await memory.catalog(owner, project.id)).length === 2);
+    await bind(target);
+    const restarted = new ProjectCatalog(path);
+    try {
+      expect(restarted.sessionMembership(harnessConversationId(target))).toEqual(first);
+    } finally {
+      restarted.close();
+    }
+  } finally {
+    resume.resolve();
+    catalog.close();
+  }
+}, 20000);
+
+test("project memory isolates conflicting values and respects inherited source controls", async () => {
+  const { conversations, memory, prompts, settleMemory } = await fixture({ memory: true });
+  const projectId = "atlas";
+  const first = (await conversations.create(administrator, { projectId })).conversation.id;
+  const second = (await conversations.create(administrator, { projectId })).conversation.id;
+  const target = (await conversations.create(administrator, { projectId })).conversation.id;
+  await memory.configure(administrator.owner, projectId, {
+    revision: 0,
+    write: true,
+    recall: true,
+    model: memoryFixturePolicy,
+  });
+  const send = async (id: string, text: string) => {
+    await conversations.submit(administrator, id, { requestId: randomUUID(), text });
+    await eventually(async () => (await conversations.snapshot(administrator, id)).run?.status === "complete");
+    await settleMemory();
+  };
+  const entries = () => memory.catalog(administrator.owner, projectId);
+  await send(first, "项目约定 [release]：cache ttl = 24h");
+  await send(second, "Project convention [release]: cache ttl = 7d");
+  await eventually(async () => (await entries())[0]?.state === "conflict");
+  const id = (await entries())[0]!.id;
+  const detail = () => memory.detail(administrator.owner, projectId, id);
+  await expect(detail()).rejects.toMatchObject({ code: "notFound" });
+  expect(await memory.find(administrator.owner, projectId, "")).toEqual([]);
+  await expect(memory.detail("someone-else", projectId, id)).rejects.toMatchObject({ code: "notFound" });
+  await expect(memory.detail(administrator.owner, "other-project", id)).rejects.toMatchObject({ code: "notFound" });
+  await send(target, "release cache ttl?");
+  expect(prompts.at(-1)!.text).not.toContain("Project memory");
+  const earlier = await conversations.memoryRemovalImpact(administrator, second);
+  expect(earlier).toMatchObject({ recovers: 1, stops: 0, retains: 0, pauses: 0 });
+  await conversations.rename(administrator, second, "Source for the conflict");
+  await expect(
+    conversations.configureMemory(administrator, second, {
+      revision: 0,
+      revoke: true,
+      write: false,
+      recall: null,
+      impactToken: earlier.token,
+    }),
+  ).rejects.toMatchObject({ code: "conflict" });
+  const fresh = await conversations.memoryRemovalImpact(administrator, second);
+  await conversations.configureMemory(administrator, second, {
+    revision: 0,
+    revoke: true,
+    write: false,
+    recall: null,
+    impactToken: fresh.token,
+  });
+  expect((await entries())[0]).toMatchObject({ value: "24h", state: "active" });
+  const recovered = await detail();
+  expect(recovered.versions.map((event) => event.reason)).toEqual(["recovered", "recorded"]);
+  expect(JSON.stringify(recovered)).not.toContain(second);
+  expect(recovered.versions.map((event) => event.entry?.value)).not.toContain("7d");
+  await conversations.configureMemory(administrator, target, {
+    revision: 0,
+    revoke: false,
+    write: null,
+    recall: false,
+  });
+  await send(target, "release cache ttl?");
+  expect(prompts.at(-1)!.text).not.toContain("Project memory");
+  await conversations.configureMemory(administrator, target, { revision: 1, revoke: false, write: null, recall: null });
+  await send(target, "release cache ttl?");
+  expect(prompts.at(-1)!.text).toContain("24h");
+  const update = (await conversations.create(administrator, { projectId })).conversation.id;
+  await send(update, "Replace project convention [release]: cache ttl = 48h");
+  await eventually(async () => (await entries())[0]?.value === "48h");
+  expect((await detail()).versions[0]).toMatchObject({ reason: "replaced", entry: { value: "48h" } });
+  const removal = await conversations.memoryRemovalImpact(administrator, update);
+  expect(removal.stops).toBe(1);
+  await conversations.delete(administrator, update, removal.token);
+  expect(await entries()).toEqual([]);
+  const withdrawn = await detail();
+  expect(withdrawn.current).toBeNull();
+  expect(withdrawn.versions[0]).toMatchObject({ reason: "withdrawn", entry: null });
+  expect(JSON.stringify(withdrawn)).not.toContain("48h");
+  expect(JSON.stringify(withdrawn)).not.toContain(update);
+  await send(target, "release cache ttl?");
+  expect(prompts.at(-1)!.text).not.toContain("24h");
+}, 20000);
+
+test("project memory resumes failed jobs with an expiring claim and bounded retry", async () => {
+  const f = await fixture();
+  let now = Date.now();
+  let available = false;
+  let reads = 0;
+  const history = new JsonlHarnessHistory(join(f.directory, "history"));
+  const memory = new ProjectMemory(
+    f.metadata,
+    history,
+    async () => {
+      reads++;
+      if (!available) throw Error("test transient failure");
+    },
+    () => true,
+    () => now,
+    undefined,
+    memoryFixtureOrganizer,
+  );
+  const project = "retry-project";
+  const opened = await f.conversations.create(administrator, { projectId: project });
+  const id = opened.conversation.id;
+  await memory.configure(administrator.owner, project, {
+    revision: 0,
+    write: true,
+    recall: true,
+    model: memoryFixturePolicy,
+  });
+  const messageId = randomUUID(),
+    runtimeId = "codex",
+    runId = randomUUID();
+  const text = "Project convention: test command = bun test";
+  await f.metadata.transaction(async (tx) => {
+    const row = await tx.get(conversationKey(id));
+    const stored = decode<MemoryConversation>(row)!;
+    const throughBytes = await history.append(stored.owner, id, stored.historyBytes, [
+      {
+        type: "message",
+        seq: 1,
+        message: {
+          id: messageId,
+          seq: 1,
+          runId,
+          runtimeId,
+          model: null,
+          attachments: [],
+          text,
+          status: "complete",
+          createdAt: now,
+          role: "user",
+        },
+      },
+    ]);
+    const next = { ...stored, lastSeq: 2, historyBytes: throughBytes };
+    await save(tx, conversationKey(id), "conversation", stored.owner, next);
+    await stageCompletedMemory(tx, memory, next, { id: messageId, runId, seq: 1 });
+  });
+  now += 5 * 60_000;
+  await memory.processPending();
+  await memory.processPending();
+  expect(reads).toBe(1);
+  const delayed = (await f.metadata.list("project-memory-organization"))[0]!;
+  expect(delayed.updatedAt).toBeGreaterThan(now);
+  const due = () => f.metadata.list("project-memory-organization", undefined, { limit: 1, updatedThrough: now });
+  expect(await due()).toEqual([]);
+  for (let iteration = 0; iteration < 3; iteration++) {
+    now += 90_000;
+    await memory.processPending();
+  }
+  const source = decode<MemoryConversation>(await f.metadata.read(conversationKey(id)))!;
+  expect(await memory.contributions(source)).toMatchObject({ entries: [], pending: 0, failed: 1 });
+  available = true;
+  expect(await memory.retryFailed(source)).toEqual({ retried: 1 });
+  expect(await memory.retryFailed(source)).toEqual({ retried: 0 });
+  const queued = (await due())[0]!;
+  await f.metadata.transaction((tx) =>
+    tx.put({ ...queued, updatedAt: now + 30_000, revision: queued.revision + 1 }, queued.revision),
+  );
+  // A restarted worker waits for the abandoned claim to expire.
+  const restarted = new ProjectMemory(
+    f.metadata,
+    history,
+    async () => {
+      reads++;
+    },
+    () => true,
+    () => now,
+    undefined,
+    memoryFixtureOrganizer,
+  );
+  await restarted.processPending();
+  expect((await restarted.contributions(source)).pending).toBe(1);
+  now += 31_000;
+  await restarted.processPending();
+  expect(await memory.contributions(source)).toMatchObject({ pending: 0, failed: 0, entries: [{ value: "bun test" }] });
+}, 20000);
+
 test("conversation deletion is owned, idempotent and durable, and fences every history or send entry", async () => {
   const f = await fixture();
   const created = await f.conversations.create(administrator, { runtimeId: "grok-build" }),
@@ -777,6 +1287,26 @@ describe("Harness runtime ownership, transactions and portable context", () => {
       code: "notFound",
     });
   });
+  test("non-resumable engines use fresh sessions and retain visible context on consecutive sends", async () => {
+    const f = await fixture({ initialInfo: { ...info, capabilities: { ...info.capabilities, load: false } } });
+    const { conversation } = await f.conversations.create(administrator, { projectId: "atlas" });
+    const inputs = ["Save the first detail", "Add a second detail", "Add a third detail"];
+    for (const text of inputs) {
+      await f.conversations.submit(administrator, conversation.id, { requestId: randomUUID(), text });
+      await eventually(
+        async () => !(await f.conversations.snapshot(administrator, conversation.id)).conversation.activeRunId,
+      );
+      expect((await f.conversations.snapshot(administrator, conversation.id)).run?.status).toBe("complete");
+    }
+    expect(new Set(f.prompts.map((prompt) => prompt.session)).size).toBe(inputs.length);
+    expect(f.prompts[2]!.text).toContain(inputs[0]!);
+    expect(f.prompts[2]!.text).toContain(inputs[1]!);
+    expect(f.prompts[2]!.text).toContain("codex reply");
+    const snapshot = await f.conversations.snapshot(administrator, conversation.id);
+    expect(snapshot.messages.filter((message) => message.role === "user").map((message) => message.text)).toEqual(
+      inputs,
+    );
+  });
   test("repeated submission is coalesced; active execution cannot switch; defaults affect new conversations only", async () => {
     const f = await fixture({ hold: true }),
       created = await f.conversations.create(administrator, {}),
@@ -942,7 +1472,85 @@ describe("bounded Harness handoff", () => {
   });
 });
 
+test("project memory scans bounded history pages through a large frame and stops at the committed offset", async () => {
+  const history = new JsonlHarnessHistory(await temporary());
+  const owner = "scan-fixture",
+    id = randomUUID(),
+    createdAt = Date.now();
+  const event = (seq: number, text = "small", role: "user" | "assistant" = "user") => ({
+    type: "message" as const,
+    seq,
+    message: {
+      id: randomUUID(),
+      seq,
+      runId: randomUUID(),
+      role,
+      text,
+      runtimeId: "codex",
+      model: null,
+      attachments: [],
+      status: "complete" as const,
+      createdAt,
+    },
+  });
+  const first = Array.from({ length: 8 }, (_, index) => event(index + 1));
+  const firstEnd = await history.append(owner, id, 0, first);
+  const long = event(9, "x".repeat(900 * 1024), "assistant");
+  const last = event(10, "last visible message");
+  const committed = await history.append(owner, id, firstEnd, [long, last]);
+  await history.append(owner, id, committed, [event(11, "uncommitted")]);
+
+  const firstPage = await history.scanUserMessages(owner, id, committed, 0);
+  expect(firstPage.nextBytes).toBe(firstEnd);
+  expect(firstPage.messages.map(({ message }) => message.id)).toEqual(first.map(({ message }) => message.id));
+  const finalPage = await history.scanUserMessages(owner, id, committed, firstPage.nextBytes);
+  expect(finalPage).toEqual({ messages: [{ message: last.message, throughBytes: committed }], nextBytes: committed });
+  await expect(history.scanUserMessages(owner, id, committed, firstEnd + 1)).rejects.toMatchObject({
+    code: "historyCorrupt",
+  });
+  await expect(history.scanUserMessages(owner, id, committed - 1, firstEnd)).rejects.toMatchObject({
+    code: "historyCorrupt",
+  });
+});
+
 describe("timestamp history retrieval", () => {
+  test("locates a source before a long transcript tail using committed offsets and legacy timestamps", async () => {
+    const directory = await temporary();
+    let clock = Date.parse("2026-11-20T12:00:00Z");
+    const history = new JsonlHarnessHistory(directory, () => clock);
+    const id = randomUUID();
+    const original = {
+      id: randomUUID(),
+      seq: 1,
+      runId: "run",
+      role: "user" as const,
+      runtimeId: "codex",
+      model: null,
+      text: "Project convention: retention = 30 days",
+      attachments: [],
+      status: "complete" as const,
+      createdAt: clock,
+    };
+    const throughBytes = await history.append("one", id, 0, [{ type: "message", seq: 1, message: original }]);
+    clock += 5000;
+    const tail = "x".repeat(900_000);
+    const later = { ...original, seq: 2, id: randomUUID(), text: tail, createdAt: clock };
+    const committed = await history.append("one", id, throughBytes, [
+      { type: "message", seq: 2, message: later },
+      { type: "text", seq: 3, messageId: later.id, text: tail },
+    ]);
+    expect(committed - throughBytes).toBeGreaterThan(1024 * 1024);
+    expect(
+      (await history.window("one", id, committed, { maxBytes: 1024 * 1024 + 1 })).events.map(({ seq }) => seq),
+    ).not.toContain(1);
+    const pointer = { messageId: original.id, recordedAt: original.createdAt };
+    expect(await history.messageAt("one", id, committed, { ...pointer, throughBytes })).toEqual(original);
+    expect(await history.messageAt("one", id, committed, pointer)).toEqual(original);
+    const uncommitted = { ...original, seq: 4, id: randomUUID() };
+    await history.append("one", id, committed, [{ type: "message", seq: 4, message: uncommitted }]);
+    expect(await history.messageAt("one", id, committed, { ...pointer, messageId: uncommitted.id })).toBeNull();
+  });
+
   test("uses UTC timestamps, returns bounded pages, handles clock reversal and ignores uncommitted index entries", async () => {
     const directory = await temporary();
     let clock = Date.parse("2026-11-20T12:00:00Z");
@@ -1312,14 +1920,22 @@ describe("Codex Harness adapter lifecycle", () => {
       },
     } as unknown as Driver;
     const agent = new CodexHarnessAgent(driver);
+    const turn = {
+      text: "hello",
+      attachments: [],
+      model: null,
+      effort: null,
+      operationId: randomUUID(),
+      visualEvidence: [{ mimeType: "image/png" as const, base64: "AA==" }],
+    };
     for (const permissionMode of ["full-access", "ask"] as const) {
       const session = await agent.load("native", "/workspace", { permissionMode });
-      await agent.prompt(
-        session,
-        { text: "hello", attachments: [], model: null, effort: null, operationId: randomUUID() },
-        async () => {},
-      );
+      await agent.prompt(session, turn, async () => {});
       const input = calls.at(-1)!.params;
+      expect(input.input).toEqual([
+        { type: "text", text: "hello" },
+        { type: "image", url: "data:image/png;base64,AA==" },
+      ]);
       expect(input.approvalPolicy).toBe(permissionMode === "full-access" ? "never" : "on-request");
       expect(input.sandboxPolicy).toEqual(
         permissionMode === "full-access"
@@ -1333,6 +1949,21 @@ describe("Codex Harness adapter lifecycle", () => {
             },
       );
     }
+    const previous = calls.length;
+    const session = await agent.load("native", "/workspace");
+    await expect(
+      agent.prompt(
+        session,
+        {
+          ...turn,
+          beforeDispatch: async () => {
+            throw new HarnessPromptError("conflict", false, 409);
+          },
+        },
+        async () => {},
+      ),
+    ).rejects.toMatchObject({ code: "conflict", dispatched: false });
+    expect(calls.length).toBe(previous);
     await expect(agent.load("native", "/workspace", { permissionMode: "always-approve" })).rejects.toMatchObject({
       code: "capabilityUnavailable",
     });

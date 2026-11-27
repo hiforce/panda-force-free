@@ -1,13 +1,15 @@
+import { openHistoryFile, prepareHistoryRotation } from "./history-archive.js";
 import { HarnessTimeIndex } from "./time-index.js";
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { mkdir, open, realpath } from "node:fs/promises";
 import { join, resolve, relative, isAbsolute } from "node:path";
-import { HarnessError, type HarnessHistoryEvent } from "../../../shared/harness/contracts.js";
+import { HarnessError, type HarnessMessage, type HarnessHistoryEvent } from "../../../shared/harness/contracts.js";
 import type { HarnessHistory } from "../ports.js";
 
 const MAX_FRAME = 1024 * 1024;
 const MAX_READ = 128 * 1024 * 1024;
+const SCAN_CHUNK = 32 * 1024;
 /** Private application-owned transcripts are separated by owner and conversation, never native engine paths. */
 export class JsonlHarnessHistory implements HarnessHistory {
   constructor(
@@ -38,9 +40,9 @@ export class JsonlHarnessHistory implements HarnessHistory {
     if (!Number.isSafeInteger(committed) || committed < 0 || !Number.isSafeInteger(end) || end < 0 || end > committed)
       throw new HarnessError("invalidInput");
     if (!end) return { events: [], startBytes: 0, truncated: false };
-    const file = await open(await this.path(owner, id), constants.O_RDONLY | constants.O_NOFOLLOW);
+    const file = await openHistoryFile(await this.path(owner, id));
     try {
-      if ((await file.stat()).size < committed) throw new HarnessError("historyCorrupt", 503);
+      if ((await file.size()) < committed) throw new HarnessError("historyCorrupt", 503);
       let start = Math.max(0, end - budget);
       const body = Buffer.alloc(end - start);
       let offset = 0;
@@ -79,6 +81,104 @@ export class JsonlHarnessHistory implements HarnessHistory {
       await file.close();
     }
   }
+  async scanUserMessages(owner: string, id: string, committed: number, afterBytes: number) {
+    if (
+      !Number.isSafeInteger(committed) ||
+      !Number.isSafeInteger(afterBytes) ||
+      afterBytes < 0 ||
+      afterBytes > committed
+    )
+      throw new HarnessError("invalidInput");
+    const messages: Array<{ message: HarnessMessage; throughBytes: number }> = [];
+    if (afterBytes === committed) return { messages, nextBytes: committed };
+    const file = await openHistoryFile(await this.path(owner, id));
+    try {
+      const start = Math.max(0, afterBytes - 1);
+      const prefix = afterBytes - start;
+      const budget = Math.min(MAX_FRAME + 1, committed - afterBytes) + prefix;
+      const bytes = Buffer.allocUnsafe(budget);
+      if ((await file.size()) < committed) throw new HarnessError("historyCorrupt", 503);
+      if (start + budget === committed) {
+        const tail = await file.read(bytes, budget - 1, 1, committed - 1);
+        if (tail.bytesRead !== 1 || bytes[budget - 1] !== 10) throw new HarnessError("historyCorrupt", 503);
+      }
+      let cursor = prefix;
+      let searchAt = cursor;
+      let filled = 0;
+      let previous: number | undefined;
+      let count = 0;
+      while (count < 256 && messages.length < 8 && (searchAt < filled || filled < budget)) {
+        // Small messages usually fill the page before the maximum frame-sized read is needed.
+        if (searchAt >= filled) {
+          const end = Math.min(budget, Math.max(SCAN_CHUNK, filled * 2));
+          while (filled < end) {
+            const result = await file.read(bytes, filled, end - filled, start + filled);
+            if (!result.bytesRead) throw new HarnessError("historyCorrupt", 503);
+            filled += result.bytesRead;
+          }
+          if (prefix && bytes[0] !== 10) throw new HarnessError("historyCorrupt", 503);
+        }
+        const newline = bytes.subarray(0, filled).indexOf(10, searchAt);
+        if (newline < 0) {
+          searchAt = filled;
+          continue;
+        }
+        if (newline === cursor || newline - cursor > MAX_FRAME) throw new HarnessError("historyCorrupt", 503);
+        const { event } = historyFrame(bytes.toString("utf8", cursor, newline));
+        if (!Number.isSafeInteger(event.seq) || (previous !== undefined && event.seq !== previous + 1))
+          throw new HarnessError("historyCorrupt", 503);
+        previous = event.seq;
+        count++;
+        cursor = newline + 1;
+        searchAt = cursor;
+        if (event.type === "message" && event.message.role === "user")
+          messages.push({ message: event.message, throughBytes: start + cursor });
+      }
+      const nextBytes = start + cursor;
+      if (nextBytes <= afterBytes) throw new HarnessError("historyCorrupt", 503);
+      return { messages, nextBytes };
+    } finally {
+      await file.close();
+    }
+  }
+  async messageAt(
+    owner: string,
+    id: string,
+    committed: number,
+    { messageId, recordedAt, throughBytes }: { messageId: string; recordedAt: number; throughBytes?: number },
+  ) {
+    const readAt = async (beforeBytes: number) => {
+      const { events } = await this.window(owner, id, committed, { beforeBytes, maxBytes: MAX_FRAME + 1 });
+      const event = events.find((item) => item.type === "message" && item.message.id === messageId);
+      return event?.type === "message" ? event.message : null;
+    };
+    const recent = await readAt(throughBytes ?? committed);
+    if (recent || throughBytes !== undefined) return recent;
+    // Evidence learned before byte locations were stored can use the original submission time.
+    const index = new HarnessTimeIndex((await this.path(owner, id)) + ".time-index");
+    const { blocks } = await index.matching(committed, recordedAt - 60_000, recordedAt + 60_000, 0, 64);
+    const distance = ({ from, to }: { from: number; to: number }) => Math.max(from - recordedAt, recordedAt - to, 0);
+    blocks.sort((a, b) => distance(a) - distance(b));
+    for (const { end } of blocks.slice(0, 10)) {
+      if (end === committed) continue;
+      const message = await readAt(end);
+      if (message) return message;
+    }
+    return null;
+  }
+  async prepareRotation(owner: string, id: string, committed: number, signal: AbortSignal) {
+    const now = this.now();
+    return prepareHistoryRotation(
+      await this.path(owner, id),
+      committed,
+      now,
+      (line) => {
+        const { retainedAtMs, event } = historyFrame(line);
+        return { at: retainedAtMs, seq: event.seq };
+      },
+      signal,
+    );
+  }
   async reference(owner: string, id: string, committedBytes: number) {
     const path = await this.path(owner, id);
     return {
@@ -103,9 +203,9 @@ export class JsonlHarnessHistory implements HarnessHistory {
   async read(owner: string, id: string, bytes: number): Promise<HarnessHistoryEvent[]> {
     if (!Number.isSafeInteger(bytes) || bytes < 0 || bytes > MAX_READ) throw new HarnessError("historyCorrupt", 503);
     if (!bytes) return [];
-    const file = await open(await this.path(owner, id), constants.O_RDONLY | constants.O_NOFOLLOW);
+    const file = await openHistoryFile(await this.path(owner, id));
     try {
-      if ((await file.stat()).size < bytes) throw new HarnessError("historyCorrupt", 503);
+      if ((await file.size()) < bytes) throw new HarnessError("historyCorrupt", 503);
       const body = Buffer.alloc(bytes);
       let offset = 0;
       while (offset < bytes) {
@@ -168,15 +268,16 @@ export class JsonlHarnessHistory implements HarnessHistory {
     const body = Buffer.from(payload);
 
     const path = await this.path(owner, id),
-      file = await open(path, constants.O_CREAT | constants.O_RDWR | constants.O_NOFOLLOW, 0o600);
+      live = await openHistoryFile(path, true);
+    const { file, base } = live;
     try {
-      const size = (await file.stat()).size;
+      const size = await live.size();
       if (size < bytes) throw new HarnessError("historyCorrupt", 503);
       // Bytes beyond the committed metadata offset belong to an interrupted transaction.
-      if (size > bytes) await file.truncate(bytes);
+      if (size > bytes) await file.truncate(bytes - base);
       let written = 0;
       while (written < body.length) {
-        const result = await file.write(body, written, body.length - written, bytes + written);
+        const result = await file.write(body, written, body.length - written, bytes - base + written);
         if (!result.bytesWritten) throw new HarnessError("unavailable", 503);
         written += result.bytesWritten;
       }
@@ -203,7 +304,7 @@ export class JsonlHarnessHistory implements HarnessHistory {
   }
 }
 
-export function historyFrame(line: string): { event: HarnessHistoryEvent; timestampMs: number } {
+export function historyFrame(line: string): { event: HarnessHistoryEvent; timestampMs: number; retainedAtMs: number } {
   try {
     if (Buffer.byteLength(line) > MAX_FRAME) throw Error();
     const frame = JSON.parse(line) as {
@@ -241,7 +342,12 @@ export function historyFrame(line: string): { event: HarnessHistoryEvent; timest
         (!Number.isSafeInteger(frame.recordedAtMs) || new Date(frame.recordedAtMs!).toISOString() !== frame.recordedAt))
     )
       throw Error();
-    return { event: frame.event, timestampMs: timestampMs! };
+    return {
+      event: frame.event,
+      timestampMs: timestampMs!,
+      // Pre-timestamp events remain together with the most recent known frame during rotation.
+      retainedAtMs: frame.recordedAtMs ?? timestampMs!,
+    };
   } catch {
     throw new HarnessError("historyCorrupt", 503);
   }
@@ -281,7 +387,7 @@ export async function queryHarnessHistoryFile(
       text: string;
       truncated: boolean;
     }> = [];
-  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  const file = await openHistoryFile(path);
   let readBytes = 0,
     returnedBytes = 0;
   try {

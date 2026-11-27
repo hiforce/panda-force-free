@@ -77,6 +77,7 @@ try {
         });
         page = await context.newPage();
         page.setDefaultTimeout(25000);
+        await page.routeWebSocket("**/ws", (socket) => socket.close());
         const errors = [];
         page.on("pageerror", (e) => errors.push(e.message));
         await page.goto(app.base + "/project?id=" + project.id + "&tab=sessions");
@@ -93,7 +94,11 @@ try {
         await option(nativeId).waitFor();
         await option(nativeId).press("Enter");
         await menu.waitFor();
-        assert(await menu.getByRole("menuitem", { name: await text("common.changeProject"), exact: true }).isVisible());
+        assert(
+          await menu
+            .getByRole("menuitem", { name: await text("projects.openAssignedProject"), exact: true })
+            .isVisible(),
+        );
         const bounds = await menu.boundingBox();
         assert(bounds.x >= 0 && bounds.x + bounds.width <= width + 1);
         assert(
@@ -102,10 +107,9 @@ try {
             .evaluateAll((nodes) => nodes.every((n) => n.getBoundingClientRect().height >= 44)),
         );
         await page.screenshot({ path: join(out, "menu-" + suffix + ".png") });
-        await menu.getByRole("menuitem", { name: await text("common.changeProject"), exact: true }).click();
-        await page.locator("#projectDialog[open]").waitFor();
-        assert.equal(await page.locator("#associationProject").inputValue(), project.id);
-        await page.locator("[data-project-close]").first().click();
+        await menu.getByRole("menuitem", { name: await text("projects.openAssignedProject"), exact: true }).click();
+        assert.equal(new URL(page.url()).searchParams.get("id"), project.id);
+        assert.equal(await page.locator("#projectDialog").evaluate((dialog) => dialog.open), false);
         await option(nativeId).press("Enter");
         await page.keyboard.press("Escape");
         assert(await option(nativeId).evaluate((el) => el === document.activeElement));
@@ -149,6 +153,7 @@ try {
           "Foreign-origin deletion must be rejected by authentication or origin validation",
         );
         assert.equal((await context.request.get(app.base + "/api/personal/harness/conversations/" + id)).status(), 200);
+        await page.waitForLoadState("networkidle");
         await page.goto(app.base + "/task/" + encodeURIComponent(publicId));
         await page.waitForFunction((id) => globalThis.__pandaForceDebug?.state.active?.id === id, publicId);
         await page.evaluate(() => {
@@ -194,6 +199,7 @@ try {
           data: { requestId: crypto.randomUUID(), text: "Do not restore" },
         });
         assert.equal(restored.status(), 404);
+        await page.waitForLoadState("networkidle");
         await page.reload();
         await page.locator("#wbTaskResults").waitFor();
         assert.equal(await option(publicId).count(), 0);

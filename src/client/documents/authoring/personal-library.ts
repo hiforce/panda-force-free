@@ -23,7 +23,7 @@ export const personalCategory = (value: string | null): PersonalCategory =>
   value && Object.hasOwn(categories, value) ? (value as PersonalCategory) : "document";
 
 export function personalCategories(t: Translate) {
-  return `<nav class="personal-categories" ${messageAttributes("aria-label", "creative.libraryCategories", {}, t)}>${Object.entries(
+  return `<nav class="personal-categories works-category-nav" ${messageAttributes("aria-label", "creative.libraryCategories", {}, t)}>${Object.entries(
     categories,
   )
     .map(

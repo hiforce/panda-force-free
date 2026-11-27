@@ -13,6 +13,7 @@ export function createRuntimeModelField(
   prefix: string,
   changed: () => void = () => {},
   scope: RuntimeModelCatalogScope = false,
+  display: { hint?: MessageId | null; noEffort?: MessageId } = {},
 ) {
   const catalog = runtimeModelCatalog(t, scope);
   let host: HTMLElement | null = null,
@@ -73,10 +74,11 @@ export function createRuntimeModelField(
     const effort = host.querySelector<HTMLInputElement>(`[name="${prefix}-effort"]`)!;
     const effortField = host.querySelector<HTMLElement>("[data-runtime-effort-slider]")!;
     effort.value = selection.effort;
+    const automatic = effectiveModel && !efforts.length && display.noEffort ? display.noEffort : "harness.automatic";
     mountReasoningSlider(
       effortField,
       [
-        { id: "", label: t("harness.automatic") },
+        { id: "", label: t(automatic) },
         ...efforts,
         ...(effortMissing ? [{ id: selection.effort, label: reasoningLabel(selection.effort, t) }] : []),
       ],
@@ -112,7 +114,9 @@ export function createRuntimeModelField(
     status.hidden = !statusId;
     retry.hidden = !failed;
     retry.disabled = pending;
-    localizeText(hint, "harness.selectionHint", {}, t);
+    const hintMessage = display.hint === undefined ? "harness.selectionHint" : display.hint;
+    hint.hidden = hintMessage === null;
+    if (hintMessage) localizeText(hint, hintMessage, {}, t);
   }
   async function load(reloadList = false) {
     const current = ++epoch;

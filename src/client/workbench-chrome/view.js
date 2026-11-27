@@ -111,7 +111,7 @@ export function renderChromeMenu(menu, context) {
       ).join("");
   } else if (menu === "layout") {
     const toggle = (panel, key, enabled, icon) =>
-      `<button type="button" class="chrome-option" data-chrome-action="panel" data-value="${panel}" role="switch" aria-checked="${enabled}">${chromeIcon(icon)}<span class="chrome-option-copy"><strong>${label(key)}</strong></span><span class="chrome-switch${enabled ? " on" : ""}" aria-hidden="true"></span></button>`;
+      `<button type="button" class="chrome-option" data-chrome-action="panel" data-value="${panel}" role="switch" aria-checked="${enabled}">${chromeIcon(icon)}<span class="chrome-option-copy"><strong>${label(key)}</strong></span><span class="pf-switch-track" aria-hidden="true"></span></button>`;
     if (!mobile) {
       body +=
         `<p class="chrome-menu-label">${label("shell.appWidth")}</p>` +

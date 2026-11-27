@@ -15,6 +15,7 @@
   "mode": "所选文件类型的存储方式",
   "local": "应用本地存储",
   "s3": "S3 兼容对象存储",
+  "projectMemoryPackages": "项目记忆包",
   "kinds": "存入 S3 的文件类型",
   "connection": "存储连接",
   "newConnection": "新建连接",

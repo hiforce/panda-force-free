@@ -7,6 +7,7 @@ import { createAppFixture, waitFor } from "../support/app-fixture.mjs";
 
 let allowExternalDirectories = true;
 const fixture = await createAppFixture({
+  startupTimeoutMs: 60000,
   extraEnvironment: () => ({ PANDA_FORCE_ALLOW_EXTERNAL_DIRECTORIES: String(allowExternalDirectories) }),
 });
 const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
@@ -78,30 +79,28 @@ try {
   assert.equal(await page.locator(`[data-project="project:${a.id}"]`).count(), 1);
   await page.reload();
   await page.locator('.wb-task-row[data-id="old-alpha"]').waitFor();
-  assert.equal(await page.locator(".wb-project-detail .project-code").innerText(), "alpha");
+  assert.equal(await page.locator("[data-project-code]").innerText(), "alpha");
   checks.push("Historical sessions from different folders link to one persistent project and sidebar group");
   const changeBeta = () =>
     page.locator('.wb-session-entry:has(.wb-task-row[data-id="old-beta"]) [data-wb="session-options"]');
   await changeBeta().click();
-  await page.locator('.sidebar-project-menu [role="menuitem"]').getByText("Change project", { exact: true }).click();
-
-  await page.locator("#associationProject").selectOption(b.id);
-  await page.locator('#projectAssociationForm [type="submit"]').click();
-  await page.locator("#projectDialog").waitFor({ state: "hidden" });
+  await page
+    .locator('.sidebar-project-menu [role="menuitem"]')
+    .getByText("Open linked project", { exact: true })
+    .click();
+  assert.equal(new URL(page.url()).searchParams.get("id"), a.id);
+  assert.equal(await page.locator("#projectDialog").evaluate((dialog) => dialog.open), false);
   snapshot = await catalog();
-  assert.equal(snapshot.assignments.find((s) => s.id === "old-beta").projectId, b.id);
-  await go("/tasks");
-  await changeBeta().click();
-  await page.locator('.sidebar-project-menu [role="menuitem"]').getByText("Change project", { exact: true }).click();
-
-  await page.locator("#associationProject").selectOption("");
-  await page.locator('#projectAssociationForm [type="submit"]').click();
-  await page.locator("#projectDialog").waitFor({ state: "hidden" });
-  assert.equal(
-    (await catalog()).assignments.some((s) => s.id === "old-beta"),
-    false,
-  );
-  checks.push("Move and unlink change only metadata while native session IDs and directories remain intact");
+  for (const projectId of [b.id, null]) {
+    const denied = await context.request.post(fixture.base + "/api/projects/assign", {
+      headers: { Origin: fixture.base },
+      data: { projectId, sessionIds: ["old-beta"], revision: snapshot.revision },
+    });
+    assert.equal(denied.status(), 409, await denied.text());
+    assert.equal((await denied.json()).messageId, "projects.sessionProjectLocked");
+  }
+  assert.deepEqual(await catalog(), snapshot);
+  checks.push("Bound native sessions open their project; moves and unlinks leave their association unchanged");
   await go("/project?id=" + a.id + "&tab=sessions");
   await page.locator('[data-wb="project-new"]').first().click();
   await page.locator("#prompt").fill("Draft for Alpha");

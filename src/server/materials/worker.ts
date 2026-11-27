@@ -11,8 +11,8 @@ Object.defineProperty(globalThis, "fetch", {
 try {
   const { name, bytes } = workerData;
   if (typeof name !== "string" || !(bytes instanceof Uint8Array)) throw new MaterialTextError("unreadable");
-  const { extractMaterialText } = await import("./extractor.js");
-  const value = await extractMaterialText(name, bytes);
+  const { extractMaterialSections } = await import("./extractor.js");
+  const value = await extractMaterialSections(name, bytes);
   parentPort.postMessage({ ok: true, value });
 } catch (error) {
   parentPort.postMessage({ ok: false, code: error instanceof MaterialTextError ? error.code : "unreadable" });

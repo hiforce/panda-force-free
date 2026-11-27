@@ -9,14 +9,15 @@ import { inputDigest } from "../build/creative-tools.mjs";
 export function checkInstallation(root = process.cwd()) {
   const text = (path) => readFileSync(resolve(root, path), "utf8");
   const json = (path) => JSON.parse(text(path));
-  const version = json("release/community/edition.json").version;
-  const image = `hiforceai/panda-force:${version}`;
+  const { version, installationVersion = version } = json("release/community/edition.json");
+  const image = `hiforceai/panda-force:${installationVersion}`;
   const installClone = "git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git";
   const bases = json("scripts/build/base-images.json");
   const require = (value, message) => {
     if (!value) throw Error(message);
   };
   require(json("package.json").version === version, "Application and community versions differ");
+  require(/^\d+\.\d+\.\d+$/.test(installationVersion), "Invalid published installation version");
   require(bases.defaultProfile === "rocky9-creative", "Release must select the reviewed creative profile");
   require(bases.creativeInputsSha256 ===
     inputDigest(resolve(root, "scripts/build/creative-tools")), "Creative inputs differ from the release bases");
@@ -114,7 +115,7 @@ export function checkInstallation(root = process.cwd()) {
     )) {
       const path = `${directory}/${name}`;
       for (const match of text(path).matchAll(/hiforceai\/panda-force:(\d+\.\d+\.\d+)/g))
-        require(match[1] === version, `${path}: outdated application image in the documentation`);
+        require(match[1] === installationVersion, `${path}: outdated application image in the documentation`);
       if (["installation.md", "harness-runtimes.md", "storage.md"].includes(name))
         require(!text(path).includes("panda-force:local"), `${path}: end-user instructions must use the release image`);
       if (["installation.md", "harness-runtimes.md"].includes(name))
@@ -125,6 +126,7 @@ export function checkInstallation(root = process.cwd()) {
   return {
     passed: true,
     version,
+    installationVersion,
     image,
     profile: bases.defaultProfile,
     matchedBaseSelectors: 4,

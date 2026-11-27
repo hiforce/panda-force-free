@@ -49,11 +49,17 @@ createInterface({ input: process.stdin }).on(
         return;
       }
       let result = {};
-      if (frame.method === "initialize")
+      if (frame.method === "initialize") {
+        const account = await readFile(join(home, "auth.json"), "utf8")
+          .then(JSON.parse)
+          .catch(() => ({}));
         result = {
           protocolVersion: 1,
           authMethods: [],
-          agentCapabilities: { loadSession: true, promptCapabilities: { image: false, embeddedContext: true } },
+          agentCapabilities: {
+            loadSession: true,
+            promptCapabilities: { image: account.fixture?.visualInput === true, embeddedContext: true },
+          },
           _meta: {
             modelState: {
               currentModelId: "grok-cached-fixture",
@@ -61,7 +67,7 @@ createInterface({ input: process.stdin }).on(
             },
           },
         };
-      else if (["session/new", "session/load"].includes(frame.method)) {
+      } else if (["session/new", "session/load"].includes(frame.method)) {
         const account = JSON.parse(await readFile(join(home, "auth.json"), "utf8"));
         if (Number.isSafeInteger(account.fixture?.sessionDelayMs))
           await Bun.sleep(Math.min(2000, Math.max(0, account.fixture.sessionDelayMs)));
@@ -90,6 +96,17 @@ createInterface({ input: process.stdin }).on(
         result = { sessionId: session.id, models: catalog, _meta: { currentWorkingDirectory: session.cwd } };
       } else if (frame.method === "session/set_config_option") {
         if (typeof params.value !== "string") throw Error("Invalid ACP config value");
+        if (params.configId === "reasoning_effort") {
+          const account = JSON.parse(await readFile(join(home, "auth.json"), "utf8"));
+          if (account.fixture?.pauseMemoryDispatch) {
+            await writeFile(join(home, "memory-dispatch-paused"), "");
+            const deadline = Date.now() + 15000;
+            while (!(await Bun.file(join(home, "memory-dispatch-release")).exists())) {
+              if (Date.now() > deadline) throw Error("Fixture dispatch was never released");
+              await Bun.sleep(25);
+            }
+          }
+        }
         session[params.configId] = params.value;
         result = { configOptions: [] };
       } else if (frame.method === "session/prompt") {
@@ -105,6 +122,8 @@ createInterface({ input: process.stdin }).on(
           .filter((part) => part.type === "text")
           .map((part) => part.text)
           .join("\n");
+        if (account.fixture?.captureMemoryPrompt)
+          await writeFile(join(home, "memory-prompt.json"), JSON.stringify(params.prompt), { mode: 0o600 });
         const behavior = text.split("Current user message:\n").at(-1);
         active = { id: frame.id };
         if (session.application) {
@@ -117,6 +136,33 @@ createInterface({ input: process.stdin }).on(
             )
           )
             throw Error("Application tools were not isolated");
+          if (session.application.promptBody.startsWith("Extract reusable project conventions")) {
+            if (session.yoloMode || session.mcpServers.length || session.application.toolConfig.tools.length)
+              throw Error("Memory model had native or application tools available");
+            const input = JSON.parse(text);
+            if (
+              Object.keys(input).join() !== "excerpt" ||
+              Object.values(input).some((value) => typeof value !== "string")
+            )
+              throw Error("Memory model received an unexpected context");
+            const value = input.excerpt.startsWith("Malformed")
+              ? "not JSON"
+              : JSON.stringify({
+                  candidates: [
+                    {
+                      key: "cache retention",
+                      scope: "release",
+                      value: "24 hours",
+                      quote: input.excerpt,
+                      intent: "decision",
+                    },
+                  ],
+                });
+            update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: value } });
+            send({ id: frame.id, result: { stopReason: "end_turn", _meta: { usage: { totalTokens: 111 } } } });
+            active = null;
+            return;
+          }
           if (text === "fixture: hold for creation update") {
             session.heldForUpdate = true;
             update({ sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Organizing the brief." } });

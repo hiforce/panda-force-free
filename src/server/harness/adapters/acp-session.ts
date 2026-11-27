@@ -49,6 +49,7 @@ export class AcpSessionAgent implements HarnessAgent {
     commands: [],
   };
   private initialized?: Promise<HarnessAgentInfo>;
+  private restoreMethod?: "session/resume" | "session/load";
   private session?: HarnessNativeSession;
   private emit: AcpEmit | null = null;
   private cancelled = false;
@@ -95,7 +96,9 @@ export class AcpSessionAgent implements HarnessAgent {
       }
       this.info.capabilities.imageInput = prompts.image === true;
       this.info.capabilities.fileInput = prompts.embeddedContext === true;
-      this.info.capabilities.load = "resume" in record(capabilities.sessionCapabilities);
+      if ("resume" in record(capabilities.sessionCapabilities)) this.restoreMethod = "session/resume";
+      else if (capabilities.loadSession === true) this.restoreMethod = "session/load";
+      this.info.capabilities.load = !!this.restoreMethod;
       return this.info;
     })());
   }
@@ -113,15 +116,17 @@ export class AcpSessionAgent implements HarnessAgent {
     )
       throw new HarnessError("capabilityUnavailable", 409);
     await this.initialize();
-    if (id && !this.info.capabilities.load) throw new HarnessError("capabilityUnavailable", 409);
+    const method = id ? this.restoreMethod : "session/new";
+    if (!method) throw new HarnessError("capabilityUnavailable", 409);
     const result = record(
-      await this.transport.request(id ? "session/resume" : "session/new", {
+      await this.transport.request(method, {
         cwd,
-        mcpServers: !application
-          ? []
-          : this.settings.applicationTransport === "http"
-            ? [application.mcpServer]
-            : [{ type: "acp", name: application.mcpServer.name, serverId: this.mcpServerId }],
+        mcpServers:
+          !application || application.scope === "project-memory"
+            ? []
+            : this.settings.applicationTransport === "http"
+              ? [application.mcpServer]
+              : [{ type: "acp", name: application.mcpServer.name, serverId: this.mcpServerId }],
         ...(this.settings.applicationMeta ? { _meta: this.settings.applicationMeta } : {}),
         ...(id ? { sessionId: id } : {}),
       }),
@@ -257,6 +262,7 @@ export class AcpSessionAgent implements HarnessAgent {
         }
         if (input.effort) await this.select(this.settings.effortId, input.effort);
         prompt = await acpPrompt(input, this.info.capabilities);
+        if (input.beforeDispatch) await input.beforeDispatch();
       } catch (error) {
         throw new HarnessPromptError(
           error instanceof HarnessError ? error.code : "unavailable",

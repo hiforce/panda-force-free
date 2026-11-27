@@ -3,7 +3,7 @@ import { chmodSync, lstatSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { CliError } from "../../../shared/cli/contracts.js";
 import type { CliClientRecord, CliCredentialStore } from "./ports.js";
-import { storedCliClient, storedCliKey } from "./records.js";
+import { storedCliClient, storedCliKey, serializeCliProjects } from "./records.js";
 export function openCliCredentialStore(path: string): { store: CliCredentialStore; close(): void } {
   if (path !== ":memory:") {
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
@@ -62,7 +62,7 @@ export function openCliCredentialStore(path: string): { store: CliCredentialStor
               credential.clientId,
               credential.owner,
               credential.digest,
-              JSON.stringify(credential.projects),
+              serializeCliProjects(credential),
               JSON.stringify(credential.capabilities),
               credential.expiresAt,
               credential.createdAt,

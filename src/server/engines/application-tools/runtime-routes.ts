@@ -16,7 +16,8 @@ export function applicationRuntimeRoutes(
         try {
           const id = context.url.searchParams.get("runtimeId"),
             scope = context.url.searchParams.get("scope"),
-            catalogScope = scope === "bots" || scope === "creation" ? scope : scope === "conversation";
+            catalogScope =
+              scope === "bots" || scope === "creation" || scope === "project-memory" ? scope : scope === "conversation";
           if (id !== null && !/^[a-zA-Z0-9-]{1,64}$/.test(id)) throw new HarnessError("invalidInput");
           respondJson(
             context.res,

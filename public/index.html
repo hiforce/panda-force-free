@@ -1678,6 +1678,9 @@
               <span class="icon-slot" data-icon="slidersHorizontal"></span
               ><span data-pf-message="settings.preferences"></span>
             </button>
+            <button type="button" data-settings-page="encryption-keys">
+              <span class="icon-slot" data-icon="shield"></span><span data-pf-message="settings.encryptionKeys"></span>
+            </button>
             <div class="settings-search-results" id="settingsSearchResults" hidden></div>
             <details class="settings-nav-group" data-settings-group="services" open>
               <summary data-pf-message="creative.system"></summary>
@@ -1692,6 +1695,9 @@
               ><button type="button" data-settings-page="bots">
                 <span class="icon-slot" data-icon="bot"></span
                 ><span data-pf-message="cli.botSettingsTitle"></span></button
+              ><button type="button" data-settings-page="memory-settings">
+                <span class="icon-slot" data-icon="listChecks"></span
+                ><span data-pf-message="projects.memory"></span></button
               ><button type="button" data-settings-page="client-access">
                 <span class="icon-slot" data-icon="shield"></span><span data-pf-message="cli.title"></span></button
               ><button type="button" data-settings-page="storage">
@@ -1737,6 +1743,7 @@
             <p class="settings-page-description" data-pf-message="settings.preferencesHint"></p>
             <nav class="settings-section-links" data-pf-aria-label="settings.jumpTo" aria-label="Jump to">
               <button type="button" data-preferences-jump="appearance" data-pf-message="shell.appearance"></button
+              ><button type="button" data-preferences-jump="region" data-pf-message="settings.languageRegion"></button
               ><button
                 type="button"
                 data-preferences-jump="conversation"
@@ -1755,8 +1762,7 @@
               aria-labelledby="settings-appearance-heading"
             >
               <header>
-                <h2 id="settings-appearance-heading" tabindex="-1" data-pf-message="creative.appearance"></h2>
-                <p data-pf-message="settings.appearanceHint"></p>
+                <h2 id="settings-appearance-heading" tabindex="-1" data-pf-message="shell.appearance"></h2>
               </header>
               <div class="settings-preference-fields">
                 <label class="settings-row settings-select-row"
@@ -1772,16 +1778,27 @@
                     <option value="silk" data-pf-message="shell.silk">Silk</option>
                     <option value="aurora" data-pf-message="shell.aurora">Aurora</option>
                   </select></label
-                ><label class="settings-row settings-select-row"
-                  ><span
-                    ><strong data-pf-message="common.language">Language</strong
-                    ><small data-pf-message="common.interfaceLanguage">Interface language</small></span
+                >
+              </div>
+            </section>
+            <section
+              class="settings-preference-section"
+              data-preference-section="region"
+              aria-labelledby="settings-region-heading"
+            >
+              <header>
+                <h2 id="settings-region-heading" tabindex="-1" data-pf-message="settings.languageRegion"></h2>
+              </header>
+              <div class="settings-preference-fields">
+                <label class="settings-row settings-select-row"
+                  ><span><strong data-pf-message="common.interfaceLanguage">Interface language</strong></span
                   ><select class="settings-select wb-select" id="languageSelect">
                     <option value="system" data-pf-message="common.systemDefault">System default</option>
                     <option value="zh-CN">简体中文</option>
                     <option value="en" data-pf-message="common.english">English</option>
                   </select></label
                 >
+                <div data-memory-system-language></div>
               </div>
             </section>
             <section
@@ -1878,6 +1895,21 @@
               </div>
             </section>
           </section>
+          <section class="settings-page" data-settings-content="encryption-keys" hidden>
+            <header class="settings-page-heading">
+              <button
+                class="settings-mobile-back icon-button"
+                type="button"
+                data-settings-mobile-back
+                aria-label="Back to settings"
+                data-pf-aria-label="common.backToSettings"
+              >
+                <span class="icon-slot" data-icon="chevronLeft"></span>
+              </button>
+              <h1 data-pf-message="settings.encryptionKeys"></h1>
+            </header>
+            <div data-settings-view="encryption-keys"></div>
+          </section>
           <section class="settings-page" data-settings-content="users" hidden>
             <header class="settings-page-heading">
               <button type="button" class="settings-mobile-back icon-button" data-pf-aria-label="common.backToSettings">
@@ -1956,6 +1988,17 @@
               <span class="icon-slot" data-icon="chevronLeft"></span>
             </button>
             <div data-settings-view="bots"></div>
+          </section>
+          <section class="settings-page" data-settings-content="memory-settings" hidden>
+            <button
+              class="settings-mobile-back icon-button"
+              type="button"
+              data-settings-mobile-back
+              data-pf-aria-label="common.back"
+            >
+              <span class="icon-slot" data-icon="chevronLeft"></span>
+            </button>
+            <div data-settings-view="memory-settings"></div>
           </section>
           <section class="settings-page" data-settings-content="client-access" hidden>
             <button

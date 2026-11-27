@@ -188,11 +188,10 @@ export function createBrowserEngine({
     if (!thread) return;
     // A native creation is already committed. Metadata failure must never look like a retryable creation failure.
     await publishCatalogUpdate(projectCatalog, broadcast, async () => {
-      const snapshot = await projectCatalog.assign(
-        flags.pandaProjectId as string,
-        [thread],
-        (await projectCatalog.snapshot()).revision,
-      );
+      const snapshot = await projectCatalog.bindSession(flags.pandaProjectId as string, {
+        ...thread,
+        updatedAt: typeof thread.updatedAt === "number" ? thread.updatedAt : undefined,
+      });
       if (isRecord(result)) {
         result.pandaProjectId = flags.pandaProjectId;
         result.pandaProjectCatalog = directoryPolicy.snapshot(snapshot);

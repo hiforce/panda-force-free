@@ -124,7 +124,9 @@ export class HarnessRegistry {
     const profile = this.profiles.get(profileId);
     return (
       !!profile &&
-      (!profile.conversationOnly || (scope !== undefined && profile.applicationScopes?.includes(scope) === true))
+      (scope === "project-memory"
+        ? profile.applicationScopes?.includes(scope) === true
+        : !profile.conversationOnly || (scope !== undefined && profile.applicationScopes?.includes(scope) === true))
     );
   }
   allowsApplication(runtime: HarnessRuntime, scope?: ApplicationRuntimeScope) {
@@ -250,7 +252,12 @@ export class HarnessRegistry {
     {
       application,
       permissionMode,
-    }: { application?: HarnessApplicationPolicy; permissionMode?: HarnessPermissionMode } = {},
+      persistentConversation,
+    }: {
+      application?: HarnessApplicationPolicy;
+      permissionMode?: HarnessPermissionMode;
+      persistentConversation?: boolean;
+    } = {},
   ) {
     const runtime = await this.require(principal, id),
       profile = this.profiles.get(runtime.profileId)!;
@@ -263,6 +270,7 @@ export class HarnessRegistry {
         cwd,
         application,
         permissionMode,
+        persistentConversation,
       });
       let info: HarnessAgentInfo;
       try {

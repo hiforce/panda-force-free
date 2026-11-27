@@ -14,6 +14,29 @@
   --pf-checkbox-size: 18px;
   --pf-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238793a3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
 }
+.pf-switch-track {
+  display: flex;
+  inline-size: 28px;
+  block-size: 16px;
+  flex: none;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--pf-muted);
+}
+.pf-switch-track::after {
+  content: "";
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: 50%;
+  background: var(--pf-card);
+}
+[role="switch"][aria-checked="true"] > .pf-switch-track {
+  justify-content: flex-end;
+  background: var(--pf-primary);
+}
+[role="switch"][aria-checked="true"] > .pf-switch-track::after {
+  background: #fff;
+}
 .busy-indicator {
   display: inline-block;
   inline-size: var(--busy-indicator-size, var(--pf-space-5));

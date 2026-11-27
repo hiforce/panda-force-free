@@ -58,6 +58,24 @@ export class FileDocumentQueries extends FileSavedQueries {
       return project.documents.revisions(documentId, 100, view.commit);
     });
   }
+  async savedRecords(projectId: string, offset: number) {
+    return (
+      (await this.projects.ifPresent(projectId, async (_project, view) => {
+        const bytes = await view.read("tree.json");
+        const tree = bytes === null ? null : decodeProjectNavigation(bytes);
+        if (tree && tree.projectId !== projectId) throw new ProjectContentError("invalidFile");
+        const trashed = new Set(tree?.spaces.flatMap((state) => state.trash.map((row) => row.documentId)));
+        const ids = Array.from(view.paths)
+          .map(projectDocumentId)
+          .filter((id): id is string => id !== null && !trashed.has(id))
+          .sort();
+        const documents = await Promise.all(
+          ids.slice(offset, offset + 50).map(async (id) => (await readProjectDocumentMetadata(view, id)).document),
+        );
+        return { documents, nextOffset: offset + 50 < ids.length ? offset + 50 : null };
+      })) ?? { documents: [], nextOffset: null }
+    );
+  }
   async list(projectId: string, spaceId: string, search = "", offset = 0): Promise<DocumentPage> {
     documentIdentity(spaceId);
     if (typeof search !== "string" || search.length > 200 || !Number.isSafeInteger(offset) || offset < 0)

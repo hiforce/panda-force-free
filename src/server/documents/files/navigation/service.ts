@@ -45,7 +45,11 @@ export class FileDocumentNavigation implements DocumentNavigationPort {
   createFromSource(actor: string, input: unknown, producer: DocumentCreationSource) {
     if (!this.content) throw new DocumentError("unavailable", 503);
     const command = fileTreeCommand("create", actor, input),
-      source = { identity: producer.identity, prepare: producer.prepare.bind(producer) };
+      source = {
+        identity: producer.identity,
+        prepare: producer.prepare.bind(producer),
+        verify: producer.verify?.bind(producer),
+      };
     return this.execute(
       { ...command, request: navigationRequest({ base: command.request, source: source.identity }) },
       source,
@@ -60,7 +64,11 @@ export class FileDocumentNavigation implements DocumentNavigationPort {
     if (!Number.isSafeInteger(minimumTreeVersion) || Number(minimumTreeVersion) < 0)
       throw new DocumentError("invalidInput");
     const command = fileTreeCommand("create", actor, { ...fields, treeVersion: 0 }),
-      source = { identity: producer.identity, prepare: producer.prepare.bind(producer) };
+      source = {
+        identity: producer.identity,
+        prepare: producer.prepare.bind(producer),
+        verify: producer.verify?.bind(producer),
+      };
     return this.execute(
       {
         ...command,
@@ -103,6 +111,7 @@ export class FileDocumentNavigation implements DocumentNavigationPort {
           }),
         },
         async (view) => {
+          await source?.verify?.();
           if (receipt(await project.navigationOperations.lookup(view, command.id), command)) return { changes: [] };
           const plan = new ProjectContentPlan(view);
           let snapshot = await readFileTree(plan, command.projectId);
@@ -127,6 +136,7 @@ export class FileDocumentNavigation implements DocumentNavigationPort {
               ? (documentId) => source.prepare().then((seed) => this.content!.prepare(project, documentId, seed))
               : undefined,
           );
+          await source?.verify?.();
           return { changes: plan.changes(), ...(message === undefined ? {} : { message }) };
         },
       );

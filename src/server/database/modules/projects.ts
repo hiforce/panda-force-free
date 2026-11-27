@@ -2,7 +2,7 @@ import { mysqlModelModule, type MySQLModel } from "../mysql-model.js";
 const text = (name: string, size?: number) => ({ name, type: size ? `varchar(${size})` : "text", nullable: false });
 const integer = (name: string) => ({ name, type: "bigint", nullable: false });
 const primary = (...columns: string[]) => ({ name: "PRIMARY", unique: true, columns });
-export const projectMySQLModels: readonly MySQLModel[] = [
+const initialModels: readonly MySQLModel[] = [
   { name: "panda_force_catalog_meta", columns: [integer("id"), integer("revision")], indexes: [primary("id")] },
   {
     name: "panda_force_projects",
@@ -53,7 +53,22 @@ export const projectMySQLModels: readonly MySQLModel[] = [
     indexes: [primary("project_id")],
   },
 ];
-export const mysqlProjectsModule = mysqlModelModule("projects", projectMySQLModels, {
+const checkpoints: MySQLModel = {
+  name: "panda_force_session_project_checkpoints",
+  columns: [text("session_id", 128), integer("through_bytes"), integer("through_seq")],
+  indexes: [primary("session_id")],
+};
+export const projectMySQLModels = [...initialModels, checkpoints];
+const latest = mysqlModelModule("projects", projectMySQLModels, {
   readWrite: true,
   importFrom: ["sqlite"],
 });
+export const mysqlProjectsModule = {
+  ...latest,
+  migrations: {
+    mysql: [
+      { version: 1, steps: latest.migrations.mysql![0]!.steps.filter(({ id }) => id !== checkpoints.name) },
+      { version: 2, steps: [latest.migrations.mysql![0]!.steps.find(({ id }) => id === checkpoints.name)!] },
+    ],
+  },
+};

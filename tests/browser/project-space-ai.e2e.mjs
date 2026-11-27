@@ -29,11 +29,6 @@ try {
       context = await browser.newContext({ viewport: { width, height: 1000 }, locale });
     try {
       await f.signIn(context);
-      const selection = await context.request.post(f.base + "/api/system/database/selection", {
-        data: { driver: "sqlite" },
-        headers: { Origin: f.base },
-      });
-      assert(selection.ok());
       await context.addInitScript(() => {
         try {
           localStorage.setItem("panda-force-theme", "aurora");
@@ -44,7 +39,7 @@ try {
           data === undefined
             ? await context.request.get(f.base + path)
             : await context.request.post(f.base + path, { data });
-        assert.ok(r.ok(), await r.text());
+        assert.ok(r.ok(), path + " " + r.status() + " " + (await r.text()));
         return r.json();
       };
       const initial = await api("/api/projects"),
@@ -65,13 +60,23 @@ try {
         if (new URL(r.url()).pathname === "/api/document-creations" && r.method() === "POST") creationPosts++;
       });
       await page.goto(f.base + base);
+      const openComposer = async () => {
+        await page.locator(".project-create-menu > summary").click();
+        await page.locator("[data-project-compose]").click();
+        await page.locator("#gadgetDocumentPrompt:visible").waitFor();
+      };
+      assert.equal(await page.locator("[data-system-composer]").isVisible(), false);
+      await openComposer();
       await page.locator("[data-gd-suggestions]:visible").waitFor();
       assert.equal(await page.locator("[data-system-composer]").isVisible(), true);
       assert.equal(await page.locator("[data-creative-ai]").count(), 0);
       assert.equal(await page.locator("[data-creative-new].primary").count(), 0);
       assert.equal(await page.locator("[data-gd-start]").isEnabled(), true);
       assert.equal(creationPosts, 0);
-      assert.equal(await page.locator(".project-content-toolbar").isVisible(), false);
+      assert.equal(
+        await page.locator(width <= 700 ? "#projectCreationCategory" : ".project-creation-strip").isVisible(),
+        true,
+      );
       await page.screenshot({ path: `${out}/empty-${width}.png` });
       await page.locator('[data-gd-suggestion="article"]').click();
       assert.ok((await page.locator("#gadgetDocumentPrompt").inputValue()).length > 10);
@@ -109,7 +114,10 @@ try {
       assert.equal(await page.locator("#gadgetDocumentPrompt").inputValue(), "");
       assert.equal(await page.locator(".creative-skill-chip").count(), 0);
       assert.equal(await page.locator("[data-system-composer]").isVisible(), true);
-      assert.equal(await page.locator(".project-content-toolbar").isVisible(), true);
+      assert.equal(
+        await page.locator(width <= 700 ? "#projectCreationCategory" : ".project-creation-strip").isVisible(),
+        true,
+      );
       await page.screenshot({ path: `${out}/content-${width}.png` });
       if (process.env.PANDA_FORCE_TEST_SCOPE === "composer") {
         assert.deepEqual(errors, []);
@@ -124,8 +132,9 @@ try {
         });
         continue;
       }
-      await page.locator(`.resource-project-tabs a[href="${base}&tab=documents"]`).click();
-      await page.locator(".project-document-row").waitFor();
+      if (width <= 700) await page.locator("#projectCreationCategory").selectOption("document");
+      else await page.locator(`[data-creative-filter="document"]`).click();
+      await page.locator(".document-tree-row").waitFor();
       assert.equal(await page.locator(".resource-project-tabs > *").count(), 4);
       const tree = await api("/api/project-document-tree?project=" + project.id),
         parent = tree.nodes[0].documentId;
@@ -138,17 +147,38 @@ try {
         parentId: parent,
       });
       await page.reload();
-      await page.locator(".project-document-row").nth(1).waitFor();
-      await page.locator("[data-directory-toggle]").click();
-      assert.equal(await page.locator(".project-document-row").count(), 1);
-      await page.locator("[data-project-document-search]").fill("Draft notes");
-      await page.locator(".project-document-row").nth(1).waitFor();
-      await page.locator("[data-directory-open]").last().click();
+      await page.locator(".document-tree-row").nth(1).waitFor();
+      await page.locator(".document-tree-expand:enabled").click();
+      assert.equal(await page.locator(".document-tree-row").count(), 1);
+      await page.locator("#documentSearch").fill("Draft notes");
+      await page.locator(".document-tree-row").nth(1).waitFor();
+      await page.locator(".document-tree-title").last().click();
       await page.locator(".document-rich-content").waitFor();
-      await page.locator(`a[href="${base}&tab=documents"]:visible`).first().click();
-      await page.locator("[data-project-document-search]").waitFor();
-      assert.equal(await page.locator("[data-project-document-search]").inputValue(), "Draft notes");
-      await page.locator("[data-project-document-search]").fill("");
+      assert.equal(new URL(page.url()).pathname, "/project");
+      assert.equal(new URL(page.url()).searchParams.get("tab"), "documents");
+      if (width < 700) {
+        assert.equal(await page.locator(".project-overview-heading").isVisible(), false);
+        assert.equal(await page.locator(".topbar").isVisible(), false);
+        assert.equal(await page.locator(".workbench-mobile-nav").isVisible(), false);
+        assert.equal(await page.locator(".document-authoring-editor-header").isVisible(), true);
+        assert(
+          await page
+            .locator(".document-authoring-editor-header")
+            .evaluate((bar) => bar.contains(document.activeElement)),
+        );
+      } else {
+        assert.equal(await page.locator("#authoringDirectory").isVisible(), true);
+        const [directory, document] = await Promise.all([
+          page.locator("#authoringDirectory").boundingBox(),
+          page.locator("#documentEditor").boundingBox(),
+        ]);
+        assert(directory.x + directory.width <= document.x + 1);
+      }
+      await page.screenshot({ path: `${out}/reading-${width}.png` });
+      await page.locator(`[data-authoring-action="close-project-document"]:visible`).first().click();
+      await page.locator("#documentSearch").waitFor();
+      assert.equal(await page.locator("#documentSearch").inputValue(), "Draft notes");
+      await page.locator("#documentSearch").fill("");
       await page.screenshot({ path: `${out}/documents-${width}.png` });
       const snapshot = await api("/api/projects");
       await api("/api/projects/assign", {
@@ -164,7 +194,7 @@ try {
       assert.equal(await page.locator(".wb-session-entry").count(), 1);
       await page.locator("#projectSessionDirectory").selectOption(f.alpha);
       await page.locator(`.resource-project-tabs a[href="${base}"]`).click();
-      await page.locator("[data-system-composer]").waitFor();
+      await page.locator(width <= 700 ? "#projectCreationCategory" : ".project-creation-categories").waitFor();
       await page.locator(`.resource-project-tabs a[href="${base}&tab=sessions"]`).click();
       assert.equal(await page.locator("#projectSessionSearch").inputValue(), "alpha");
       assert.equal(await page.locator("#projectSessionDirectory").inputValue(), f.alpha);
@@ -187,6 +217,7 @@ try {
         await page.waitForFunction((value) => document.documentElement.lang === value, language);
         if (await page.locator(`.resource-project-tabs a[href="${base}"]`).count())
           await page.locator(`.resource-project-tabs a[href="${base}"]`).click();
+        await openComposer();
         await page
           .locator(
             `[data-gd-start][aria-label="${language === "en" ? "Start writing" : language === "zh-CN" ? "开始创作" : "開始創作"}"]`,

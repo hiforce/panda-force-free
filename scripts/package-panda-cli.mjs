@@ -1,9 +1,11 @@
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, mkdtemp, chmod, rm } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { zipSync } from "fflate";
 import { CLI_VERSION } from "../src/shared/cli/version.js";
+import { CLI_LOCAL_COMMANDS } from "../src/shared/cli/local-commands.js";
 import { CLI_COMMANDS } from "../src/shared/cli/commands.js";
 import { cliCommandSchema } from "../src/shared/cli/schema.js";
 import { pandaCliManual } from "../src/shared/cli/manual.js";
@@ -21,6 +23,7 @@ const files = {
         schema: 1,
         protocol: 1,
         version: CLI_VERSION,
+        localCommands: CLI_LOCAL_COMMANDS.map(([syntax, summary]) => ({ syntax, summary })),
         commands: CLI_COMMANDS.map((spec) => ({ ...spec, inputSchema: cliCommandSchema(spec) })),
       },
       null,
@@ -44,6 +47,35 @@ await mkdir(directory, { recursive: true });
 const path = resolve(directory, name + ".zip");
 await writeFile(path, archive);
 await writeFile(path + ".sha256", createHash("sha256").update(archive).digest("hex") + "  " + name + ".zip\n");
+const staging = await mkdtemp(resolve(tmpdir(), "panda-cli-npm-"));
+const npm = resolve(directory, "hiforceai-panda-cli-" + CLI_VERSION + ".tgz");
+try {
+  await mkdir(resolve(staging, "bin"));
+  for (const [name, bytes] of Object.entries(files)) await writeFile(resolve(staging, name), bytes);
+  await chmod(resolve(staging, "bin/panda.mjs"), 0o755);
+  await writeFile(
+    resolve(staging, "package.json"),
+    JSON.stringify({
+      name: "@hiforceai/panda-cli",
+      version: CLI_VERSION,
+      description: "PandaForce command-line client",
+      license: "MIT",
+      type: "module",
+      engines: { node: ">=22" },
+      bin: { panda: "./bin/panda.mjs" },
+      files: ["bin/panda.mjs", "README.html", "commands.json", "LICENSE", "SHA256SUMS"],
+    }),
+  );
+  const packed = Bun.spawn(["npm", "pack", staging, "--ignore-scripts", "--pack-destination", directory, "--json"], {
+    stdout: "pipe",
+    stderr: "inherit",
+  });
+  const receipt = await new Response(packed.stdout).json();
+  if ((await packed.exited) !== 0 || resolve(directory, receipt[0]?.filename ?? "") !== npm)
+    throw new Error("Panda CLI npm packaging failed");
+} finally {
+  await rm(staging, { recursive: true, force: true });
+}
 console.log(
-  JSON.stringify({ version: CLI_VERSION, archive: path, files: Object.keys(files), credentialsIncluded: false }),
+  JSON.stringify({ version: CLI_VERSION, archive: path, npm, files: Object.keys(files), credentialsIncluded: false }),
 );

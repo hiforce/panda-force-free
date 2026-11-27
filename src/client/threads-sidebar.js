@@ -1,7 +1,7 @@
 import { harnessId } from "../shared/harness/presentation.js";
 import { sidebarSessionGroups } from "./sidebar-session-groups.js";
 import { createSidebarSessionBrowser } from "./sidebar-session-browser.js";
-import { errorMessage } from "./../shared/errors.js";
+import { errorCode, errorMessage } from "./../shared/errors.js";
 import { createAnchoredMenu } from "./anchored-menu.js";
 import { closestElement, findElement } from "./dom.js";
 import { request as fetch } from "./http-client.js";
@@ -342,7 +342,12 @@ export function createThreadSidebar({
       const project = document.createElement("button");
       project.type = "button";
       project.setAttribute("role", "menuitem");
-      localizeText(project, "common.changeProject", undefined, t);
+      localizeText(
+        project,
+        projectCatalog?.assignment(thread.id) ? "projects.openAssignedProject" : "projects.linkSessionToProject",
+        undefined,
+        t,
+      );
       project.onclick = () => {
         closeSidebarProjectMenu();
         void onSessionProject(thread.id);
@@ -371,6 +376,17 @@ export function createThreadSidebar({
     }
   }
   async function confirmDeleteThread(thread, returnFocus) {
+    let impact = /** @type {import("../shared/project-memory/contracts.js").MemoryRemovalImpact | null} */ (null);
+    if (harnessId(thread.id)) {
+      try {
+        impact = await rpc("host/thread/memoryRemovalImpact", { threadId: thread.id });
+      } catch (error) {
+        addPersistentError(errorMessage(error) || t("sessions.memoryImpactUnavailable"), {
+          key: `session-delete:${thread.id}`,
+        });
+        return;
+      }
+    }
     const title = titleOf(thread);
     if (
       !(await confirmAction({
@@ -379,6 +395,17 @@ export function createThreadSidebar({
           ? "sessions.deleteHarnessMessage"
           : "sessions.titleAndItsDescendantSessionsWillBePermanentlyDeletedThis",
         values: { title },
+        ...(impact && impact.stops + impact.retains + impact.recovers + impact.pauses > 0
+          ? {
+              detailMessage: "sessions.memoryDeleteImpact",
+              detailValues: {
+                stops: impact.stops,
+                retains: impact.retains,
+                recovers: impact.recovers,
+                pauses: impact.pauses,
+              },
+            }
+          : {}),
         confirmText: "sessions.deleteSession",
         cancelText: "common.cancel",
         returnFocus: () =>
@@ -394,7 +421,7 @@ export function createThreadSidebar({
     )
       return;
     try {
-      await rpc("thread/delete", { threadId: thread.id });
+      await rpc("thread/delete", { threadId: thread.id, ...(impact ? { memoryImpact: impact.token } : {}) });
       removePersistentError(`session-delete:${thread.id}`);
       cleanupDeletedThread(thread.id);
       projectCatalog?.discardHistorySession(thread.id);
@@ -410,9 +437,11 @@ export function createThreadSidebar({
       toast(t("sessions.threadDeleted"));
     } catch (error) {
       console.error("Could not delete thread", error);
-      addPersistentError(errorMessage(error) || t("errors.couldNotDeleteThread"), {
-        key: `session-delete:${thread.id}`,
-      });
+      const message =
+        impact && errorCode(error) === "conflict"
+          ? t("sessions.memoryImpactChanged")
+          : errorMessage(error) || t("errors.couldNotDeleteThread");
+      addPersistentError(message, { key: `session-delete:${thread.id}` });
     }
   }
   function appendSessionRows(threads, visibleThreads) {

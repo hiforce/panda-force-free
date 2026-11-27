@@ -57,7 +57,12 @@ export async function antigravityApplicationAgent(
   const config = {
     name,
     description: "PandaForce scoped task",
-    tools: application.nativeOutput ? ["send_message", "write_file"] : ["send_message"],
+    tools:
+      application.scope === "project-memory"
+        ? []
+        : application.nativeOutput
+          ? ["send_message", "write_file"]
+          : ["send_message"],
     mainAgent: true,
     subagent: false,
     inheritCustomizations: false,

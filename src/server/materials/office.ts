@@ -5,7 +5,7 @@ import { xmlChildren, xmlDescendants, type XmlElement } from "../packages/opc/xm
 import { NativePresentation } from "../slides/office/package.js";
 import { PRESENTATION_NAMESPACES } from "../slides/office/namespaces.js";
 import { MaterialTextBuilder } from "./builder.js";
-import { MATERIAL_TEXT_LIMITS as limits, MaterialTextError, type MaterialText } from "./contracts.js";
+import { MATERIAL_TEXT_LIMITS as limits, MaterialTextError, type DetailedMaterialText } from "./contracts.js";
 
 const relationships = [
   "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
@@ -83,7 +83,7 @@ function wordBlocks(node: XmlElement, ns: string): string {
     .filter(Boolean)
     .join("\n");
 }
-export async function wordMaterialText(bytes: Uint8Array): Promise<MaterialText> {
+export async function wordMaterialText(bytes: Uint8Array): Promise<DetailedMaterialText> {
   const { parts, main } = await packageSource(bytes, "docx"),
     root = parts.xml(main).documentElement!,
     ns = root.namespaceURI;
@@ -110,7 +110,7 @@ function cellReference(value: string) {
   if (column > 16384 || row > 1048576) fail();
   return row;
 }
-export async function workbookMaterialText(bytes: Uint8Array): Promise<MaterialText> {
+export async function workbookMaterialText(bytes: Uint8Array): Promise<DetailedMaterialText> {
   const { parts, main } = await packageSource(bytes, "xlsx"),
     root = parts.xml(main).documentElement!,
     ns = root.namespaceURI;
@@ -186,7 +186,7 @@ export async function workbookMaterialText(bytes: Uint8Array): Promise<MaterialT
   if (!hasContent) throw new MaterialTextError("empty");
   return builder.result();
 }
-export async function presentationMaterialText(bytes: Uint8Array): Promise<MaterialText> {
+export async function presentationMaterialText(bytes: Uint8Array): Promise<DetailedMaterialText> {
   const presentation = await NativePresentation.open(bytes, "material.pptx", { sourceLimits }),
     ns = PRESENTATION_NAMESPACES.find((item) => item.dialect === presentation.index.dialect)!;
   if (presentation.index.kind !== "pptx") fail();

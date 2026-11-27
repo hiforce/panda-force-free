@@ -2,7 +2,7 @@
 title: 编译源码与基础镜像
 ---
 
-0.1.11 默认使用已公开、配套的 **Rocky 创作构建/运行基础镜像**，平台为 Linux amd64。两种镜像均包含 Codex CLI、Grok Build 与完整的 Office/PDF/OCR、字体、图像、研究、写作、浏览器和视频工具；构建镜像增加应用开发/原生编译依赖，运行镜像保留生产依赖。[基础镜像内容与用途](base-images.md)说明清单、目的和锁定输入。
+源码默认使用已公开、配套的 **Rocky 创作构建/运行基础镜像**，平台为 Linux amd64。两种镜像均包含 Codex CLI、Grok Build 与完整的 Office/PDF/OCR、字体、图像、研究、写作、浏览器和视频工具；构建镜像增加应用开发/原生编译依赖，运行镜像保留生产依赖。[基础镜像内容与用途](base-images.md)说明清单、目的和锁定输入。
 
 ## Development container
 
@@ -61,3 +61,7 @@ docker build -f scripts/build/Dockerfile.engine-bases --platform linux/amd64 \
 本地应用工具链使用 Bun 1.4.2、Node.js 22 和 Codex CLI 0.171.0。运行 `bun install --frozen-lockfile`、`npm rebuild node-pty --build-from-source` 后，使用 `bun run check`、相关单元/集成/浏览器用例。完整验证可独立使用 `bun run verify`，不把它默认附加到每次镜像打包。浏览器检查需要 Playwright Chromium 和 WebKit。
 
 帮助站独立构建：进入 `panda-docs`，运行 `bun install --frozen-lockfile` 和 `bun run build`，使用 Node.js 22 或更新版本。原生/远程诊断、真实模型账号和生产凭据不属于普通安装要求。
+
+## 0.2.1 源码
+
+`develop` 分支包含 0.2.1 的公开源码，可按本页步骤构建。项目记忆支持跨会话取用。项目开启取用后，隐私会话也可以使用已授权的记忆，消息内容不会成为记忆来源。切换 Harness 时，会话列表仍显示同一条会话。

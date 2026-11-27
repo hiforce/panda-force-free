@@ -18,10 +18,8 @@ export interface ZipDirectory {
   entries: readonly ZipEntry[];
   offset: number;
 }
-/** Inspect every central record and declared expansion before decoding any payload. */
-export function zipDirectory(bytes: Uint8Array, limits: SourceLimits, allowSymlinks = false): ZipDirectory {
+export function zipTrailer(bytes: Uint8Array, archiveSize = bytes.length) {
   if (bytes.byteLength < 22) throw new SourceError("invalidArchive");
-  if (bytes.byteLength > limits.archiveBytes) throw new SourceError("sourceTooLarge");
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let end = -1;
   for (let offset = bytes.byteLength - 22; offset >= Math.max(0, bytes.byteLength - 65557); offset--) {
@@ -46,11 +44,25 @@ export function zipDirectory(bytes: Uint8Array, limits: SourceLimits, allowSymli
     start === 0xffffffff
   )
     throw new SourceError("unsupportedArchive");
+  if (start + size !== archiveSize - bytes.length + end) throw new SourceError("invalidArchive");
+  return { count, size, start };
+}
+
+/** Inspect every central record and declared expansion before decoding any payload. */
+export function zipEntries(
+  bytes: Uint8Array,
+  directory: ReturnType<typeof zipTrailer>,
+  limits: SourceLimits,
+  allowSymlinks = false,
+): ZipDirectory {
+  const { start, count, size } = directory;
   if (count > limits.entries) throw new SourceError("sourceTooLarge");
-  if (start + size !== end) throw new SourceError("invalidArchive");
+  if (bytes.length !== size) throw new SourceError("invalidArchive");
+  const end = bytes.length;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const paths = new SourcePaths(limits.entries),
     entries: ZipEntry[] = [];
-  let offset = start,
+  let offset = 0,
     total = 0,
     files = 0;
   for (let index = 0; index < count; index++) {
@@ -103,4 +115,15 @@ export function zipDirectory(bytes: Uint8Array, limits: SourceLimits, allowSymli
   }
   if (offset !== end) throw new SourceError("invalidArchive");
   return { entries, offset: start };
+}
+
+export function zipDirectory(bytes: Uint8Array, limits: SourceLimits, allowSymlinks = false): ZipDirectory {
+  if (bytes.byteLength > limits.archiveBytes) throw new SourceError("sourceTooLarge");
+  const directory = zipTrailer(bytes);
+  return zipEntries(
+    bytes.subarray(directory.start, directory.start + directory.size),
+    directory,
+    limits,
+    allowSymlinks,
+  );
 }

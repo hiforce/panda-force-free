@@ -1,4 +1,5 @@
 {
+  "languageRegion": "Language & region",
   "noProject": "No project",
   "authenticatedPandaforceAccount": "Authenticated PandaForce account",
   "preferences": "Preferences",
@@ -13,5 +14,18 @@
   "shortcuts": "Shortcuts",
   "pageLoading": "Loading settings…",
   "pageLoadFailed": "Couldn't load settings. Try again.",
-  "pageReloadRequired": "Reload the workspace to load these settings."
+  "pageReloadRequired": "Reload the workspace to load these settings.",
+  "encryptionKeys": "Encryption keys",
+  "encryptionKeysHint": "Keys are kept in this browser. Download the passphrase-protected backup to use a key on another device. Keep the backup and passphrase safe.",
+  "encryptionKeyCreate": "Generate key",
+  "encryptionKeyRestore": "Restore key",
+  "encryptionKeyName": "Key name",
+  "encryptionKeyPassphrase": "Key passphrase",
+  "encryptionKeyRepeatPassphrase": "Repeat passphrase",
+  "encryptionKeyBackup": "Key backup (.pfkey)",
+  "encryptionKeyDownload": "Download backup",
+  "encryptionKeyPassphraseMismatch": "The passphrases do not match.",
+  "encryptionKeyError": "Unable to save or restore the key. Check the backup file and passphrase.",
+  "encryptionKeyCreated": "Key generated. Keep the downloaded backup and its passphrase.",
+  "encryptionKeyRestored": "Key restored."
 }

@@ -111,7 +111,9 @@ export function harnessRoutes(options: {
           action = segments[1];
         if (context.req.method === "DELETE") {
           if (!id || action || segments.length !== 1) throw new HarnessError("notFound", 404);
-          await options.conversations.delete(principal, id);
+          const impactToken = context.url.searchParams.get("memoryImpact") ?? undefined;
+          if (impactToken !== undefined && !/^[a-f0-9]{64}$/u.test(impactToken)) throw new HarnessError("invalidInput");
+          await options.conversations.delete(principal, id, impactToken);
           return {};
         }
         const input = context.req.method === "GET" ? {} : await readJsonBody(context.req, 512 * 1024);
@@ -120,7 +122,8 @@ export function harnessRoutes(options: {
           if (
             (input.cwd !== undefined && typeof input.cwd !== "string") ||
             (input.projectId !== undefined && input.projectId !== null && typeof input.projectId !== "string") ||
-            (input.runtimeId !== undefined && typeof input.runtimeId !== "string")
+            (input.runtimeId !== undefined && typeof input.runtimeId !== "string") ||
+            (input.memoryPrivate !== undefined && typeof input.memoryPrivate !== "boolean")
           )
             throw new HarnessError("invalidInput");
           return options.conversations.create(principal, {
@@ -129,9 +132,65 @@ export function harnessRoutes(options: {
               import("../../shared/harness/contracts.js").HarnessPermissionMode | undefined,
             projectId: input.projectId as string | undefined,
             cwd: input.cwd as string | undefined,
+            memoryPrivate: input.memoryPrivate === true,
           });
         }
         if (!id) throw new HarnessError("notFound", 404);
+        if (segments.length === 2 && action === "memory-summary" && context.req.method === "GET") {
+          context.res.setHeader("Cache-Control", "private, no-store");
+          return options.conversations.memorySummary(principal, id);
+        }
+        if (segments.length === 2 && (action === "memory" || action === "memory-policy")) {
+          context.res.setHeader("Cache-Control", "private, no-store");
+          if (context.req.method === "GET")
+            return action === "memory"
+              ? options.conversations.memoryDetails(principal, id)
+              : options.conversations.memorySettings(principal, id);
+          if (context.req.method === "PATCH" && action === "memory-policy") {
+            if (
+              !Number.isSafeInteger(input.revision) ||
+              !(input.write === undefined || input.write === null || typeof input.write === "boolean") ||
+              !(input.recall === undefined || input.recall === null || typeof input.recall === "boolean") ||
+              (input.paused !== undefined && typeof input.paused !== "boolean") ||
+              (input.paused === undefined &&
+                input.revoke !== true &&
+                input.write === undefined &&
+                input.recall === undefined) ||
+              (input.revoke !== undefined && typeof input.revoke !== "boolean") ||
+              (input.impactToken !== undefined &&
+                (typeof input.impactToken !== "string" || !/^[a-f0-9]{64}$/u.test(input.impactToken)))
+            )
+              throw new HarnessError("invalidInput");
+            return options.conversations.configureMemory(principal, id, {
+              revision: Number(input.revision),
+              write: input.write,
+              recall: input.recall,
+              paused: input.paused,
+              revoke: input.revoke === true,
+              impactToken: typeof input.impactToken === "string" ? input.impactToken : undefined,
+            });
+          }
+          throw new HarnessError("notFound", 404);
+        }
+        if (segments.length === 2 && action === "memory-removal-impact" && context.req.method === "GET") {
+          context.res.setHeader("Cache-Control", "private, no-store");
+          return options.conversations.memoryRemovalImpact(principal, id);
+        }
+        if (segments.length === 2 && action === "memory-refresh" && context.req.method === "POST") {
+          context.res.setHeader("Cache-Control", "private, no-store");
+          return options.conversations.retryMemory(principal, id);
+        }
+        if (segments.length === 2 && action === "memory-backfill") {
+          context.res.setHeader("Cache-Control", "private, no-store");
+          if (context.req.method === "GET") return options.conversations.memoryBackfill(principal, id);
+          if (context.req.method === "POST")
+            return options.conversations.memoryBackfill(principal, id, {
+              from: input.from,
+              to: input.to,
+              requestId: input.requestId,
+            });
+          throw new HarnessError("notFound", 404);
+        }
         if (action === "history" && context.req.method === "GET") {
           const from = context.url.searchParams.get("from"),
             to = context.url.searchParams.get("to");

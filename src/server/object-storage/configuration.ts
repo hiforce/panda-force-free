@@ -1,4 +1,4 @@
-import type { CreativeAssetKind } from "../../shared/creative/assets.js";
+import type { OriginalStorageKind } from "../../shared/storage/contracts.js";
 import type {
   OriginalStorageCredentials,
   OriginalStorageSettings,
@@ -335,7 +335,16 @@ export class OriginalStorageConfiguration {
       client: new PrivateS3Client(profile, credentials),
     };
   }
-  async writeTarget(kind: CreativeAssetKind) {
+  async memoryPackagesEnabled() {
+    const current = await this.current();
+    return current.mode === "s3" && current.kinds.includes("project-memory-package");
+  }
+  async memoryPackageTarget() {
+    const target = await this.writeTarget("project-memory-package");
+    if (!target) return null;
+    return { ...target, installation: await this.files.installation() };
+  }
+  async writeTarget(kind: OriginalStorageKind) {
     const current = await this.current();
     if (current.mode !== "s3" || !current.kinds.includes(kind)) return null;
     const reference = current.profiles.find((profile) => profile.id === current.activeProfileId);

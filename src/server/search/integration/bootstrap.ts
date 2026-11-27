@@ -33,6 +33,7 @@ export async function createOptionalSearchFeature(options: Parameters<typeof cre
       export: unavailable,
     };
     return {
+      projectMemoryText: unavailable,
       query: unavailable,
       status: unavailable,
       routes: searchRoutes(api),

@@ -15,6 +15,8 @@ import { engineSession } from "./session-codec.js";
 export interface CodexDriverOptions {
   connection: CodexConnection;
   defaultCwd: string;
+  processEnvironment?: NodeJS.ProcessEnv;
+  processArguments?: string[];
   version: string;
   isShuttingDown(): boolean;
 }
@@ -55,6 +57,8 @@ export function createCodexDriver(
   const bridge = transportFactory({
     connection: options.connection,
     defaultCwd: options.defaultCwd,
+    processEnvironment: options.processEnvironment,
+    processArguments: options.processArguments,
     clientInfo: { name: "panda-force", title: "PandaForce", version: options.version },
     isShuttingDown: options.isShuttingDown,
     onConnected: (info) =>

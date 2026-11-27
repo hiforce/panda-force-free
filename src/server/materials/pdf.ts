@@ -1,8 +1,8 @@
 import { getDocumentProxy } from "./vendor/pdf-parser.mjs";
-import { MATERIAL_TEXT_LIMITS as limits, MaterialTextError, type MaterialText } from "./contracts.js";
+import { MATERIAL_TEXT_LIMITS as limits, MaterialTextError, type DetailedMaterialText } from "./contracts.js";
 import { MaterialTextBuilder } from "./builder.js";
 /** Source bytes only: no URL, font directory, evaluation, external resource or renderer is enabled. */
-export async function pdfMaterialText(bytes: Uint8Array): Promise<MaterialText> {
+export async function pdfMaterialText(bytes: Uint8Array): Promise<DetailedMaterialText> {
   let pdf: Awaited<ReturnType<typeof getDocumentProxy>> | undefined;
   try {
     pdf = await getDocumentProxy(new Uint8Array(bytes), {

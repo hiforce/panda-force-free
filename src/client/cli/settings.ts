@@ -8,6 +8,7 @@ import { bindContentAccessSettings } from "../content-access/settings.js";
 export function createCliSettings(t: Translate) {
   let host: HTMLElement | null = null,
     epoch = 0,
+    listRevision = 0,
     controller = new AbortController(),
     busy = false,
     secret: { registration: CliRegistration; apiKey: string } | null = null;
@@ -28,8 +29,10 @@ export function createCliSettings(t: Translate) {
   }
   async function list() {
     const current = epoch,
+      revision = ++listRevision,
       result = await api<{ clients: ClientAccess[] }>();
-    if (host && current === epoch) setMessageHtml(field("[data-cli-clients]"), clientCards(t, result.clients));
+    if (host && current === epoch && revision === listRevision)
+      setMessageHtml(field("[data-cli-clients]"), clientCards(t, result.clients));
   }
   function clearSecret() {
     secret = null;
@@ -89,14 +92,24 @@ export function createCliSettings(t: Translate) {
         if (!host || current !== epoch) return;
         setMessageHtml(host, cliSettingsView(t, access.projects, access));
         bindContentAccessSettings(host, access, t, controller.signal);
-        await list();
+        void list().catch(() => {
+          if (host && current === epoch) field("[data-cli-clients]").textContent = t("cli.unavailable");
+        });
+        const scope = field<HTMLSelectElement>('[name="pf-cli-project-scope"]');
+        const projectsField = field<HTMLFieldSetElement>("[data-cli-projects]");
+        scope.onchange = () => {
+          const selected = scope.value === "selected";
+          projectsField.hidden = projectsField.disabled = !selected;
+          field("#cli-project-scope-hint").hidden = selected;
+        };
         field<HTMLFormElement>("[data-cli-form]").onsubmit = (event) => {
           event.preventDefault();
           void run(async () => {
             const form = new FormData(event.currentTarget as HTMLFormElement),
+              projectScope = form.get("pf-cli-project-scope"),
               projects = form.getAll("pf-cli-project"),
               capabilities = form.getAll("pf-cli-capability");
-            if (!projects.length || !capabilities.length) {
+            if ((projectScope === "selected" && !projects.length) || !capabilities.length) {
               notice(t("cli.scopeRequired"));
               return;
             }
@@ -104,6 +117,7 @@ export function createCliSettings(t: Translate) {
               name: form.get("pf-cli-name"),
               kind: form.get("pf-cli-kind"),
               projects,
+              projectScope,
               capabilities,
               expiresInDays: Number(form.get("pf-cli-expiry")),
             });

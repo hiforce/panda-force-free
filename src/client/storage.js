@@ -8,6 +8,7 @@ migrateBrowserState();
  */
 export const STORAGE_KEYS = {
   layout: "panda-force-layout",
+  memoryMapLayout: "panda-force-memory-map-layout",
   sidebarOpen: "panda-force-sidebar-open",
   sidebarWidth: "panda-force-sidebar-width",
   sessionDetailsOpen: "panda-force-session-details-open",

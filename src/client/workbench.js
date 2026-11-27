@@ -15,6 +15,7 @@ import { GadgetWorkspace } from "./gadget/workspace.js";
 import { createLazySettingsPage } from "./settings-pages/lazy.js";
 import { createBotNavigation } from "./bots/navigation.js";
 import { createLazyTemplateManager } from "./templates/lazy-settings.js";
+import { projectOverviewHeading } from "./creative/project-view.js";
 import { createLazyContentWorkspace } from "./creative/lazy-workspace.js";
 import { escapeHtml as escape } from "../shared/html.js";
 import { closestElement, findElement, findElements, requireElement } from "./dom.js";
@@ -39,6 +40,7 @@ import { createSocialWorkspace } from "./social/controller.js";
 import { createWorkbenchViews } from "./workbench-views.js";
 
 import { codexIcon } from "./codex-icons.js";
+import { createMemorySourceReader } from "./projects/memory-source-reader.js";
 import { createProjectDialogs } from "./project-dialogs.js";
 import { storage } from "./storage.js";
 import { createWorkbenchFrame } from "./workbench-chrome/frame.js";
@@ -112,13 +114,15 @@ export function createWorkbench({
     delivery,
     packages: createPackageManager(t),
   });
+  let standaloneDocumentFocus = false;
   const documents = createProjectDocumentWorkspace({
     t,
     identityKey,
     projects: () => catalog.projects(),
+    projectFrame: (id) => projectOverviewHeading(t, id, catalog.get(id), "", "documents"),
     onDocumentFocusChanged: (active) => {
-      document.body.dataset.documentNavigationFocus = String(active);
-      dispatchEvent(new CustomEvent("panda-force:document-focus-changed", { detail: active }));
+      standaloneDocumentFocus = active;
+      syncNavigationFocus();
     },
     sources: documentSources,
     publishing: createDocumentPublicationWorkspace(t, {
@@ -133,7 +137,8 @@ export function createWorkbench({
       },
     }),
   });
-  const projectDocuments = createLazyContentWorkspace("directory", t, identityKey, () => catalog.projects(), navigate);
+  const memorySource = createMemorySourceReader(t);
+  const projectMemory = createLazyContentWorkspace("memory", t, identityKey, () => catalog.projects(), navigate);
   const projectContent = createLazyContentWorkspace(
     "project",
     t,
@@ -224,6 +229,7 @@ export function createWorkbench({
   projectContext.className = "business-project-context";
   let contextSignature = "";
   function renderProjectContext() {
+    const projects = catalog.projects();
     const selected = state.active
       ? catalog.projectForSession(state.active.id)?.id || ""
       : state.newSessionProjectId || "";
@@ -231,24 +237,25 @@ export function createWorkbench({
       state.active?.id,
       selected,
       catalog.ready,
-      catalog.projects().map((p) => [p.id, p.name, p.code]),
+      projects.map((p) => [p.id, p.name, p.code, p.workspace?.path]),
     ]);
     if (key !== contextSignature) {
       contextSignature = key;
       const project = catalog.get(selected);
+      const names = new Map();
+      for (const { name } of projects) names.set(name, (names.get(name) || 0) + 1);
       setMessageHtml(
         projectContext,
-        `<span>${messageHtml("common.project", undefined, t)}</span>${
-          state.active
-            ? `<strong data-i18n-ignore>${escape(project?.name || t("common.unassigned"))}</strong>${button("common.changeProject", "session-project", 'data-id="' + escape(state.active.id) + '"')}`
-            : `<select id="sessionProjectSelect" ${messageAttributes("aria-label", "common.project", undefined, t)} ${catalog.ready ? "" : "disabled"}><option value="" data-pf-message="common.unassigned">${escape(t("common.unassigned"))}</option>${catalog
-                .projects()
-                .map(
-                  (p) =>
-                    `<option value="${escape(p.id)}" ${p.id === selected ? "selected" : ""}>${escape(p.name)} · ${escape(p.code)}</option>`,
-                )
-                .join("")}</select>`
-        }`,
+        state.active
+          ? `<span>${messageHtml("common.project", undefined, t)}</span><strong data-i18n-ignore>${escape(project?.name || t("common.unassigned"))}</strong>${button(project ? "projects.openAssignedProject" : "projects.linkSessionToProject", "session-project", 'data-id="' + escape(state.active.id) + '"')}`
+          : `<div class="session-project-choice">${codexIcon("folder")}<select id="sessionProjectSelect" ${messageAttributes("aria-label", "common.project", undefined, t)} ${project?.workspace?.path ? 'aria-describedby="sessionProjectFolderHint"' : ""} ${catalog.ready ? "" : "disabled"}><option value="" data-pf-message="common.unassigned">${escape(t("common.unassigned"))}</option>${projects
+              .map(
+                (p) =>
+                  `<option value="${escape(p.id)}" ${p.id === selected ? "selected" : ""}>${escape(names.get(p.name) > 1 ? p.name + " · " + p.code : p.name)}</option>`,
+              )
+              .join(
+                "",
+              )}</select>${codexIcon("chevronDown", "session-project-chevron")}</div>${project?.workspace?.path ? `<span id="sessionProjectFolderHint" class="sr-only">${messageHtml("projects.workspacePath", undefined, t)} <span data-i18n-ignore>${escape(project.workspace.path)}</span></span>` : ""}`,
       );
       findElement("select", projectContext)?.addEventListener("change", (event) =>
         newTask({
@@ -273,6 +280,7 @@ export function createWorkbench({
     publish: "creative.publish",
     new: "common.newSession",
     task: "common.session",
+    "memory-source": "projects.memorySourcePosition",
     settings: "common.settings",
   };
   const iconNames = {
@@ -369,18 +377,31 @@ export function createWorkbench({
     gadgetApplicationNavigation(navigate),
   );
 
+  function syncNavigationFocus() {
+    const project = route.page === "project" || (route.page === "publish" && Boolean(route.projectId));
+    const active = standaloneDocumentFocus || project;
+    if (document.body.dataset.documentNavigationFocus === String(active)) return;
+    document.body.dataset.documentNavigationFocus = String(active);
+    dispatchEvent(new CustomEvent("panda-force:document-focus-changed", { detail: active }));
+  }
+
   function render() {
     const focus = captureRenderFocus(view);
     const conversation =
       !(unavailableId && unavailableId === route.id) && workbenchRouteSurface(routeUrl, route) !== "workspace";
     hideInactiveWorkspaces();
     document.body.dataset.workbenchPage = route.page;
+    document.body.classList.toggle(
+      "project-creation-page",
+      route.page === "project" && !["sessions", "memory"].includes(routeUrl.searchParams.get("tab") || ""),
+    );
     const dockedWorkspace = isBotConversationRoute(routeUrl);
     view.classList.toggle("conversation-workspace-view", dockedWorkspace);
     document.body.classList.toggle("conversation-workspace-layout", dockedWorkspace);
     document.title = `PandaForce · ${t(pageLabel())}`;
     syncConversationSurfaces(conversation);
     renderPage(conversation);
+    syncNavigationFocus();
     renderNavigation();
     if (!conversation) localizeText(requireElement("#threadTitle"), pageLabel(), undefined, t);
     if (!conversation) setOpaqueText(requireElement("#threadPath"), "");
@@ -394,18 +415,21 @@ export function createWorkbench({
     const params = new URL(location.href).searchParams;
     return params.get("view") === "works" || (params.get("view") !== "activity" && params.has("asset"));
   }
+  function projectDocumentsRoute() {
+    return route.page === "project" && routeUrl.searchParams.get("tab") === "documents";
+  }
   function hideInactiveWorkspaces() {
+    if (route.page !== "memory-source") memorySource.hide();
     if (route.page !== "workspace") gadgetHome.hide();
     if (!creationSessionRoute()) creationWorkspace.hide();
-    if (route.page !== "documents" && !personalWorks()) documents.hide();
+    if (route.page !== "documents" && !personalWorks() && !projectDocumentsRoute()) documents.hide();
     if (route.page !== "create" || creationSessionRoute() || personalWorks()) creative.hide();
     if (
       route.page !== "project" ||
-      ["sessions", "documents"].includes(new URL(location.href).searchParams.get("tab") || "")
+      ["sessions", "documents", "memory"].includes(new URL(location.href).searchParams.get("tab") || "")
     )
       projectContent.hide();
-    if (route.page !== "project" || new URL(location.href).searchParams.get("tab") !== "documents")
-      projectDocuments.hide();
+    if (route.page !== "project" || new URL(location.href).searchParams.get("tab") !== "memory") projectMemory.hide();
     if (route.page !== "skills") skills.hide();
     if (route.page !== "publish") publish.hide();
     if (route.page !== "bots") bots.hide();
@@ -415,10 +439,13 @@ export function createWorkbench({
     view.hidden = conversation;
     viewport.hidden = !conversation;
     dock.hidden = !conversation;
-    picker.hidden = Boolean(state.active) || !conversation;
+    picker.hidden = Boolean(state.active || catalog.get(state.newSessionProjectId || "")?.workspace) || !conversation;
     if (conversation) {
       if (picker.parentNode !== shell) shell.insertBefore(picker, viewport);
-      if (projectContext.parentNode !== shell) shell.insertBefore(projectContext, picker);
+      if (route.page === "new" && !state.active) {
+        const actions = requireElement(".workspace-context-actions");
+        if (projectContext.parentNode !== actions.parentNode) actions.before(projectContext);
+      } else if (projectContext.parentNode !== shell) shell.insertBefore(projectContext, picker);
       if (dock.parentNode !== shell && creationSessionRoute()?.id !== "") shell.append(dock);
     } else {
       // Native projections may update their own visibility while this entry uses the registered composer.
@@ -449,13 +476,16 @@ export function createWorkbench({
               button("common.sessions", "route", 'data-route="tasks"'),
             ) + button("common.retrySession", "task", `data-id="${escape(route.id)}"`),
           );
-        } else if (route.page === "tasks") renderTasks();
+        } else if (route.page === "memory-source") memorySource.show(content, routeUrl, route.id);
+        else if (route.page === "tasks") renderTasks();
         else if (route.page === "projects") renderProjects();
         else if (route.page === "project") {
           if (new URL(location.href).searchParams.get("tab") === "sessions") {
             renderProject();
-          } else if (new URL(location.href).searchParams.get("tab") === "documents")
-            projectDocuments.show(content, route.id);
+          } else if (projectDocumentsRoute()) {
+            const params = new URL(location.href).searchParams;
+            documents.show(content, route.id, params.get("document") || "", params.get("knowledge") || "", true);
+          } else if (new URL(location.href).searchParams.get("tab") === "memory") projectMemory.show(content, route.id);
           else projectContent.show(content, route.id);
         } else if (personalWorks() || (route.page === "documents" && route.projectId === "personal")) {
           const params = new URL(location.href).searchParams;
@@ -494,7 +524,8 @@ export function createWorkbench({
     const activePage =
       route.page === "documents" && route.projectId === "personal"
         ? "create"
-        : ["project", "documents"].includes(route.page) || (route.page === "publish" && route.projectId)
+        : ["project", "documents", "memory-source"].includes(route.page) ||
+            (route.page === "publish" && route.projectId)
           ? "projects"
           : route.page === "creation"
             ? "create"
@@ -567,7 +598,11 @@ export function createWorkbench({
     unavailableId = "";
     if (workbenchRouteSurface(url) === "workspace") parkMessageComposer({ blur: true });
     // Returning home invalidates pending session reads without invoking new-session focus or routing.
-    if (!creationChanged && next.page === "workspace" && (state.active || route.page === "task"))
+    if (
+      !creationChanged &&
+      ["workspace", "memory-source"].includes(next.page) &&
+      (state.active || route.page === "task")
+    )
       newTask({ keepRoute: true });
     if (next.page !== "settings") {
       hideSettings();
@@ -581,7 +616,7 @@ export function createWorkbench({
     closeSidebar();
     render();
     if (oldCreation && !nextCreation) creationBridge.restoreDraft();
-    if (next.page === "settings") showSettings(next.id || "general-settings");
+    if (next.page === "settings") showSettings(next.id || "general-settings", { route: url.pathname + url.search });
     if (next.page === "task" && readSession) loadRouteTask();
     routing = false;
   }
@@ -615,7 +650,7 @@ export function createWorkbench({
       });
   }
   function threadOpened(id) {
-    if (routing && route.page !== "task") return;
+    if (route.page === "memory-source" || (routing && route.page !== "task")) return;
     // All openers share route cleanup and draft handoff without starting a second history read.
     navigate("/task/" + encodeURIComponent(id), { readSession: false });
   }
@@ -795,6 +830,14 @@ export function createWorkbench({
     }
   });
   document.addEventListener("change", (event) => {
+    if (event.target instanceof HTMLSelectElement && event.target.id === "projectCreationCategory") {
+      const path = event.target.selectedOptions[0]?.dataset.route;
+      if (path) {
+        // Release the native picker before rendering the destination view.
+        event.target.blur();
+        navigate(path);
+      }
+    }
     if (event.target instanceof HTMLSelectElement && event.target.id === "projectSessionDirectory")
       filterProjectDirectory(event.target.value);
     if (event.target instanceof HTMLSelectElement && event.target.id === "wbTaskFilter") {
@@ -847,8 +890,14 @@ export function createWorkbench({
   function rememberProject() {
     refresh();
   }
-  function associateSession(id) {
-    return projectDialogs.associate(catalog.projectForSession(id)?.id || null, [id]);
+  async function associateSession(id) {
+    if (!catalog.ready) await catalog.load();
+    const assignment = catalog.assignment(id);
+    if (assignment) {
+      navigate("/project?id=" + encodeURIComponent(assignment.projectId) + "&tab=sessions");
+      return;
+    }
+    await projectDialogs.associate(null, [id]);
   }
   function keyboard(event) {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {

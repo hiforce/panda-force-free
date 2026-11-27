@@ -21,6 +21,7 @@ export interface SessionWorkspaceView {
   title: string;
   cwd: string;
   project: { id: string; name: string; code: string } | null;
+  memoryPrivate?: true;
   status: { state: string; label: string; detail: string; icon: string } | null;
   usage: SessionUsageView;
   elapsedMs: number | null;

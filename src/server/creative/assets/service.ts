@@ -33,7 +33,7 @@ export class FileCreativeAssets extends FileCreativeAssetReader {
   ) {
     super(projects, assetRoot, undefined, objects);
   }
-  save(actor: string, project: string, value: CreativeSaveInput, signal?: AbortSignal) {
+  save(actor: string, project: string, value: CreativeSaveInput, signal?: AbortSignal, verify?: () => Promise<void>) {
     const input = creativeSaveInput(value);
     return documentFileOperation(async () => {
       await this.projects.authorize(project);
@@ -46,6 +46,7 @@ export class FileCreativeAssets extends FileCreativeAssetReader {
         undefined,
         async () => {
           if (signal?.aborted) throw new DocumentError("unavailable", 503);
+          await verify?.();
         },
         signal,
       );
@@ -301,6 +302,7 @@ export class FileCreativeAssets extends FileCreativeAssetReader {
       return this.receipt(owner.owned, replay.commit, input.id);
     }
     let storage: OriginalUploadPlan | undefined;
+    let local: Awaited<ReturnType<typeof this.files.blobs>> | undefined;
     await owner.coordinator.view(async (view) => {
       await guard();
       const previous = this.previous(input, project, await view.read(projectCreationFile(input.id)));
@@ -309,6 +311,9 @@ export class FileCreativeAssets extends FileCreativeAssetReader {
         ...descriptors.resources,
       ]);
       if (previous?.hasObjectHistory && !storage?.history) throw new ProjectContentError("unavailable");
+      // Initialize binary ownership under the project lease; put the large blobs after releasing it.
+      if (!storage?.remote && (input.kind !== "web" || input.resources.length))
+        local = await this.files.blobs(owner.owned, true);
     });
     if (storage?.remote) {
       await this.objects!.upload(
@@ -322,11 +327,10 @@ export class FileCreativeAssets extends FileCreativeAssetReader {
         ],
         signal,
       );
-    } else if (input.kind !== "web" || input.resources.length) {
-      const blobs = await this.files.blobs(owner.owned, true);
-      if (input.kind !== "web") await blobs.put(descriptors.source.digest, input.bytes);
+    } else if (local) {
+      if (input.kind !== "web") await local.put(descriptors.source.digest, input.bytes);
       for (const [i, resource] of input.resources.entries())
-        if (resource.bytes.length) await blobs.put(descriptors.resources[i]!.digest, resource.bytes);
+        if (resource.bytes.length) await local.put(descriptors.resources[i]!.digest, resource.bytes);
     }
     const receipt = await owner.coordinator.plan(command, async (view) => {
       await guard();

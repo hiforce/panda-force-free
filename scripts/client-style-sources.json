@@ -7,7 +7,8 @@
     "src/client/workbench/styles/sidebar-typography.css",
     "src/client/workbench/styles/preparation.css",
     "src/client/workbench/styles/notification-center.css",
-    "src/client/workbench/styles/workspace-tools.css"
+    "src/client/workbench/styles/workspace-tools.css",
+    "src/client/workbench/styles/project-memory.css"
   ],
   "public/creation.css": [
     "src/client/creation/styles/authoring.css",

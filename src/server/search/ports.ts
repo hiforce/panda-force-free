@@ -75,8 +75,9 @@ export interface TextIndexProvider {
     analyzer: SearchAnalyzer,
     limit: number,
     signal: AbortSignal,
+    options?: { match?: "any" },
   ): Promise<SearchCandidate[]>;
-  drop(index: IndexReference): Promise<void>;
+  drop(index: IndexReference, signal?: AbortSignal): Promise<void>;
   health(): Promise<boolean>;
   fingerprint(): string;
   canRetire?(fingerprint: string): boolean;

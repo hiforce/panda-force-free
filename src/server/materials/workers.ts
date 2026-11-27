@@ -7,6 +7,7 @@ import {
   MATERIAL_TEXT_VERSION,
   MaterialTextError,
   type MaterialText,
+  type DetailedMaterialText,
   type MaterialTextFailure,
 } from "./contracts.js";
 const failures: readonly MaterialTextFailure[] = [
@@ -17,8 +18,8 @@ const failures: readonly MaterialTextFailure[] = [
   "tooLarge",
   "busy",
 ];
-function projection(value: unknown): MaterialText {
-  const row = value as Partial<MaterialText>;
+function projection(value: unknown): DetailedMaterialText {
+  const row = value as Partial<DetailedMaterialText>;
   if (
     !row ||
     typeof row.text !== "string" ||
@@ -27,16 +28,25 @@ function projection(value: unknown): MaterialText {
     Buffer.byteLength(row.text) > limits.textBytes ||
     !Number.isSafeInteger(row.sections) ||
     row.sections! < 1 ||
-    row.sections! > limits.parts
+    row.sections! > limits.parts ||
+    !Array.isArray(row.offsets) ||
+    row.offsets.length !== row.sections ||
+    row.offsets[0] !== 0 ||
+    !row.offsets.every(
+      (offset, index) =>
+        Number.isSafeInteger(offset) &&
+        offset <= row.text!.length &&
+        (index === 0 || offset > row.offsets![index - 1]!),
+    )
   )
     throw new MaterialTextError("unreadable");
-  return { text: row.text, sections: row.sections! };
+  return { text: row.text, sections: row.sections!, offsets: row.offsets };
 }
 /** Source parsing is shared; authority and original-byte verification remain with each caller. */
 export class MaterialTextWorkers {
-  private readonly cache = new Map<string, { value: MaterialText; bytes: number }>();
+  private readonly cache = new Map<string, { value: DetailedMaterialText; bytes: number }>();
   private cacheBytes = 0;
-  private readonly pending = new Map<string, Promise<MaterialText>>();
+  private readonly pending = new Map<string, Promise<DetailedMaterialText>>();
   private readonly active = new Map<Worker, Promise<void>>();
   private closed = false;
   constructor(
@@ -44,6 +54,10 @@ export class MaterialTextWorkers {
     private readonly timeoutMs = 15000,
   ) {}
   async read(name: string, input: Uint8Array): Promise<MaterialText> {
+    const { text, sections } = await this.readSections(name, input);
+    return { text, sections };
+  }
+  async readSections(name: string, input: Uint8Array): Promise<DetailedMaterialText> {
     if (this.closed) throw new MaterialTextError("busy");
     if (!(input instanceof Uint8Array) || input.length > limits.inputBytes) throw new MaterialTextError("tooLarge");
     const format = extname(name).toLowerCase();
@@ -78,7 +92,7 @@ export class MaterialTextWorkers {
     this.pending.set(key, work);
     return work;
   }
-  private run(name: string, input: Uint8Array): Promise<MaterialText> {
+  private run(name: string, input: Uint8Array): Promise<DetailedMaterialText> {
     const local = new URL("./worker.ts", import.meta.url),
       entry = existsSync(local) ? local : new URL("../src/server/materials/worker.ts", import.meta.url),
       bytes = new Uint8Array(input),
@@ -89,7 +103,7 @@ export class MaterialTextWorkers {
     });
     this.active.set(worker, done);
     return new Promise((resolve, reject) => {
-      let value: MaterialText | undefined, failure: MaterialTextError | undefined;
+      let value: DetailedMaterialText | undefined, failure: MaterialTextError | undefined;
       const timer = setTimeout(() => {
         failure = new MaterialTextError("tooLarge");
         void worker.terminate().catch(() => {});

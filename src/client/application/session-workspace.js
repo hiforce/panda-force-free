@@ -177,6 +177,7 @@ export function assembleSessionWorkspace({
       title: active?.name || active?.preview || "",
       cwd: active?.projectless ? "" : active?.cwd || "",
       project: project ? { id: project.id, name: project.name, code: project.code } : null,
+      memoryPrivate: active?.memoryPrivate,
       status,
       elapsedMs,
       usage: sessionUsageView(id ? state.tokenUsage.get(id) : undefined, !!harnessId(id)),

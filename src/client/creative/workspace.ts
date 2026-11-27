@@ -14,8 +14,14 @@ import { CreativeCovers } from "./covers.js";
 import { creativeCards, type CreativeCard, type CreativeFilter } from "./cards.js";
 import { LazyCreativeAssetsPanel } from "./assets-lazy.js";
 import type { ProjectReadAhead } from "./read-ahead.js";
-import { projectEmptyView, projectOverviewHeading, projectOverviewTabs } from "./project-view.js";
+import {
+  projectCreationBody,
+  projectCreationPath,
+  projectOverviewHeading,
+  updateProjectHeading,
+} from "./project-view.js";
 
+import { projectAssetKind, projectGallery, projectGalleryEmpty, projectGalleryLabel } from "./project-gallery.js";
 import type { ContentProject } from "./contracts.js";
 export type { ContentProject } from "./contracts.js";
 /** Owns discovery and navigation only. Editors, creation jobs and file copies remain separate services. */
@@ -33,7 +39,9 @@ export function createCreativeWorkspace(
     query = "",
     limit = 24,
     locale = "",
-    followedAsset = "";
+    followedAsset = "",
+    selectedAsset = "",
+    catalogScroll = 0;
   const covers = new CreativeCovers(t);
   let scope = "personal";
   let tree: ProjectDocumentTree = { projectId: scope, version: 0, nodes: [] };
@@ -49,11 +57,22 @@ export function createCreativeWorkspace(
     capabilitiesLoaded = false,
     paging = false,
     request: AbortController | null = null;
+  let composerExpanded = false;
   let composer: ReturnType<ComposerMount> | null = null;
   const modal = new DocumentModal(t, context === "personal" ? "creativeActionDialog" : "projectCreativeActionDialog"),
-    assetPanel = new LazyCreativeAssetsPanel(t, context + "CreativeAssetsDialog", identity);
+    assetPanel = new LazyCreativeAssetsPanel(t, context + "CreativeAssetsDialog", identity),
+    assetReader = new LazyCreativeAssetsPanel(t, "projectAssetReaderActions", identity);
   const open = (id: string, edit = false) =>
-    navigate("/documents?" + new URLSearchParams({ project: scope, document: id, ...(edit ? { edit: "1" } : {}) }));
+    navigate(
+      scope === "personal"
+        ? "/documents?" + new URLSearchParams({ project: scope, document: id, ...(edit ? { edit: "1" } : {}) })
+        : projectCreationPath(scope, "document", id, edit),
+    );
+  function selectedCategory(): CreativeFilter {
+    const kind = new URL(location.href).searchParams.get("kind");
+    return (["image", "slides", "web", "video", "file", "trash"].find((item) => item === kind) ||
+      "all") as CreativeFilter;
+  }
   function notice(text: string, failed = false) {
     const el = host?.querySelector<HTMLElement>("[data-creative-status]");
     if (el) {
@@ -61,31 +80,90 @@ export function createCreativeWorkspace(
       el.dataset.error = String(failed);
     }
   }
+  function assetPath(id?: string) {
+    const url = new URL(projectCreationPath(scope, filter), location.origin);
+    if (id) url.searchParams.set("asset", id);
+    return url.pathname + url.search;
+  }
   function followAsset() {
+    if (!host) return;
     const params = new URL(location.href).searchParams,
       id = params.get("asset"),
       version = params.get("assetVersion") || undefined;
-    if (!id) {
-      if (followedAsset) assetPanel.close();
-      followedAsset = "";
+    const gallery = host.querySelector<HTMLElement>("[data-project-gallery]");
+    if (!gallery) {
+      if (id) {
+        const key = JSON.stringify([scope, id, version]);
+        if (key === followedAsset) return;
+        followedAsset = key;
+        const project = scope;
+        void assetPanel
+          .follow(
+            project,
+            id,
+            async () => {
+              if (project === scope && host) await refresh();
+            },
+            version,
+          )
+          .catch(() => notice(t("documents.unavailable"), true));
+      } else if (followedAsset) {
+        followedAsset = "";
+        assetPanel.close();
+      }
       return;
     }
-    const key = JSON.stringify([scope, id, version]);
-    if (key === followedAsset) return;
-    followedAsset = key;
+    const reader = gallery.querySelector<HTMLElement>("[data-project-asset-reader]")!;
+    const scroller = gallery.closest<HTMLElement>(".workbench-view");
+    if (!id || filter === "trash") {
+      if (!selectedAsset) return;
+      const previous = selectedAsset;
+      selectedAsset = followedAsset = "";
+      assetReader.close();
+      gallery.removeAttribute("data-open");
+      reader.hidden = true;
+      reader.querySelector("[data-project-asset-content]")!.replaceChildren();
+      reader.querySelector("[data-project-asset-commands]")!.replaceChildren();
+      cards();
+      if (scroller) scroller.scrollTop = catalogScroll;
+      const source = gallery.querySelector<HTMLElement>('[data-creative-asset="' + CSS.escape(previous) + '"]');
+      (source || gallery.querySelector<HTMLElement>("[data-creative-search]"))?.focus({ preventScroll: true });
+      return;
+    }
     const project = scope,
-      generation = epoch;
-    void assetPanel
-      .follow(
-        project,
-        id,
+      key = JSON.stringify([project, id, version]);
+    if (key === followedAsset) return;
+    if (!selectedAsset) catalogScroll = scroller?.scrollTop ?? 0;
+    selectedAsset = id;
+    followedAsset = key;
+    const existing = assets.find((asset) => asset.id === id);
+    const title = reader.querySelector<HTMLElement>("[data-project-asset-title]")!;
+    title.textContent = existing?.title || t("creative.assetOpening");
+    title.title = title.textContent;
+    reader.dataset.assetKind = existing?.kind || "";
+    gallery.dataset.open = "";
+    reader.hidden = false;
+    cards();
+    if (scroller) scroller.scrollTop = 0;
+    reader.querySelector<HTMLElement>("[data-project-asset-close]")?.focus({ preventScroll: true });
+    const surface = reader.querySelector<HTMLElement>("[data-project-asset-content]")!;
+    const commands = reader.querySelector<HTMLElement>("[data-project-asset-commands]")!;
+    void assetReader
+      .readInline(
+        { project, id, title: title.textContent },
+        surface,
+        title,
+        commands,
         async () => {
-          if (project === scope && host) await refresh();
+          if (host?.contains(reader) && followedAsset === key) {
+            navigate(assetPath());
+            await refresh();
+          }
         },
         version,
       )
-      .catch(() => {
-        if (generation === epoch && host) notice(t("documents.unavailable"), true);
+      .then((asset) => {
+        if (asset && followedAsset === key) reader.dataset.assetKind = asset.kind;
       });
   }
   async function create() {
@@ -123,21 +201,29 @@ export function createCreativeWorkspace(
     ]
       .filter(({ value }) => value.title.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
       .sort((a, b) => b.value.updatedAt - a.value.updatedAt);
+    const grid = host.querySelector<HTMLElement>("[data-creative-grid]")!;
+    const layout =
+      scope === "personal" || (!selectedAsset && (filter === "image" || filter === "slides")) ? "tiles" : "rows";
+    grid.dataset.galleryLayout = layout;
+    grid.dataset.galleryCategory = filter;
+    const status =
+      !docsLoaded || !assetsLoaded
+        ? "documents.loading"
+        : failed
+          ? "creative.assetLoadFailed"
+          : cursor
+            ? "creative.assetMoreAvailable"
+            : query
+              ? "creative.assetNoMatches"
+              : "";
     setMessageHtml(
-      host.querySelector("[data-creative-grid]")!,
-      creativeCards(t, list.slice(0, limit), scope === "personal") ||
-        (scope !== "personal" &&
-        docsLoaded &&
-        assetsLoaded &&
-        capabilitiesLoaded &&
-        !failed &&
-        !query &&
-        !cursor &&
-        filter === "all"
-          ? projectEmptyView(t, contribute)
-          : `<p class="resource-empty">${e(t(!docsLoaded || !assetsLoaded ? "documents.loading" : failed ? "creative.assetLoadFailed" : cursor ? "creative.assetMoreAvailable" : query ? "creative.assetNoMatches" : filter === "trash" ? "creative.assetTrashEmpty" : "creative.empty"))}</p>`),
+      grid,
+      creativeCards(t, list.slice(0, limit), scope === "personal", layout, selectedAsset) ||
+        (scope !== "personal" && capabilitiesLoaded && !status
+          ? projectGalleryEmpty(t, filter, contribute && originals)
+          : `<p class="resource-empty">${e(t(status || (filter === "trash" ? "creative.assetTrashEmpty" : "creative.empty")))}</p>`),
     );
-    covers.render(host.querySelector<HTMLElement>("[data-creative-grid]")!);
+    covers.render(grid);
     const more = host.querySelector<HTMLButtonElement>("[data-creative-more]")!;
     more.hidden = list.length <= limit && !cursor;
     more.disabled = paging;
@@ -150,25 +236,37 @@ export function createCreativeWorkspace(
       filter === "trash" || !capabilitiesLoaded || !originals;
     host.querySelector<HTMLButtonElement>("[data-creative-new]")!.hidden = filter === "trash";
     host.querySelector<HTMLButtonElement>("[data-creative-retry]")!.hidden = !failed;
-    host.querySelector<HTMLElement>("[data-system-composer]")!.hidden = filter === "trash";
-    if (scope !== "personal") {
-      const empty =
-        docsLoaded && assetsLoaded && capabilitiesLoaded && !failed && !tree.nodes.length && !assets.length && !cursor;
-      host.querySelector(".project-overview")?.setAttribute("data-empty", String(empty));
-      const toolbar = host.querySelector<HTMLElement>(".project-content-toolbar");
-      if (toolbar) toolbar.hidden = empty && filter === "all" && !query;
+    host.querySelector<HTMLElement>("[data-system-composer]")!.hidden =
+      filter === "trash" || (scope !== "personal" && (filter !== "all" || !composerExpanded));
+    const projectMenu = host.querySelector<HTMLElement>(".project-create-menu");
+    if (projectMenu) projectMenu.hidden = filter !== "all";
+    const upload = host.querySelector<HTMLButtonElement>(".project-gallery-upload");
+    if (upload) {
+      upload.hidden = !projectAssetKind(filter) || !originals;
+      upload.disabled = !capabilitiesLoaded || !contribute;
     }
+    const trash = host.querySelector<HTMLAnchorElement>("[data-project-trash]");
+    if (trash) trash.hidden = filter !== "all" || !originals || Boolean(selectedAsset);
     host.querySelector("[data-creative-library]")!.textContent = t(
       filter === "trash"
         ? "creative.assetFileTrash"
         : scope === "personal"
           ? "creative.assetLibrary"
-          : "creative.content",
+          : projectGalleryLabel(filter),
     );
-    for (const button of host.querySelectorAll<HTMLButtonElement>("[data-creative-filter]")) {
-      button.setAttribute("aria-pressed", String(button.dataset.creativeFilter === filter));
-      button.hidden =
-        ["slides", "web", "trash"].includes(button.dataset.creativeFilter ?? "") && (!capabilitiesLoaded || !originals);
+    for (const control of host.querySelectorAll<HTMLElement>("[data-creative-filter]")) {
+      const selected = control.dataset.creativeFilter === filter;
+      const unavailable = ["slides", "web", "trash"].includes(control.dataset.creativeFilter ?? "") && !originals;
+      if (control instanceof HTMLAnchorElement) {
+        if (selected) control.setAttribute("aria-current", "page");
+        else control.removeAttribute("aria-current");
+        control.hidden = false;
+      } else {
+        control.setAttribute("aria-pressed", String(selected));
+        control.hidden =
+          unavailable ||
+          (["slides", "web", "trash"].includes(control.dataset.creativeFilter ?? "") && !capabilitiesLoaded);
+      }
     }
   }
   getBrowserI18n().subscribe(() => {
@@ -183,10 +281,13 @@ export function createCreativeWorkspace(
       project = scope,
       state = filter === "trash" ? "trashed" : "saved";
     request?.abort();
-    const prepared = filter === "trash" ? null : readAhead?.take(project);
+    const assetKind = scope === "personal" ? undefined : projectAssetKind(filter);
+    const skipTree = filter === "trash" || Boolean(assetKind);
+    if (skipTree) readAhead?.cancel();
+    const prepared = skipTree ? null : readAhead?.take(project);
     request = prepared?.controller ?? new AbortController();
     const signal = request.signal;
-    docsLoaded = filter === "trash";
+    docsLoaded = skipTree;
     docsReady = false;
     assetsLoaded = false;
     failed = false;
@@ -200,7 +301,7 @@ export function createCreativeWorkspace(
     notice(t("documents.loading"));
     const live = () => generation === epoch && !!host && !signal.aborted;
     await Promise.allSettled([
-      filter === "trash"
+      skipTree
         ? Promise.resolve()
         : (prepared?.tree ?? documentTreeApi.read(project, signal))
             .then((value) => {
@@ -218,7 +319,7 @@ export function createCreativeWorkspace(
                 cards();
               }
             }),
-      (prepared?.assets ?? creativeAssetsApi.list(project, undefined, signal, state))
+      (prepared?.assets ?? creativeAssetsApi.list(project, undefined, signal, state, assetKind))
         .then((value) => {
           if (live()) {
             assets = value.assets;
@@ -270,6 +371,7 @@ export function createCreativeWorkspace(
         cursor,
         request?.signal,
         filter === "trash" ? "trashed" : "saved",
+        scope === "personal" ? undefined : projectAssetKind(filter),
       );
       if (generation !== epoch || !host) return;
       assets = [...new Map([...assets, ...page.assets].map((value) => [value.id, value])).values()];
@@ -287,26 +389,29 @@ export function createCreativeWorkspace(
     }
   }
   async function assetAction(action: "import" | "read" | "copy", id?: string) {
-    const generation = epoch,
-      project = scope;
+    const asset = assets.find((candidate) => candidate.id === id);
+    if (action === "read" && asset?.state === "saved" && scope !== "personal") {
+      navigate(assetPath(asset.id));
+      return;
+    }
+    const project = scope,
+      surface = host;
     notice(t("documents.loading"));
     try {
       await assetPanel.open(
         action,
         project,
-        assets.find((a) => a.id === id),
+        asset,
         async () => {
-          if (generation === epoch && project === scope && host) {
-            if (action === "import") filter = "all";
-            await refresh();
-          }
+          if (host === surface && project === scope) await refresh();
         },
+        action === "import" && scope !== "personal" ? projectAssetKind(filter) : undefined,
       );
     } catch {
-      if (generation === epoch) notice(t("documents.unavailable"), true);
+      if (host === surface && project === scope) notice(t("documents.unavailable"), true);
       return;
     }
-    if (generation === epoch) notice("");
+    if (host === surface && project === scope) notice("");
   }
   async function copy(document: DocumentRecord) {
     if (await copyPersonalDocument(modal, t, document, projects())) notice(t("creative.copyDone"));
@@ -319,29 +424,23 @@ export function createCreativeWorkspace(
         locale === document.documentElement.lang &&
         target.querySelector(".creative-workspace")
       ) {
-        const details = projects().find((p) => p.id === project),
-          name = details?.name;
-        if (project !== "personal" && name) {
-          target.querySelector("[data-creative-heading]")!.textContent = name;
-          const crumb = target.querySelector<HTMLElement>("[data-project-breadcrumb-current]");
-          if (crumb) {
-            crumb.textContent = name;
-            crumb.title = name;
+        if (project !== "personal") {
+          const details = projects().find((item) => item.id === project);
+          if (details) updateProjectHeading(target, details.name);
+          for (const menu of target.querySelectorAll<HTMLDetailsElement>("details[open]")) {
+            if (menu.matches(".project-create-menu")) menu.open = false;
           }
-          const scopeLabel = target.querySelector("[data-creative-scope]");
-          if (scopeLabel) scopeLabel.textContent = name;
-          const code = target.querySelector<HTMLElement>("[data-project-code]");
-          if (code) {
-            code.textContent = details?.code || "";
-            code.hidden = !details?.code;
-          }
-          const description = target.querySelector("[data-project-description]");
-          if (description) {
-            description.toggleAttribute("data-i18n-ignore", !!details?.description);
-            setMessageHtml(
-              description,
-              details?.description ? e(details.description) : messageHtml("projects.overviewHint", {}, t),
-            );
+          const next = selectedCategory();
+          if (next !== filter) {
+            filter = next;
+            const picker = target.querySelector<HTMLSelectElement>("#projectCreationCategory");
+            if (picker) {
+              for (const option of picker.querySelectorAll<HTMLOptionElement>("option[data-legacy]"))
+                option.hidden = option.value !== next;
+              picker.value = next;
+            }
+            limit = 24;
+            void refresh();
           }
         }
         composer?.update();
@@ -351,6 +450,9 @@ export function createCreativeWorkspace(
       request?.abort();
       covers.close();
       assetPanel.close();
+      assetReader.close();
+      selectedAsset = followedAsset = "";
+      catalogScroll = 0;
       modal.close();
       composer?.dispose();
       composer = null;
@@ -363,22 +465,36 @@ export function createCreativeWorkspace(
       limit = 24;
       assets = [];
       cursor = null;
-      filter = "all";
+      filter = project === "personal" ? "all" : selectedCategory();
+      composerExpanded = false;
       docsLoaded = false;
       assetsLoaded = false;
       contribute = false;
       paging = false;
+      const newButton = `<button type="button" class="wb-button" data-creative-new>${codexIcon("plus")}${messageHtml(scope === "personal" ? "creative.new" : "documents.newDocument", {}, t)}</button>`;
+      const heading =
+        scope === "personal"
+          ? `<header class="resource-heading"><div><h1 data-creative-heading>${messageHtml("creative.myWork", {}, t)}</h1><p>${messageHtml("creative.createHint", {}, t)}</p></div><div class="creative-heading-actions">${newButton}</div></header>`
+          : projectOverviewHeading(
+              t,
+              scope,
+              projects().find((p) => p.id === scope),
+            );
+      const projectActions = `<div class="project-creation-actions"><details class="project-create-menu"><summary class="wb-button primary">${codexIcon("plus")}${messageHtml("creative.new", {}, t)}</summary><div class="creative-heading-actions"><button type="button" class="wb-button" data-project-compose>${messageHtml("creation.trigger", {}, t)}</button>${newButton}</div></details><button type="button" class="wb-button primary project-gallery-upload" data-project-import hidden ${messageAttributes("aria-label", "creative.assetImport", {}, t)}>${codexIcon("fileInput")}<span>${messageHtml("creative.assetImport", {}, t)}</span></button></div>`;
+      const personalList = `<div class="creative-list-heading"><h2 data-creative-library>${messageHtml("creative.recent", {}, t)}</h2><label class="resource-search">${codexIcon("search")}<input type="search" data-creative-search ${messageAttributes("placeholder", "creative.search", {}, t)} ${messageAttributes("aria-label", "creative.search", {}, t)}></label></div><p role="status" data-creative-status></p><div class="creative-grid" data-creative-grid></div><button type="button" class="wb-button" data-creative-more hidden>${messageHtml("templates.loadMore", {}, t)}</button>`;
+      const content =
+        scope === "personal"
+          ? `<div data-system-composer></div>${personalList}`
+          : projectCreationBody(
+              t,
+              scope,
+              filter,
+              projectActions,
+              `<div data-system-composer hidden></div>${projectGallery(t, scope)}`,
+            );
       setMessageHtml(
         host,
-        `<section class="creative-workspace ${scope === "personal" ? "" : "project-overview"}">${
-          scope !== "personal"
-            ? projectOverviewHeading(
-                t,
-                scope,
-                projects().find((p) => p.id === scope),
-              ) + projectOverviewTabs(t, scope)
-            : `<header class="resource-heading"><div><h1 data-creative-heading>${messageHtml("creative.myWork", {}, t)}</h1><p>${messageHtml("creative.createHint", {}, t)}</p></div><div class="creative-heading-actions"><button type="button" class="wb-button" data-creative-new>${codexIcon("plus")}${messageHtml("creative.new", {}, t)}</button></div></header>`
-        }<div data-system-composer></div>${scope === "personal" ? `<div class="creative-list-heading"><h2 data-creative-library>${messageHtml("creative.recent", {}, t)}</h2><label class="resource-search">${codexIcon("search")}<input type="search" data-creative-search ${messageAttributes("placeholder", "creative.search", {}, t)} ${messageAttributes("aria-label", "creative.search", {}, t)}></label></div>` : `<div class="project-content-toolbar wb-form"><div data-project-filters></div><label class="wb-field"><span class="project-content-search-caption">${messageHtml("creative.search", {}, t)}</span><span class="wb-control-with-icon">${codexIcon("search")}<input type="search" data-creative-search ${messageAttributes("placeholder", "creative.search", {}, t)}></span></label><h2 class="sr-only" data-creative-library>${messageHtml("creative.content", {}, t)}</h2></div>`}<p role="status" data-creative-status></p><div class="creative-grid" data-creative-grid></div><button type="button" class="wb-button" data-creative-more hidden>${messageHtml("templates.loadMore", {}, t)}</button></section>`,
+        `<section class="creative-workspace ${scope === "personal" ? "" : "project-overview project-creation-gallery"}">${heading}${content}</section>`,
       );
       composer = mountComposer(
         host.querySelector<HTMLElement>("[data-system-composer]")!,
@@ -416,14 +532,27 @@ export function createCreativeWorkspace(
       retry.dataset.creativeRetry = "";
       retry.hidden = true;
       setMessageHtml(retry, messageHtml("creative.retry", {}, t));
-      const filterHost = host.querySelector("[data-project-filters]");
-      if (filterHost) filterHost.append(filters);
-      else host.querySelector("[data-creative-grid]")!.before(filters);
+      if (scope === "personal") host.querySelector("[data-creative-grid]")!.before(filters);
       host.querySelector("[data-creative-grid]")!.before(retry);
       host.onclick = (event) => {
         const b = (event.target as Element).closest<HTMLElement>("button");
         if (!b) return;
-        if (b.hasAttribute("data-creative-import")) void assetAction("import");
+        const menu = b.closest<HTMLDetailsElement>(".project-create-menu");
+        if (menu) {
+          menu.open = false;
+          menu.querySelector("summary")?.focus();
+        }
+        if (b.hasAttribute("data-project-compose")) {
+          composerExpanded = true;
+          const pane = host?.querySelector<HTMLElement>("[data-system-composer]");
+          if (pane) pane.hidden = false;
+          composer?.update();
+          const prompt = pane?.querySelector<HTMLElement>("textarea");
+          if (prompt) prompt.focus();
+          else pane?.scrollIntoView({ block: "nearest" });
+        }
+        if (b.hasAttribute("data-project-asset-close")) navigate(assetPath());
+        if (b.hasAttribute("data-creative-import") || b.hasAttribute("data-project-import")) void assetAction("import");
         if (b.dataset.creativeAsset) void assetAction("read", b.dataset.creativeAsset);
         if (b.dataset.creativeCopyAsset) void assetAction("copy", b.dataset.creativeCopyAsset);
         if (b.hasAttribute("data-creative-retry")) void refresh();
@@ -444,6 +573,12 @@ export function createCreativeWorkspace(
           void more();
         }
       };
+      host.querySelector("[data-project-asset-reader]")?.addEventListener("keydown", (event) => {
+        if (event instanceof KeyboardEvent && event.key === "Escape" && !event.defaultPrevented) {
+          event.preventDefault();
+          navigate(assetPath());
+        }
+      });
       host.oninput = (event) => {
         if ((event.target as Element).matches("[data-creative-search]")) {
           query = (event.target as HTMLInputElement).value;
@@ -463,6 +598,8 @@ export function createCreativeWorkspace(
       covers.close();
       request?.abort();
       assetPanel.close();
+      assetReader.close();
+      selectedAsset = "";
       paging = false;
       host = null;
       composer?.dispose();

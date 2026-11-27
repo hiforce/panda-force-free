@@ -63,12 +63,22 @@ try {
       p.on("pageerror", (error) => errors.push(error.message));
       await p.goto(f.base + "/project?id=" + project);
       await p.locator("[data-creative-heading]").filter({ hasText: "Existing documents" }).waitFor();
-      await p.locator("[data-creative-import]:enabled").waitFor();
+      await p.locator("[data-creative-import]:enabled").waitFor({ state: "attached" });
       assert.equal(await p.locator("[data-creative-retry]").isVisible(), false);
-      assert.equal(await p.locator("[data-system-composer]").isVisible(), true);
-      for (const filter of ["web", "slides", "trash"])
-        assert.equal(await p.locator(`[data-creative-filter="${filter}"]`).isVisible(), true);
-      assert.equal(await p.locator("[data-system-composer]").isVisible(), true);
+      assert.equal(await p.locator("[data-system-composer]").isVisible(), false);
+      for (const filter of ["web", "slides"])
+        assert.equal(
+          await p
+            .locator(
+              width <= 700
+                ? `#projectCreationCategory option[value="${filter}"]`
+                : `[data-creative-filter="${filter}"]`,
+            )
+            .count(),
+          1,
+        );
+      await p.locator(".project-create-menu > summary").click();
+      await p.locator("[data-project-compose]").click();
       await p.locator("#gadgetDocumentPrompt").fill("Draft a practical project handbook.");
       assert.equal(await p.locator("#gadgetDocumentPrompt").inputValue(), "Draft a practical project handbook.");
       await p.locator("[data-gd-start]").click();
@@ -99,11 +109,12 @@ try {
       assert.equal(imported.status(), 201, await imported.text());
       await p.reload();
       await p.locator(".creative-card").nth(2).waitFor();
-      await p.locator("[data-creative-import]:enabled").waitFor();
+      await p.locator("[data-creative-import]:enabled").waitFor({ state: "attached" });
       assert.equal(await p.locator("[data-creative-new]").isEnabled(), true);
       await p.locator(".creative-card").filter({ hasText: "Preserved release notes" }).waitFor();
       assert.equal(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       await p.screenshot({ path: `${out}/project-${width}.png` });
+      await p.locator(".project-create-menu > summary").click();
       await p.locator("[data-creative-new]").click();
       await p.locator("#documentTitle").waitFor();
       await p.goto(f.base + "/project?id=" + project);
@@ -127,6 +138,8 @@ try {
       for (const language of ["en", "zh-CN", "zh-HK", "zh-TW"]) {
         await p.evaluate((value) => window.__pandaForceI18n.setPreference(value), language);
         await p.waitForFunction((value) => document.documentElement.lang === value, language);
+        await p.locator(".project-create-menu > summary").click();
+        await p.locator("[data-project-compose]").click();
         await p
           .locator(
             `[data-gd-start][aria-label="${language === "en" ? "Start writing" : language === "zh-CN" ? "开始创作" : "開始創作"}"]`,

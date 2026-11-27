@@ -13,6 +13,7 @@ export function harnessSummary(conversation: Omit<HarnessConversation, "owner" |
     updatedAt: conversation.updatedAt / 1000,
     status: { type: conversation.activeRunId ? "active" : "idle" },
     canAcceptDirectInput: true,
+    ...(conversation.memoryPrivate ? { memoryPrivate: true } : {}),
     turns: [],
   };
 }

@@ -105,7 +105,17 @@ try {
           async () =>
             !(await api("/api/personal/harness/conversations/" + managed.conversation.id)).conversation.activeRunId,
         );
-        const before = await api("/api/personal/harness/conversations/" + managed.conversation.id),
+        await page.locator("#sessionInfoButton").click();
+        await page.locator("#sessionAssociateProject").click();
+        assert.equal(new URL(page.url()).searchParams.get("id"), a.id);
+        assert.equal(await page.locator("#projectDialog").evaluate((dialog) => dialog.open), false);
+        const unbound = await api("/api/personal/harness/conversations", { runtimeId: "grok-local" }),
+          unboundId = "harness:" + unbound.conversation.id,
+          unboundPath = "/api/personal/harness/conversations/" + unbound.conversation.id;
+        assert.equal(unbound.conversation.projectId, null);
+        await navigate(app.base + "/task/" + encodeURIComponent(unboundId));
+        await page.waitForFunction((id) => globalThis.__pandaForceDebug?.state.active?.id === id, unboundId);
+        const before = await api(unboundPath),
           dialog = page.locator("#projectDialog"),
           submit = dialog.locator('[type="submit"]');
         const open = async () => {
@@ -148,7 +158,7 @@ try {
         await dialog.waitFor({ state: "hidden" });
         assert.equal(saves, 2);
         await waitFor(async () =>
-          (await api("/api/projects")).assignments.some((s) => s.id === id && s.projectId === b.id),
+          (await api("/api/projects")).assignments.some((s) => s.id === unboundId && s.projectId === b.id),
         );
         await page.waitForLoadState("networkidle");
         await page.reload();
@@ -157,26 +167,27 @@ try {
           (name) => document.querySelector("#sessionHeadingProject")?.textContent === name,
           b.name,
         );
-        const after = await api("/api/personal/harness/conversations/" + managed.conversation.id);
+        const after = await api(unboundPath);
         assert.equal(after.conversation.cwd, before.conversation.cwd);
         assert.deepEqual(after.messages, before.messages);
-        await navigate(app.base + "/project?id=" + b.id + "&tab=sessions");
-        await page.locator(`[data-wb="session-options"][data-id="${id}"]`).click();
-        const change = await page.evaluate(() =>
-          globalThis[Symbol.for("PandaForce.browserI18n")].t("common.changeProject"),
-        );
-        await page.locator(".sidebar-project-menu").getByRole("menuitem", { name: change, exact: true }).click();
-        await dialog.waitFor({ state: "visible" });
-        await page.locator("#associationProject").selectOption("");
-        await submit.click();
-        await dialog.waitFor({ state: "hidden" });
-        assert(!(await api("/api/projects")).assignments.some((s) => s.id === id));
+        cat = await api("/api/projects");
+        for (const projectId of [a.id, null]) {
+          const denied = await context.request.post(app.base + "/api/projects/assign", {
+            headers: { Origin: app.base },
+            data: { projectId, sessionIds: [unboundId], revision: cat.revision },
+          });
+          assert.equal(denied.status(), 409, await denied.text());
+          assert.equal((await denied.json()).messageId, "projects.sessionProjectLocked");
+        }
+        assert.deepEqual(await api("/api/projects"), cat);
         await navigate(app.base + "/project?id=" + a.id + "&tab=sessions");
         await page.locator('[data-wb="project-link"]').click();
-        await dialog.locator(`input[value="${id}"]`).check();
-        await submit.click();
-        await dialog.waitFor({ state: "hidden" });
-        assert((await api("/api/projects")).assignments.some((s) => s.id === id && s.projectId === a.id));
+        await page.waitForFunction(
+          () => document.querySelector("#projectAssociationForm")?.getAttribute("aria-busy") === "false",
+        );
+        assert.equal(await dialog.locator(`input[value="${unboundId}"]`).count(), 0);
+        assert.equal(await dialog.locator(`input[value="${id}"]`).count(), 0);
+        await page.keyboard.press("Escape");
         if (locale === "en") {
           const n = await api("/api/rpc", {
               id: crypto.randomUUID(),
@@ -186,6 +197,15 @@ try {
             nativeId = n.result.thread.id;
           cat = await api("/api/projects");
           await api("/api/projects/assign", { projectId: b.id, sessionIds: [nativeId], revision: cat.revision });
+          const nativeCatalog = await api("/api/projects");
+          for (const projectId of [a.id, null]) {
+            const denied = await context.request.post(app.base + "/api/projects/assign", {
+              headers: { Origin: app.base },
+              data: { projectId, sessionIds: [nativeId], revision: nativeCatalog.revision },
+            });
+            assert.equal(denied.status(), 409, await denied.text());
+            assert.equal((await denied.json()).messageId, "projects.sessionProjectLocked");
+          }
           await navigate(app.base + "/task/" + nativeId);
           await page.waitForFunction((id) => globalThis.__pandaForceDebug?.state.active?.id === id, nativeId);
           await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
@@ -207,8 +227,8 @@ try {
           locale,
           width,
           autoAssignment: true,
-          manualMove: true,
-          unlink: true,
+          firstAssociation: true,
+          movesAndUnlinksRejected: true,
           managedPicker: true,
           failedSaveRetry: true,
           duplicateSubmitCoalesced: true,

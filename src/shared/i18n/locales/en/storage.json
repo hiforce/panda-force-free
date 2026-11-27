@@ -15,6 +15,7 @@
   "mode": "Storage for selected file types",
   "local": "Local application storage",
   "s3": "S3-compatible object storage",
+  "projectMemoryPackages": "Project memory packages",
   "kinds": "File types to store in S3",
   "connection": "Storage connection",
   "newConnection": "New connection",

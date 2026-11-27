@@ -18,3 +18,7 @@ export interface MaterialText {
   text: string;
   sections: number;
 }
+
+export interface DetailedMaterialText extends MaterialText {
+  offsets: number[];
+}

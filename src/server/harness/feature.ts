@@ -1,5 +1,7 @@
+import type { ProjectSessionBinding, ProjectSessionMembership } from "../projects/session-membership.js";
+import { ProjectMemoryMaterialSearch } from "../project-memory/material-search.js";
 import { HarnessMaterials } from "./materials.js";
-import { harnessSummary } from "../../shared/harness/presentation.js";
+import { harnessConversationId, harnessSummary } from "../../shared/harness/presentation.js";
 import { errorCode } from "../../shared/errors.js";
 import type { CreationMaterialPort } from "../creation/materials.js";
 import { existsSync } from "node:fs";
@@ -15,6 +17,7 @@ import type { ProjectDirectoryPolicy } from "../projects/directory-policy.js";
 import type { RouteContext } from "../http/router.js";
 import { sharedWorkspaceAllowed } from "../auth/users/access.js";
 import { SQLiteHarnessMetadata } from "./storage/sqlite.js";
+import { HarnessHistoryMaintenance } from "./storage/history-maintenance.js";
 import { JsonlHarnessHistory } from "./storage/history.js";
 import { HarnessRegistry, type HarnessPrincipal } from "./registry.js";
 import { HarnessConversations } from "./conversations.js";
@@ -25,6 +28,19 @@ import { readHarnessSourcePage } from "./source-history.js";
 import { ensureAttachmentWorkspace } from "../workspace/attachment-workspace.js";
 import { attachmentWorkspaceContext } from "../../shared/attachment-workspace.js";
 import { createHarnessWorkspace } from "./workspaces.js";
+import { ProjectMemory } from "../project-memory/service.js";
+import type { MemoryArchiveAuthorize } from "../project-memory/portability.js";
+import { RemoteMemoryPackages } from "../project-memory/pmf-remote.js";
+import type { OriginalStorageConfiguration } from "../object-storage/configuration.js";
+import type { MemoryMaterialStore } from "../project-memory/materials.js";
+import { MemoryMaterialPreviews } from "../project-memory/material-previews.js";
+import { MemoryMaterialVisuals } from "../project-memory/material-visuals.js";
+import { MemoryNativeCopies } from "../project-memory/native-copies.js";
+import { projectMemoryRoutes } from "../project-memory/routes.js";
+import { NativeMemoryJournal } from "../project-memory/native-journal.js";
+import { legacyMemoryRoute } from "../project-memory/legacy.js";
+import type { ModelReviewPort } from "../project-memory/model-review.js";
+import type { MemorySearchProviders } from "../project-memory/search-index.js";
 export async function createHarnessFeature(options: {
   stateRoot: string;
   defaultCwd: string;
@@ -37,7 +53,14 @@ export async function createHarnessFeature(options: {
   directoryPolicy: ProjectDirectoryPolicy;
   owner(context: RouteContext): string;
   project(owner: string, project: string): Promise<{ path: string }>;
-  authorizeProject(owner: string, project: string): Promise<void>;
+  authorizeProject: MemoryArchiveAuthorize;
+  sessionMembership(id: string): Promise<ProjectSessionMembership | null>;
+  bindSession(project: string, session: ProjectSessionBinding): Promise<void>;
+  memoryModels?: ModelReviewPort;
+  memorySearch?: MemorySearchProviders;
+  memoryMaterials?: MemoryMaterialStore;
+  memoryCopyDestination?: ConstructorParameters<typeof MemoryNativeCopies>[1];
+  memoryPackageStorage?: Pick<OriginalStorageConfiguration, "memoryPackageTarget" | "memoryPackagesEnabled" | "client">;
 }) {
   const metadata = options.metadata ?? new SQLiteHarnessMetadata(join(options.stateRoot, "data", "harness.sqlite"));
   const registry = new HarnessRegistry(metadata, harnessProfiles(options.stateRoot, options.driver));
@@ -61,9 +84,42 @@ export async function createHarnessFeature(options: {
     materials: options.materials,
     remote: options.remoteMaterial,
   });
+  const history = new JsonlHarnessHistory(join(options.stateRoot, "harness", "conversations"));
+  const historyMaintenance = new HarnessHistoryMaintenance(metadata, history);
+  const memory = new ProjectMemory(
+    metadata,
+    history,
+    async (source, access) => {
+      if (!source.projectId) throw new HarnessError("notFound", 404);
+      await options.authorizeProject(source.owner, source.projectId, access);
+    },
+    (cwd) => options.directoryPolicy.allowsPath(cwd),
+    Date.now,
+    (id) => options.sessionMembership(harnessConversationId(id)),
+    options.memoryModels,
+    options.memorySearch,
+    options.memorySearch && options.memoryMaterials
+      ? new ProjectMemoryMaterialSearch(
+          metadata,
+          options.memorySearch.local,
+          options.memoryMaterials,
+          options.authorizeProject,
+        )
+      : undefined,
+    options.sessionMembership,
+    options.authorizeProject,
+  );
+  const nativeMemory = new NativeMemoryJournal(metadata, history, memory);
+  const remotePackages = options.memoryPackageStorage
+    ? new RemoteMemoryPackages(metadata, options.memoryPackageStorage, options.authorizeProject)
+    : undefined;
+  const memoryPreviews = new MemoryMaterialPreviews();
   const conversations = new HarnessConversations({
     metadata,
-    history: new JsonlHarnessHistory(join(options.stateRoot, "harness", "conversations")),
+    history,
+    memory,
+    memoryVisuals: options.memoryMaterials && new MemoryMaterialVisuals(options.memoryMaterials, memoryPreviews),
+    bindProject: options.bindSession,
     registry,
     sourcePage: async (principal, id, cursor) => {
       if (!principal.administrator) throw new HarnessError("forbidden", 403);
@@ -121,11 +177,23 @@ export async function createHarnessFeature(options: {
     },
   });
   return {
+    startProjectMemory: () => {
+      memory.start();
+      historyMaintenance.start();
+      remotePackages?.start();
+    },
     registry,
     conversations,
+    projectMemory: memory,
+    nativeMemory,
     hostCatalogWorkspace: () => workspace(".panda-harness-catalog-", true),
     projectSessions: {
       get: (context: RouteContext, id: string) => conversations.summary(principal(context), id),
+      withAssignmentCheckpoints: <T>(
+        context: RouteContext,
+        ids: readonly string[],
+        commit: (sessions: readonly ProjectSessionBinding[]) => Promise<T>,
+      ) => conversations.withAssignmentCheckpoints(principal(context), ids, commit),
       list: async (context: RouteContext) => {
         let identity: HarnessPrincipal;
         try {
@@ -138,10 +206,34 @@ export async function createHarnessFeature(options: {
         return (await conversations.list(identity)).map(harnessSummary);
       },
     },
-    routes,
+    routes: [
+      ...routes,
+      legacyMemoryRoute({
+        memory,
+        journal: nativeMemory,
+        principal,
+        authorize: options.authorizeProject,
+        membership: options.sessionMembership,
+        history: options.nativeHistory,
+        directory: options.directoryPolicy,
+      }),
+      ...projectMemoryRoutes({
+        memory,
+        principal,
+        authorize: options.authorizeProject,
+        remotePackages,
+        materials: options.memoryMaterials,
+        previews: memoryPreviews,
+        copies: options.memoryCopyDestination && new MemoryNativeCopies(metadata, options.memoryCopyDestination),
+      }),
+    ],
     async close() {
       await diagnostics.close();
       await conversations.close();
+      await nativeMemory.close();
+      await memory.close();
+      await historyMaintenance.close();
+      await remotePackages?.close();
       await metadata.close();
     },
   };

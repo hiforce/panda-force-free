@@ -149,11 +149,12 @@ try {
       assert((await waitProject(creator.cookie, id))?.canManageMembers);
       assert(await waitProject(member.cookie, id));
       assert.equal(await waitProject(outsider.cookie, id), undefined);
+      const treePath = "/api/project-document-tree?" + new URLSearchParams({ project: id });
+      assert.equal((await api(member.cookie, treePath)).projectId, id);
+      assert.equal((await call(outsider.cookie, treePath)).status, 404);
       assert.equal(await waitProject(admin, id), undefined);
       assert.equal((await call(outsider.cookie, "/api/projects/workspace", { projectId: id })).status, 404);
-      const documents = "/api/project-document-tree?" + new URLSearchParams({ project: id });
-      assert.equal((await call(outsider.cookie, documents)).status, 404);
-      assert.equal((await call(member.cookie, documents)).status, 200);
+      assert.equal((await call(outsider.cookie, "/api/projects/" + id + "/memory-team")).status, 404);
       const membersPath = "/api/projects/members?" + new URLSearchParams({ project: id });
       assert.deepEqual(await api(member.cookie, membersPath), { editable: false, revision: null, members: [] });
       const { revision } = await api(creator.cookie, membersPath);

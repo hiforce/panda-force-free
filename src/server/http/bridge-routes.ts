@@ -28,9 +28,9 @@ export function bridgeRoutes({
   projectCatalog,
   projectWorkspaces,
   projectOwner,
+  authorizeProjectBinding,
   projectSessions,
   projectMembers,
-  authorizeProjectBinding,
   directoryPolicy,
   sseClients,
   pendingEngineRequests,
@@ -64,9 +64,9 @@ export function bridgeRoutes({
   | "dispatchBrowserMessage"
 > & {
   projectOwner(context: RouteContext): string | undefined;
+  authorizeProjectBinding?(context: RouteContext, projectId: string): Promise<void>;
   projectSessions?: ManagedProjectSessions<RouteContext>;
   projectMembers?: ProjectMembers;
-  authorizeProjectBinding?(context: RouteContext, projectId: string): Promise<void>;
 }): Route[] {
   return [
     {
@@ -83,9 +83,9 @@ export function bridgeRoutes({
       catalog: projectCatalog,
       workspaces: projectWorkspaces,
       projectOwner,
+      authorizeProjectBinding,
       projectSessions,
       projectMembers,
-      authorizeProjectBinding,
       directoryPolicy,
       request,
       getSession: (id: string) => threadHub.getThreadMetadata(id),

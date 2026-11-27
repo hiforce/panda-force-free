@@ -1,4 +1,4 @@
-import { MATERIAL_TEXT_LIMITS as limits, MaterialTextError, type MaterialText } from "./contracts.js";
+import { MATERIAL_TEXT_LIMITS as limits, MaterialTextError, type DetailedMaterialText } from "./contracts.js";
 /** Bounded assembly avoids silently accepting a truncated source. */
 export class MaterialTextBuilder {
   private parts: string[] = [];
@@ -11,9 +11,15 @@ export class MaterialTextBuilder {
     this.parts.push(text);
     this.sections++;
   }
-  result(): MaterialText {
+  result(): DetailedMaterialText {
     const text = this.parts.join("\n\n");
     if (!text.trim()) throw new MaterialTextError("empty");
-    return { text, sections: this.sections };
+    const offsets: number[] = [];
+    let offset = 0;
+    for (const part of this.parts) {
+      offsets.push(offset);
+      offset += part.length + 2;
+    }
+    return { text, offsets, sections: this.sections };
   }
 }

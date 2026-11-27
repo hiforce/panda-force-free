@@ -21,9 +21,29 @@ export function createSessionWorkspaceView(t) {
     </nav>
     <div class="session-inspector-scroll" id="sessionInspectorScroll">
       <section id="sessionOverview" role="tabpanel" aria-labelledby="sessionOverviewTab">
+        <section class="session-memory-control" id="sessionMemoryControl" aria-labelledby="sessionMemoryHeading" hidden>
+          <header class="session-memory-heading">
+            <h3 id="sessionMemoryHeading">${codexIcon("listChecks")}${label("sessions.memoryInspectorTitle")}</h3>
+            <div class="session-memory-indicators">
+              <p class="session-memory-status" data-memory-control-status role="status"></p>
+              <button type="button" class="icon-button" data-memory-control-settings data-session-action="memory-settings"
+                ${attr("sessions.memorySettings")} ${messageAttributes("title", "sessions.memorySettings", undefined, t)} hidden>${codexIcon("slidersHorizontal")}</button>
+            </div>
+          </header>
+          <dl class="session-memory-counts" data-memory-control-counts hidden>
+            <div><dt>${label("sessions.memoryRecordedCount")}</dt><dd data-memory-contributed></dd></div>
+            <div><dt>${label("sessions.memoryUsedCount")}</dt><dd data-memory-recalled></dd></div>
+          </dl>
+          <p class="session-caption" data-memory-control-hint hidden></p>
+          <p class="session-caption" data-memory-manual-count hidden></p>
+          <div class="session-memory-controls">
+            <button type="button" class="wb-button primary" data-memory-control-main hidden></button>
+            <button type="button" class="wb-button" data-memory-control-button hidden></button>
+          </div>
+        </section>
         <section class="session-section session-usage-section" id="sessionUsageSection"><div class="session-section-heading"><h3>${label("sessionview.sessionUsage")}</h3><button type="button" class="icon-button small" data-session-action="usage" ${attr("sessionview.sessionUsage")}>${codexIcon("info")}</button></div><div id="sessionUsageView"></div></section>
         <section class="session-section" id="sessionExecutionSection"><div class="session-section-heading"><h3>${label("sessionview.execution")}</h3><span id="sessionElapsed"></span></div><div id="sessionExecutionSlot"></div><p class="session-caption" id="sessionExecutionHint"></p><button type="button" class="session-pending-action" id="sessionPendingAction" data-session-action="pending" hidden>${label("sessionview.reviewRequest")}${codexIcon("arrowUpRight")}</button></section>
-        <section class="session-section"><div class="session-section-heading"><h3>${label("sessionview.projectContext")}</h3></div><button type="button" class="session-project-selector" id="sessionAssociateProject" data-session-action="project"><strong id="sessionProjectName"></strong>${codexIcon("chevronDown")}</button><div class="session-working-folder"><span class="session-context-caption">${label("common.workingFolder")}</span><span id="sessionWorkingFolder"></span></div></section>
+        <section class="session-section"><div class="session-section-heading"><h3>${label("sessionview.projectContext")}</h3></div><button type="button" class="session-project-selector" id="sessionAssociateProject" data-session-action="project"><strong id="sessionProjectName"></strong><span id="sessionProjectActionIcon" aria-hidden="true"></span></button><div class="session-working-folder"><span class="session-context-caption">${label("common.workingFolder")}</span><span id="sessionWorkingFolder"></span></div></section>
         <section class="session-section"><div class="session-section-heading"><h3>${label("sessionview.configuration")}</h3></div><div class="session-configuration" id="sessionConfiguration"></div><div class="session-configuration-mirror"><button type="button" data-session-action="model">${codexIcon("slidersHorizontal")}<span><strong id="sessionMirrorModel"></strong><small id="sessionMirrorEffort"></small></span>${codexIcon("chevronRight")}</button><button type="button" data-session-action="permissions">${codexIcon("shield")}<span><strong id="sessionMirrorPermission"></strong><small>${label("common.permissions")}</small></span>${codexIcon("chevronRight")}</button></div></section>
         <details class="session-goal-plan" id="sessionGoalPlan" hidden><summary>${codexIcon("list")}<span>${label("sessionview.goalPlan")}</span>${codexIcon("chevronDown")}</summary><div id="sessionGoalSlot"></div></details>
       </section>
@@ -74,7 +94,15 @@ export function createSessionWorkspaceView(t) {
       content: `<p class="session-caption">${label("sessionview.usageHint")} ${label("sessionview.cachedHint")}</p><div id="sessionUsageDialogContent"></div>`,
     },
     { dialog: toolsDialog, title: "sessionview.manageTools", content: `<div id="sessionToolsManager"></div>` },
-    { dialog: actionsDialog, title: "sessionview.sessionActions", content: `<div id="sessionActionsContent"></div>` },
+    {
+      dialog: actionsDialog,
+      title: "sessionview.sessionActions",
+      content: `<div id="sessionActionsContent"></div>
+        <div id="sessionMemoryActions" class="session-memory-actions" hidden>
+          <button type="button" class="wb-button" data-session-action="memory-details">${label("sessions.memoryView")}</button>
+          <button type="button" class="wb-button" data-session-action="memory-settings">${label("sessions.memorySettings")}</button>
+        </div>`,
+    },
   ]) {
     const id = dialog.id;
     dialog.className = "session-dialog";

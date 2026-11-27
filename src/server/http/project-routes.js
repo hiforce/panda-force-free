@@ -187,7 +187,12 @@ export function projectRoutes({
           throw new ProjectError(400, "projects.errorProjectNotFound");
         if (projectId !== null) {
           await catalog.project(projectId);
-          if (projectMembers) await authorize(context, projectId);
+          try {
+            await authorizeProjectBinding(context, projectId);
+          } catch (error) {
+            if (errorStatus(error) === 404) throw new ProjectError(404, "projects.errorProjectNotFound");
+            throw error;
+          }
         }
         if (
           !Array.isArray(sessionIds) ||
@@ -211,7 +216,27 @@ export function projectRoutes({
             throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
           }
         }
-        await changed(context, await catalog.assign(projectId, sessions, revision));
+        const ids = sessionIds.map(harnessId).filter(Boolean);
+        let snapshot;
+        try {
+          snapshot =
+            projectId !== null && ids.length && projectSessions?.withAssignmentCheckpoints
+              ? await projectSessions.withAssignmentCheckpoints(context, ids, async (managed) => {
+                  await authorizeProjectBinding(context, projectId);
+                  const bindings = new Map(managed.map((session) => [session.id, session]));
+                  return catalog.assign(
+                    projectId,
+                    sessions.map((session) => bindings.get(session.id) ?? session),
+                    revision,
+                  );
+                })
+              : await catalog.assign(projectId, sessions, revision);
+        } catch (error) {
+          if (errorStatus(error) === 404 && !(error instanceof ProjectError))
+            throw new ProjectError(404, "projects.errorSessionNotFoundRefreshTheSessionListAndTryAgain");
+          throw error;
+        }
+        await changed(context, snapshot);
       }),
     },
     {

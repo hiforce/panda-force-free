@@ -112,6 +112,7 @@ export interface HarnessConversation {
   title: string;
   runtimeId: string;
   permissionMode?: HarnessPermissionMode;
+  memoryPrivate?: true;
   revision: number;
   lastSeq: number;
   historyBytes: number;

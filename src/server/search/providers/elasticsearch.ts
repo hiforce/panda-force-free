@@ -120,7 +120,14 @@ export class ElasticsearchIndex implements TextIndexProvider {
       throw error;
     }
   }
-  async query(ref: IndexReference, query: string, analyzer: SearchAnalyzer, limit: number, signal: AbortSignal) {
+  async query(
+    ref: IndexReference,
+    query: string,
+    analyzer: SearchAnalyzer,
+    limit: number,
+    signal: AbortSignal,
+    options?: { match?: "any" },
+  ) {
     const terms = analyzer.tokens(query);
     if (!terms.length) return [];
     const result = await this.http
@@ -131,7 +138,12 @@ export class ElasticsearchIndex implements TextIndexProvider {
           size: limit,
           _source: ["version"],
           query: {
-            multi_match: { query: terms.join(" "), fields: ["title^4", "text"], operator: "and", fuzziness: "AUTO" },
+            multi_match: {
+              query: terms.join(" "),
+              fields: ["title^4", "text"],
+              operator: options?.match === "any" ? "or" : "and",
+              fuzziness: "AUTO",
+            },
           },
         },
         signal,
@@ -151,12 +163,12 @@ export class ElasticsearchIndex implements TextIndexProvider {
     if (ref.provider !== this.id) throw new SearchError("configuration", 409);
     return auditElasticsearch(this.http, this.name(ref.name), ref, analyzer, signal);
   }
-  async drop(ref: IndexReference) {
+  async drop(ref: IndexReference, signal?: AbortSignal) {
     const result = await this.http.request(
       "/" + this.name(ref.name) + "?timeout=30s&master_timeout=10s",
       "DELETE",
       undefined,
-      undefined,
+      signal,
       [200, 404],
       60000,
     );

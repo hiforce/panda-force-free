@@ -1,7 +1,7 @@
 import type { MessageId, Translate } from "../../shared/i18n/messages.js";
 import type { ContentProject } from "./workspace.js";
 import { escapeHtml as e } from "../../shared/html.js";
-import { projectOverviewHeading, projectOverviewTabs } from "./project-view.js";
+import { projectOverviewHeading } from "./project-view.js";
 import { setMessageHtml, messageHtml } from "../i18n.js";
 import { codexIcon } from "../codex-icons.js";
 import { accountsApi } from "../accounts/api.js";
@@ -152,7 +152,8 @@ export function createPublishWorkspace(
                 projectSelection,
                 projects().find((p) => p.id === projectSelection),
                 "",
-              ) + projectOverviewTabs(t, projectSelection, "publish")
+                "publish",
+              )
             : ""
         }<header class="resource-heading project-section-heading"><div>${selected ? `<a href="/publish${projectSelection ? "?project=" + encodeURIComponent(projectSelection) : ""}" data-wb="route" data-route="/publish${projectSelection ? "?project=" + encodeURIComponent(projectSelection) : ""}" class="resource-back">${messageHtml("creative.backPublish", {}, t)}</a>` : ""}<${projectSelection ? "h2" : "h1"}>${selected ? e(label(selected)) : messageHtml("creative.publish", {}, t)}</${projectSelection ? "h2" : "h1"}><p>${messageHtml(selected?.description || "creative.channelHint", {}, t)}</p></div></header>${
           !selected

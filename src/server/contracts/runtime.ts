@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { NativeInput } from "../../shared/data-contracts.js";
 import type { ProjectSnapshot, ProjectVisibility, SessionSummary } from "../../shared/engine/types.js";
+import type { ProjectSessionBinding } from "../projects/session-membership.js";
 import type { AccountIdentity } from "../misc/profile.js";
 import type { AttachmentStorage } from "../workspace/attachment-types.js";
 export interface IdentitySession {
@@ -42,9 +43,10 @@ export interface ProjectRepository {
   snapshot(): ProjectSnapshot | Promise<ProjectSnapshot>;
   project(id: string): unknown;
   save(input: unknown, revision: unknown): ProjectSnapshot | Promise<ProjectSnapshot>;
+  bindSession(projectId: string, session: ProjectSessionBinding): ProjectSnapshot | Promise<ProjectSnapshot>;
   assign(
     projectId: string | null,
-    sessions: readonly { id: string; name?: string; cwd?: string }[],
+    sessions: readonly ProjectSessionBinding[],
     revision: unknown,
   ): ProjectSnapshot | Promise<ProjectSnapshot>;
   refreshSessions(sessions: readonly SessionSummary[]): ProjectSnapshot | null | Promise<ProjectSnapshot | null>;

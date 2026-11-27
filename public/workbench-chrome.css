@@ -218,29 +218,6 @@
 .chrome-width-preview.fill::after {
   width: 26px;
 }
-.chrome-switch {
-  width: 28px;
-  height: 16px;
-  border-radius: 10px;
-  background: var(--pf-muted);
-  flex-shrink: 0;
-  padding: 2px;
-}
-.chrome-switch::after {
-  content: "";
-  display: block;
-  width: 12px;
-  height: 12px;
-  background: var(--pf-card);
-  border-radius: 50%;
-}
-.chrome-switch.on {
-  background: var(--pf-primary);
-}
-.chrome-switch.on::after {
-  transform: translateX(12px);
-  background: #fff;
-}
 @media (max-width: 767px) {
   .chrome-desktop {
     display: none;

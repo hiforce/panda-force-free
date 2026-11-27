@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { HarnessError } from "../../../shared/harness/contracts.js";
-import type { HarnessMetadata, HarnessMetadataTransaction, HarnessRecord } from "../ports.js";
+import type { HarnessMetadata, HarnessMetadataTransaction, HarnessRecord, HarnessRecordList } from "../ports.js";
 
 /** Only metadata lives here. Awaited JSONL writes remain inside the same serialized metadata transaction. */
 export class SQLiteHarnessMetadata implements HarnessMetadata {
@@ -35,16 +35,19 @@ export class SQLiteHarnessMetadata implements HarnessMetadata {
       this.db.query<HarnessRecord, [string]>("SELECT * FROM harness_records WHERE id=?").get(id);
     return {
       get,
-      list: async (kind, owner) =>
-        owner === undefined
-          ? this.db
-              .query<HarnessRecord, [string]>("SELECT * FROM harness_records WHERE kind=? ORDER BY updatedAt DESC,id")
-              .all(kind)
-          : this.db
-              .query<HarnessRecord, [string, string]>(
-                "SELECT * FROM harness_records WHERE kind=? AND owner=? ORDER BY updatedAt DESC,id",
-              )
-              .all(kind, owner),
+      list: async (kind, owner, page) => {
+        const ownership = owner === undefined ? "" : " AND owner=?";
+        const due = page?.updatedThrough === undefined ? "" : " AND updatedAt<=?";
+        const order = page?.oldestFirst ? "ASC" : "DESC";
+        const limit = page ? " LIMIT ?" : "";
+        const args: (string | number)[] = owner === undefined ? [kind] : [kind, owner];
+        if (page?.updatedThrough !== undefined) args.push(page.updatedThrough);
+        return this.db
+          .query<HarnessRecord, (string | number)[]>(
+            `SELECT * FROM harness_records WHERE kind=?${ownership}${due} ORDER BY updatedAt ${order},id${limit}`,
+          )
+          .all(...(page ? [...args, page.limit] : args));
+      },
       put: async (row, expected) => {
         const current = await get(row.id);
         if ((current?.revision ?? null) !== expected || row.revision !== (expected ?? 0) + 1)
@@ -64,8 +67,8 @@ export class SQLiteHarnessMetadata implements HarnessMetadata {
   read(id: string) {
     return this.serialize(() => this.transactionPort().get(id));
   }
-  list(kind: string, owner?: string) {
-    return this.serialize(() => this.transactionPort().list(kind, owner));
+  list(kind: string, owner?: string, page?: HarnessRecordList) {
+    return this.serialize(() => this.transactionPort().list(kind, owner, page));
   }
   transaction<T>(work: (transaction: HarnessMetadataTransaction) => Promise<T>) {
     return this.serialize(async () => {

@@ -54,6 +54,10 @@ export class ProjectCatalog {
         name TEXT NOT NULL, cwd TEXT NOT NULL, updated_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS session_projects_by_project ON session_projects(project_id);
+      CREATE TABLE IF NOT EXISTS session_project_checkpoints (
+        session_id TEXT PRIMARY KEY REFERENCES session_projects(session_id) ON DELETE CASCADE,
+        through_bytes INTEGER NOT NULL, through_seq INTEGER NOT NULL
+      );
     `);
     migrateProjectWorkspaces(this.db);
   }
@@ -132,6 +136,35 @@ export class ProjectCatalog {
         .run(id, fields.code, fields.name, fields.description, now, now);
     });
   }
+  /** @param {string} id @returns {string | null} */
+  sessionProject(id) {
+    return (
+      this.db.query("SELECT project_id AS projectId FROM session_projects WHERE session_id=?").get(id)?.projectId ??
+      null
+    );
+  }
+  /** @param {string} id @returns {import("./session-membership.js").ProjectSessionMembership | null} */
+  sessionMembership(id) {
+    const row = this.db
+      .query(
+        `SELECT p.project_id AS projectId,c.through_bytes AS throughBytes,c.through_seq AS throughSeq
+         FROM session_projects p LEFT JOIN session_project_checkpoints c USING(session_id) WHERE p.session_id=?`,
+      )
+      .get(id);
+    return row
+      ? {
+          projectId: row.projectId,
+          checkpoint: row.throughSeq === null ? null : { throughSeq: row.throughSeq, throughBytes: row.throughBytes },
+        }
+      : null;
+  }
+  /** @param {string} projectId @param {import("./session-membership.js").ProjectSessionBinding} session */
+  bindSession(projectId, session) {
+    return this.atomic(() => {
+      if (this.sessionProject(session.id) === projectId) return this.snapshot();
+      return this.assign(projectId, [session], this.revision());
+    });
+  }
   assign(projectId, sessions, revision) {
     if (!Array.isArray(sessions) || sessions.length < 1 || sessions.length > 100)
       throw new ProjectError(400, "projects.errorSelectBetween1And100Sessions");
@@ -143,22 +176,29 @@ export class ProjectCatalog {
     }
     return this.mutate(revision, () => {
       if (projectId !== null) this.project(projectId);
+      const firstBindings = new Map();
       for (const session of sessions) {
-        if (projectId === null) this.db.query("DELETE FROM session_projects WHERE session_id=?").run(session.id);
-        else
-          this.db
-            .query(
-              `INSERT INTO session_projects VALUES (?, ?, ?, ?, ?)
-          ON CONFLICT(session_id) DO UPDATE SET project_id=excluded.project_id,name=excluded.name,cwd=excluded.cwd,updated_at=excluded.updated_at`,
-            )
-            .run(
-              session.id,
-              projectId,
-              String(session.name || session.preview || "").slice(0, 500),
-              String(session.cwd || "").slice(0, 4096),
-              Number.isFinite(session.updatedAt) ? Math.floor(session.updatedAt) : 0,
-            );
+        const current = this.sessionProject(session.id);
+        if (current && current !== projectId) throw new ProjectError(409, "projects.sessionProjectLocked");
+        if (!current && session.checkpoint) firstBindings.set(session.id, session.checkpoint);
       }
+      if (projectId === null) return;
+      for (const session of sessions) {
+        this.db
+          .query(
+            `INSERT INTO session_projects VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(session_id) DO UPDATE SET name=excluded.name,cwd=excluded.cwd,updated_at=excluded.updated_at`,
+          )
+          .run(
+            session.id,
+            projectId,
+            String(session.name || session.preview || "").slice(0, 500),
+            String(session.cwd || "").slice(0, 4096),
+            Number.isFinite(session.updatedAt) ? Math.floor(session.updatedAt) : 0,
+          );
+      }
+      for (const [id, { throughBytes, throughSeq }] of firstBindings)
+        this.db.query("INSERT INTO session_project_checkpoints VALUES (?,?,?)").run(id, throughBytes, throughSeq);
     });
   }
   refreshSessions(sessions) {

@@ -1,6 +1,30 @@
 import type { CliCapability } from "./contracts.js";
 export const CLI_COMMANDS = [
   {
+    id: "memory.search",
+    words: ["memory", "search"],
+    capability: "memory:read",
+    summary: "Read authorized project memory entries with an optional text query.",
+    fields: ["project", "query", "offset"],
+    required: ["project"],
+  },
+  {
+    id: "memory.status",
+    words: ["memory", "status"],
+    capability: "memory:read",
+    summary: "Read the memory organization status for an owned project conversation.",
+    fields: ["project", "id"],
+    required: ["project", "id"],
+  },
+  {
+    id: "memory.organize",
+    words: ["memory", "organize"],
+    capability: "memory:organize",
+    summary: "Queue an explicit seven- or thirty-day organization task for an owned project conversation.",
+    fields: ["project", "id", "days", "requestId"],
+    required: ["project", "id", "days", "requestId"],
+  },
+  {
     id: "sources.list",
     words: ["sources", "list"],
     capability: "content:read",

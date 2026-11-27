@@ -400,6 +400,36 @@
 }
 .wb-page-heading,
 .resource-heading,
+.encryption-key-settings {
+  display: grid;
+  gap: var(--pf-space-3);
+}
+.encryption-key-settings :is(p, ul) {
+  margin: 0;
+}
+.encryption-key-settings :is(p, ul):empty {
+  display: none;
+}
+.encryption-key-settings ul {
+  padding: 0;
+  list-style: none;
+}
+.encryption-key-settings details {
+  border-block-start: 1px solid var(--app-border);
+  padding-block-start: var(--pf-space-3);
+}
+.encryption-key-settings form {
+  margin-block-start: var(--pf-space-3);
+  max-inline-size: 34rem;
+}
+.encryption-key-settings summary {
+  cursor: pointer;
+}
+.encryption-key-settings .settings-row {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+  gap: var(--pf-space-2);
+}
 .settings-page-heading {
   display: var(--pf-resource-heading-display, flex);
   align-items: var(--pf-resource-heading-align, flex-start);
@@ -436,8 +466,11 @@
   margin: 0;
 }
 .wb-sessions-toolbar {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--pf-space-2) var(--pf-space-3);
+  margin-block-end: var(--pf-space-2);
 }
 .wb-sessions-title {
   display: flex;
@@ -451,8 +484,7 @@
 }
 .wb-session-filters {
   grid-template-columns: minmax(0, 1fr) minmax(0, auto);
-  flex: 1 1 18rem;
-  max-inline-size: 36rem;
+  flex: 0 1 20rem;
   min-inline-size: 0;
   margin-inline-start: auto;
   gap: var(--pf-space-2);
@@ -460,6 +492,9 @@
 .wb-session-filters > select {
   max-inline-size: 12rem;
   text-overflow: ellipsis;
+}
+.wb-session-create {
+  white-space: nowrap;
 }
 .wb-check {
   display: flex;
@@ -1362,12 +1397,18 @@
   .wb-page-heading.wb-sessions-toolbar > .wb-session-filters {
     grid-column: 1 / -1;
     grid-row: 2;
-    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
-    max-inline-size: none;
     margin-inline-start: 0;
   }
   .wb-session-filters > select {
     max-inline-size: 9rem;
+  }
+  .wb-page-heading.wb-sessions-toolbar > .wb-session-create {
+    inline-size: var(--pf-touch-target);
+    min-block-size: var(--pf-touch-target);
+    padding: 0;
+  }
+  .wb-session-create > [data-pf-message] {
+    display: none;
   }
   .wb-task-columns {
     display: none;

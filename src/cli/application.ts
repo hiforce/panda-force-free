@@ -1,6 +1,7 @@
 import { cliOutput, cliErrorText } from "./output.js";
 import { pandaIntegration } from "./integrations.js";
 import type { Readable, Writable } from "node:stream";
+import { CLI_LOCAL_COMMANDS } from "../shared/cli/local-commands.js";
 import { CLI_COMMANDS } from "../shared/cli/commands.js";
 import { cliCommandSchema } from "../shared/cli/schema.js";
 import { CliError, cliObject } from "../shared/cli/contracts.js";
@@ -10,6 +11,9 @@ import { PandaClient } from "./client.js";
 import { servePandaMcp } from "./mcp.js";
 import { CLI_VERSION } from "../shared/cli/version.js";
 import { pandaCliManual } from "../shared/cli/manual.js";
+import { runMemoryCommand } from "./memory.js";
+import type { MemoryOrganizationCli } from "../shared/project-memory/organization.js";
+
 async function boundedInput(input: Readable) {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -36,12 +40,18 @@ export async function runPandaCli(
   argv: string[],
   io: { input: Readable; output: Writable; error: Writable },
   profiles = new CliProfiles(),
+  memory?: MemoryOrganizationCli,
 ): Promise<number> {
   let json = argv.includes("--json");
   try {
     const { words, flags } = cliArguments(argv);
     const requested = words.join(" "),
       command = flags.help ? "help" : flags.version ? "version" : requested;
+    if (words[0] === "memory" && command === requested && ["memory context", "memory submit"].includes(command)) {
+      const result = await runMemoryCommand(command, flags, io.input, memory);
+      io.output.write(json ? JSON.stringify(result) + "\n" : cliOutput(result));
+      return 0;
+    }
     const local = ["", "help", "guide", "version"].includes(command);
     const profile =
       typeof flags.profile === "string"
@@ -65,20 +75,7 @@ export async function runPandaCli(
         protocol: 1,
         registrationRequired: true,
         authentication: "Registered client plus scoped API key",
-        localCommands: [
-          "register --file FILE",
-          "auth login --api-key-stdin",
-          "auth status",
-          "auth profiles",
-          "auth use PROFILE",
-          "doctor",
-          "auth logout",
-          "mcp serve",
-          "integrations install|inspect|uninstall --target codex|claude --directory DIR",
-          "help",
-          "guide",
-          "version",
-        ],
+        localCommands: CLI_LOCAL_COMMANDS.map(([syntax]) => syntax),
         commands: CLI_COMMANDS.map((spec) => ({ ...spec, inputSchema: cliCommandSchema(spec) })),
       };
     } else if (["integrations install", "integrations inspect", "integrations uninstall"].includes(command)) {
@@ -141,7 +138,7 @@ export async function runPandaCli(
             args[field] =
               ["ids", "contentKinds"].includes(field) && typeof value === "string"
                 ? value.split(",")
-                : ["offset", "revision"].includes(field) && typeof value === "string" && /^\d+$/.test(value)
+                : ["offset", "revision", "days"].includes(field) && typeof value === "string" && /^\d+$/.test(value)
                   ? Number(value)
                   : ["answers", "draft"].includes(field)
                     ? (() => {

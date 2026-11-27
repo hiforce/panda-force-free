@@ -12,6 +12,7 @@ import { consistentMySQLRead } from "../database/consistent-read.js";
 import type { ProjectWorkspaceBinding } from "./workspaces/repository.js";
 import type { ProjectWorkspaceMetadata } from "./workspaces/metadata.js";
 
+import type { ProjectSessionBinding, ProjectSessionMembership } from "./session-membership.js";
 type Row = Record<string, unknown>;
 export const projectPathHash = (path: string) => createHash("sha256").update(path).digest("hex");
 const projectProjection = `SELECT p.id,p.code,p.name,p.description,p.created_at createdAt,p.updated_at updatedAt,w.path,w.state FROM panda_force_projects p LEFT JOIN panda_force_project_workspaces w ON w.projectId=p.id`;
@@ -124,11 +125,31 @@ export class MySQLProjectCatalog {
           .sql`INSERT INTO panda_force_projects(id,code,name,description,created_at,updated_at) VALUES(${id},${fields.code},${fields.name},${fields.description},${now},${now})`;
     });
   }
-  async assign(
-    projectId: string | null,
-    sessions: readonly { id: string; name?: string; preview?: string; cwd?: string; updatedAt?: number }[],
-    revision: unknown,
-  ) {
+  async sessionProject(id: string): Promise<string | null> {
+    const [row] = await this.sql`SELECT project_id FROM panda_force_session_projects WHERE session_id=${id}`;
+    return row ? String(row.project_id) : null;
+  }
+  async sessionMembership(id: string): Promise<ProjectSessionMembership | null> {
+    const [row] = await this.sql`
+      SELECT p.project_id,c.through_bytes,c.through_seq FROM panda_force_session_projects p
+      LEFT JOIN panda_force_session_project_checkpoints c USING(session_id) WHERE p.session_id=${id}`;
+    return row
+      ? {
+          projectId: String(row.project_id),
+          checkpoint:
+            row.through_seq === null
+              ? null
+              : { throughSeq: mysqlInteger(row.through_seq), throughBytes: mysqlInteger(row.through_bytes) },
+        }
+      : null;
+  }
+  async bindSession(projectId: string, session: ProjectSessionBinding) {
+    return this.atomic(async () => {
+      if ((await this.sessionProject(session.id)) === projectId) return this.snapshot();
+      return this.assign(projectId, [session], await this.revision());
+    });
+  }
+  async assign(projectId: string | null, sessions: readonly ProjectSessionBinding[], revision: unknown) {
     if (
       !Array.isArray(sessions) ||
       !sessions.length ||
@@ -139,14 +160,15 @@ export class MySQLProjectCatalog {
       throw new ProjectError(400, "projects.errorInvalidSessionSelection");
     return this.mutate(revision, async () => {
       if (projectId !== null) await this.project(projectId);
-      if (projectId === null)
+      const existing = await this.sql.unsafe(
+        `SELECT session_id,project_id FROM panda_force_session_projects WHERE session_id IN (${sessions.map(() => "?").join(",")})`,
+        sessions.map((session) => session.id),
+      );
+      if (existing.some((row: Row) => row.project_id !== projectId))
+        throw new ProjectError(409, "projects.sessionProjectLocked");
+      if (projectId !== null) {
         await this.sql.unsafe(
-          `DELETE FROM panda_force_session_projects WHERE session_id IN (${sessions.map(() => "?").join(",")})`,
-          sessions.map((session) => session.id),
-        );
-      else
-        await this.sql.unsafe(
-          `INSERT INTO panda_force_session_projects(session_id,project_id,name,cwd,updated_at) VALUES ${sessions.map(() => "(?,?,?,?,?)").join(",")} ON DUPLICATE KEY UPDATE project_id=VALUES(project_id),name=VALUES(name),cwd=VALUES(cwd),updated_at=VALUES(updated_at)`,
+          `INSERT INTO panda_force_session_projects(session_id,project_id,name,cwd,updated_at) VALUES ${sessions.map(() => "(?,?,?,?,?)").join(",")} ON DUPLICATE KEY UPDATE name=VALUES(name),cwd=VALUES(cwd),updated_at=VALUES(updated_at)`,
           sessions.flatMap((s) => [
             s.id,
             projectId,
@@ -155,6 +177,14 @@ export class MySQLProjectCatalog {
             Number.isFinite(s.updatedAt) ? Math.floor(s.updatedAt!) : 0,
           ]),
         );
+        const bound = new Set(existing.map((row: Row) => String(row.session_id)));
+        const checkpoints = sessions.filter(({ id, checkpoint }) => checkpoint && !bound.has(id));
+        if (checkpoints.length)
+          await this.sql.unsafe(
+            `INSERT INTO panda_force_session_project_checkpoints(session_id,through_bytes,through_seq) VALUES ${checkpoints.map(() => "(?,?,?)").join(",")}`,
+            checkpoints.flatMap(({ id, checkpoint }) => [id, checkpoint!.throughBytes, checkpoint!.throughSeq]),
+          );
+      }
     });
   }
   async refreshSessions(sessions: readonly { id: string; name?: string; preview?: string; cwd?: string }[]) {
@@ -201,6 +231,7 @@ export class MySQLProjectCatalog {
     return this.atomic(async () => {
       if (!(await this.sql`SELECT session_id FROM panda_force_session_projects WHERE session_id=${id}`).length)
         return null;
+      await this.sql`DELETE FROM panda_force_session_project_checkpoints WHERE session_id=${id}`;
       await this.sql`DELETE FROM panda_force_session_projects WHERE session_id=${id}`;
       await this.sql`UPDATE panda_force_catalog_meta SET revision=revision+1 WHERE id=1`;
       return this.snapshot();

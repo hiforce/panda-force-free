@@ -18,7 +18,9 @@ export function storedCliClient(row: CliClientRecord): CliClientRecord {
 /** Corrupt durable grants fail closed instead of being treated as a partially valid permission set. */
 export function storedCliKey(row: Record<string, unknown>): CliKeyRecord {
   try {
-    const projects: unknown = JSON.parse(String(row.projects)),
+    const storedProjects: unknown = JSON.parse(String(row.projects)),
+      dynamic = storedProjects === "allAccessible",
+      projects = dynamic ? [] : storedProjects,
       capabilities: unknown = JSON.parse(String(row.capabilities));
     cliId(row.clientId);
     cliText(row.owner, 1024);
@@ -28,7 +30,7 @@ export function storedCliKey(row: Record<string, unknown>): CliKeyRecord {
       typeof row.digest !== "string" ||
       !/^[a-f0-9]{64}$/.test(row.digest) ||
       !Array.isArray(projects) ||
-      !projects.length ||
+      (!dynamic && !projects.length) ||
       projects.length > 64 ||
       projects.some((project) => cliId(project) !== project) ||
       new Set(projects).size !== projects.length ||
@@ -49,6 +51,7 @@ export function storedCliKey(row: Record<string, unknown>): CliKeyRecord {
       owner: row.owner as string,
       digest: row.digest,
       projects,
+      ...(dynamic ? { projectScope: "allAccessible" } : {}),
       capabilities,
       createdAt: row.createdAt as number,
       expiresAt: row.expiresAt as number,
@@ -59,3 +62,6 @@ export function storedCliKey(row: Record<string, unknown>): CliKeyRecord {
     throw new CliError("unavailable", 503);
   }
 }
+
+export const serializeCliProjects = ({ projectScope, projects }: CliKeyRecord) =>
+  JSON.stringify(projectScope === "allAccessible" ? "allAccessible" : projects);

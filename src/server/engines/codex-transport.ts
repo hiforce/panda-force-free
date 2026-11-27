@@ -3,6 +3,8 @@ export type CodexConnection = { mode: "shared"; socketPath: string } | { mode: s
 export interface CodexTransportOptions {
   connection: CodexConnection;
   defaultCwd: string;
+  processEnvironment?: NodeJS.ProcessEnv;
+  processArguments?: string[];
   clientInfo: { name: string; title: string; version: string };
   isShuttingDown(): boolean;
   onMessage(message: EngineEnvelope): void;

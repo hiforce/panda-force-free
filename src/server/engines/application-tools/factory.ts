@@ -21,7 +21,7 @@ export function isolatedApplicationEngines(
     workspaceRoot?: string;
     version: string;
     engineId: string;
-    purpose: "creation" | "knowledge" | "editorial";
+    purpose: "creation" | "knowledge" | "editorial" | "project-memory";
     runtimes?: import("./runtime-port.js").ApplicationRuntimePort;
   },
   factory?: CodexTransportFactory,

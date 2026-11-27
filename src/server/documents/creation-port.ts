@@ -8,5 +8,6 @@ export interface PreparedDocumentCreation {
 /** Trusted producers supply immutable intent; project creation resolves it only after checking its durable receipt. */
 export interface DocumentCreationSource {
   readonly identity: string;
+  verify?(): Promise<void>;
   prepare(): Promise<PreparedDocumentCreation>;
 }

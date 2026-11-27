@@ -1,4 +1,7 @@
-import type { CreativeAssetKind } from "../creative/assets.js";
+import { CREATIVE_ASSET_KINDS } from "../creative/assets.js";
+
+export const originalStorageKinds = [...CREATIVE_ASSET_KINDS, "project-memory-package"] as const;
+export type OriginalStorageKind = (typeof originalStorageKinds)[number];
 
 export type OriginalStorageErrorCode =
   | "storageInvalidConfiguration"
@@ -32,7 +35,7 @@ export interface OriginalStorageSettings {
   schema: 1;
   revision: number;
   mode: "local" | "s3";
-  kinds: CreativeAssetKind[];
+  kinds: OriginalStorageKind[];
   activeProfileId: string | null;
   profiles: OriginalStorageProfile[];
   operationId: string | null;
@@ -50,7 +53,7 @@ export type OriginalStorageMutation = {
   | {
       action: "configure";
       mode: "local" | "s3";
-      kinds: CreativeAssetKind[];
+      kinds: OriginalStorageKind[];
       profile?: OriginalStorageConnection & {
         id?: string;
         label: string;

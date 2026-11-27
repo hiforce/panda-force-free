@@ -1,6 +1,10 @@
 import { creativeImportKind, creativeKindMatchesName } from "../../shared/creative/file-types.js";
 import type { Translate } from "../../shared/i18n/messages.js";
-import { CREATIVE_ASSET_LIMITS as limits, type CreativeAsset } from "../../shared/creative/assets.js";
+import {
+  CREATIVE_ASSET_LIMITS as limits,
+  type CreativeAsset,
+  type CreativeAssetKind,
+} from "../../shared/creative/assets.js";
 import { escapeHtml as e } from "../../shared/html.js";
 import { DocumentModal } from "../documents/modal.js";
 import { DocumentApiError } from "../documents/api.js";
@@ -14,6 +18,7 @@ export async function importCreativeAsset(
   project: string,
   signal: AbortSignal,
   previous?: CreativeAsset,
+  category?: CreativeAssetKind,
 ) {
   let priorFile: File | undefined,
     signature = "",
@@ -21,20 +26,22 @@ export async function importCreativeAsset(
     id = previous?.id ?? "c-" + crypto.randomUUID();
   let submitting = false;
   let bundle: CreativeBundleSelection;
-  const archiveFile = (file: File) => file.name.toLowerCase().endsWith(".zip") && previous?.kind !== "file";
+  const target = previous?.kind ?? category;
+  const acceptsArchive = !target || target === "web";
+  const archiveFile = (file: File) => file.name.toLowerCase().endsWith(".zip") && acceptsArchive;
   const selectedFile = () => modal.element.querySelector<HTMLInputElement>('[name="document-source"]')?.files?.[0],
     canSubmit = () => {
       const file = selectedFile();
       return !submitting && !!file && (!archiveFile(file) || !!bundle?.entry(file));
     },
     accept =
-      previous?.kind === "slides"
+      target === "slides"
         ? ".pptx"
-        : previous?.kind === "web"
+        : target === "web"
           ? ".html,.zip"
-          : previous?.kind === "image"
+          : target === "image"
             ? ".png,.jpg,.jpeg,.webp,.gif,.avif"
-            : previous?.kind === "video"
+            : target === "video"
               ? ".mp4,.webm,.mov,.m4v"
               : "";
   const result = modal.form(
@@ -48,6 +55,7 @@ export async function importCreativeAsset(
         entry = archive ? bundle.entry(file) : undefined,
         kind = previous?.kind ?? creativeImportKind(file.name);
       if (
+        (target !== undefined && target !== kind) ||
         (!archive && !creativeKindMatchesName(kind, file.name)) ||
         !file.size ||
         file.size > (kind === "web" && !archive ? limits.htmlBytes : limits.sourceBytes) ||
@@ -106,7 +114,7 @@ export async function importCreativeAsset(
     () => {
       if (bundle?.active) modal.element.querySelector<HTMLButtonElement>('[type="submit"]')!.disabled = !canSubmit();
     },
-    previous?.kind !== "file",
+    acceptsArchive,
   );
   modal.element.querySelector<HTMLInputElement>('[name="document-source"]')!.onchange = () => {
     if (submitting) return;

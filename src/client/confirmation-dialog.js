@@ -5,13 +5,16 @@ let cancelActiveConfirmation = null;
 let confirmationSequence = 0;
 
 // Confirmation state belongs to this dialog, separate from application data.
-/** @param {{title: string; message: string; values?: Record<string, unknown>; confirmText?: string; cancelText?: string; returnFocus?: Element | (() => Element | null) | null}} options */
+/** @param {{title: string; message: string; values?: Record<string, unknown>; detailMessage?: string; detailValues?: Record<string, unknown>; confirmText?: string; confirmTone?: "primary" | "danger"; cancelText?: string; returnFocus?: Element | (() => Element | null) | null}} options */
 export function confirmAction({
   title,
   message,
   confirmText,
+  confirmTone = "danger",
   cancelText,
   values,
+  detailMessage,
+  detailValues,
   returnFocus = document.activeElement,
 }) {
   cancelActiveConfirmation?.();
@@ -41,10 +44,19 @@ export function confirmAction({
     cancel.autofocus = true;
     const accept = document.createElement("button");
     accept.type = "submit";
-    accept.className = "wb-button danger";
+    accept.className = "wb-button " + confirmTone;
     localizeText(accept, confirmText, values);
     form.append(cancel, accept);
-    dialog.append(brand, heading, description, form);
+    dialog.append(brand, heading, description);
+    if (detailMessage) {
+      const detail = document.createElement("p");
+      detail.className = "confirmation-detail";
+      detail.id = id + "-detail";
+      localizeText(detail, detailMessage, detailValues);
+      dialog.setAttribute("aria-describedby", description.id + " " + detail.id);
+      dialog.append(detail);
+    }
+    dialog.append(form);
     let settled = false;
     function finish(accepted = false) {
       if (settled) return;

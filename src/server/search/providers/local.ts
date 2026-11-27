@@ -165,11 +165,22 @@ export class LocalTextIndex implements TextIndexProvider {
   ) {
     return this.call<IndexReference>("build", { name, documents, analyzer: analyzer.descriptor }, signal, progress);
   }
-  query(index: IndexReference, query: string, analyzer: SearchAnalyzer, limit: number, signal: AbortSignal) {
-    return this.call<SearchCandidate[]>("query", { index, query, analyzer: analyzer.descriptor, limit }, signal);
+  query(
+    index: IndexReference,
+    query: string,
+    analyzer: SearchAnalyzer,
+    limit: number,
+    signal: AbortSignal,
+    options?: { match?: "any" },
+  ) {
+    return this.call<SearchCandidate[]>(
+      "query",
+      { index, query, analyzer: analyzer.descriptor, limit, options },
+      signal,
+    );
   }
-  drop(index: IndexReference) {
-    return this.call<void>("drop", { index });
+  drop(index: IndexReference, signal?: AbortSignal) {
+    return this.call<void>("drop", { index }, signal);
   }
   audit(index: IndexReference, analyzer: SearchAnalyzer, signal: AbortSignal) {
     return this.call<IndexAuditResult>("audit", { index, analyzer: analyzer.descriptor }, signal);

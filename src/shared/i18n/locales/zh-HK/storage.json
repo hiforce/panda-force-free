@@ -15,6 +15,7 @@
   "mode": "所選檔案類型的儲存方式",
   "local": "應用程式本機儲存",
   "s3": "S3 相容物件儲存",
+  "projectMemoryPackages": "項目記憶資料包",
   "kinds": "存入 S3 的檔案類型",
   "connection": "儲存連線",
   "newConnection": "新增連線",

@@ -139,7 +139,7 @@ export class GrokHarnessAgent implements HarnessAgent {
     const result = record(
       await this.authenticatedRequest(method, {
         cwd,
-        mcpServers: this.application ? [this.application.mcpServer] : [],
+        mcpServers: this.application && this.application.scope !== "project-memory" ? [this.application.mcpServer] : [],
         _meta: {
           yoloMode: permissionMode === "always-approve",
           autoMode: false,
@@ -154,7 +154,12 @@ export class GrokHarnessAgent implements HarnessAgent {
                   agentsMd: false,
                   discoverSkills: false,
                   inheritSkills: false,
-                  toolConfig: { tools: [{ id: "GrokBuild:search_tool" }, { id: "GrokBuild:use_tool" }] },
+                  toolConfig: {
+                    tools:
+                      this.application.scope === "project-memory"
+                        ? []
+                        : [{ id: "GrokBuild:search_tool" }, { id: "GrokBuild:use_tool" }],
+                  },
                 },
               }
             : {}),
@@ -165,7 +170,7 @@ export class GrokHarnessAgent implements HarnessAgent {
     const actual = text(record(result._meta).currentWorkingDirectory) || cwd;
     if (resolve(actual) !== resolve(cwd)) throw new HarnessError("workspaceUnavailable", 409);
     const id = text(result.sessionId) || sessionId;
-    if (!id) throw new HarnessError("invalidProtocol", 503);
+    if (!id || (sessionId && id !== sessionId)) throw new HarnessError("invalidProtocol", 503);
     this.updateModels(record(result.models));
     const effortOption = (Array.isArray(result.configOptions) ? result.configOptions : [])
       .map(record)
@@ -230,6 +235,7 @@ export class GrokHarnessAgent implements HarnessAgent {
     try {
       await this.credentials?.prepare();
       prompt = await this.preparePrompt(session, input);
+      if (input.beforeDispatch) await input.beforeDispatch();
     } catch (error) {
       throw new HarnessPromptError(
         error instanceof HarnessError ? error.code : "unavailable",

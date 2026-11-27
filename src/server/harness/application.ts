@@ -188,7 +188,11 @@ export function applicationRuntimes(options: {
     engine(owner, selection, directory, purpose) {
       const runtimeId = selection.runtimeId || "codex",
         scopeName: ApplicationRuntimeScope | undefined =
-          purpose === "bot-chat" ? "bots" : purpose === "bots" || purpose === "creation" ? purpose : undefined;
+          purpose === "bot-chat"
+            ? "bots"
+            : purpose === "bots" || purpose === "creation" || purpose === "project-memory"
+              ? purpose
+              : undefined;
       if (runtimeId === "codex") {
         const engine = options.codex(selection, directory, purpose);
         return {
@@ -211,6 +215,13 @@ export function applicationRuntimes(options: {
         },
         async run(input, callbacks) {
           callbacks.signal.throwIfAborted();
+          if (
+            scopeName === "project-memory" &&
+            (input.sessionId ||
+              input.persistent ||
+              input.tools.some(({ name }) => name !== "panda_memory_context" && name !== "panda_memory_submit"))
+          )
+            throw new HarnessError("capabilityUnavailable", 409);
           const configured = await options.registry.require(await options.principal(owner), runtimeId);
           if (!options.registry.allowsApplication(configured, scopeName))
             throw new HarnessError("capabilityUnavailable", 409);
@@ -286,7 +297,9 @@ export function applicationRuntimes(options: {
             );
             agent = opened.agent;
             signal.throwIfAborted();
-            const native = await agent.create(cwd, { permissionMode: "always-approve" });
+            const native = await agent.create(cwd, {
+              permissionMode: scopeName === "project-memory" ? "ask" : "always-approve",
+            });
             signal.throwIfAborted();
             const { model, effort } = await port.resolve(owner, selection, scopeName);
             scope = { sessionId: "app-" + randomUUID(), runId: randomUUID() };
@@ -303,6 +316,7 @@ export function applicationRuntimes(options: {
               model,
               effort: effort || null,
               creation: purpose === "creation",
+              reportUsage: scopeName === "project-memory",
               toolBusy: () => toolCalls > 0,
               onToolIdle: (wake) => {
                 resumeUpdates = wake;

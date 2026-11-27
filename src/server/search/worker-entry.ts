@@ -40,6 +40,9 @@ async function command(message: Record<string, unknown>) {
         createAnalyzer(analyzerPackage(p.analyzer)),
         Math.min(Number(p.limit), SEARCH_LIMITS.candidates),
         controller.signal,
+        p.options && typeof p.options === "object" && "match" in p.options && p.options.match === "any"
+          ? { match: "any" }
+          : undefined,
       );
     else if (message.method === "audit")
       result = await engine.audit(

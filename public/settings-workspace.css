@@ -573,3 +573,16 @@
 .harness-settings .harness-hint { margin-inline: 0; }
 .harness-actions { display: flex; flex-wrap: wrap; gap: var(--pf-space-2); justify-content: flex-end; }
 .harness-feedback { margin-block: var(--pf-space-3); color: var(--pf-muted); font-size: var(--pf-text-body); overflow-wrap: anywhere; }
+
+.settings-page[data-settings-content="memory-settings"] [data-memory-settings-fields] {
+  max-inline-size: 34rem;
+}
+.settings-page[data-settings-content="memory-settings"] [data-memory-model-fields] {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+.settings-page[data-settings-content="memory-settings"] [data-memory-model-fields][hidden] {
+  display: none;
+}

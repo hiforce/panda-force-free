@@ -2,7 +2,7 @@ import type { SQL } from "bun";
 import { createHash } from "node:crypto";
 import { CliError } from "../../../shared/cli/contracts.js";
 import type { CliCredentialStore, CliClientRecord, CliKeyRecord } from "./ports.js";
-import { storedCliClient, storedCliKey } from "./records.js";
+import { storedCliClient, storedCliKey, serializeCliProjects } from "./records.js";
 import { mysqlInteger } from "../../database/mysql-model.js";
 
 const nullableTime = (v: unknown) => (v === null ? null : mysqlInteger(v));
@@ -56,7 +56,7 @@ export function openMySQLCliCredentialStore(pool: SQL): { store: CliCredentialSt
           )
             throw new CliError("limit", 429);
           await sql`INSERT INTO panda_force_cli_clients(id,owner,name,kind,createdAt,revokedAt) VALUES(${client.id},${client.owner},${client.name},${client.kind},${client.createdAt},${client.revokedAt})`;
-          await sql`INSERT INTO panda_force_cli_keys(keyId,clientId,owner,digest,projects,capabilities,expiresAt,createdAt,revokedAt,lastUsedAt) VALUES(${key.keyId},${key.clientId},${key.owner},${key.digest},${JSON.stringify(key.projects)},${JSON.stringify(key.capabilities)},${key.expiresAt},${key.createdAt},${key.revokedAt},${key.lastUsedAt})`;
+          await sql`INSERT INTO panda_force_cli_keys(keyId,clientId,owner,digest,projects,capabilities,expiresAt,createdAt,revokedAt,lastUsedAt) VALUES(${key.keyId},${key.clientId},${key.owner},${key.digest},${serializeCliProjects(key)},${JSON.stringify(key.capabilities)},${key.expiresAt},${key.createdAt},${key.revokedAt},${key.lastUsedAt})`;
         }),
       ),
     find: (keyId) =>

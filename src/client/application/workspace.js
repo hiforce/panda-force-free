@@ -127,7 +127,7 @@ export function assembleWorkspace({
       projectsPort.businessProjects.get(state.newSessionProjectId)?.workspace;
     button.hidden = hidden;
     button.disabled = Boolean(managed);
-    if (picker) picker.hidden = hidden;
+    if (picker) picker.hidden = hidden || Boolean(managed);
     const caption = picker?.querySelector(".working-folder-label");
     if (caption) localizeText(caption, managed ? "projects.workspacePath" : "common.workingFolder", undefined, t);
     localizeAttribute(button, "aria-label", managed ? "projects.workspacePath" : "common.workingFolder", undefined, t);

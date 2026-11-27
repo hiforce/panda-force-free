@@ -1,7 +1,7 @@
 import type { SQL } from "bun";
 import { mysqlInteger } from "../../database/mysql-model.js";
 import { HarnessError } from "../../../shared/harness/contracts.js";
-import type { HarnessMetadata, HarnessMetadataTransaction, HarnessRecord } from "../ports.js";
+import type { HarnessMetadata, HarnessMetadataTransaction, HarnessRecord, HarnessRecordList } from "../ports.js";
 
 /** A database guard fences metadata and the corresponding committed JSONL offsets across application processes. */
 export class MySQLHarnessMetadata implements HarnessMetadata {
@@ -18,12 +18,14 @@ export class MySQLHarnessMetadata implements HarnessMetadata {
     };
     return {
       get,
-      list: async (kind, owner) => {
+      list: async (kind, owner, page) => {
+        const owned = owner === undefined ? sql`` : sql`AND owner=${owner}`;
+        const due = page?.updatedThrough === undefined ? sql`` : sql`AND updatedAt<=${page.updatedThrough}`;
+        const order = page?.oldestFirst ? sql`ASC` : sql`DESC`;
+        const limit = page ? sql`LIMIT ${page.limit}` : sql``;
         const rows =
-          owner === undefined
-            ? await sql`SELECT * FROM panda_force_harness_records WHERE kind=${kind} ORDER BY updatedAt DESC,id`
-            : await sql`SELECT * FROM panda_force_harness_records WHERE kind=${kind} AND owner=${owner} ORDER BY updatedAt DESC,id`;
-        return rows.map((row: HarnessRecord) => record(row as HarnessRecord));
+          await sql`SELECT * FROM panda_force_harness_records WHERE kind=${kind} ${owned} ${due} ORDER BY updatedAt ${order},id ${limit}`;
+        return rows.map(record);
       },
       put: async (row, expected) => {
         if ((await get(row.id))?.revision !== (expected ?? undefined) || row.revision !== (expected ?? 0) + 1)
@@ -39,8 +41,8 @@ export class MySQLHarnessMetadata implements HarnessMetadata {
   read(id: string) {
     return this.port(this.pool).get(id);
   }
-  list(kind: string, owner?: string) {
-    return this.port(this.pool).list(kind, owner);
+  list(kind: string, owner?: string, page?: HarnessRecordList) {
+    return this.port(this.pool).list(kind, owner, page);
   }
   transaction<T>(work: (transaction: HarnessMetadataTransaction) => Promise<T>) {
     return this.pool.begin(async (sql) => {

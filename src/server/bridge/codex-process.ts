@@ -43,6 +43,8 @@ import type { CodexTransport, CodexTransportOptions } from "../engines/codex-tra
 export function createCodexBridge({
   connection,
   defaultCwd,
+  processEnvironment,
+  processArguments,
   clientInfo,
   isShuttingDown,
   onMessage,
@@ -112,9 +114,9 @@ export function createCodexBridge({
       });
       return;
     }
-    const child = spawn("codex", ["app-server", "--stdio"], {
+    const child = spawn("codex", ["app-server", "--stdio", ...(processArguments ?? [])], {
       cwd: defaultCwd,
-      env: process.env,
+      env: processEnvironment ?? process.env,
       stdio: ["pipe", "pipe", "pipe"],
       detached: process.platform !== "win32",
     });

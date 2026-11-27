@@ -5,7 +5,7 @@ import { runtimeModels } from "../../shared/engine/runtime-selection.js";
 import { harnessApi } from "./api.js";
 
 /** Catalog requests are independent of the active session and its model RPC interceptor. */
-export type RuntimeModelCatalogScope = boolean | "bots" | "creation";
+export type RuntimeModelCatalogScope = boolean | "bots" | "creation" | "project-memory";
 
 export function runtimeModelCatalog(t: Translate, scope: RuntimeModelCatalogScope = false) {
   const api = harnessApi(t);

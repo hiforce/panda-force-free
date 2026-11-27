@@ -80,16 +80,30 @@ async function output(path: string, maximum: number) {
   }
 }
 
+async function inspectPdf(work: string, pdf: Buffer, deadline: AbortSignal): Promise<RenderedSlideDeck> {
+  if (!pdf.subarray(0, 5).equals(Buffer.from("%PDF-"))) throw new DocumentError("invalidInput");
+  const pages = Number(/^Pages:\s+(\d+)$/m.exec(await run(work, deadline, "info"))?.[1]);
+  if (!Number.isInteger(pages) || pages < 1 || pages > 500) throw new DocumentError("unavailable", 503);
+  return { pdf, pages };
+}
+
+export function preparePdfPreview(source: Uint8Array, signal: AbortSignal): Promise<RenderedSlideDeck> {
+  if (source.length > maxPdfBytes) throw new DocumentError("tooLarge", 413);
+  return isolatedWork(async (work) => {
+    const deadline = AbortSignal.any([signal, AbortSignal.timeout(8000)]);
+    const pdf = Buffer.from(source.buffer, source.byteOffset, source.byteLength);
+    await writeFile(join(work, "preview.pdf"), pdf, { mode: 0o600, flag: "wx", signal: deadline });
+    return inspectPdf(work, pdf, deadline);
+  });
+}
+
 export function renderSlideDeck(source: Uint8Array, signal: AbortSignal): Promise<RenderedSlideDeck> {
   return isolatedWork(async (work) => {
     const deadline = AbortSignal.any([signal, AbortSignal.timeout(32_000)]);
     await writeFile(join(work, "preview.pptx"), source, { mode: 0o600, flag: "wx", signal: deadline });
     await run(work, deadline, "convert");
     const pdf = await output(join(work, "preview.pdf"), maxPdfBytes);
-    if (!pdf.subarray(0, 5).equals(Buffer.from("%PDF-"))) throw new DocumentError("unavailable", 503);
-    const pages = Number(/^Pages:\s+(\d+)$/m.exec(await run(work, deadline, "info"))?.[1]);
-    if (!Number.isInteger(pages) || pages < 1 || pages > 500) throw new DocumentError("unavailable", 503);
-    return { pdf, pages };
+    return inspectPdf(work, pdf, deadline);
   });
 }
 

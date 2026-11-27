@@ -24,6 +24,9 @@ export function memberApiAllowed(path: string, method: string) {
     ].includes(path)
   )
     return method === "GET";
+  if (/^\/api\/projects\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}\/memory-team$/u.test(path)) return method === "GET";
+  if (/^\/api\/projects\/[A-Za-z0-9][A-Za-z0-9_-]{0,127}\/memory-team\/[a-f0-9]{64}$/u.test(path))
+    return method === "POST";
   if (path === "/api/local-users/password") return method === "POST";
   if (path.startsWith("/api/personal/")) return true;
   if (path === "/api/creation-materials") return method === "POST";

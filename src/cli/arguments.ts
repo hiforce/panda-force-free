@@ -11,7 +11,7 @@ export function cliArguments(argv: string[]) {
     }
     const name = arg.slice(2);
     if (!/^[a-z][a-z-]*$/.test(name) || name in flags) throw new CliError("invalidInput");
-    if (["json", "api-key-stdin", "help", "version"].includes(name)) {
+    if (["json", "stdin", "api-key-stdin", "help", "version"].includes(name)) {
       flags[name] = true;
       continue;
     }

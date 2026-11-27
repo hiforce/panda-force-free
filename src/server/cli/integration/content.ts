@@ -3,10 +3,11 @@ import type { FileDocumentQueries } from "../../documents/files/queries.js";
 import type { FileDocumentSpaces } from "../../documents/files/spaces/service.js";
 import type { KnowledgeTasks } from "../../knowledge/tasks/service.js";
 import type { KnowledgeRecords } from "../../knowledge/catalog/read.js";
-import { CliError, cliId } from "../../../shared/cli/contracts.js";
+import { CliError, cliId, cliText } from "../../../shared/cli/contracts.js";
 import { cliContentError } from "./errors.js";
 import type { CliContentCommands } from "../commands.js";
 import type { FileOriginalQueries } from "../../content-sources/reader.js";
+import type { ProjectMemory } from "../../project-memory/service.js";
 import { executeSavedSourceCommand } from "./saved-sources.js";
 type Knowledge = Pick<
   KnowledgeTasks,
@@ -22,6 +23,7 @@ export function cliContentCommands(options: {
     spaces: Pick<FileDocumentSpaces, "list">;
     navigation: Pick<FileDocumentNavigation, "tree">;
   }>;
+  memory?: Pick<ProjectMemory, "find" | "registeredBackfill">;
   authorize(owner: string, project: string): Promise<void>;
   knowledge: Knowledge;
   records: Pick<KnowledgeRecords, "detail">;
@@ -34,6 +36,30 @@ export function cliContentCommands(options: {
         const project = cliId(args.project);
         await options.authorize(owner, project);
         signal.throwIfAborted();
+        if (id === "memory.search" || id === "memory.status" || id === "memory.organize") {
+          if (project === "personal") throw new CliError("notFound", 404);
+          if (!options.memory) throw new CliError("unavailable", 503);
+          if (id === "memory.search") {
+            const query = args.query === undefined ? "" : cliText(args.query, 160).trim().toLowerCase();
+            const offset = args.offset ?? 0;
+            if (typeof offset !== "number" || !Number.isSafeInteger(offset) || offset < 0)
+              throw new CliError("invalidInput");
+            const matches = await options.memory.find(owner, project, query);
+            return {
+              entries: matches.slice(offset, offset + 40),
+              next: offset + 40 < matches.length ? offset + 40 : null,
+            };
+          }
+          const conversation = cliId(args.id);
+          if (id === "memory.status") return await options.memory.registeredBackfill(owner, project, conversation);
+          if (args.days !== 7 && args.days !== 30) throw new CliError("invalidInput");
+          return {
+            task: await options.memory.registeredBackfill(owner, project, conversation, {
+              days: args.days,
+              requestId: args.requestId,
+            }),
+          };
+        }
         if (id === "sources.list" || id === "sources.read") {
           if (!options.originals) throw new CliError("unavailable", 503);
           return await executeSavedSourceCommand(await options.originals(owner, project), id, project, args, signal);

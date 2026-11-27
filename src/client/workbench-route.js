@@ -57,13 +57,15 @@ export function workbenchLinkPath(anchor, event, base = location.href) {
 export function parseWorkbenchRoute(url = new URL(location.href)) {
   const parts = url.pathname.split("/").filter(Boolean);
   const page =
-    ["create", "workspace"].includes(parts[0]) && url.searchParams.has("creation")
-      ? "creation"
-      : parts[0] === "settings"
-        ? "settings"
-        : routes.has(parts[0])
-          ? parts[0]
-          : "workspace";
+    parts[0] === "task" && url.searchParams.has("memoryMessage")
+      ? "memory-source"
+      : ["create", "workspace"].includes(parts[0]) && url.searchParams.has("creation")
+        ? "creation"
+        : parts[0] === "settings"
+          ? "settings"
+          : routes.has(parts[0])
+            ? parts[0]
+            : "workspace";
   let id = "";
   try {
     id = decodeURIComponent(parts[1] || "");

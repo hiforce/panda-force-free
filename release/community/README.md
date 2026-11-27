@@ -168,6 +168,8 @@ The 0.1.11 image contains **Codex CLI 0.171.0**, **Grok Build 1.0.89**, and **ZC
 
 Codex starts through the application's app-server connection. Grok uses on-demand ACP processes; its optional account service handles native credential renewal. No host Grok/tmux session is required. Provider logins remain separate from the PandaForce administrator. [Container roles, login, persistence and recovery →](./panda-docs/docs/harness-runtimes.md)
 
+The `develop` branch contains the **0.2.1** source. See [what changed](./panda-docs/docs/releases.md#021) and the [source build guide](./panda-docs/docs/building.md).
+
 ## Install 0.1.11
 
 Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.1.11`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes all three Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)

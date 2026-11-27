@@ -39,6 +39,14 @@ bun scripts/release/prepare-update.mjs \
 
 Three-way application preserves independent public changes and stops on conflicts. The tool neither commits nor pushes. Do not merge private Git branches into the public repository. New commercial material in an existing filename still needs explicit review; a path whitelist cannot make that licensing decision.
 
+## 0.2.1
+
+The 0.2.1 source is available on the `develop` branch. Follow the [source build guide](building.md) to run it.
+
+- Project memory can retain and recall authorized information across project conversations. Private conversations can use existing project memories when recall is enabled. Their messages do not become memory sources.
+- Managed conversations keep a single history when switching Harness runtimes. Each supported runtime can resume its own saved session.
+- Project creation categories use a common navigation layout. The mobile layout gives document and media content the full width.
+
 ## 0.1.11
 
 Use Git tag `v0.1.11` and `hiforceai/panda-force:0.1.11` on Linux amd64. [Install](installation.md) or [upgrade](updates.md).
