@@ -43,10 +43,10 @@ The documentation build currently inherits a low-severity [deepmerge advisory](h
 
 ## Run from source
 
-Clone the `develop` branch for the 0.2.1 source:
+Check out `v0.2.1` for the released source. Use `develop` for ongoing development.
 
 ```bash
-git clone --branch develop --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch v0.2.1 --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 ```
 

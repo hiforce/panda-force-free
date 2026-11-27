@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hiforce/panda-force-free/releases/tag/v0.1.11"><img src="./panda-docs/static/img/readme-release-v0.1.11.svg" width="105" height="20" alt="发行版 v0.1.11" /></a>
+  <a href="https://github.com/hiforce/panda-force-free/releases/tag/v0.2.1"><img src="./panda-docs/static/img/readme-release-v0.2.1.svg" width="105" height="20" alt="发行版 v0.2.1" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/hiforce/panda-force-free?label=License" alt="MIT 许可证" /></a>
   <a href="./src"><img src="https://img.shields.io/badge/TypeScript%20%2B%20JS-3178C6?logo=typescript&amp;logoColor=white" alt="开发语言：TypeScript 和 JavaScript" /></a>
   <a href="https://hub.docker.com/r/hiforceai/panda-force/tags"><img src="https://img.shields.io/badge/Docker-Linux%20amd64-2496ED?logo=docker&amp;logoColor=white" alt="Docker Hub 镜像，支持 Linux amd64" /></a>
@@ -14,7 +14,7 @@ PandaForce 是一个可自行部署的开源 Web 工作台，支持 **Codex**、
 
 **支持电脑和手机浏览器。** 通过 HTTPS 访问自己的实例并登录账号，有网络时就能随时随地继续工作。
 
-[Docker Compose 安装](#安装-0111) · [配置 Harness 运行实例](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md) · [远程访问与安全](./panda-docs/docs/security.md) · [English](./README.md)
+[Docker Compose 安装](#安装-021) · [配置 Harness 运行实例](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md) · [远程访问与安全](./panda-docs/docs/security.md) · [English](./README.md)
 
 ![PandaForce 桌面对话演示。用户请 Codex 为徒步笔记添加搜索，界面显示测试命令和代理回复。](./panda-docs/static/img/conversation-zh-CN.webp)
 
@@ -29,7 +29,7 @@ _模拟对话截图。截图来自实际界面，项目、消息和测试结果�
 
 也可以[用技能创作插画、幻灯片、网页或文档](#先来做点好玩的)，以及[通过 Bot API 交给助理处理重复任务](#认识你的-bot)。
 
-> **PandaForce 0.1.11** 默认允许 Bot 使用已配置的 Harness 运行实例，修复了选择这些实例后 Bot 对话无法发送的问题，并改进了创作技能卡片和作品浏览。[安装发行版 →](#安装-0111) · [发行说明 →](./panda-docs/docs/releases.md#0111) · [Harness 配置 →](./panda-docs/docs/harness-runtimes.md)
+> **PandaForce 0.2.1** 增加项目记忆、隐私会话只读取用和 Harness 会话持久化，并为项目创作区留出更多内容空间。[安装发行版 →](#安装-021) · [发行说明 →](./panda-docs/docs/releases.md#021) · [Harness 配置 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
 ## 先来做点好玩的
 
@@ -164,15 +164,13 @@ curl --fail-with-body --silent --show-error \
 
 ## 多个 Harness Runtime
 
-0.1.11 镜像包含 **Codex CLI 0.171.0** 、**Grok Build 1.0.89** 和 **ZCode CLI 0.17.1**。会话、助理/Bot 和支持的创作设置统一按 **Harness Runtime → 模型 → 推理强度**选择。当前轮完成后可以切换会话引擎，交接选定上下文，文件继续保留在工作区。[多实例配置指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md#同时使用多个命名实例)介绍独立账户与可选的 Antigravity 配置。
+0.2.1 镜像包含 **Codex CLI 0.171.0** 、**Grok Build 1.0.89** 和 **ZCode CLI 0.17.1**。会话、助理/Bot 和支持的创作设置统一按 **Harness Runtime → 模型 → 推理强度**选择。当前轮完成后可以切换会话引擎，交接选定上下文，文件继续保留在工作区。[多实例配置指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md#同时使用多个命名实例)介绍独立账户与可选的 Antigravity 配置。
 
 Codex 使用应用的 app-server 连接，Grok 使用按需启动的 ACP 进程；可选账户服务负责原生命令行凭据续期，无需在宿主机保持 Grok/tmux 会话。模型账户与 PandaForce 管理员相互独立。[容器分工、登录、持久化与恢复 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
-`develop` 分支的源码版本为 **0.2.1**。请参阅 [版本变更](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md#021-源码)和[源码构建指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/building.md)。
+## 安装 0.2.1
 
-## 安装 0.1.11
-
-从 **`main` 分支**获取安装配置，运行正式镜像 **`hiforceai/panda-force:0.1.11`**，平台为 **Linux amd64**。镜像采用 **Rocky Linux 9**，包含三种 Harness CLI、Bun、Node.js、Python、Office、PDF/OCR、字体、图像/研究/写作库、Chromium 和 FFmpeg。宿主机准备 Git、Docker 和 Compose 即可。[基础镜像的内容与用途 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)
+从 **`main` 分支**获取安装配置，运行正式镜像 **`hiforceai/panda-force:0.2.1`**，平台为 **Linux amd64**。镜像采用 **Rocky Linux 9**，包含三种 Harness CLI、Bun、Node.js、Python、Office、PDF/OCR、字体、图像/研究/写作库、Chromium 和 FFmpeg。宿主机准备 Git、Docker 和 Compose 即可。[基础镜像的内容与用途 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)
 
 ```bash
 git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
@@ -200,7 +198,7 @@ docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
   run --rm grok-auth grok --no-auto-update login --device-auth
 ```
 
-打开 **设置 → Harness Runtime** 检查 Grok Build，然后选择模型与强度。明确的 **hi** 测试会使用你的模型账户发送一次真实小型请求。应用与 Grok 辅助服务默认使用同一份 0.1.11 镜像。[完整配置与账户卷说明 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
+打开 **设置 → Harness Runtime** 检查 Grok Build，然后选择模型与强度。明确的 **hi** 测试会使用你的模型账户发送一次真实小型请求。应用与 Grok 辅助服务默认使用同一份 0.2.1 镜像。[完整配置与账户卷说明 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
 **ZCode 会话运行环境（实验性）**
 

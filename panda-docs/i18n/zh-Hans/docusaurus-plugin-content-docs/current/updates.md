@@ -2,7 +2,7 @@
 title: 升级 PandaForce
 ---
 
-使用已发布的 `hiforceai/panda-force:0.1.11` 和配套发行配置。升级前查看[发行说明](releases.md#0111)。首次安装请使用[安装指南](installation.md)。
+使用已发布的 `hiforceai/panda-force:0.2.1` 和配套发行配置。升级前查看[发行说明](releases.md#021)。首次安装请使用[安装指南](installation.md)。
 
 创作、普通会话和 Bot 对话的发送按钮内统一显示发送指示器。创作首次提交会确认 Harness 选择，发送结果无法确认时保留草稿并沿用原请求编号。创作任务的执行权限由服务端管理，设置中可调整模型和推理强度。
 
@@ -10,7 +10,7 @@ title: 升级 PandaForce
 
 - 按[存储指南](storage.md)备份应用状态、所选 SQLite/MySQL 数据库、模型账户、工作区与附件。Grok 账户通过现有持有者备份，避免让多份账户副本独立轮换凭据。
 - 保留原 Compose 项目名、`.env`、卷名及管理员配置；审阅新版配置后，再合并到自己的文件。
-- 检查 `.env` 和当前终端中的 `PANDA_FORCE_IMAGE`。将旧覆盖项更新为 `hiforceai/panda-force:0.1.11`，或使用配套的自有仓库镜像。仓库凭据继续由独立仓库工具管理。
+- 检查 `.env` 和当前终端中的 `PANDA_FORCE_IMAGE`。将旧覆盖项更新为 `hiforceai/panda-force:0.2.1`，或使用配套的自有仓库镜像。仓库凭据继续由独立仓库工具管理。
 - 保留前版镜像摘要与兼容备份。涉及数据库迁移时，回退可能需要恢复配套备份，不能仅启动旧镜像。
 
 ## 升级标准安装

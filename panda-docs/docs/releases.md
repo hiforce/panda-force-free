@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.1.11` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.2.1` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -41,11 +41,13 @@ Three-way application preserves independent public changes and stops on conflict
 
 ## 0.2.1
 
-The 0.2.1 source is available on the `develop` branch. Follow the [source build guide](building.md) to run it.
+Use Git tag `v0.2.1` and image `hiforceai/panda-force:0.2.1` on Linux amd64. [Install](installation.md), [upgrade](updates.md) or [build from source](building.md).
 
 - Project memory can retain and recall authorized information across project conversations. Private conversations can use existing project memories when recall is enabled. Their messages do not become memory sources.
 - Managed conversations keep a single history when switching Harness runtimes. Each supported runtime can resume its own saved session.
 - Project creation categories use a common navigation layout. The mobile layout gives document and media content the full width.
+
+- The application creates its schema on first setup and applies registered upgrades at startup. Back up the database and application state before upgrading.
 
 ## 0.1.11
 
