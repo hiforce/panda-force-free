@@ -48,7 +48,7 @@
   "retrySubmission": "Check submission",
   "showTasks": "Writing tasks",
   "failedInterrupted": "The engine stopped before saving your creation. You can retry.",
-  "failedInvalidOutput": "No valid document was saved. Review the brief or skills, then retry.",
+  "failedInvalidOutput": "No finished work was saved. Send updated instructions below or retry the task.",
   "failedTargetChanged": "The saved document or destination changed. Your document and accepted requirements are retained. Save any manual edits, then retry with the latest content.",
   "failedWriteUnavailable": "The generated content is retained. Retry saving when storage is available.",
   "submitted": "Your task is queued. You may close this panel and return later.",

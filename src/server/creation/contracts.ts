@@ -38,6 +38,9 @@ export interface CreationTask {
   createdAt: number;
   updatedAt: number;
 }
+export function creationCanContinueFailedTask(task: CreationTask) {
+  return task.state === "failed" && !task.cancelRequested && !task.artifact && !task.outputDigest;
+}
 export interface CreationLease {
   taskId: string;
   owner: string;

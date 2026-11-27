@@ -12,7 +12,7 @@ import type { CreationTask } from "./contracts.js";
 import type { CreationSubmissions } from "./submissions.js";
 import type { CreationQuestions } from "./questions/service.js";
 import { creationHistoryCommand } from "./history/contracts.js";
-import { CreationError } from "./contracts.js";
+import { CreationError, creationCanContinueFailedTask } from "./contracts.js";
 import { creationGoalCommand, creationGoalView } from "./goals/contracts.js";
 import { creationId, creationUuid, creationRecord, creationInteger } from "./validation.js";
 import type { CreationProgressStore } from "./ports.js";
@@ -408,7 +408,9 @@ export class CreationService {
       if (this.messages && (await this.messages.submit(owner, id, frozen, true))) return this.view(owner, task);
       if (
         !(frozen && typeof frozen === "object" && Object.hasOwn(frozen, "updateGeneration")) &&
-        ((task.artifact && task.state === "succeeded") || task.state === "replied")
+        ((task.artifact && task.state === "succeeded") ||
+          task.state === "replied" ||
+          creationCanContinueFailedTask(task))
       ) {
         const next = await this.submissions.followUp(owner, id, frozen);
         this.runtime.wake();

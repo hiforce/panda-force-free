@@ -38,8 +38,20 @@ export function creationAuthority(options: {
     },
     profile: (id, selection, owner) => options.profiles.resolve(id, selection, owner),
     capture: async (owner, input, requestDigest) => {
+      let output = input.outputType;
+      if (output === "auto" && input.selections.length) {
+        const kinds = await Promise.all(
+          input.selections.map(async (selection) => {
+            const { package: pack } = await options.skills.detail(selection.packageId, selection.version);
+            if (pack.digest !== selection.digest) return;
+            return pack.manifest.skills.find((skill) => skill.id === selection.id)?.category;
+          }),
+        );
+        if (kinds.includes("image") && !kinds.some((kind) => kind === "web" || kind === "slides" || kind === "video"))
+          output = "image";
+      }
       const allowed = new Set<SkillCapability>(
-        creationCaptureCapabilities(input.outputType, (await options.rendering?.available()) ?? []),
+        creationCaptureCapabilities(output, (await options.rendering?.available()) ?? []),
       );
       return options.skills.capture(
         {
@@ -52,7 +64,7 @@ export function creationAuthority(options: {
         },
         owner,
         {
-          outputType: input.outputType && input.outputType !== "auto" ? input.outputType : "document",
+          outputType: output && output !== "auto" ? output : "document",
           ...(input.outputType === undefined ? {} : { guidanceOnly: true, workflowRequired: false }),
           available: allowed,
           granted: allowed,

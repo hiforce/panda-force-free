@@ -90,8 +90,9 @@ export function createComposerDisclosure(
   const observer = new MutationObserver(refresh);
   observer.observe(body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
   body.addEventListener("input", refresh);
-  button.onclick = () => {
-    collapsed = !collapsed;
+  function setCollapsed(next: boolean) {
+    if (collapsed === next) return;
+    collapsed = next;
     mergeStoredStates();
     states.delete(scope);
     states.set(scope, collapsed);
@@ -99,11 +100,19 @@ export function createComposerDisclosure(
     if (identity) storage.setSessionJson(STORAGE_KEYS.composerDisclosureFor(identity), Object.fromEntries(states));
     refresh();
     form.dispatchEvent(new CustomEvent("composer:visibility-changed"));
-    if (!collapsed) body.querySelector("textarea")?.focus({ preventScroll: true });
+  }
+  function focusInput(preventScroll = false) {
+    setCollapsed(false);
+    body.querySelector("textarea")?.focus({ preventScroll });
+  }
+  button.onclick = () => {
+    if (collapsed) focusInput(true);
+    else setCollapsed(true);
   };
   refresh();
   return {
     refresh,
+    focusInput,
     setScope(next: string) {
       if (next !== scope) {
         contexts.close();

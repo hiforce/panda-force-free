@@ -4,7 +4,7 @@ title: 完整功能清单
 
 # 完整功能清单
 
-本清单对应 PandaForce 0.2.2，请使用配套发行镜像与配置文件。截图内容为虚构演示数据。
+本清单对应 PandaForce 0.2.3，请使用配套发行镜像与配置文件。截图内容为虚构演示数据。
 
 [English](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/docs/features.md) · [README](https://github.com/hiforce/panda-force-free/blob/main/README-zh.md) · [安装指南](https://github.com/hiforce/panda-force-free/blob/main/panda-docs/docs/installation.md)
 
@@ -51,6 +51,8 @@ title: 完整功能清单
 - 管理员可把目录浏览限制在指定项目根目录，并配置持久工作区、文档和附件存储。
 
 ## 个人创作与可复用资产
+
+管理员可按[自建环境的创作配置](self-hosted-creation.md)接入各个 Harness，并检查每种成品的依赖。
 
 - 在创作中心保存个人文档、图片、视频、可编辑 PPTX 幻灯片、网页及导入文件，与独立的项目副本分开。
 - 直接新建空白文档，或结合所选技能和来源内容生成 AI 草稿。
@@ -162,7 +164,7 @@ title: 完整功能清单
 
 ## 安装、构建与 CDN
 
-- 使用 Docker、Compose 与 `hiforceai/panda-force:0.2.2` 安装；Rocky Linux 9 镜像包含 Codex CLI、Grok Build、ZCode CLI 及创作工具，文档镜像目标为 Linux amd64。
+- 使用 Docker、Compose 与 `hiforceai/panda-force:0.2.3` 安装；Rocky Linux 9 镜像包含 Codex CLI、Grok Build、ZCode CLI 及创作工具，文档镜像目标为 Linux amd64。
 - 使用配套发行配置。源码贡献与定制构建见[开发指南](building.md)。
 - 独立配置构建、预览执行器，按需使用文档、搜索和预览服务的 Compose 覆盖文件。
 - 可覆盖镜像、仓库凭据和拉取策略，包括使用私有仓库，无需把凭据写进应用源码。

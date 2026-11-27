@@ -12,10 +12,12 @@ import type { EngineDriver } from "../../shared/engine/contracts.js";
 import type { HarnessProfile } from "./registry.js";
 import { CodexHarnessAgent } from "./adapters/codex.js";
 import { GrokHarnessAgent } from "./adapters/grok.js";
+import { grokImageRenderer } from "./adapters/grok-image.js";
 import { accessCredentials } from "./auth/snapshot.js";
 import { brokerCredentialSource, credentialLease } from "./auth/remote.js";
 import type { HarnessCredentialLease } from "./auth/contracts.js";
 import { createCodexDriver } from "../engines/codex.js";
+import { zcodeImageRenderer } from "./adapters/zcode-image.js";
 import { ZCodeHarnessAgent } from "./adapters/zcode.js";
 import { AntigravityHarnessAgent, antigravityApplicationAgent } from "./adapters/antigravity.js";
 import { AcpSessionAgent } from "./adapters/acp-session.js";
@@ -212,6 +214,9 @@ export function harnessProfiles(
       ...identity,
       kind: "zcode",
       deployment: "local",
+      ...(profile.creationImageHome === undefined
+        ? {}
+        : { creationImage: zcodeImageRenderer(operatorPath(profile.creationImageHome)) }),
       conversationOnly: true,
       applicationScopes: ["bots", "creation", "project-memory"],
       isolatedApplicationWorkspace: true,
@@ -410,6 +415,7 @@ export function harnessProfiles(
       name: profile.name,
       kind: "grok-build",
       applicationScopes: ["project-memory"],
+      creationImage: grokImageRenderer(profile, env),
       deployment: profile.deployment ?? "local",
       factory: {
         create: async (runtime, scope) => {

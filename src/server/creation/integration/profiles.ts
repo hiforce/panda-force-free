@@ -59,7 +59,7 @@ export class CreationProfiles {
     private readonly engines: ReadonlySet<string>,
     private readonly defaultModel: (engineId: string, catalog?: unknown) => Promise<string>,
     private readonly models?: () => Promise<unknown>,
-    private readonly runtimes?: ApplicationRuntimePort,
+    private readonly runtimes?: Pick<ApplicationRuntimePort, "resolve">,
   ) {}
   async resolve(id: string, selection?: { runtimeId?: string; model?: string; effort?: string }, owner?: string) {
     const configured = this.settings.profiles.find((profile) => profile.id === id);

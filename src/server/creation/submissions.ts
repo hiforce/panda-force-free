@@ -2,9 +2,9 @@ import type { CreationResult } from "./ports.js";
 import type { CreationInputs, CreationEngineProfile, CreationRequest } from "./input.js";
 import type { SkillCapture } from "../../shared/skills/registry.js";
 import type { CreationTask } from "./contracts.js";
-import { CreationError } from "./contracts.js";
+import { CreationError, creationCanContinueFailedTask } from "./contracts.js";
 import { creationText, creationRecord, creationUuid } from "./validation.js";
-import { creationOperation, creationRequest, creationRequestDigest } from "./requests.js";
+import { creationAttachments, creationOperation, creationRequest, creationRequestDigest } from "./requests.js";
 
 export interface CreationSubmissionTasks {
   find(owner: string, id: string): CreationResult<CreationTask | null>;
@@ -96,6 +96,25 @@ export class CreationSubmissions {
     if (!task) throw new CreationError("notFound");
     await this.authority.authorize(owner, task.spec.projectId);
     const input = await this.inputs.read(task.spec);
+    const continuing = creationCanContinueFailedTask(task);
+    const updates = continuing ? ((await this.messages?.context(owner, id)) ?? []) : [];
+    const selected = updates.findLast(({ payload }) => !payload.inheritSkills);
+    const retainedSkills = selected
+      ? (selected.payload.skills?.composition.skills ?? [])
+      : input.skills.composition.skills;
+    const retainedMaterials = continuing
+      ? [...(input.materials ?? []), ...updates.flatMap(({ payload }) => payload.materials)]
+      : [];
+    const attachments = continuing
+      ? [
+          ...new Map(
+            [
+              ...retainedMaterials.map(({ id }) => ({ materialId: id })),
+              ...creationAttachments(request.attachments ?? []),
+            ].map((material) => [material.materialId, material]),
+          ).values(),
+        ]
+      : request.attachments;
     return this.submit(owner, {
       id: request.id,
       prompt: request.prompt,
@@ -112,10 +131,12 @@ export class CreationSubmissions {
         : { outputType: request.outputType ?? input.outputType }),
       ...(request.model === undefined ? {} : { model: request.model }),
       ...(request.effort === undefined ? {} : { effort: request.effort }),
-      ...(request.attachments === undefined ? {} : { attachments: request.attachments }),
+      ...(attachments === undefined ? {} : { attachments }),
       selections:
-        request.selections ??
-        input.skills.composition.skills.map(({ packageId, version, digest, id, parameters }) => ({
+        (continuing && Array.isArray(request.selections) && !request.selections.length
+          ? undefined
+          : request.selections) ??
+        retainedSkills.map(({ packageId, version, digest, id, parameters }) => ({
           packageId,
           version,
           digest,
@@ -157,7 +178,13 @@ export class CreationSubmissions {
       if (!task || task.spec.projectId !== request.projectId) throw new CreationError("notFound");
       await this.authority.authorize(owner, task.spec.projectId);
       const recovery = recoveryFrom?.taskId === task.spec.id && recoveryFrom.inputDigest === task.spec.inputDigest;
-      if (!recovery && task.state !== "replied" && (task.state !== "succeeded" || !task.artifact || !task.outputDigest))
+      const continuing = !recovery && creationCanContinueFailedTask(task);
+      if (
+        !recovery &&
+        !continuing &&
+        task.state !== "replied" &&
+        (task.state !== "succeeded" || !task.artifact || !task.outputDigest)
+      )
         throw new CreationError("conflict");
       let root = task;
       const seen = new Set([root.spec.id]);
@@ -179,6 +206,17 @@ export class CreationSubmissions {
         )?.text;
         if (!answer) throw new CreationError("unavailable");
         discussion = [...(discussion ?? []), { user: input.prompt.slice(0, 6000), assistant: answer }].slice(-5);
+      }
+      if (continuing) {
+        const updates = (await this.messages?.context(owner, task.spec.id)) ?? [];
+        const earlier = [input.prompt, ...updates.map(({ payload }) => payload.prompt)];
+        discussion = [
+          ...(discussion ?? []),
+          ...earlier.slice(-5).map((user) => ({
+            user: user.slice(0, 6000),
+            assistant: "The previous attempt ended without saving an artifact. Continue with the current user request.",
+          })),
+        ].slice(-5);
       }
       documentFileLineage = input.documentFileLineage;
       if (recovery) recoveredProfile = input.profile;
@@ -212,7 +250,7 @@ export class CreationSubmissions {
         document = current.base;
         documentProjectId = current.projectId;
         documentTreeVersion = current.treeVersion;
-      } else if (source.state !== "replied") throw new CreationError("conflict");
+      } else if (!continuing && source.state !== "replied") throw new CreationError("conflict");
     }
     const permitted = await this.authority.profile(
       request.profileId,
@@ -223,6 +261,8 @@ export class CreationSubmissions {
     const profile = structuredClone(recoveredProfile || permitted);
     if (profile.id !== request.profileId) throw new CreationError("unavailable");
     const skills = await this.authority.capture(owner, request, signature);
+    const outputType =
+      request.outputType === "auto" && skills.composition.outputType === "image" ? "image" : request.outputType;
     if (request.attachments?.length && !this.materials) throw new CreationError("unavailable");
     const materials = request.attachments?.length ? await this.materials!.prepare(owner, request.attachments) : [];
     const inputDigest = await this.inputs.put({
@@ -232,7 +272,7 @@ export class CreationSubmissions {
       projectId: request.projectId,
       requestDigest: signature,
       prompt: request.prompt,
-      ...(request.outputType === undefined ? {} : { outputType: request.outputType }),
+      ...(outputType === undefined ? {} : { outputType }),
       ...(request.dialogue ? { dialogue: true } : {}),
       ...(discussion?.length ? { discussion } : {}),
       profile,
@@ -252,7 +292,7 @@ export class CreationSubmissions {
           owner,
           projectId: request.projectId,
           operationId: creationOperation(owner, request.id),
-          kind: request.outputType ?? "document",
+          kind: outputType ?? "document",
           target: {
             parentId: request.parentId,
             treeVersion: documentTreeVersion ?? request.treeVersion,

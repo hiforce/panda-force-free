@@ -185,6 +185,25 @@ export function applicationRuntimes(options: {
       const effort = supportedEffort(efforts, selection.effort, selected.defaultEffort);
       return { runtimeId: id, model, effort: effort || "" };
     },
+    hasCreationImage: () => options.registry.hasCreationImage(),
+    async creationImage(owner, runtimeId) {
+      const runtime = await options.registry.require(await applicationPrincipal(owner, runtimeId), runtimeId);
+      if (!options.registry.allowsApplication(runtime, "creation"))
+        throw new HarnessError("capabilityUnavailable", 409);
+      const plugin = options.registry.creationImage(runtime.profileId);
+      if (!plugin) return undefined;
+      return {
+        provider: plugin.provider,
+        maxReferences: plugin.maxReferences,
+        maxReferenceBytes: plugin.maxReferenceBytes,
+        async render(prompt, references, signal) {
+          const active = await options.registry.require(await applicationPrincipal(owner, runtimeId), runtimeId);
+          if (active.profileId !== runtime.profileId || !options.registry.allowsApplication(active, "creation"))
+            throw new HarnessError("capabilityUnavailable", 409);
+          return plugin.render(prompt, references, signal);
+        },
+      };
+    },
     engine(owner, selection, directory, purpose) {
       const runtimeId = selection.runtimeId || "codex",
         scopeName: ApplicationRuntimeScope | undefined =

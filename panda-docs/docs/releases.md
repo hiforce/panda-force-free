@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.2.2` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.2.3` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -38,6 +38,15 @@ bun scripts/release/prepare-update.mjs \
 ```
 
 Three-way application preserves independent public changes and stops on conflicts. The tool neither commits nor pushes. Do not merge private Git branches into the public repository. New commercial material in an existing filename still needs explicit review; a path whitelist cannot make that licensing decision.
+
+## 0.2.3
+
+Use Git tag `v0.2.3` and image `hiforceai/panda-force:0.2.3` on Linux amd64. [Install](installation.md) or [upgrade](updates.md).
+
+- Create raster images with Grok Build’s native Imagine tool using the selected, eligible Grok account. Open the saved work and download its original.
+- Image rendering follows the selected Harness. A configured ZCode profile can use its official image plugin.
+- Continue an image creation after a failed attempt while retaining the task's requirements.
+- This release reuses the 0.2.2 base images and database schema.
 
 ## 0.2.2
 

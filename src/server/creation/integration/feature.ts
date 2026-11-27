@@ -59,6 +59,7 @@ export function createCreationFeature(options: {
   engines: CreationEngines;
   materials?: import("../materials.js").CreationMaterialPort;
   image?: {
+    applicationImages?: Parameters<typeof creationImageTools>[0]["applicationImages"];
     journal: import("./rendering/image-journal.js").ImageRenderJournal;
     renderer: Parameters<typeof creationImageTools>[0]["renderer"];
     assets: CreationAssetAccess;
@@ -120,7 +121,9 @@ export function createCreationFeature(options: {
                   request.outputType,
                   options.image
                     ? [
-                        ...((await options.image.available()) ? ["image" as const] : []),
+                        ...(options.image.applicationImages?.hasCreationImage?.() || (await options.image.available())
+                          ? ["image" as const]
+                          : []),
                         ...(options.image.generators?.map((g) => g.kind) ?? []),
                       ]
                     : [],

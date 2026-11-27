@@ -137,6 +137,7 @@ export class NativeImageRenderer {
   }
   async render(value: ImageRenderRequest, callbacks: Callbacks) {
     callbacks.signal.throwIfAborted();
+    if (value.profile.engineId !== "codex") throw new ImageRenderError("invalidInput");
     const input = structuredClone(value),
       intent = await imageRenderIntent(input);
     await callbacks.authorize();

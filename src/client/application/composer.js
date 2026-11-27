@@ -284,6 +284,7 @@ export function assembleComposer({
     persistComposerDraft,
     composerHistory,
     restoreComposerDraft,
+    focusComposerInput: disclosure.focusInput,
     resizePrompt,
     syncTurnRuntime,
     get promptComposing() {

@@ -34,6 +34,7 @@ export async function creationAppFixture(
   options: {
     storage?: Parameters<typeof createCreationFeature>[0]["storage"];
     home?: string;
+    runtimes?: ConstructorParameters<typeof CreationProfiles>[4];
     assets?: boolean;
     notificationSources?: readonly NotificationSource[];
     content?(
@@ -95,6 +96,8 @@ export async function creationAppFixture(
       },
       new Set(["codex"]),
       async () => "unused",
+      undefined,
+      options.runtimes,
     );
     return createCreationFeature({
       storage: options.storage,
@@ -111,7 +114,7 @@ export async function creationAppFixture(
       engines: {
         select(profile) {
           return {
-            id: "codex",
+            id: profile.engineId,
             async run(input, callbacks) {
               const scope = { sessionId: "session-" + ++runs, runId: "run-" + runs };
               scopes.push({ profileModel: profile.model, scope, callbacks, input });

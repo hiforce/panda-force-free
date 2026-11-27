@@ -1,6 +1,6 @@
 # Configure Harness Runtimes
 
-Use the 0.2.2 release checkout and application image. Combine the normal Compose file and this overlay:
+Use the 0.2.3 release checkout and application image. Combine the normal Compose file and this overlay:
 
 ```sh
 docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml up -d
@@ -16,7 +16,7 @@ For a dedicated account, complete the official one-time device login through the
 docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml run --rm grok-auth grok --no-auto-update login --device-auth
 ```
 
-The `grok-auth` service owns the account directory. The application mounts only a named socket volume; this works with Docker Desktop as well as Linux and does not require a host daemon or Kubernetes. Private registries and explicit pull policies remain available through the normal image and pull-policy overrides. The application and both account helpers default to `hiforceai/panda-force:0.2.2`. For a local build or private registry, set `PANDA_FORCE_IMAGE` explicitly so all three services use the same selected image. When building locally, include `docker-compose.build.yml` and build `panda-force` before starting the overlay.
+The `grok-auth` service owns the account directory. The application mounts only a named socket volume; this works with Docker Desktop as well as Linux and does not require a host daemon or Kubernetes. Private registries and explicit pull policies remain available through the normal image and pull-policy overrides. The application and both account helpers default to `hiforceai/panda-force:0.2.3`. For a local build or private registry, set `PANDA_FORCE_IMAGE` explicitly so all three services use the same selected image. When building locally, include `docker-compose.build.yml` and build `panda-force` before starting the overlay.
 
 Before model discovery, connection tests and chat dispatch, the account service rereads the account file. Within five minutes of expiry it runs the installed native CLI's `models` command in an empty temporary directory, with stdin closed, automatic updates disabled and a private leader socket. This exercises native authentication without sending a model prompt. Concurrent refreshes coalesce; an account-side file lock serializes native refresh workers. The native CLI owns OAuth, its own interaction with other native CLI processes, and persistence of rotated credentials. The integration does not implement a separate OAuth client or overwrite the native account file.
 
@@ -39,9 +39,11 @@ To configure named runtimes, expose the operator profiles below to the applicati
 
 For ZCode, use an executable that accepts `app-server --stdio` and supply its built-in provider configuration. The first tested combination is ZCode 3.18.2 / CLI 0.17.1. Mount a private ZCode personal-provider JSON file at runtime. The model and provider IDs must match the file. A Codex `config.toml` uses a different format. For a BigModel Coding Plan API key, configure ZCode's OpenAI-compatible connection with `https://open.bigmodel.cn/api/coding/paas/v4` and use it for coding requests. The provider's account page reports the applicable plan usage. Test the runtime in Settings with a small coding request after the connection check.
 
+The [self-hosted Creation setup](../../panda-docs/docs/self-hosted-creation.md#5-configure-native-zcode-image-generation) explains how to prepare the official ZCode image plugin and provide its dedicated browser-login directory through `creationImageHome`.
+
 ### Rebuild the Rocky base images with ZCode
 
-The 0.2.2 public Rocky amd64 bases include ZCode. The source recipe adds the locked headless payload, built-in provider configuration and upstream licensing notices to the matching build and runtime bases. The container uses `/usr/local/bin/zcode` and `/opt/panda-zcode/zcode-builtin.json`. Prepare the image inputs on a Linux amd64 build machine using the official archive URL recorded in `scripts/build/zcode-runtime.lock.json`.
+The 0.2.3 public Rocky amd64 bases include ZCode. The source recipe adds the locked headless payload, built-in provider configuration and upstream licensing notices to the matching build and runtime bases. The container uses `/usr/local/bin/zcode` and `/opt/panda-zcode/zcode-builtin.json`. Prepare the image inputs on a Linux amd64 build machine using the official archive URL recorded in `scripts/build/zcode-runtime.lock.json`.
 
 ```sh
 archive_url=$(node -p 'require("./scripts/build/zcode-runtime.lock.json").archive.url')

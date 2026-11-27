@@ -14,8 +14,9 @@ import { creationPrompt } from "../input-values.js";
 import type { CreationAssetAccess } from "./media-output.js";
 import { renderedCreationOutput } from "./typed-output.js";
 import { ImageRenderJournal, imageRenderIntent } from "./rendering/image-journal.js";
-import { ImageRenderError, type ImageRenderRequest } from "./rendering/image-contracts.js";
-import { imageDigest } from "./rendering/image-result.js";
+import { ImageRenderError, type ImageRenderIntent, type ImageRenderRequest } from "./rendering/image-contracts.js";
+import { decodedImage, imageDigest } from "./rendering/image-result.js";
+import type { ApplicationImageRenderer, ApplicationRuntimePort } from "../../engines/application-tools/runtime-port.js";
 import {
   CreationCandidateChanged,
   type CreationGeneratedOriginals,
@@ -54,7 +55,7 @@ const definitions: ApplicationToolDefinition[] = [
   {
     name: RENDER_IMAGE_TOOL,
     description:
-      "Generate or edit one finished raster image using the configured native image backend. Read all current context first. Use a detailed prompt covering the user's actual subject, labels, composition and style. slot is a stable choice from 1 to 8: retry the same slot and unchanged prompt to recover the same result without new inference; use a new slot only for a deliberate new candidate. Optional materialIds are images explicitly provided to this task, listed by panda_creation_context. No arbitrary files, paths or URLs. The returned handle belongs only to this task. Inspect the returned image, then save the chosen result with panda_artifacts_save; rendering alone does not complete this task.",
+      "Generate or edit one finished raster image using the selected Harness for this task. Read all current context first. Use a detailed prompt covering the user's actual subject, labels, composition and style. slot is a stable choice from 1 to 8: retry the same slot and unchanged prompt to recover the same result without new inference; use a new slot only for a deliberate new candidate. Optional materialIds are images explicitly provided to this task, listed by panda_creation_context. No arbitrary files, paths or URLs. The returned handle belongs only to this task. Inspect the returned image, then save the chosen result with panda_artifacts_save; rendering alone does not complete this task.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -87,6 +88,47 @@ const definitions: ApplicationToolDefinition[] = [
     },
   },
 ];
+async function renderApplicationImage(
+  journal: ImageRenderJournal,
+  renderer: ApplicationImageRenderer,
+  intent: ImageRenderIntent,
+  images: readonly Uint8Array[],
+  signal: AbortSignal,
+  authorize: () => Promise<void>,
+) {
+  if (images.some((bytes) => bytes.length > renderer.maxReferenceBytes)) throw new ImageRenderError("invalidInput");
+  await journal.insert(intent, "intent", intent);
+  const saved = await journal.receipt(intent);
+  if (saved) return saved;
+  await authorize();
+  signal.throwIfAborted();
+  if (!(await journal.insert(intent, "dispatch", { provider: renderer.provider }))) {
+    const existing = await journal.receipt(intent);
+    if (existing) return existing;
+    throw new ImageRenderError("uncertain");
+  }
+  await authorize();
+  signal.throwIfAborted();
+  const output = await renderer
+    .render(
+      intent.prompt,
+      images.map((bytes, i) => ({ bytes, mime: intent.inputs[i]!.mime })),
+      signal,
+    )
+    .catch(() => {
+      throw new ImageRenderError("unavailable");
+    });
+  await authorize();
+  signal.throwIfAborted();
+  return journal.save(intent, output.bytes, {
+    provider: renderer.provider,
+    ...(output.invocationId ? { invocationId: output.invocationId } : {}),
+    size: output.bytes.length,
+    digest: imageDigest(output.bytes),
+    ...(await decodedImage(output.bytes)),
+  });
+}
+
 /** The main model receives only task-scoped render handles; provider identities and private paths stay server-side. */
 export function creationImageTools(options: {
   journal: ImageRenderJournal;
@@ -99,6 +141,7 @@ export function creationImageTools(options: {
   outputs: Pick<CreationOutputs, "invoke">;
   tasks: Pick<CreationOutputTasks, "get">;
   available(): Promise<boolean>;
+  applicationImages?: Pick<ApplicationRuntimePort, "creationImage" | "hasCreationImage">;
   materials?: CreationMaterialPort;
   messages?: Pick<CreationMessages, "context">;
   assets: CreationAssetAccess;
@@ -114,17 +157,33 @@ export function creationImageTools(options: {
   return {
     async available() {
       const [image, available] = await Promise.all([
-        options.available().catch(() => false),
+        options.applicationImages?.hasCreationImage?.() || options.available().catch(() => false),
         Promise.all(
           generators.map(async (g) => (!g.available || (await g.available().catch(() => false)) ? [g.kind] : [])),
         ),
       ]);
       return [...new Set([...(image ? ["image" as const] : []), ...available.flat()])];
     },
-    open(context) {
+    async open(context) {
       const task = context.task,
         profile = context.input.profile,
-        usesImageRenderer = profile.engineId === "codex" || !!profile.media;
+        usesPrimaryRenderer = profile.engineId === "codex" && (!profile.runtimeId || profile.runtimeId === "codex"),
+        applicationImage =
+          task.kind !== "document" && !usesPrimaryRenderer && profile.runtimeId
+            ? await options.applicationImages?.creationImage?.(task.owner, profile.runtimeId).catch(() => undefined)
+            : undefined;
+      const renderDefinitions = structuredClone(
+        primaryDefinitions.filter((tool) => tool.name !== RENDER_IMAGE_TOOL || usesPrimaryRenderer || applicationImage),
+      );
+      if (applicationImage) {
+        const render = renderDefinitions.find((tool) => tool.name === RENDER_IMAGE_TOOL)!;
+        const properties = render.inputSchema.properties as { materialIds: { maxItems: number } };
+        properties.materialIds.maxItems = applicationImage.maxReferences;
+        const maxMiB = applicationImage.maxReferenceBytes / (1024 * 1024);
+        render.description += applicationImage.maxReferences
+          ? ` Reference image limit: ${applicationImage.maxReferences} total, each up to ${maxMiB} MiB.`
+          : " This renderer generates from text. Omit materialIds and previousImage.";
+      }
       const sources = new CreationOriginalSources(
         context.input,
         options.assets,
@@ -143,9 +202,7 @@ export function creationImageTools(options: {
               ? [structuredClone(originalReadDefinition)]
               : []
             : [
-                ...structuredClone(
-                  primaryDefinitions.filter((tool) => tool.name !== RENDER_IMAGE_TOOL || usesImageRenderer),
-                ),
+                ...renderDefinitions,
                 ...(options.generated && context.readNativeFile ? [structuredClone(importDefinition)] : []),
                 structuredClone(originalReadDefinition),
                 ...generators
@@ -166,6 +223,7 @@ export function creationImageTools(options: {
                 args = creationRecord(call.arguments, ["kind", importing ? "filename" : "handle", "title"]),
                 title = creationText(args.title, 200),
                 kind = args.kind as "image" | GeneratedKind;
+              if (task.kind !== "auto" && task.kind !== kind) throw new CreationError("invalidOutput");
               let handle: string;
               if (importing) {
                 const name = creationText(args.filename, 200);
@@ -266,7 +324,8 @@ export function creationImageTools(options: {
               }
               if (call.name !== RENDER_IMAGE_TOOL) throw new CreationError("invalidInput");
               const execution = await context.assert(call);
-              if (!usesImageRenderer || !(await options.available())) throw new CreationError("unavailable");
+              if (!applicationImage && (!usesPrimaryRenderer || !(await options.available())))
+                throw new CreationError("unavailable");
               const args = creationRecord(call.arguments, ["slot", "prompt", "materialIds", "previousImage"]),
                 updates = (await options.messages?.context(task.owner, task.id)) ?? [],
                 materials = new Map((context.input.materials ?? []).map((m) => [m.id, m]));
@@ -277,7 +336,7 @@ export function creationImageTools(options: {
                 !Array.isArray(rawIds) ||
                 rawIds.length > 2 ||
                 (args.previousImage !== undefined && typeof args.previousImage !== "boolean") ||
-                rawIds.length + (args.previousImage ? 1 : 0) > 2
+                rawIds.length + (args.previousImage ? 1 : 0) > (applicationImage?.maxReferences ?? 2)
               )
                 throw new CreationError("invalidInput");
               const ids = rawIds.map(creationUuid);
@@ -331,15 +390,22 @@ export function creationImageTools(options: {
                   ),
                   slot: creationInteger(args.slot),
                   prompt: creationPrompt(args.prompt),
-                  profile: profile.media ? { id: "codex", engineId: "codex", ...profile.media } : profile,
+                  profile:
+                    usesPrimaryRenderer && profile.media
+                      ? { id: "codex", engineId: "codex", ...profile.media }
+                      : profile,
                   images,
                 },
                 intent = await imageRenderIntent(request);
               await context.assert(call);
-              const result = await options.renderer.render(request, {
-                signal: context.signal,
-                authorize: () => context.active(call),
-              });
+              const result = applicationImage
+                ? await renderApplicationImage(options.journal, applicationImage, intent, images, context.signal, () =>
+                    context.active(call),
+                  )
+                : await options.renderer.render(request, {
+                    signal: context.signal,
+                    authorize: () => context.active(call),
+                  });
               await context.active(call);
               const preview = await sharp(result.bytes, { limitInputPixels: 40_000_000 })
                 .resize({ width: 1536, height: 1536, fit: "inside", withoutEnlargement: true })

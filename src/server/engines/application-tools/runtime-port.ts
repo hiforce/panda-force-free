@@ -10,6 +10,19 @@ export type ApplicationRuntimePurpose = "bots" | "bot-chat" | "creation" | "know
 export type ApplicationRuntimeScope = "bots" | "creation" | "project-memory";
 export type ApplicationCatalogScope = boolean | ApplicationRuntimeScope;
 
+export type ApplicationImageProvider = "zcode" | "grok-build";
+
+export interface ApplicationImageRenderer {
+  readonly provider: ApplicationImageProvider;
+  readonly maxReferences: number;
+  readonly maxReferenceBytes: number;
+  render(
+    prompt: string,
+    references: readonly { bytes: Uint8Array; mime: string }[],
+    signal: AbortSignal,
+  ): Promise<{ bytes: Buffer; invocationId?: string }>;
+}
+
 /** Domains select installed execution identities, never executable commands or provider endpoints. */
 export interface ApplicationRuntimePort {
   catalog(owner: string, scope?: ApplicationCatalogScope): Promise<HarnessCatalog>;
@@ -19,6 +32,8 @@ export interface ApplicationRuntimePort {
     selection: ApplicationRuntimeSelection,
     scope?: ApplicationRuntimeScope,
   ): Promise<Required<ApplicationRuntimeSelection>>;
+  hasCreationImage?(): boolean;
+  creationImage?(owner: string, runtimeId: string): Promise<ApplicationImageRenderer | undefined>;
   engine(
     owner: string,
     selection: ApplicationRuntimeSelection,

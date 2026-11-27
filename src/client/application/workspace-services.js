@@ -161,6 +161,7 @@ export function assembleWorkbench({
       cwd: () => state.workspaceContext?.cwd || state.config.defaultCwd || "",
       clear: () => timelinePort.clearConversationRuntime(),
       restoreDraft: () => composerPort.restoreComposerDraft(),
+      focusInput: () => composerPort.focusComposerInput(),
       saveDraft: (scope) => composerPort.saveComposerDraft(scope),
       accepted: (scope, nextScope, prompt, materialIds, selections) =>
         composerPort.acceptCreationSubmission(scope, nextScope, prompt, materialIds, selections),

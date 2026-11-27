@@ -2,7 +2,7 @@
 title: Base image contents and purpose
 ---
 
-PandaForce 0.2.2 source separates the reusable toolchain from application code. A base image installs expensive, reviewed dependencies once. Later application builds reuse those layers, compile the checked-out source and package a runnable application. This avoids downloading Office, fonts, browser binaries and language packages during every creation task.
+PandaForce 0.2.3 source separates the reusable toolchain from application code. A base image installs expensive, reviewed dependencies once. Later application builds reuse those layers, compile the checked-out source and package a runnable application. This avoids downloading Office, fonts, browser binaries and language packages during every creation task.
 
 ## Choose a base pair
 
@@ -12,14 +12,14 @@ PandaForce 0.2.2 source separates the reusable toolchain from application code. 
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Default Rocky creative build base   | Rocky Linux 9, all three Harness CLIs, native compilers, locked application development dependencies and the creative inventory below | Public `hiforceai/panda-force-build-base:rocky9-creative-0.1.10`, selected by immutable digest in the source Dockerfile and Compose build overlay.                                                  |
 | Default Rocky creative runtime base | Rocky Linux 9, all three Harness CLIs, application production dependencies and the same creative inventory                            | Public `hiforceai/panda-force-runtime-base:rocky9-creative-0.1.10`, paired by its own immutable digest. Runs tasks with expensive tools already installed.                                          |
-| Application image                   | Selected runtime, application source, compiled browser assets, CLI and startup command                                           | Runnable `hiforceai/panda-force:0.2.2`; the normal installation pulls this image.                                                                                                                                  |
-| Legacy Debian build/runtime bases   | The earlier locked application dependencies, Harness engines, FFmpeg and Noto CJK fonts                                          | The `engines-20261120-b3302dd60ade` pair remains available for explicitly selected compatible legacy builds and as the reviewed Debian Harness seed. It is not the 0.2.2 default or the complete creative toolset. |
+| Application image                   | Selected runtime, application source, compiled browser assets, CLI and startup command                                           | Runnable `hiforceai/panda-force:0.2.3`; the normal installation pulls this image.                                                                                                                                  |
+| Legacy Debian build/runtime bases   | The earlier locked application dependencies, Harness engines, FFmpeg and Noto CJK fonts                                          | The `engines-20261120-b3302dd60ade` pair remains available for explicitly selected compatible legacy builds and as the reviewed Debian Harness seed. It is not the 0.2.3 default or the complete creative toolset. |
 
 </div>
 
 Both public bases include the pinned Claude Code setup script and dependency lock in `/opt/panda-claude-setup`. Run the setup script explicitly or provide an existing host CLI to configure Claude Code. See the [Harness setup guide](harness-runtimes.md#choose-host-or-container-mode).
 
-The stable 0.2.2 application image and both default Rocky creative bases are public for **Linux amd64**. Use the matching `v0.2.2` source and installation files. The Dockerfile, Compose overlay and `scripts/build/base-images.json` pin the actual published build/runtime digests; the two roles use distinct image references. Their installed inventories match the reviewed creative inputs. [Codex and Grok container setup](harness-runtimes.md) covers account services and login.
+The stable 0.2.3 application image and both default Rocky creative bases are public for **Linux amd64**. Use the matching `v0.2.3` source and installation files. The Dockerfile, Compose overlay and `scripts/build/base-images.json` pin the actual published build/runtime digests; the two roles use distinct image references. Their installed inventories match the reviewed creative inputs. [Codex and Grok container setup](harness-runtimes.md) covers account services and login.
 
 The container userspace is independent of the host distribution. A Rocky host can run either pair; choose the Rocky pair when you want that userspace and the complete creative toolset. The current recipe targets **Linux amd64**.
 
@@ -62,7 +62,7 @@ The recipe copies portable Node/Bun/Harness binaries and font data from the revi
 
 When a plugin needs another executable or library, update these maintained inputs, its profile and platform mapping. Review licenses, refresh the corresponding lock and rebuild both bases. Installing a dependency only in a running container or a temporary task directory does not maintain the next image. Unknown profiles, missing package mappings and inconsistent Node/Python declarations fail validation. Plugin input cannot choose an arbitrary execution image or supply installation commands to this builder.
 
-The pinned Rocky bases use the reviewed creative toolchain and include the headless ZCode CLI from ZCode 3.18.2. The published bases include the pinned payload and upstream notices. Provider credentials are supplied at runtime. After rebuilding the creative parents, apply the [ZCode base recipe](https://github.com/hiforce/panda-force-free/blob/v0.2.2/deploy/harness/README.md#rebuild-the-rocky-base-images-with-zcode) to both images before selecting their new digests.
+The pinned Rocky bases use the reviewed creative toolchain and include the headless ZCode CLI from ZCode 3.18.2. The published bases include the pinned payload and upstream notices. Provider credentials are supplied at runtime. After rebuilding the creative parents, apply the [ZCode base recipe](https://github.com/hiforce/panda-force-free/blob/v0.2.3/deploy/harness/README.md#rebuild-the-rocky-base-images-with-zcode) to both images before selecting their new digests.
 
 ## Rebuild and select Rocky bases
 

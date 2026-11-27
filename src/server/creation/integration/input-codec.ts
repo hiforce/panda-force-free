@@ -70,7 +70,9 @@ function snapshot(value: unknown): CreationInputSnapshot {
       ? {
           discussion: row.discussion.map((entry) => {
             const turn = creationRecord(entry, ["user", "assistant"]);
-            return { user: creationText(turn.user, 6000), assistant: creationText(turn.assistant, 6000) };
+            const user = creationPrompt(turn.user);
+            if (user.length > 6000) throw new CreationError("invalidInput");
+            return { user, assistant: creationText(turn.assistant, 6000) };
           }),
         }
       : {}),

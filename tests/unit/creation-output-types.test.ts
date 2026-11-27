@@ -1,5 +1,8 @@
 import { defaultCreationOutput } from "../../src/shared/creation/default-output.js";
 import { creationCaptureCapabilities } from "../../src/server/creation/integration/capabilities.js";
+import { creationImageTools, RENDER_IMAGE_TOOL } from "../../src/server/creation/integration/image-tools.js";
+import { ImageRenderJournal } from "../../src/server/creation/integration/rendering/image-journal.js";
+import { ImageRenderError } from "../../src/server/creation/integration/rendering/image-contracts.js";
 import { openCreationDatabase } from "../../src/server/creation/storage/database.js";
 import { CreationTaskRepository } from "../../src/server/creation/storage/repository.js";
 import { afterEach, expect, test } from "bun:test";
@@ -89,6 +92,91 @@ test("real asset receipts have their own identity and cannot impersonate a docum
   expect(creationArtifact(receipt, auto).kind).toBe("image");
   for (const kind of ["slides", "video", "web"] as const)
     expect(creationArtifact({ ...receipt, kind }, { ...spec, kind }).kind).toBe(kind);
+});
+
+test("a saved media override cannot reroute another Harness to the primary Codex renderer", async () => {
+  const root = await mkdtemp(join(tmpdir(), "panda-image-harness-"));
+  directories.push(root);
+  const spec = task("image"),
+    scope = { owner: spec.owner, taskId: spec.id, token: "lease", generation: 1, sessionId: "session", runId: "run" },
+    { owner, projectId } = spec,
+    renderModels: (string | undefined)[] = [];
+  const renderer = creationImageTools({
+    journal: new ImageRenderJournal(root),
+    assets: async () => {
+      throw Error("Unexpected asset access");
+    },
+    tasks: {
+      get() {
+        throw Error("Unexpected task access");
+      },
+    },
+    outputs: {
+      async invoke() {
+        throw Error("Unexpected output");
+      },
+    },
+    available: async () => true,
+    renderer: {
+      async render(input) {
+        renderModels.push(input.profile.model);
+        throw new ImageRenderError("unavailable");
+      },
+    },
+  });
+  const open = (engineId: string, runtimeId: string | undefined, model = "selected-model") =>
+    renderer.open({
+      task: spec,
+      input: {
+        schema: 1,
+        taskId: spec.id,
+        owner,
+        projectId,
+        requestDigest: spec.inputDigest,
+        prompt: "Draw a circle",
+        profile: {
+          id: "default",
+          engineId,
+          ...(runtimeId ? { runtimeId } : {}),
+          model,
+          media: { model: "codex-image-model" },
+        },
+        skills: {
+          id: spec.id,
+          owner,
+          requestBinding: spec.inputDigest,
+          registryRevision: 1,
+          createdAt: 0,
+          origins: [],
+          composition: { schema: 1, outputType: "image", skills: [], capabilities: [], constraints: {} },
+        },
+      },
+      signal: new AbortController().signal,
+      execution: () => scope,
+      active: async () => {},
+      assert: async () => scope,
+    });
+  const render = {
+    sessionId: "session",
+    runId: "run",
+    callId: "call",
+    name: RENDER_IMAGE_TOOL,
+    arguments: { slot: 1, prompt: "Draw a circle" },
+  };
+  const foreign = await open("harness-zcode", "zcode");
+  expect(foreign.definitions.some(({ name }) => name === RENDER_IMAGE_TOOL)).toBe(false);
+  expect(await foreign.call(render)).toMatchObject({ success: false });
+  const namedCodex = await open("harness-other-codex", "other-codex");
+  expect(namedCodex.definitions.some(({ name }) => name === RENDER_IMAGE_TOOL)).toBe(false);
+  expect(await namedCodex.call(render)).toMatchObject({ success: false });
+  expect(renderModels).toEqual([]);
+
+  for (const runtimeId of ["codex", undefined]) {
+    const primary = await open("codex", runtimeId);
+    expect(primary.definitions.some(({ name }) => name === RENDER_IMAGE_TOOL)).toBe(true);
+    await primary.call(render);
+  }
+  expect(renderModels).toEqual(["codex-image-model", "codex-image-model"]);
 });
 
 test("an explicit image request rejects a document before staging or project writes", async () => {

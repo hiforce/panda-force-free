@@ -76,6 +76,7 @@ export function createNativeCreationFeature(
       ...(journal && renderer && options.assets
         ? {
             image: {
+              applicationImages: options.runtimes,
               journal,
               renderer,
               assets: options.assets,

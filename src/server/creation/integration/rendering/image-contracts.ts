@@ -1,3 +1,4 @@
+import type { ApplicationImageProvider } from "../../../engines/application-tools/runtime-port.js";
 import type { CreationEngineProfile } from "../../../../shared/creation/contracts.js";
 
 export class ImageRenderError extends Error {
@@ -32,15 +33,13 @@ export interface ImageRenderBinding {
   threadId: string;
   directory: string;
 }
-export interface ImageRenderReceipt {
+interface ImageRenderArtifact {
   digest: string;
   size: number;
   width: number;
   height: number;
   mime: "image/png" | "image/jpeg" | "image/webp";
-  threadId: string;
-  turnId: string;
 }
-export interface ImageRenderResult extends ImageRenderReceipt {
-  bytes: Buffer;
-}
+export type ImageRenderReceipt = ImageRenderArtifact &
+  ({ threadId: string; turnId: string } | { provider: ApplicationImageProvider; invocationId?: string });
+export type ImageRenderResult = ImageRenderReceipt & { bytes: Buffer };

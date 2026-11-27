@@ -260,6 +260,7 @@ export interface ComposerPort {
   persistComposerDraft: () => void;
   composerHistory: ComposerHistory;
   restoreComposerDraft: () => void;
+  focusComposerInput: () => void;
   resizePrompt: () => void;
   syncTurnRuntime: (turn: View<EngineTurn> | undefined) => void;
   promptComposing: boolean;

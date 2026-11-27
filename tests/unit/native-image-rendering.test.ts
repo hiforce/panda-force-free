@@ -210,6 +210,7 @@ test("completed native images are durable, coalesced and recovered without anoth
   expect(permissions.filesystem[":root"]).toBe("deny");
   expect(permissions.filesystem[String(policy.cwd)]).toBe("write");
   expect(permissions.network.enabled).toBe(false);
+  if (!("threadId" in restored)) throw Error("Expected a Codex render receipt");
   expect(isApplicationSession(restored.threadId)).toBe(true);
   expect(f.responses).toContainEqual({
     id: 99,

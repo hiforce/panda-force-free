@@ -188,7 +188,7 @@ export class CreationWorker {
         media =
           input.outputType === undefined
             ? undefined
-            : this.rendering?.open({
+            : await this.rendering?.open({
                 task: claim.task.spec,
                 input,
                 signal,

@@ -131,7 +131,7 @@ test("a creation can clarify, answer a follow-up without saving, then revise the
           ...scope,
           callId: randomUUID(),
           name: "panda_creation_turn",
-          arguments: { action, ...(text ? { text } : {}) },
+          arguments: { action, ...(text === undefined ? {} : { text }) },
         });
       expect(input.tools.some((tool) => tool.name === "panda_creation_turn")).toBe(true);
       if (input.prompt.startsWith("Why")) {
@@ -153,7 +153,7 @@ test("a creation can clarify, answer a follow-up without saving, then revise the
         } else {
           expect(input.prompt).toContain("The first draft used the classification from its brief.");
         }
-        await turn("deliver");
+        expect((await turn("deliver", "")).success).toBe(true);
         expect(
           (
             await callbacks.call({

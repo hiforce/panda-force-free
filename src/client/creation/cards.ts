@@ -40,7 +40,7 @@ export class CreationCards {
       brief?: boolean;
       openAction?: boolean;
       progressDetails?: "stages" | boolean;
-      supplement?: boolean;
+      supplement?: () => void;
     } = {},
   ) {}
   dispose() {
@@ -170,7 +170,7 @@ export class CreationCards {
       const trigger = (event.target as Element).closest<HTMLButtonElement>("[data-creation-action]");
       if (!trigger || trigger.disabled || this.busy.has(task.id)) return;
       if (trigger.dataset.creationAction === "supplement") {
-        document.querySelector<HTMLTextAreaElement>("#prompt")?.focus();
+        this.options.supplement?.();
         return;
       }
       if (trigger.dataset.creationAction === "open" && task.artifact) {

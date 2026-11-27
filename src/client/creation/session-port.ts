@@ -8,6 +8,7 @@ export interface CreationWorkspaceBridge {
   openGoal(draft?: import("../../shared/engine/types.js").Goal): void;
   clear(): void;
   restoreDraft(): void;
+  focusInput(): void;
   saveDraft(scope?: string): void;
   accepted(
     scope: string,

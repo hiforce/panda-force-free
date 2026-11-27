@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { CreationEngineProfile } from "../../../../shared/creation/contracts.js";
 import { stableJson } from "../../../../shared/stable-json.js";
 import { FilePackageContent } from "../../../packages/content-store.js";
 import { creationDigest, creationInteger, creationRecord, creationText, creationUuid } from "../../validation.js";
@@ -29,6 +30,11 @@ function entry(value: unknown): Entry {
     data: row.data,
   };
 }
+function imageProfile(profile: CreationEngineProfile) {
+  return profile.engineId === "codex"
+    ? !profile.runtimeId || profile.runtimeId === "codex"
+    : !!profile.runtimeId && profile.engineId === `harness-${profile.runtimeId}`;
+}
 export async function imageRenderIntent(input: ImageRenderRequest): Promise<ImageRenderIntent> {
   const owner = creationText(input.owner, 200),
     taskId = creationUuid(input.taskId),
@@ -36,7 +42,7 @@ export async function imageRenderIntent(input: ImageRenderRequest): Promise<Imag
     slot = creationInteger(input.slot),
     prompt = creationPrompt(input.prompt),
     profile = creationEngineProfile(input.profile);
-  if (!slot || slot > 8 || profile.engineId !== "codex" || (input.images?.length ?? 0) > 2)
+  if (!slot || slot > 8 || !imageProfile(profile) || (input.images?.length ?? 0) > 2)
     throw new ImageRenderError("invalidInput");
   const inputs: ImageRenderIntent["inputs"] = [];
   for (const bytes of input.images ?? []) {
@@ -53,7 +59,17 @@ export async function imageRenderIntent(input: ImageRenderRequest): Promise<Imag
   };
 }
 function result(value: unknown): ImageRenderReceipt {
-  const row = creationRecord(value, ["digest", "size", "width", "height", "mime", "threadId", "turnId"]),
+  const row = creationRecord(value, [
+      "digest",
+      "size",
+      "width",
+      "height",
+      "mime",
+      "threadId",
+      "turnId",
+      "provider",
+      "invocationId",
+    ]),
     size = creationInteger(row.size),
     width = creationInteger(row.width),
     height = creationInteger(row.height);
@@ -66,15 +82,31 @@ function result(value: unknown): ImageRenderReceipt {
     !["image/png", "image/jpeg", "image/webp"].includes(String(row.mime))
   )
     throw new ImageRenderError("invalidResult");
-  return {
+  const asset = {
     digest: creationDigest(row.digest),
     size,
     width,
     height,
     mime: row.mime as ImageRenderReceipt["mime"],
-    threadId: creationUuid(row.threadId),
-    turnId: creationUuid(row.turnId),
   };
+  if (
+    (row.provider === "zcode" || row.provider === "grok-build") &&
+    row.threadId === undefined &&
+    row.turnId === undefined
+  ) {
+    if (
+      row.invocationId !== undefined &&
+      (typeof row.invocationId !== "string" || !/^[a-z\d_-]{1,160}$/i.test(row.invocationId))
+    )
+      throw new ImageRenderError("invalidResult");
+    return {
+      ...asset,
+      provider: row.provider,
+      ...(row.invocationId === undefined ? {} : { invocationId: row.invocationId }),
+    };
+  }
+  if (row.provider !== undefined || row.invocationId !== undefined) throw new ImageRenderError("invalidResult");
+  return { ...asset, threadId: creationUuid(row.threadId), turnId: creationUuid(row.turnId) };
 }
 /** Immutable dispatch claims prevent retries or competing processes from sending a second inference. */
 export class ImageRenderJournal {
@@ -142,7 +174,7 @@ export class ImageRenderJournal {
     if (
       !identity.slot ||
       identity.slot > 8 ||
-      content.profile.engineId !== "codex" ||
+      !imageProfile(content.profile) ||
       imageDigest(stableJson({ purpose: "creation-image-render", ...identity })) !== key ||
       row.key !== key ||
       row.signature !== signature ||

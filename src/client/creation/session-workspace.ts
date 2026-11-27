@@ -150,7 +150,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       this.state.updateTarget = undefined;
       this.persist();
       this.renderUpdateNotice();
-      document.querySelector<HTMLTextAreaElement>("#prompt")?.focus();
+      this.bridge.focusInput();
     };
     this.updateNotice.append(message, useNext);
     for (const section of [this.sectionView.selectedDocument, this.sectionView.versions, this.sectionView.brief])
@@ -256,7 +256,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
         () => this.openDocument(),
         () => {},
         this.api,
-        { brief: false, openAction: false, progressDetails: "stages", supplement: true },
+        { brief: false, openAction: false, progressDetails: "stages", supplement: () => this.bridge.focusInput() },
       );
       this.restoreSnapshot();
       void this.refresh();

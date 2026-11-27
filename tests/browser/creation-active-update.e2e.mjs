@@ -88,7 +88,12 @@ try {
         .getByText("I am reviewing the requirements", { exact: false });
       await progress.waitFor();
       const supplement = page.getByRole("button", { name: supplementLabel, exact: true }).first();
+      const disclosure = composer.locator(".message-composer-disclosure");
+      await disclosure.click();
+      await prompt.waitFor({ state: "hidden" });
       await supplement.click();
+      await prompt.waitFor();
+      assert.equal(await disclosure.getAttribute("aria-expanded"), "true");
       assert.equal(await prompt.evaluate((field) => field === document.activeElement), true);
       const starts = () => app.calls().filter((call) => call.method === "turn/start").length;
       const baseline = starts();
@@ -141,6 +146,39 @@ try {
       await chips.waitFor();
       await page.reload();
       await chips.waitFor();
+      if (locale === "zh-TW") {
+        app.creationOutput({ projectId: "missing-project-fixture" });
+        const firstBrief = "Create a document with a concrete glossary.";
+        await prompt.fill(firstBrief);
+        const initialFailure = post("");
+        await page.locator("#sendButton").click();
+        const { task: failed } = await (await initialFailure).json();
+        await page.waitForURL("**/creation/" + failed.id + "?creationScope=personal");
+        await question.locator(".user-input-option").first().click();
+        await question.locator(".user-input-submit").click();
+        await waitFor(async () => (await read(failed.id))?.state === "failed", 25000);
+        await page.getByText("未儲存成品。你可以在下方補充需求，或重試任務。").waitFor();
+        app.creationOutput(null);
+        await prompt.fill("繼續儲存");
+        await page.screenshot({ path: join(out, `failed-ready-${locale}-${width}.png`) });
+        const resumed = post("/message");
+        await page.locator("#sendButton").click();
+        const delivery = await resumed;
+        assert.equal(delivery.status(), 202, await delivery.text());
+        const { task: next } = await delivery.json();
+        assert.notEqual(next.id, failed.id);
+        await page.waitForURL("**/creation/" + next.id + "?creationScope=personal");
+        await question.waitFor();
+        assert(
+          app
+            .calls()
+            .filter((call) => call.method === "turn/start")
+            .at(-1)
+            .params.input[0].text.includes(firstBrief),
+        );
+        assert.equal(await prompt.inputValue(), "");
+        await page.screenshot({ path: join(out, `failure-follow-up-${locale}-${width}.png`) });
+      }
       assert.deepEqual(errors, []);
       records.push({
         locale,

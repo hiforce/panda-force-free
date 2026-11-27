@@ -1,4 +1,5 @@
 import type {
+  ApplicationImageRenderer,
   ApplicationRuntimePurpose,
   ApplicationRuntimeSelection,
   ApplicationRuntimeScope,
@@ -33,6 +34,7 @@ export interface HarnessProfile extends HarnessProfileView {
     purpose: ApplicationRuntimePurpose,
   ): ApplicationToolEngine;
   hostSocket?: boolean;
+  creationImage?: ApplicationImageRenderer;
 }
 export interface HarnessPrincipal {
   owner: string;
@@ -108,6 +110,7 @@ export class HarnessRegistry {
               isolatedApplicationWorkspace: _isolated,
               applicationEngine: _applicationEngine,
               hostSocket: _socket,
+              creationImage: _creationImage,
               ...view
             }) => view,
           )
@@ -131,6 +134,12 @@ export class HarnessRegistry {
   }
   allowsApplication(runtime: HarnessRuntime, scope?: ApplicationRuntimeScope) {
     return this.supportsApplication(runtime.profileId, scope) && (scope !== "bots" || runtime.botEnabled !== false);
+  }
+  hasCreationImage() {
+    return [...this.profiles.values()].some((profile) => !!profile.creationImage);
+  }
+  creationImage(profileId: string) {
+    return this.profiles.get(profileId)?.creationImage;
   }
   applicationEngine(profileId: string) {
     return this.profiles.get(profileId)?.applicationEngine;

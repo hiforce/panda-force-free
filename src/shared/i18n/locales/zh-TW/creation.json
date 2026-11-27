@@ -48,7 +48,7 @@
   "retrySubmission": "檢查提交結果",
   "showTasks": "創作任務",
   "failedInterrupted": "引擎在儲存作品前中斷，可以重試。",
-  "failedInvalidOutput": "尚未儲存有效文件，請檢查需求或技能後重試。",
+  "failedInvalidOutput": "未儲存成品。你可以在下方補充需求，或重試任務。",
   "failedTargetChanged": "文件或儲存位置已變更。原文件與已接收的補充需求皆已保留；請先儲存手動修改，再以最新內容重試。",
   "failedWriteUnavailable": "產生內容已保留，儲存恢復後可重試儲存。",
   "submitted": "任務已進入佇列，可以關閉此面板，稍後回來檢視。",

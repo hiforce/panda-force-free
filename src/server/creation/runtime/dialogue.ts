@@ -59,7 +59,7 @@ export function creationDialogue(enabled: boolean) {
     async call(input: unknown, ask: (question: string) => Promise<unknown>): Promise<ApplicationToolResult> {
       const { action, text } = creationRecord(input, ["action", "text"]);
       if (reply || asking) throw new CreationError("conflict");
-      if (action === "deliver" && text === undefined) {
+      if (action === "deliver" && (text === undefined || text === "")) {
         delivery = true;
         return { success: true, text: "Deliverable authorized for this turn. Read current context before writing." };
       }

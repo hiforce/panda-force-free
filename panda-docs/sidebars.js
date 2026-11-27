@@ -14,6 +14,7 @@ export default {
       items: [
         "configuration",
         "harness-runtimes",
+        "self-hosted-creation",
         "model-providers",
         "cluster",
         "storage",
