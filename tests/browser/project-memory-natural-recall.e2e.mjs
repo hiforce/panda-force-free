@@ -53,12 +53,16 @@ try {
         ).conversation;
       const run = async (id, text) => {
         const path = sessions + "/" + id;
-        await call(path + "/runs", "POST", { text, requestId: crypto.randomUUID() });
+        const { runId } = await call(path + "/runs", "POST", { text, requestId: crypto.randomUUID() });
         return waitFor(async () => {
           const details = await call(path);
           return (
-            details.run?.status === "complete" &&
-            details.messages.some(({ role, status }) => role === "assistant" && status === "complete") &&
+            details.run?.id === runId &&
+            details.run.status === "complete" &&
+            details.messages.some(
+              ({ role, status, runId: messageRun }) =>
+                role === "assistant" && status === "complete" && messageRun === runId,
+            ) &&
             details
           );
         }, 60000);
@@ -102,20 +106,67 @@ try {
         const result = await run(target.id, question);
         const answer = result.messages.find(({ role }) => role === "assistant").text;
         for (const { value } of facts) assert(answer.includes(value), answer);
-        assert(answer.includes("Collects meteorite maps."));
+        if (locale === "zh-CN") assert(answer.includes("Collects meteorite maps."));
         assert(!answer.includes("37 minutes"));
         if (memoryPrivate) {
           assert.equal(result.conversation.memoryPrivate, true);
         } else {
           const memory = await call(sessions + "/" + target.id + "/memory");
           assert.equal(memory.recalls[0].status, "sent");
-          assert.equal(memory.recalls[0].references.length, 4);
+          assert.equal(memory.recalls[0].references.length, locale === "zh-CN" ? 4 : 5);
         }
         await page.goto(app.base + "/task/harness:" + target.id);
         await page.getByText(answer, { exact: true }).waitFor();
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         const screenshot = locale + "-" + width + (memoryPrivate ? "-private" : "") + ".png";
         await page.screenshot({ path: join(output, screenshot) });
+
+        if (memoryPrivate) {
+          const [before, after, repository, values, followUp] =
+            locale === "zh-CN"
+              ? [
+                  "My hobby is restoring wooden telescopes.",
+                  "I draw star charts with fountain pens.",
+                  "I created Orbit, an open-source tool: https://github.com/example/orbit.",
+                  [
+                    "Restores wooden telescopes.",
+                    "Draws star charts with fountain pens.",
+                    "Created Orbit, an open-source tool (https://github.com/example/orbit).",
+                  ],
+                  "还有没有补充？",
+                ]
+              : [
+                  "My hobby is making paper globes.",
+                  "I draw star charts with charcoal.",
+                  "I maintain Meridian, an open-source tool: https://github.com/example/meridian.",
+                  [
+                    "Makes paper globes.",
+                    "Draws star charts with charcoal.",
+                    "Maintains Meridian, an open-source tool (https://github.com/example/meridian).",
+                  ],
+                  "還有沒有補充？",
+                ];
+          const source = await create(project.id);
+          const url = "https://example.test/fixture";
+          await run(source.id, before + " " + url + " " + after + " " + repository);
+          await waitFor(async () => {
+            const { entries } = await call("/api/projects/" + project.id + "/memory");
+            return values.every((value) =>
+              entries.some(
+                (entry) =>
+                  entry.value === value && entry.sources.some(({ conversationId }) => conversationId === source.id),
+              ),
+            );
+          }, 60000);
+          const result = await run(target.id, followUp);
+          const reply = result.messages.findLast(({ role }) => role === "assistant").text;
+          for (const value of values) assert(reply.includes(value), reply);
+          assert(!reply.includes(url));
+          assert(!reply.includes("37 minutes"));
+          await page.getByText(reply, { exact: true }).waitFor();
+          assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          await page.screenshot({ path: join(output, locale + "-" + width + "-updated-recall.png") });
+        }
       }
 
       const disabled = await create(project.id);

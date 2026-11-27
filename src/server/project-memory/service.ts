@@ -67,7 +67,7 @@ import { memoryCredentialPattern } from "./rules.js";
 import { organizedMemoryLinks } from "./relations.js";
 import { readMemoryTerrain, reserveMemoryPlaces } from "./terrain.js";
 import { appendMemoryVersions, readMemoryDetail } from "./timeline.js";
-import { modelExcerpt, type ModelReviewPort } from "./model-review.js";
+import { modelExcerpt, organizationEvidenceExcerpt, type ModelReviewPort } from "./model-review.js";
 import {
   MemoryOrganizations,
   memoryOrganizationLookbackMs,
@@ -217,7 +217,7 @@ export class ProjectMemory {
           !models?.resolveConflict ||
           !modelExcerpt(context.key) ||
           !modelExcerpt(context.scope) ||
-          context.variants.some(({ value }) => !modelExcerpt(value))
+          context.variants.some(({ value }) => !organizationEvidenceExcerpt(value))
         )
           return null;
         return models.resolveConflict(owner, selection, context, signal);
@@ -299,7 +299,7 @@ export class ProjectMemory {
     if (!source || (await this.source(source.id)).generation !== row.generation) return undefined;
     await this.authorize(source);
     const message = await this.history.messageAt(owner, source.id, source.historyBytes, row);
-    return message?.role === "user" ? modelExcerpt(message.text)?.slice(0, 360) : undefined;
+    return message?.role === "user" ? organizationEvidenceExcerpt(message.text)?.slice(0, 360) : undefined;
   }
 
   private discoverProjectConflicts(owner: string, projectId: string) {
@@ -1454,10 +1454,11 @@ export class ProjectMemory {
     text: string,
     existing: readonly MemoryRecall[],
     candidates?: MemoryCandidates,
+    precedingUserMessages: readonly string[] = [],
   ) {
     const matchesPrompt = projectMemoryMatcher(text);
     if (!matchesPrompt) return [];
-    const personal = personalRecallMatches(text);
+    const personal = personalRecallMatches(text, precedingUserMessages);
     const scoped = await this.recallScope(conversation).catch(() => null);
     if (!scoped || !(await this.recallAllowed(scoped, scoped.projectId, tx))) return [];
     const { projectId } = scoped;
@@ -1483,12 +1484,12 @@ export class ProjectMemory {
           !!candidates?.salt &&
           candidates.hits.get(entry.id) === indexedMemoryVersion(candidates.salt, entry.version));
       const seen = new Set<string>();
-      return matchingMemories(allowed, matchesPrompt, conversation.id, matches, personal)
+      return matchingMemories(allowed, matchesPrompt, conversation.id, matches, personal, existing)
         .filter((entry) => {
           const key = entryId(entry.key, entry.scope);
           if (seen.has(key)) return false;
           seen.add(key);
-          return !existing.some((reference) => reference.id === entry.id && reference.version === entry.version);
+          return true;
         })
         .map((entry) => ({ ...entry, projectId }));
     } catch {

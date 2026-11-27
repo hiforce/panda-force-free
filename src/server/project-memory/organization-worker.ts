@@ -7,7 +7,7 @@ import type { HarnessHistory, HarnessMetadata, HarnessMetadataTransaction } from
 import { decode } from "../harness/records.js";
 import type { RecordedMemoryTurn } from "./backfill.js";
 import type { ModelReviewPort } from "./model-review.js";
-import { modelExcerpt } from "./model-review.js";
+import { modelExcerpt, organizationEvidenceExcerpt, organizationSourceExcerpts } from "./model-review.js";
 import { entryId, namespace, type MemoryJob } from "./records.js";
 
 export interface MemoryOrganizationBoundary {
@@ -216,8 +216,9 @@ export async function organizeHistoryPage(input: {
   const accepted = new Map<string, { run: HarnessRun; user: string; item: ScanItem }>();
   for (const item of input.items) {
     const { message } = item;
-    const user = modelExcerpt(message.text);
-    if (!user || message.runtimeId === "import" || !message.runId) continue;
+    if (message.runtimeId === "import" || !message.runId) continue;
+    const excerpts = organizationSourceExcerpts(message.text);
+    if (!excerpts.length) continue;
     const run = decode<HarnessRun>(await input.reader.get(`run:${message.runId}`));
     if (
       run?.status !== "complete" ||
@@ -226,7 +227,10 @@ export async function organizeHistoryPage(input: {
       run.userMessageId !== message.id
     )
       continue;
-    accepted.set(message.id, { run, user, item });
+    for (const [index, user] of excerpts.entries()) {
+      const sourceId = index === 0 ? message.id : `${message.id}:${index}`;
+      accepted.set(sourceId, { run, user, item });
+    }
   }
   if (!accepted.size) return [];
   if (!input.models?.organize) throw new Error("Memory organization is unavailable.");
@@ -248,7 +252,10 @@ export async function organizeHistoryPage(input: {
     user,
     assistant: modelExcerpt(assistantText.get(run.assistantMessageId) ?? "") ?? undefined,
   }));
-  const existing = entries.map((entry) => ({ ...entry, value: entry.value && modelExcerpt(entry.value) }));
+  const existing = entries.map((entry) => ({
+    ...entry,
+    value: entry.value && organizationEvidenceExcerpt(entry.value),
+  }));
   input.signal?.throwIfAborted();
   if (input.eligible && !(await input.eligible())) return [];
   const found = await input.models.organize(
@@ -263,7 +270,7 @@ export async function organizeHistoryPage(input: {
       owner: input.owner,
       projectId: input.projectId,
       conversationId: input.conversationId,
-      messageId: sourceId,
+      messageId: message.id,
       seq: message.seq,
       throughBytes,
       policyRevision: input.policyRevision,

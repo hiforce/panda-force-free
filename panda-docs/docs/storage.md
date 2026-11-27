@@ -41,7 +41,7 @@ Moving a file to Trash preserves its originals and resources for restoration. **
 
 This configuration is separate from static CDN credentials and from conversation attachment storage. It covers saved creative originals and their resources; native engine history and private renderer recovery caches keep their existing storage. Keep the application metadata and project content in backups alongside the S3 objects so saved locations and cleanup receipts remain available. No shared engine state is automatically removed when an original is deleted.
 
-Configuration, independent credential records and cleanup journals live in the private `original-storage` directory under the application state root, which the standard Compose state volume already persists. Administrators needing a different parent may set `PANDA_FORCE_ORIGINAL_STORAGE_PARENT` in the service environment and mount that parent on persistent storage; the application still uses its dedicated `original-storage` child. These settings are included in the published 0.2.1 application image.
+Configuration, independent credential records and cleanup journals live in the private `original-storage` directory under the application state root, which the standard Compose state volume already persists. Administrators needing a different parent may set `PANDA_FORCE_ORIGINAL_STORAGE_PARENT` in the service environment and mount that parent on persistent storage; the application still uses its dedicated `original-storage` child. These settings are included in the published 0.2.2 application image.
 
 ## Managed project folders (0.0.15+)
 
@@ -58,7 +58,7 @@ For example, mount your own host `/srv/panda-projects` at `/srv/panda-projects` 
 
 With external directories disabled, browser directory/file roots and native history access are restricted, and refresh uses a new cache scope. Restart and refresh after changing this setting. This is a browser visibility policy; native command access is still governed by the engine's permissions. Application-owned attachments remain available through their authorized routes. Native session records stay in the engine's own state directory rather than moving into project folders.
 
-The Compose service is `panda-force`; its release image is `hiforceai/panda-force:0.2.1`. Volumes are `panda-force-state`, `panda-force-model-state` and `panda-force-workspace`, with a Compose project prefix. The Grok overlay adds separate account and socket volumes. The account service owns the account volume; the socket volume holds communication state and does not replace an account backup.
+The Compose service is `panda-force`; its release image is `hiforceai/panda-force:0.2.2`. Volumes are `panda-force-state`, `panda-force-model-state` and `panda-force-workspace`, with a Compose project prefix. The Grok overlay adds separate account and socket volumes. The account service owns the account volume; the socket volume holds communication state and does not replace an account backup.
 
 For existing volumes, set `PANDA_FORCE_STATE_VOLUME_NAME`, `PANDA_FORCE_MODEL_VOLUME_NAME` and `PANDA_FORCE_WORKSPACE_VOLUME_NAME` to their actual Docker names before recreating the service. For absolute host-directory mounts, use `PANDA_FORCE_HOME_HOST`, `PANDA_FORCE_MODEL_HOME_HOST` and `PANDA_FORCE_WORKSPACE_HOST`. Renaming defaults does not migrate or delete old data.
 

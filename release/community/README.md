@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hiforce/panda-force-free/releases/tag/v0.2.1"><img src="./panda-docs/static/img/readme-release-v0.2.1.svg" width="105" height="20" alt="Release v0.2.1" /></a>
+  <a href="https://github.com/hiforce/panda-force-free/releases/tag/v0.2.2"><img src="./panda-docs/static/img/readme-release-v0.2.2.svg" width="105" height="20" alt="Release v0.2.2" /></a>
   <a href="./LICENSE"><img src="https://img.shields.io/github/license/hiforce/panda-force-free?label=License" alt="MIT license" /></a>
   <a href="./src"><img src="https://img.shields.io/badge/TypeScript%20%2B%20JS-3178C6?logo=typescript&amp;logoColor=white" alt="Languages: TypeScript and JavaScript" /></a>
   <a href="https://hub.docker.com/r/hiforceai/panda-force/tags"><img src="https://img.shields.io/badge/Docker-Linux%20amd64-2496ED?logo=docker&amp;logoColor=white" alt="Docker Hub image for Linux amd64" /></a>
@@ -14,7 +14,7 @@ PandaForce is an open-source, self-hosted web workspace for **Codex**, **ZCode**
 
 **Works in desktop and mobile browsers.** Use HTTPS and sign in to your own instance to pick up your work wherever you have a connection.
 
-[Install with Docker Compose](#install-021) · [Set up Harness runtimes](./panda-docs/docs/harness-runtimes.md) · [Secure remote access](./panda-docs/docs/security.md) · [简体中文](./README-zh.md)
+[Install with Docker Compose](#install-022) · [Set up Harness runtimes](./panda-docs/docs/harness-runtimes.md) · [Secure remote access](./panda-docs/docs/security.md) · [简体中文](./README-zh.md)
 
 ![PandaForce desktop conversation demo showing a request to add search to Trail Notes, the test command, and the Codex reply.](./panda-docs/static/img/conversation-en.webp)
 
@@ -29,7 +29,7 @@ _Simulated conversation captured in the real interface. The project, messages, a
 
 You can also [create illustrations, slides, web pages, and documents with skills](#create-something-fun) and [hand repeatable tasks off to Bots through the API](#meet-your-bot).
 
-> **PandaForce 0.2.1** adds project memory, read-only recall in private conversations, durable Harness sessions and a larger content area in project creation. [Install the release →](#install-021) · [Release notes →](./panda-docs/docs/releases.md#021) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
+> **PandaForce 0.2.2** keeps public repository links in project memory and refreshes recent memories on personal follow-up questions. [Install the release →](#install-022) · [Release notes →](./panda-docs/docs/releases.md#022) · [Harness setup →](./panda-docs/docs/harness-runtimes.md)
 
 ## Create something fun
 
@@ -164,13 +164,13 @@ PandaForce also includes streaming AI conversations and coding, a terminal for a
 
 ## Multiple Harness Runtimes
 
-The 0.2.1 image contains **Codex CLI 0.171.0**, **Grok Build 1.0.89**, and **ZCode CLI 0.17.1**. In conversations, assistants/Bots and supported creation settings, choose **Harness Runtime → model → reasoning level**. Finish the current turn before switching a conversation; selected context is handed over and files remain in the workspace. See the [multi-runtime guide](./panda-docs/docs/harness-runtimes.md#use-several-named-runtimes) for account isolation and the optional Antigravity setup.
+The 0.2.2 image contains **Codex CLI 0.171.0**, **Grok Build 1.0.89**, and **ZCode CLI 0.17.1**. In conversations, assistants/Bots and supported creation settings, choose **Harness Runtime → model → reasoning level**. Finish the current turn before switching a conversation; selected context is handed over and files remain in the workspace. See the [multi-runtime guide](./panda-docs/docs/harness-runtimes.md#use-several-named-runtimes) for account isolation and the optional Antigravity setup.
 
 Codex starts through the application's app-server connection. Grok uses on-demand ACP processes; its optional account service handles native credential renewal. No host Grok/tmux session is required. Provider logins remain separate from the PandaForce administrator. [Container roles, login, persistence and recovery →](./panda-docs/docs/harness-runtimes.md)
 
-## Install 0.2.1
+## Install 0.2.2
 
-Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.2.1`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes all three Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
+Clone the **`main` branch** for the installation configuration and run **`hiforceai/panda-force:0.2.2`** for **Linux amd64**. The image uses **Rocky Linux 9** and includes all three Harness CLIs, Bun, Node.js, Python, Office, PDF/OCR, fonts, image/research/writing libraries, Chromium and FFmpeg. The host needs Git and Docker with Compose. [Base image contents and purpose →](./panda-docs/docs/base-images.md)
 
 ```bash
 git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
@@ -198,7 +198,7 @@ docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
   run --rm grok-auth grok --no-auto-update login --device-auth
 ```
 
-Open **Settings → Harness Runtimes**, check Grok Build, and select its model/effort. The explicit **hi** test sends a real small request using your model account. The application and Grok helper services use the same 0.2.1 image by default. [Detailed setup and account volumes →](./panda-docs/docs/harness-runtimes.md)
+Open **Settings → Harness Runtimes**, check Grok Build, and select its model/effort. The explicit **hi** test sends a real small request using your model account. The application and Grok helper services use the same 0.2.2 image by default. [Detailed setup and account volumes →](./panda-docs/docs/harness-runtimes.md)
 
 **ZCode conversation runtime (experimental)**
 

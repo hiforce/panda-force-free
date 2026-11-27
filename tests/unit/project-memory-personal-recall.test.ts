@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { MemoryEntry } from "../../src/shared/project-memory/contracts.js";
+import { modelExcerpt, organizationSourceExcerpts } from "../../src/server/project-memory/model-review.js";
 import { organizationCli } from "../../src/server/project-memory/organization-tools.js";
 import { personalRecallMatches, personalRecallTopics } from "../../src/server/project-memory/personal-recall.js";
 import { matchingMemories, projectMemoryMatcher } from "../../src/server/project-memory/projection.js";
@@ -71,6 +72,57 @@ test("natural personal questions recall legacy and project memories without inte
   expect(
     matchingMemories(records, projectMemoryMatcher(overview)!, source, () => false, personalRecallMatches(overview)),
   ).toEqual([]);
+});
+
+test("personal recall follow-ups keep the last explicit question and stop at a topic change", () => {
+  const anchor = "What do you remember about me?";
+  const profile = memory("user-profile");
+  for (const query of ["还有没有补充？", "還有沒有補充？", "仲有冇補充？", "Any updates?"]) {
+    expect(personalRecallMatches(query, [anchor, "Anything else?"])?.(profile)).toBe(0);
+    expect(personalRecallMatches(query, [anchor, "What is the release schedule?"])).toBeUndefined();
+    expect(personalRecallMatches(query)).toBeUndefined();
+  }
+  expect(personalRecallMatches("Show me the release schedule.", [anchor])).toBeUndefined();
+});
+
+test("organization sends only contiguous text from a message with a link", () => {
+  const statement = "I grow alpine plants. https://example.test/archive I collect old maps.";
+  expect(modelExcerpt(statement)).toBeNull();
+  expect(organizationSourceExcerpts(statement)).toEqual(["I grow alpine plants.", "I collect old maps."]);
+  expect(organizationSourceExcerpts("https://example.test/archive")).toEqual([]);
+  expect(organizationSourceExcerpts("I grow alpine plants. https://example.test/archive\n> Quoted content")).toEqual(
+    [],
+  );
+  expect(
+    organizationSourceExcerpts("I grow alpine plants. https://example.test/archive API key: fixture-value"),
+  ).toEqual([]);
+});
+
+test("repository addresses can be recorded and recalled with their authored project", async () => {
+  const url = "https://github.com/example/meridian";
+  const authored = `I maintain Meridian, an open-source tool: ${url}.`;
+  expect(organizationSourceExcerpts(authored)).toEqual([authored]);
+  expect(
+    organizationSourceExcerpts(`${authored} https://github.com/example/private#private-section I maintain tool docs.`),
+  ).toEqual([authored, "I maintain tool docs."]);
+  const context = { job: "e".repeat(32), existing: [], sources: [{ id: "source", user: authored }] };
+  const proposal = {
+    key: "user-open-source-project-meridian",
+    sourceId: "source",
+    value: `Maintains Meridian: ${url}`,
+    quote: authored,
+  };
+  const cli = organizationCli(context);
+  await cli.submit(JSON.stringify({ entries: [proposal] }));
+  expect(cli.result()?.[0]?.value).toContain(url);
+  for (const value of ["https://github.com/example/another-project", `${url}?token=signed`]) {
+    await expect(
+      organizationCli(context).submit(JSON.stringify({ entries: [{ ...proposal, value }] })),
+    ).rejects.toMatchObject({ code: "invalidInput" });
+  }
+  const entry = memory(proposal.key);
+  expect(personalRecallMatches("你知道我做了哪些开源项目？")?.(entry)).toBe(0);
+  expect(personalRecallMatches("還有沒有補充？", ["你對我了解多少？"])?.(entry)).toBeGreaterThanOrEqual(0);
 });
 
 test("legacy project aliases re-use identity and different qualified values remain isolated", () => {

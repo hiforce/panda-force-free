@@ -14,6 +14,7 @@ import { visibleHarnessText } from "../../shared/harness/text.js";
 import type { MemoryModelCandidate, MemoryModelReview } from "../../shared/project-memory/contracts.js";
 import type { ApplicationRuntimePort } from "../engines/application-tools/runtime-port.js";
 import { isolatedApplicationEngines } from "../engines/application-tools/factory.js";
+import { memoryLinks, isMemoryRepositoryLink } from "./links.js";
 import { memoryControlPattern, memoryCredentialPattern, memoryKey, verifiedMemoryTitle } from "./rules.js";
 
 export const modelDeadlineMs = 12_000;
@@ -42,21 +43,47 @@ export interface ModelReviewPort {
   ): Promise<Pick<MemoryModelReview, "status" | "candidates" | "tokens">>;
 }
 
-/** Limit opted-in processing to the authored message. Skip imports, attachments and sensitive payloads at the caller. */
-export function modelExcerpt(text: string) {
+const unsafeExcerpt =
+  /(?:^\s*(?:>|[`~]{3})|data:[^\s]+;base64|\b(?:sk|ghp|gho|ghs|xoxb|xoxp)[-_][A-Za-z0-9_-]{16,}|\b[A-Za-z0-9_+/-]{48,}={0,2}\b)/imu;
+const linkStart = /\bhttps?:\/\//iu;
+
+function reviewedExcerpt(text: string) {
   if (text.length > 16_384) return null;
   const visible = visibleHarnessText(text);
   if (
     !visible ||
     Buffer.byteLength(visible) > inputBytes ||
     memoryCredentialPattern.test(visible) ||
-    /(?:^\s*(?:>|[`~]{3})|\bhttps?:\/\/|data:[^\s]+;base64|\b(?:sk|ghp|gho|ghs|xoxb|xoxp)[-_][A-Za-z0-9_-]{16,}|\b[A-Za-z0-9_+/-]{48,}={0,2}\b)/imu.test(
-      visible,
-    ) ||
+    unsafeExcerpt.test(visible) ||
     memoryControlPattern.test(visible.replace(/[\n\r\t]/gu, ""))
   )
     return null;
   return visible;
+}
+
+export function modelExcerpt(text: string) {
+  const visible = reviewedExcerpt(text);
+  return visible && !linkStart.test(visible) ? visible : null;
+}
+
+export function organizationSourceExcerpts(text: string) {
+  const visible = reviewedExcerpt(text);
+  if (!visible) return [];
+  const excerpts: string[] = [];
+  let from = 0;
+  for (const { url, start, end } of memoryLinks(visible)) {
+    if (isMemoryRepositoryLink(url)) continue;
+    excerpts.push(visible.slice(from, start));
+    from = end;
+  }
+  excerpts.push(visible.slice(from));
+  // Separate excerpts preserve the exact boundaries of each authored quotation.
+  return excerpts.map((part) => part.trim()).filter((part) => /[\p{L}\p{N}]/u.test(part));
+}
+
+export function organizationEvidenceExcerpt(text: string) {
+  const visible = reviewedExcerpt(text);
+  return visible && memoryLinks(visible).every(({ url }) => isMemoryRepositoryLink(url)) ? visible : null;
 }
 
 function candidates(text: string, output: string): MemoryModelCandidate[] | null {

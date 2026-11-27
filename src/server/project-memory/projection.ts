@@ -71,6 +71,7 @@ export function matchingMemories(
   conversationId: string,
   indexed?: (entry: MemoryEntry) => boolean,
   personal?: (entry: MemoryEntry) => number,
+  existing: readonly Pick<MemoryEntry, "id" | "version">[] = [],
 ) {
   const exact = entries.filter((entry) => matchesMemoryEntry(entry, matches));
   const projectScope = (entry: MemoryEntry) =>
@@ -84,8 +85,10 @@ export function matchingMemories(
     const value = defaults.get(entry.key);
     defaults.set(entry.key, value === undefined || value === entry.value ? entry.value : null);
   }
+  const available = new Map(existing.map(({ id, version }) => [id, version]));
   const eligible = (entry: MemoryEntry) =>
     entry.state === "active" &&
+    available.get(entry.id) !== entry.version &&
     (!projectScope(entry) || entry.team || defaults.get(entry.key) !== null) &&
     (entry.team ||
       entry.packages?.length ||
@@ -119,7 +122,7 @@ export function matchingMemories(
       include(entry);
   }
   for (const { entry } of authored) include(entry);
-  return [...candidates.values()].slice(0, 4).map((entry) => ({
+  return [...candidates.values()].slice(0, personal ? 5 : 4).map((entry) => ({
     ...entry,
     sources: entry.sources.filter((source) => source.conversationId !== conversationId).slice(0, 2),
     ...(entry.packages ? { packages: entry.packages.slice(0, 2) } : {}),

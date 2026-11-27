@@ -1,4 +1,4 @@
-# Optional cluster example; uses the 0.2.1 release and requires separate PostgreSQL coordination.
+# Optional cluster example; uses the 0.2.2 release and requires separate PostgreSQL coordination.
 # Set your public origin; create the panda-cluster Secret separately.
 # One exclusive owner; gateways may scale. Never increase owner replicas.
 # Requires a CSI StorageClass supporting ReadWriteOncePod.
@@ -48,7 +48,7 @@ spec:
       terminationGracePeriodSeconds: 45
       initContainers:
       - name: prepare-state
-        image: hiforceai/panda-force:0.2.1
+        image: hiforceai/panda-force:0.2.2
         imagePullPolicy: IfNotPresent
         command:
         - bun
@@ -60,7 +60,7 @@ spec:
           mountPath: /var/lib/panda-force
       containers:
       - name: panda-force
-        image: hiforceai/panda-force:0.2.1
+        image: hiforceai/panda-force:0.2.2
         imagePullPolicy: IfNotPresent
         ports:
         - name: http
@@ -181,7 +181,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
       - name: panda-force
-        image: hiforceai/panda-force:0.2.1
+        image: hiforceai/panda-force:0.2.2
         imagePullPolicy: IfNotPresent
         ports:
         - name: http

@@ -752,12 +752,20 @@ export class HarnessConversations {
         }
         let recalled = false;
         if (memory && acceptsMemory && liveBinding && current.memoryProjectId) {
+          const precedingUserMessages = window.events
+            .flatMap((event) =>
+              event.seq < user.seq && event.type === "message" && event.message.role === "user"
+                ? [event.message.text]
+                : [],
+            )
+            .slice(-6);
           const entries = await memory.recall(
             tx,
             conversation,
             user.message.text,
             previousReferences,
             memoryCandidates,
+            precedingUserMessages,
           );
           const materials = await memory.recallMaterials(
             conversation,

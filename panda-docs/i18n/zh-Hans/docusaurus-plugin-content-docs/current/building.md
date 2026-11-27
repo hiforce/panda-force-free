@@ -32,7 +32,7 @@ Dockerfile、Compose 构建叠加文件与 `scripts/build/base-images.json` 固�
 
 在同版干净源码中使用 [Rocky 创作构建器](base-images.md#构建并选用-rocky-基础镜像)。它按 profile、Node/Python 锁和校验值构建两种基础镜像，验证实际清单，支持明确的拉取策略和可信源覆盖。插件或依赖变化后先重建验证配套镜像，再选用新摘要；仅应用版本号变化可复用兼容基础层。
 
-旧版 Debian 配方保留为明确选择的兼容环境，并提供 Rocky 配方使用的 Debian Harness seed。它不包含完整创作工具。[旧环境的完整构建顺序](https://github.com/hiforce/panda-force-free/blob/v0.2.1/panda-docs/docs/building.md#build-your-own-base-images)是 **核心依赖 → 媒体层 → Harness 引擎层**；单独的核心/媒体层不能满足本版引擎锁。
+旧版 Debian 配方保留为明确选择的兼容环境，并提供 Rocky 配方使用的 Debian Harness seed。它不包含完整创作工具。[旧环境的完整构建顺序](https://github.com/hiforce/panda-force-free/blob/v0.2.2/panda-docs/docs/building.md#build-your-own-base-images)是 **核心依赖 → 媒体层 → Harness 引擎层**；单独的核心/媒体层不能满足本版引擎锁。
 
 Rocky 的 seed 阶段通过 apt 准备可移植字体，所以 `--seed-image` 使用已验证的 **Debian 引擎构建镜像**，而非新的 Rocky 默认镜像；最终 Rocky 阶段自行安装 RPM 并重新编译原生模块。
 
@@ -62,6 +62,6 @@ docker build -f scripts/build/Dockerfile.engine-bases --platform linux/amd64 \
 
 帮助站独立构建：进入 `panda-docs`，运行 `bun install --frozen-lockfile` 和 `bun run build`，使用 Node.js 22 或更新版本。原生/远程诊断、真实模型账号和生产凭据不属于普通安装要求。
 
-## 0.2.1 源码
+## 0.2.2 源码
 
-`v0.2.1` 标签对应公开发行源码，可按本页步骤构建；`develop` 用于后续开发。项目记忆支持跨会话取用。项目开启取用后，隐私会话也可以使用已授权的记忆，消息内容不会成为记忆来源。切换 Harness 时，会话列表仍显示同一条会话。
+`v0.2.2` 标签对应公开发行源码，可按本页步骤构建；`develop` 用于后续开发。项目记忆支持跨会话取用。项目开启取用后，隐私会话也可以使用已授权的记忆，消息内容不会成为记忆来源。切换 Harness 时，会话列表仍显示同一条会话。
