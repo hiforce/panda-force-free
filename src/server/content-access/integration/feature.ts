@@ -85,15 +85,57 @@ export function createContentAccess(
   };
   const service = {
     async view(owner: string) {
+      return service.viewProjects(owner, await options.projects());
+    },
+    async viewProjects(owner: string, projects: readonly { id: string; name: string }[], allowLegacy = false) {
       identity(owner);
-      return available().access.view(owner, await options.projects());
+      return available().access.view(owner, projects, allowLegacy);
+    },
+    async projectMembership(actor: string, project: string) {
+      identity(actor);
+      contentAccessProject(project);
+      if (project === "personal") return null;
+      const { store } = available();
+      const registered = await store.projectOwner?.(project);
+      if (registered)
+        return registered === actor ? { ...(await store.grants(project)), owner: actor, legacy: false } : null;
+      const creator = await store.legacyCreator?.(project);
+      if (creator ? creator !== actor : actor !== options.localAdministrator()) return null;
+      await options.requireProject(project);
+      return { ...(await store.grants(project)), owner: creator ?? null, legacy: true };
+    },
+    async replaceProjectMembers(
+      actor: string,
+      project: string,
+      members: string[],
+      revision: number,
+      chosenOwner?: string,
+    ) {
+      const current = await service.projectMembership(actor, project);
+      if (!current) throw new ContentAccessError("notFound");
+      if (current.revision !== revision) throw new ContentAccessError("conflict");
+      if (current.owner ? chosenOwner && chosenOwner !== current.owner : !chosenOwner)
+        throw new ContentAccessError("invalidInput");
+      const owner = current.owner ?? chosenOwner!;
+      identity(owner);
+      members.forEach(identity);
+      const { store } = available();
+      if (!store.replaceMembers) throw new ContentAccessError("unavailable");
+      const legacy = current.legacy ? { actor, allowUnverified: !current.owner } : undefined;
+      const write = async () => {
+        await store.replaceMembers!(owner, project, members, revision, Date.now(), legacy);
+        return true;
+      };
+      const result = await options.documents.ifPresent(project, write);
+      if (!result) await options.documents.initialize(project, (repository) => repository.coordinator.view(write));
     },
     async grants(actor: string, project: unknown) {
       const { store } = administrator(actor),
         id = contentAccessProject(project);
       if (id === "personal") throw new ContentAccessError("invalidInput");
       await options.requireProject(id);
-      return store.grants(id);
+      const [grants, owner] = await Promise.all([store.grants(id), store.projectOwner?.(id)]);
+      return { ...grants, ...(owner ? { projectOwner: owner } : {}) };
     },
     async set(actor: string, value: unknown) {
       administrator(actor);
@@ -130,21 +172,22 @@ export function createContentAccess(
   };
   return {
     /** Called only while reserving new project metadata in the catalog transaction. */
-    reserveCreator(owner: string, project: string): void {
+    reserveCreator(owner: string, project: string, members: readonly string[] = []): void {
       identity(owner);
+      members.forEach(identity);
       contentAccessProject(project);
       if (!sqliteStore || !options.db?.inTransaction || project === "personal")
         throw new ContentAccessError("invalidInput");
       options.requireProject(project);
-      if (sqliteStore.role(owner, project) !== null) throw new ContentAccessError("conflict");
-      sqliteStore.set(owner, project, owner, "contributor", sqliteStore.revision(), Date.now());
+      sqliteStore.reserveCreator(owner, project, Date.now(), members);
     },
-    async reserveCreatorAsync(owner: string, project: string): Promise<void> {
+    async reserveCreatorAsync(owner: string, project: string, members: readonly string[] = []): Promise<void> {
       identity(owner);
+      members.forEach(identity);
       contentAccessProject(project);
       if (!options.store?.reserveCreator) throw new ContentAccessError("unavailable");
       await options.requireProject(project);
-      await options.store.reserveCreator(owner, project, Date.now());
+      await options.store.reserveCreator(owner, project, Date.now(), members);
     },
     require: (owner: string, project: string, action: ContentAccessAction = "read") =>
       requireAccess(owner, project, action),

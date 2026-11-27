@@ -39,6 +39,7 @@ export interface ProductProject {
   description?: string;
   createdAt?: number;
   updatedAt?: number;
+  canManageMembers?: boolean;
   workspace?: { path: string; state: "preparing" | "ready" };
 }
 

@@ -69,7 +69,14 @@ export interface BusinessProjects extends DirectorySource {
   readonly ready: boolean;
   readonly revision: number;
   workspace(projectId: string): Promise<{ path: string; state: "preparing" | "ready" }>;
-  save(fields: Partial<ProductProject>): Promise<ProductProject>;
+  save(fields: Partial<ProductProject> & { members?: string[] }): Promise<ProductProject>;
+  projectMembers(projectId?: string): Promise<import("../../shared/content-access.js").ProjectMemberOptions>;
+  saveProjectMembers(
+    projectId: string,
+    revision: number,
+    members: string[],
+    ownerId?: string,
+  ): Promise<import("../../shared/content-access.js").ProjectMemberOptions>;
   assign(projectId: string | null, sessionIds: readonly string[], revision?: number): Promise<void>;
   history(options?: {
     search?: string;

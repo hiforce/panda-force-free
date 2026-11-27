@@ -1,3 +1,4 @@
+import { createProjectMembers } from "./projects/project-members.js";
 import { createHarnessFeature } from "./harness/feature.js";
 import { applicationRuntimes } from "./harness/application.js";
 import { applicationRuntimeRoutes } from "./engines/application-tools/runtime-routes.js";
@@ -565,7 +566,10 @@ const mime: Record<string, string> = {
 
 const notifications = new NotificationCenter([
   creationNotificationSource("creation", () => creationFeature.service),
-  creationNotificationSource("personal-creation", async (owner) => (await personalContent.forOwner(owner)).creation?.service),
+  creationNotificationSource(
+    "personal-creation",
+    async (owner) => (await personalContent.forOwner(owner)).creation?.service,
+  ),
 ]);
 const remoteRegistry = new RemoteRegistry(config.stateRoot);
 const remoteSessions = new RemoteTerminalSessions(remoteRegistry);
@@ -656,6 +660,10 @@ const dispatchApiRoute = createRouter([
   ...sitePublicationFeature.routes,
   ...bridgeRoutes({
     projectSessions: harnessFeature.projectSessions,
+    projectMembers: localAccountFeature
+      ? createProjectMembers(localAccountFeature.accounts, contentAccess, resolveOwner)
+      : undefined,
+    authorizeProjectBinding: (context, project) => contentAccess.require(resolveOwner(context), project, "contribute"),
     projectOwner: (context) => (authState.administrator ? publicationOwner(authState, context) : undefined),
     browserWire,
     projectless,
@@ -818,22 +826,6 @@ const server = createServer(
           { operationId: activation?.operationId ?? "", status: "complete" },
           { "cache-control": "no-store" },
         );
-        return;
-      }
-      if (!sharedWorkspaceAllowed(req) && url.pathname === "/api/projects") {
-        const access = await contentAccess.service.view(resolveOwner({ req }));
-        const allowed = new Set(access.projects.map((project) => project.id));
-        const snapshot = await projectCatalog.snapshot();
-        respondJson(res, 200, {
-          revision: snapshot.revision,
-          projects: snapshot.projects
-            .filter((project) => allowed.has(project.id))
-            .map(({ workspace, ...project }) => {
-              void workspace;
-              return project;
-            }),
-          assignments: [],
-        });
         return;
       }
       if (await dispatchApiRoute({ req, res, url })) return;

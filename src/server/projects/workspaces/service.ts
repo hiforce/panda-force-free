@@ -1,6 +1,7 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { ProjectError, projectFields } from "../catalog.js";
 import type { ProjectSnapshot } from "../../../shared/engine/types.js";
+import { projectCreationHash } from "../../content-access/storage/creation-receipt.js";
 import { ProjectWorkspaceDirectory } from "./directory.js";
 import type { ProjectWorkspaceBinding } from "./repository.js";
 import {
@@ -59,14 +60,18 @@ export class ProjectWorkspaceService<C extends WorkspaceCatalog = WorkspaceCatal
     await this.repository.ready(binding.projectId);
     return { path: binding.path, state: "ready" as const };
   }
-  async create(input: unknown, revision: unknown, requestId?: unknown, creator?: string): Promise<ProjectSnapshot> {
+  async create(
+    input: unknown,
+    revision: unknown,
+    requestId?: unknown,
+    creator?: string,
+    members: readonly string[] = [],
+  ): Promise<ProjectSnapshot> {
     const fields = projectFields(input),
       operationId = requestId ?? randomUUID();
     if (typeof operationId !== "string" || !/^[a-z0-9_-]{1,128}$/i.test(operationId))
       throw new ProjectError(400, "projects.errorInvalidProjectDetails");
-    const hash = createHash("sha256")
-      .update(JSON.stringify(creator ? [fields, creator] : fields))
-      .digest("hex");
+    const hash = projectCreationHash(fields, creator, members);
     return this.exclusive(async () => {
       if (!(await this.repository.operation(operationId))) {
         if ((await this.catalog.snapshot()).projects.some((project) => project.code === fields.code))
@@ -80,6 +85,7 @@ export class ProjectWorkspaceService<C extends WorkspaceCatalog = WorkspaceCatal
         requestHash: hash,
         root: this.root,
         creator,
+        members,
         reserve: this.reserveMetadata,
       });
       await this.prepare(binding);

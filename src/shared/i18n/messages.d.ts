@@ -3229,6 +3229,7 @@ export interface MessageParameters {
   "projects.blankDocument": {  };
   "projects.breadcrumb": {  };
   "projects.cardView": {  };
+  "projects.chooseLegacyProjectOwner": {  };
   "projects.clearFilters": {  };
   "projects.composerHint": {  };
   "projects.composerPlaceholder": {  };
@@ -3249,6 +3250,7 @@ export interface MessageParameters {
   "projects.emptyContentTitle": {  };
   "projects.emptyHelp": {  };
   "projects.emptyTitle": {  };
+  "projects.enableProjectMembers": {  };
   "projects.errorAProjectWithThisCodeAlreadyExists": {  };
   "projects.errorCrossOriginRequestRejected": {  };
   "projects.errorDirectoryOutsideRoot": {  };
@@ -3257,6 +3259,7 @@ export interface MessageParameters {
   "projects.errorInvalidSessionSelection": {  };
   "projects.errorProjectCodeMustContain264LettersNumbersHyphensOrUnderscores": {  };
   "projects.errorProjectDescriptionMustBe2000CharactersOrFewer": {  };
+  "projects.errorProjectMembers": {  };
   "projects.errorProjectNameMustContain1100Characters": {  };
   "projects.errorProjectNotFound": {  };
   "projects.errorProjectsChangedInAnotherWindowReviewTheLatestInformationAndTryAgain": {  };
@@ -3272,8 +3275,11 @@ export interface MessageParameters {
   "projects.ideaNotes": {  };
   "projects.ideaPlan": {  };
   "projects.importContentHint": {  };
+  "projects.legacyProjectMembersHint": {  };
+  "projects.legacyProjectOwnerHint": {  };
   "projects.linkingChangesOnlyTheProjectAssociationSessionContentsAndWorking": {  };
   "projects.listView": {  };
+  "projects.loadingProjectMembers": {  };
   "projects.loadOlderSessions": {  };
   "projects.manageDirectory": {  };
   "projects.nextPage": {  };
@@ -3281,12 +3287,20 @@ export interface MessageParameters {
   "projects.noDocumentsMatch": {  };
   "projects.noDocumentsMatchTitle": {  };
   "projects.noMatchesHelp": {  };
+  "projects.noOtherProjectMembers": {  };
   "projects.overviewHint": {  };
   "projects.pagePosition": { "page": number; "pages": number };
   "projects.pinnedProjects": {  };
   "projects.previousPage": {  };
   "projects.projectCode": {  };
+  "projects.projectMembers": {  };
+  "projects.projectMembersChanged": {  };
+  "projects.projectMembersHint": {  };
+  "projects.projectMembersSaved": {  };
+  "projects.projectMembersSaveFailed": {  };
+  "projects.projectMembersUnavailable": {  };
   "projects.projectName": {  };
+  "projects.projectOwner": {  };
   "projects.projectSections": {  };
   "projects.projectView": {  };
   "projects.promptArticle": {  };
@@ -3296,7 +3310,9 @@ export interface MessageParameters {
   "projects.quickActions": {  };
   "projects.reloadLatestProjectDetails": {  };
   "projects.resultRange": { "end": number; "start": number; "total": number };
+  "projects.saveProjectMembers": {  };
   "projects.savingAssociation": {  };
+  "projects.savingProjectMembers": {  };
   "projects.searchBySessionNameOrWorkingFolder": {  };
   "projects.searchPlaceholder": {  };
   "projects.sessionsHint": {  };

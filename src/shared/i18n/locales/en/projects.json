@@ -88,5 +88,21 @@
   "directoryEmptyHint": "Start with an idea on the Content tab. Your documents will appear here.",
   "manageDirectory": "Manage directory",
   "directoryHint": "Browse the document hierarchy, search by title, or open a document to keep editing.",
-  "breadcrumb": "Project path"
+  "breadcrumb": "Project path",
+  "errorProjectMembers": "Choose valid project members.",
+  "loadingProjectMembers": "Loading members…",
+  "noOtherProjectMembers": "No other accounts are available.",
+  "projectMembers": "Project members",
+  "projectMembersChanged": "The member list changed. Reload it and review your choices.",
+  "projectMembersHint": "Choose who can open this project.",
+  "projectMembersSaveFailed": "Could not save the members. Try again.",
+  "projectMembersSaved": "Members saved.",
+  "projectMembersUnavailable": "Could not load the member list.",
+  "projectOwner": "Owner",
+  "saveProjectMembers": "Save members",
+  "savingProjectMembers": "Saving members…",
+  "legacyProjectMembersHint": "After you save, only the owner and selected members can open this project.",
+  "enableProjectMembers": "Enable and save members",
+  "legacyProjectOwnerHint": "The creator could not be verified. Choose the project owner.",
+  "chooseLegacyProjectOwner": "Choose an owner"
 }

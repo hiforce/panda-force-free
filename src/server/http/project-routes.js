@@ -1,3 +1,5 @@
+import { sharedWorkspaceAllowed } from "../auth/users/access.js";
+import { ContentAccessError } from "../content-access/contracts.js";
 import { createSessionDiscovery } from "../conversation/discovery.js";
 import { ProjectSessionAccess } from "../projects/session-access.js";
 import { validSessionReference } from "../../shared/engine/session-reference.js";
@@ -13,7 +15,9 @@ export function projectRoutes({
   catalog,
   workspaces,
   projectOwner,
+  authorizeProjectBinding = async (_context, _projectId) => {},
   projectSessions,
+  projectMembers,
   directoryPolicy,
   request: nativeRequest,
   getSession: nativeGetSession,
@@ -31,6 +35,16 @@ export function projectRoutes({
   const candidates = new Map();
   const access = new ProjectSessionAccess({ policy: directoryPolicy, native: getSession, managed: projectSessions });
   const discovery = createSessionDiscovery({ request, recordSessions });
+  const visible = (context, snapshot) => projectMembers?.snapshot(context, snapshot) ?? snapshot;
+  const filtered = async (context, snapshot) => access.snapshot(context, await visible(context, snapshot));
+  async function authorize(context, id) {
+    try {
+      await authorizeProjectBinding(context, id);
+    } catch (error) {
+      if (errorStatus(error) === 404) throw new ProjectError(404, "projects.errorProjectNotFound");
+      throw error;
+    }
+  }
   function queryCursor(url) {
     const cursor = url.searchParams.get("cursor") || null;
     if (cursor && cursor.length > 4096) throw new ProjectError(400, "projects.errorInvalidSessionCursor");
@@ -47,7 +61,17 @@ export function projectRoutes({
           throw new ProjectError(403, "projects.errorCrossOriginRequestRejected");
       }
       await handler(ctx);
-    } catch (error) {
+    } catch (failure) {
+      const error =
+        failure instanceof ContentAccessError
+          ? failure.code === "conflict"
+            ? new ProjectError(409, "projects.errorProjectsChangedInAnotherWindowReviewTheLatestInformationAndTryAgain")
+            : failure.code === "invalidInput"
+              ? new ProjectError(400, "projects.errorProjectMembers")
+              : failure.code === "forbidden" || failure.code === "notFound"
+                ? new ProjectError(404, "projects.errorProjectNotFound")
+                : failure
+          : failure;
       // Record operational failures without logging submitted project data.
       if (!(error instanceof ProjectError) && !(error instanceof RequestBodyError))
         console.warn(
@@ -66,7 +90,7 @@ export function projectRoutes({
   };
   const changed = async (context, snapshot, status = 200) => {
     broadcast({ type: "project-catalog/changed", ...directoryPolicy.snapshot(snapshot) });
-    respondJson(context.res, status, await access.snapshot(context, snapshot));
+    respondJson(context.res, status, await filtered(context, snapshot));
   };
   return [
     {
@@ -76,10 +100,11 @@ export function projectRoutes({
         const { req, res } = context;
         const body = await readJsonBody(req);
         if (typeof body.projectId !== "string") throw new ProjectError(400, "projects.errorInvalidProjectDetails");
+        if (projectMembers) await authorize(context, body.projectId);
         const workspace = await workspaces.ensure(body.projectId);
         const snapshot = await catalog.snapshot();
         broadcast({ type: "project-catalog/changed", ...directoryPolicy.snapshot(snapshot) });
-        respondJson(res, 200, { ...(await access.snapshot(context, snapshot)), workspace });
+        respondJson(res, 200, { ...(await filtered(context, snapshot)), workspace });
       }),
     },
     {
@@ -109,18 +134,47 @@ export function projectRoutes({
       method: ["GET", "POST", "PATCH"],
       handler: protect(async (context) => {
         const { req, res } = context;
-        if (req.method === "GET")
-          return respondJson(res, 200, await access.snapshot(context, await catalog.snapshot()));
+        res.setHeader("cache-control", "private, no-store");
+        if (req.method === "GET") return respondJson(res, 200, await filtered(context, await catalog.snapshot()));
         const body = await readJsonBody(req);
         if (req.method === "PATCH" && typeof body.id !== "string")
           throw new ProjectError(400, "projects.errorProjectNotFound");
         if (req.method === "POST" && body.id !== undefined)
           throw new ProjectError(400, "projects.errorInvalidProjectDetails");
+        if (req.method === "PATCH" && projectMembers) {
+          if (!sharedWorkspaceAllowed(req) && !(await projectMembers.isCreator(context, body.id)))
+            throw new ProjectError(404, "projects.errorProjectNotFound");
+          await authorize(context, body.id);
+        }
+        const members = req.method === "POST" ? await projectMembers?.select(body.members) : undefined;
         const snapshot =
           req.method === "POST"
-            ? await workspaces.create(body, body.revision, body.operationId, projectOwner(context))
+            ? await workspaces.create(body, body.revision, body.operationId, projectOwner(context), members)
             : await catalog.save(body, body.revision);
         await changed(context, snapshot, req.method === "POST" ? 201 : 200);
+      }),
+    },
+    {
+      path: "/api/projects/members",
+      method: ["GET", "PUT"],
+      handler: protect(async (context) => {
+        context.res.setHeader("cache-control", "private, no-store");
+        const id = context.url.searchParams.get("project") ?? undefined;
+        if (!projectMembers) {
+          if (context.req.method === "GET")
+            return respondJson(context.res, 200, { editable: !id, revision: null, members: [] });
+          throw new ProjectError(404, "projects.errorProjectNotFound");
+        }
+        if (id !== undefined && !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id))
+          throw new ProjectError(400, "projects.errorInvalidProjectDetails");
+        if (id) await catalog.project(id);
+        if (context.req.method === "PUT") {
+          if (!id) throw new ProjectError(400, "projects.errorInvalidProjectDetails");
+          const input = await readJsonBody(context.req, 16 * 1024);
+          await projectMembers.update(context, id, input.members, input.revision, input.ownerId);
+          broadcast({ type: "project-catalog/changed", revision: (await catalog.snapshot()).revision });
+        }
+        respondJson(context.res, 200, await projectMembers.options(context, id));
       }),
     },
     {
@@ -131,7 +185,10 @@ export function projectRoutes({
         const { projectId, sessionIds, revision } = await readJsonBody(req);
         if (projectId !== null && typeof projectId !== "string")
           throw new ProjectError(400, "projects.errorProjectNotFound");
-        if (projectId !== null) await catalog.project(projectId);
+        if (projectId !== null) {
+          await catalog.project(projectId);
+          if (projectMembers) await authorize(context, projectId);
+        }
         if (
           !Array.isArray(sessionIds) ||
           !sessionIds.length ||
@@ -177,6 +234,14 @@ export function projectRoutes({
             }),
           );
           result.sessions = [...managed, ...result.sessions];
+        }
+        if (projectMembers) {
+          const snapshot = await catalog.snapshot();
+          const permitted = new Set((await visible(context, snapshot)).projects.map(({ id }) => id));
+          const hidden = new Set(
+            snapshot.assignments.filter(({ projectId }) => !permitted.has(projectId)).map(({ id }) => id),
+          );
+          result.sessions = result.sessions.filter(({ id }) => !hidden.has(id));
         }
         for (const session of result.sessions) {
           candidates.delete(session.id);

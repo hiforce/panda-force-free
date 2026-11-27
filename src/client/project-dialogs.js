@@ -34,6 +34,143 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
     generation++;
     if (returnFocus?.isConnected) returnFocus.focus();
   });
+  function projectMemberPicker(projectId) {
+    const opened = generation;
+    const root = /** @type {HTMLFieldSetElement} */ (requireElement("[data-project-members]", dialog));
+    const list = requireElement("[data-project-member-list]", root);
+    const status = requireElement("[data-project-member-status]", root);
+    const retry = requireElement("[data-project-member-retry]", root);
+    const save = /** @type {HTMLButtonElement | null} */ (findElement("[data-project-member-save]", root));
+    const legacyNotice = requireElement("[data-project-legacy-members]", root);
+    const ownerField = requireElement("[data-project-owner-field]", root);
+    const ownerPicker = /** @type {HTMLSelectElement} */ (requireElement("[data-project-owner-picker]", root));
+    const changes = new Map();
+    let snapshot,
+      busy = false;
+    const notice = (id) => {
+      if (id) localizeText(status, id, undefined, t);
+      else status.textContent = "";
+    };
+    const selected = () =>
+      (snapshot?.members || [])
+        .filter((member) => !member.creator && (changes.get(member.id) ?? member.selected))
+        .map((member) => member.id);
+    function renderMembers() {
+      setMessageHtml(
+        list,
+        (snapshot?.members || [])
+          .map(({ id, username, selected, creator }) => {
+            const locked = creator || (snapshot.chooseOwner && id === ownerPicker.value);
+            return `<label class="project-session-option project-member-option"><input type="checkbox" value="${escape(id)}" ${locked || (changes.get(id) ?? selected) ? "checked" : ""} ${locked ? "disabled" : ""}><span><strong data-i18n-ignore>${escape(username)}</strong>${locked ? `<small>${messageHtml("projects.projectOwner", undefined, t)}</small>` : ""}</span></label>`;
+          })
+          .join(""),
+      );
+    }
+    function render() {
+      root.hidden = !snapshot.editable;
+      legacyNotice.hidden = !snapshot.legacy;
+      ownerField.hidden = !snapshot.chooseOwner;
+      const previousOwner = ownerPicker.value;
+      const empty = document.createElement("option");
+      empty.value = "";
+      localizeText(empty, "projects.chooseLegacyProjectOwner", undefined, t);
+      ownerPicker.replaceChildren(empty);
+      if (snapshot.chooseOwner) {
+        for (const member of snapshot.members) {
+          const option = document.createElement("option");
+          option.value = member.id;
+          setOpaqueText(option, member.username);
+          ownerPicker.append(option);
+        }
+        ownerPicker.value = snapshot.members.some(({ id }) => id === previousOwner) ? previousOwner : "";
+      }
+      renderMembers();
+      if (save) {
+        save.hidden = snapshot.revision === null;
+        localizeText(
+          save,
+          snapshot.legacy ? "projects.enableProjectMembers" : "projects.saveProjectMembers",
+          undefined,
+          t,
+        );
+      }
+    }
+    function setBusy(value) {
+      busy = value;
+      root.disabled = value;
+      if (save)
+        save.disabled =
+          value ||
+          !retry.hidden ||
+          (!snapshot?.legacy && !changes.size) ||
+          (snapshot?.chooseOwner && !ownerPicker.value);
+    }
+    ownerPicker.onchange = () => {
+      renderMembers();
+      setBusy(false);
+    };
+    async function load() {
+      setBusy(true);
+      retry.hidden = true;
+      notice("projects.loadingProjectMembers");
+      try {
+        const result = await catalog.projectMembers(projectId);
+        if (generation !== opened) return;
+        snapshot = result;
+        for (const [id, checked] of changes)
+          if (!snapshot.members.some((member) => member.id === id && member.selected !== checked)) changes.delete(id);
+        render();
+        notice(!projectId && !snapshot.members.length ? "projects.noOtherProjectMembers" : null);
+      } catch {
+        if (generation !== opened) return;
+        root.hidden = false;
+        notice("projects.projectMembersUnavailable");
+        retry.hidden = false;
+      } finally {
+        if (generation === opened) setBusy(false);
+      }
+    }
+    retry.onclick = () => void load();
+    list.onchange = (event) => {
+      const checkbox = closestElement('input[type="checkbox"]', event.target);
+      if (!checkbox || !snapshot || busy) return;
+      const member = snapshot.members.find(({ id }) => id === checkbox.value);
+      if (!member || member.creator) return;
+      if (member.selected === checkbox.checked) changes.delete(member.id);
+      else changes.set(member.id, checkbox.checked);
+      if (retry.hidden) notice(null);
+      setBusy(false);
+    };
+    if (save)
+      save.onclick = async () => {
+        if (busy || !snapshot || save.disabled) return;
+        setBusy(true);
+        notice("projects.savingProjectMembers");
+        try {
+          const result = await catalog.saveProjectMembers(
+            projectId,
+            snapshot.revision,
+            selected(),
+            snapshot.chooseOwner ? ownerPicker.value : undefined,
+          );
+          if (generation !== opened) return;
+          snapshot = result;
+          changes.clear();
+          render();
+          root.hidden = false;
+          notice("projects.projectMembersSaved");
+        } catch (reason) {
+          if (generation !== opened) return;
+          const stale = errorStatus(reason) === 409;
+          retry.hidden = !stale;
+          notice(stale ? "projects.projectMembersChanged" : "projects.projectMembersSaveFailed");
+        } finally {
+          if (generation === opened) setBusy(false);
+        }
+      };
+    void load();
+    return selected;
+  }
   /** @param {import("../shared/data-contracts.js").ProductProject | null} project */
   async function edit(project = null) {
     if (!catalog.ready) await catalog.load();
@@ -43,11 +180,22 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
       project ? "common.editProject" : "common.createProject",
       `<form id="projectForm" class="project-form">
       <label for="projectNameInput">${messageHtml("projects.projectName", undefined, t)}</label><input id="projectNameInput" name="projectName" required maxlength="100" autocomplete="off" value="${escape(project?.name || "")}">
-      <label for="projectCodeInput">${messageHtml("projects.projectCode", undefined, t)}</label><input id="projectCodeInput" name="code" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" ${project?.workspace ? "readonly" : ""} value="${escape(project?.code || "")}"><p class="wb-help">${messageHtml(project?.workspace ? "projects.workspaceCodeLocked" : "projects.workspaceCodeHelp", undefined, t)}</p>
+      <label for="projectCodeInput">${messageHtml("projects.projectCode", undefined, t)}</label><input id="projectCodeInput" name="code" required minlength="2" maxlength="64" autocomplete="off" spellcheck="false" ${project?.workspace || project?.canManageMembers ? "readonly" : ""} value="${escape(project?.code || "")}"><p class="wb-help">${messageHtml(project?.workspace || project?.canManageMembers ? "projects.workspaceCodeLocked" : "projects.workspaceCodeHelp", undefined, t)}</p>
       <label for="projectDescriptionInput">${messageHtml("projects.descriptionOptional", undefined, t)}</label><textarea id="projectDescriptionInput" name="description" maxlength="2000" rows="4">${escape(project?.description || "")}</textarea>
+      <fieldset class="project-member-picker" data-project-members ${project ? "hidden" : ""}>
+        <legend>${messageHtml("projects.projectMembers", undefined, t)}</legend>
+        <p class="wb-help">${messageHtml("projects.projectMembersHint", undefined, t)}</p>
+        <p class="wb-help" data-project-legacy-members hidden>${messageHtml("projects.legacyProjectMembersHint", undefined, t)}</p>
+        <label class="wb-field project-owner-field" data-project-owner-field hidden><span>${messageHtml("projects.legacyProjectOwnerHint", undefined, t)}</span><select data-project-owner-picker></select></label>
+        <div class="project-session-picker" data-project-member-list></div>
+        <p class="wb-help" data-project-member-status role="status"></p>
+        <button type="button" class="wb-button" data-project-member-retry hidden>${messageHtml("common.retry", undefined, t)}</button>
+        ${project ? `<button type="button" class="wb-button" data-project-member-save hidden>${messageHtml("projects.saveProjectMembers", undefined, t)}</button>` : ""}
+      </fieldset>
       <footer><button type="submit" class="wb-button primary">${messageHtml(project ? "common.saveProject" : "common.createProject", undefined, t)}</button></footer></form>`,
     );
-    requireElement("input", dialog).focus();
+    requireElement("#projectNameInput", dialog).focus();
+    const selectedMembers = projectMemberPicker(project?.id);
     requireElement("form", dialog).onsubmit = async (event) => {
       event.preventDefault();
       const form = requireElement("form", dialog),
@@ -57,7 +205,10 @@ export function createProjectDialogs({ catalog, t, onSaved, onAssigned }) {
         const fields = Object.fromEntries(new FormData(form));
         fields.name = fields.projectName;
         delete fields.projectName;
-        const saved = await catalog.save({ ...fields, ...(project ? { id: project.id, revision } : { operationId }) });
+        const saved = await catalog.save({
+          ...fields,
+          ...(project ? { id: project.id, revision } : { operationId, members: selectedMembers() }),
+        });
         dialog.close();
         onSaved(saved);
       } catch (reason) {

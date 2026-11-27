@@ -21,34 +21,38 @@ export class ContentScopeAccess {
   async role(owner: string, project: string) {
     contentAccessOwner(owner);
     contentAccessProject(project);
-    if (project === "personal" || this.administrator(owner)) return "contributor" as const;
+    if (project === "personal") return "contributor" as const;
+    const creator = await this.store.projectOwner?.(project);
+    if (creator === owner || (!creator && this.administrator(owner))) return "contributor" as const;
     const role = await this.store.role(owner, project);
-    return role === "blocked" ? null : (role ?? (this.policy.mode === "shared" ? "contributor" : null));
+    return role === "blocked" ? null : (role ?? (!creator && this.policy.mode === "shared" ? "contributor" : null));
   }
   async require(owner: string, project: string, action: ContentAccessAction = "read") {
     const role = await this.role(owner, project);
     if (!role || (action === "contribute" && role !== "contributor")) throw new ContentAccessError("notFound");
   }
-  async view(owner: string, projects: readonly { id: string; name: string }[]) {
+  async view(owner: string, projects: readonly { id: string; name: string }[], allowLegacy = false) {
     contentAccessOwner(owner);
     for (const project of projects) contentAccessProject(project.id);
-    const permitted: { id: string; name: string; role: "reader" | "contributor" }[] = [];
-    const administrator = this.administrator(owner),
-      roles =
-        !administrator && this.store.roles
-          ? await this.store.roles(
-              owner,
-              projects.map((p) => p.id),
-            )
-          : null;
+    const permitted: { id: string; name: string; role: "reader" | "contributor"; canManageMembers?: boolean }[] = [];
+    const administrator = this.administrator(owner);
+    const ids = projects.map(({ id }) => id);
+    const [roles, owners] = await Promise.all([this.store.roles?.(owner, ids), this.store.projectOwners?.(ids)]);
     for (const project of projects) {
+      const creator = owners?.get(project.id);
       const role =
-        administrator || project.id === "personal"
-          ? "contributor"
-          : roles
-            ? (roles.get(project.id) ?? (this.policy.mode === "shared" ? "contributor" : null))
-            : await this.role(owner, project.id);
-      if (role && role !== "blocked") permitted.push({ id: project.id, name: project.name, role });
+        roles && owners
+          ? creator === owner || project.id === "personal" || (!creator && (administrator || allowLegacy))
+            ? "contributor"
+            : (roles.get(project.id) ?? (!creator && this.policy.mode === "shared" ? "contributor" : null))
+          : await this.role(owner, project.id);
+      if (role && role !== "blocked")
+        permitted.push({
+          id: project.id,
+          name: project.name,
+          role,
+          ...(creator === owner ? { canManageMembers: true } : {}),
+        });
     }
     return {
       owner: contentAccessOwner(owner),

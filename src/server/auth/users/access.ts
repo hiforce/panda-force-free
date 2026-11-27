@@ -9,6 +9,9 @@ export function sharedWorkspaceAllowed(req: IncomingMessage) {
 /** Personal/business APIs retain their own owner and project checks; host and installation APIs default to denied. */
 export function memberApiAllowed(path: string, method: string) {
   if (!path.startsWith("/api/")) return true;
+  if (path === "/api/projects") return ["GET", "POST", "PATCH"].includes(method);
+  if (path === "/api/projects/members") return ["GET", "PUT"].includes(method);
+  if (path === "/api/project-document-tree") return method === "GET";
   if (
     [
       "/api/config",
@@ -17,7 +20,6 @@ export function memberApiAllowed(path: string, method: string) {
       "/api/harness-runtimes",
       "/api/model-catalog",
       "/api/content-access",
-      "/api/projects",
       "/api/local-users/self",
     ].includes(path)
   )

@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import { Database } from "bun:sqlite";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isolatedMySQLDatabase } from "../support/mysql-database.js";
@@ -47,6 +47,7 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
       await registry.upgrade(new MySQLSchemaConnection(f.sql));
       await migrateProjectsSnapshot({ sql: f.sql, snapshotPath, migrationId: "projects-v1" });
       await migrateContentAccessSnapshot({ sql: f.sql, snapshotPath, migrationId: "access-v1" });
+      await mkdir(join(root, "content"));
       const catalog = new MySQLProjectCatalog(f.sql),
         store = new MySQLContentAccessStore(catalog),
         feature = createContentAccess(
@@ -80,27 +81,80 @@ test.skipIf(!process.env.PANDA_FORCE_TEST_MYSQL_CONFIG_FILE)(
       const current = await catalog.snapshot(),
         before = await store.revision();
       let failedProject = "";
-      const fail = new ProjectWorkspaceService(catalog, join(root, "workspaces"), true, async (project, owner) => {
-        failedProject = project.id;
-        await catalog.bindFiles(project.id);
-        await feature.reserveCreatorAsync(owner!, project.id);
-        throw Error("Injected metadata rollback");
-      });
+      const fail = new ProjectWorkspaceService(
+        catalog,
+        join(root, "workspaces"),
+        true,
+        async (project, owner, members) => {
+          failedProject = project.id;
+          await catalog.bindFiles(project.id);
+          await feature.reserveCreatorAsync(owner!, project.id, members);
+          throw Error("Injected metadata rollback");
+        },
+      );
       await expect(
         fail.create({ name: "Rollback", code: "rollback-project" }, current.revision, "rollback", alice),
       ).rejects.toMatchObject({ status: 503 });
       expect(await catalog.snapshot()).toEqual(current);
       expect(await store.revision()).toBe(before);
       expect(await store.role(alice, failedProject)).toBeNull();
-      const create = new ProjectWorkspaceService(catalog, join(root, "workspaces"), true, async (project, owner) => {
-        await catalog.bindFiles(project.id);
-        await feature.reserveCreatorAsync(owner!, project.id);
-      });
-      const created = await create.create({ name: "Owned", code: "owned-project" }, current.revision, "owned", alice),
+      const create = new ProjectWorkspaceService(
+        catalog,
+        join(root, "workspaces"),
+        true,
+        async (project, owner, members) => {
+          await catalog.bindFiles(project.id);
+          await feature.reserveCreatorAsync(owner!, project.id, members);
+        },
+      );
+      const created = await create.create({ name: "Owned", code: "owned-project" }, current.revision, "owned", alice, [
+          bob,
+        ]),
         owned = created.projects.find((p) => p.code === "owned-project")!;
       await expect(feature.require(alice, owned.id, "contribute")).resolves.toBeUndefined();
+      await expect(feature.require(bob, owned.id)).resolves.toBeUndefined();
+      await expect(feature.require(admin, owned.id)).rejects.toMatchObject({ code: "notFound" });
+      expect(await store.projectOwner(owned.id)).toBe(alice);
+      const revision = await store.revision();
+      await expect(store.set(admin, owned.id, alice, null, revision, 1003)).rejects.toMatchObject({
+        code: "forbidden",
+      });
+      await feature.service.replaceProjectMembers(alice, owned.id, [], revision);
       await expect(feature.require(bob, owned.id)).rejects.toMatchObject({ code: "notFound" });
+      await expect(feature.require(alice, owned.id)).resolves.toBeUndefined();
+      await expect(feature.service.replaceProjectMembers(alice, owned.id, [bob], revision)).rejects.toMatchObject({
+        code: "conflict",
+      });
       await expect(feature.reserveCreatorAsync(bob, owned.id)).rejects.toMatchObject({ code: "invalidInput" });
+      const oldCreator = new ProjectWorkspaceService(catalog, join(root, "workspaces"), true, async (project) => {
+        await catalog.bindFiles(project.id);
+        await store.set(alice, project.id, alice, "contributor", await store.revision(), 1010);
+      });
+      const oldSnapshot = await oldCreator.create(
+        { name: "Legacy created", code: "legacy-created" },
+        (await catalog.snapshot()).revision,
+        "legacy",
+        alice,
+      );
+      const oldProject = oldSnapshot.projects.find(({ code }) => code === "legacy-created")!;
+      expect(await store.legacyCreator(oldProject.id)).toBe(alice);
+      expect(await feature.service.projectMembership(admin, oldProject.id)).toBeNull();
+      const legacy = (await feature.service.projectMembership(alice, oldProject.id))!;
+      expect(legacy.legacy).toBe(true);
+      await expect(
+        feature.service.replaceProjectMembers(alice, oldProject.id, [bob], legacy.revision, bob),
+      ).rejects.toMatchObject({ code: "invalidInput" });
+      await feature.service.replaceProjectMembers(alice, oldProject.id, [bob], legacy.revision);
+      expect(await store.projectOwner(oldProject.id)).toBe(alice);
+      await expect(feature.require(bob, oldProject.id)).resolves.toBeUndefined();
+
+      const unresolved = (await feature.service.projectMembership(admin, p.id))!;
+      expect(unresolved.owner).toBeNull();
+      await expect(feature.service.replaceProjectMembers(admin, p.id, [], unresolved.revision)).rejects.toMatchObject({
+        code: "invalidInput",
+      });
+      await feature.service.replaceProjectMembers(admin, p.id, [], unresolved.revision, bob);
+      expect(await store.projectOwner(p.id)).toBe(bob);
       expect(await registry.inspect(new MySQLSchemaConnection(f.sql))).toEqual([]);
     } finally {
       source.close();

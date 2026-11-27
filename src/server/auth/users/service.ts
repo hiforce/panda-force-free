@@ -75,6 +75,13 @@ export class LocalAccounts {
       username === (await this.repository.settings()).administratorEmail?.email
     );
   }
+  async projectDirectory() {
+    const administrator = localAdministratorIdentity(this.auth);
+    return [
+      ...(administrator ? [administrator] : []),
+      ...(await this.repository.list()).filter(({ enabled }) => enabled).map(identity),
+    ].map(({ id, username, owner }) => ({ id, username, owner }));
+  }
   async list() {
     const administrator = this.auth.administrator;
     return {

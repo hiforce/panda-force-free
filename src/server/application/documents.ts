@@ -88,18 +88,18 @@ export async function createApplicationDocuments(
           projects.catalog,
           config.projectWorkspaceRoot,
           sharedEngine === false || config.projectWorkspaceRootConfigured,
-          async (project, creator) => {
+          async (project, creator, members) => {
             await projects.catalog.bindFiles(project.id);
-            if (creator) await contentAccess.reserveCreatorAsync(creator, project.id);
+            if (creator) await contentAccess.reserveCreatorAsync(creator, project.id, members);
           },
         )
       : new ProjectWorkspaceService(
           projects.catalog,
           config.projectWorkspaceRoot,
           sharedEngine === false || config.projectWorkspaceRootConfigured,
-          (project, creator) => {
+          (project, creator, members) => {
             projects.storage.bindFiles(project.id);
-            if (creator) contentAccess.reserveCreator(creator, project.id);
+            if (creator) contentAccess.reserveCreator(creator, project.id, members);
           },
         );
   if (!config.allowExternalDirectories) await projectWorkspaces.initialize();

@@ -1,6 +1,13 @@
-import { ContentAccessError, contentAccessOwner, contentAccessProject, type ContentAccessRole } from "../contracts.js";
+import {
+  ContentAccessError,
+  contentAccessOwner,
+  contentAccessProject,
+  type ContentAccessRole,
+  type LegacyProjectOwnership,
+} from "../contracts.js";
 import type { SQL } from "bun";
 import { mysqlInteger } from "../../database/mysql-model.js";
+import { creatorFromProjectReceipt } from "./creation-receipt.js";
 import type { ContentAccessRepository } from "./ports.js";
 const roleValue = (role: unknown): ContentAccessRole | null => {
   if (role === null || role === "reader" || role === "contributor" || role === "blocked") return role;
@@ -65,6 +72,25 @@ export class MySQLContentAccessStore implements ContentAccessRepository {
         ),
     );
   }
+  async projectOwner(project: string) {
+    return this.protect(async () => {
+      const [row] = await this.catalog
+        .sql`SELECT owner FROM panda_force_content_access_project_owners WHERE project=${project}`;
+      return row ? contentAccessOwner(row.owner) : null;
+    });
+  }
+  async projectOwners(projects: readonly string[]) {
+    if (!projects.length) return new Map<string, string>();
+    return this.protect(async () => {
+      const rows: { project: string; owner: string }[] = await this.catalog.sql.unsafe(
+        "SELECT project,owner FROM panda_force_content_access_project_owners WHERE project IN (" +
+          projects.map(() => "?").join(",") +
+          ")",
+        [...projects],
+      );
+      return new Map(rows.map(({ project, owner }) => [project, contentAccessOwner(owner)]));
+    });
+  }
   async grants(project: string) {
     return this.protect(() =>
       this.catalog.view(async () => ({
@@ -88,6 +114,7 @@ export class MySQLContentAccessStore implements ContentAccessRepository {
     role: ContentAccessRole | null,
     revision: number,
     now: number,
+    record = false,
   ) {
     contentAccessOwner(actor);
     contentAccessOwner(owner);
@@ -105,8 +132,10 @@ export class MySQLContentAccessStore implements ContentAccessRepository {
         await this.catalog
           .sql`INSERT INTO panda_force_content_access_meta(id,revision) VALUES(1,0) ON DUPLICATE KEY UPDATE id=VALUES(id)`;
         if ((await this.revision()) !== revision) throw new ContentAccessError("conflict");
+        if (role !== "contributor" && (await this.projectOwner(project)) === owner)
+          throw new ContentAccessError("forbidden");
         const previous = await this.role(owner, project);
-        if (previous === role) return this.grants(project);
+        if (!record && previous === role) return this.grants(project);
         if (role) {
           const counts = (
             await this.catalog
@@ -126,11 +155,61 @@ export class MySQLContentAccessStore implements ContentAccessRepository {
       }),
     );
   }
-  async reserveCreator(owner: string, project: string, now: number) {
+  async legacyCreator(project: string) {
+    return this.protect(() =>
+      this.catalog.view(async () => {
+        const [row] = await this.catalog
+          .sql`SELECT name,code,description FROM panda_force_projects WHERE id=${project}`;
+        if (!row) return null;
+        const receipts: { requestHash: string }[] = await this.catalog
+          .sql`SELECT requestHash FROM panda_force_project_workspace_creations WHERE projectId=${project}`;
+        if (!receipts.length) return null;
+        const candidates: { actor: string }[] = await this.catalog
+          .sql`SELECT DISTINCT actor FROM panda_force_content_access_changes WHERE project=${project} AND role='contributor' AND owner=actor`;
+        return creatorFromProjectReceipt(
+          { name: row.name, code: row.code, description: row.description },
+          receipts.map(({ requestHash }) => requestHash),
+          candidates.map(({ actor }) => actor),
+        );
+      }),
+    );
+  }
+  async reserveCreator(owner: string, project: string, now: number, members: readonly string[] = []) {
     if (!this.catalog.inTransaction || project === "personal") throw new ContentAccessError("invalidInput");
     contentAccessOwner(owner);
     contentAccessProject(project);
-    if ((await this.role(owner, project)) !== null) throw new ContentAccessError("conflict");
-    await this.set(owner, project, owner, "contributor", await this.revision(), now);
+    await this.catalog
+      .sql`INSERT INTO panda_force_content_access_project_owners(project,owner) VALUES(${project},${owner})`;
+    for (const id of new Set([owner, ...members]))
+      await this.set(owner, project, id, "contributor", await this.revision(), now);
+  }
+  async replaceMembers(
+    owner: string,
+    project: string,
+    members: readonly string[],
+    revision: number,
+    now: number,
+    legacy?: LegacyProjectOwnership,
+  ) {
+    await this.catalog.atomic(async () => {
+      const registered = await this.projectOwner(project);
+      if (registered && registered !== owner) throw new ContentAccessError("notFound");
+      if (revision !== (await this.revision())) throw new ContentAccessError("conflict");
+      if (!registered) {
+        const creator = await this.legacyCreator(project);
+        if (!legacy || (creator ? creator !== owner : !legacy.allowUnverified))
+          throw new ContentAccessError("conflict");
+        await this.catalog
+          .sql`INSERT INTO panda_force_content_access_project_owners(project,owner) VALUES(${project},${owner})`;
+        await this.set(legacy.actor, project, owner, "contributor", revision, now, true);
+      }
+      const desired = new Set([owner, ...members]);
+      for (const grant of (await this.grants(project)).grants) {
+        if (grant.role !== "blocked" && !desired.has(grant.owner))
+          await this.set(owner, project, grant.owner, null, await this.revision(), now);
+        else if (grant.role !== "blocked") desired.delete(grant.owner);
+      }
+      for (const id of desired) await this.set(owner, project, id, "contributor", await this.revision(), now);
+    });
   }
 }

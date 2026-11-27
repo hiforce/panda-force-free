@@ -6,6 +6,8 @@ export interface ContentAccessPolicy {
   administrators: ReadonlySet<string>;
 }
 export interface ContentAccessMemberships {
+  projectOwner?(project: string): string | null | Promise<string | null>;
+  projectOwners?(projects: readonly string[]): Map<string, string> | Promise<Map<string, string>>;
   role(owner: string, project: string): ContentAccessRole | null | Promise<ContentAccessRole | null>;
   roles?(
     owner: string,
@@ -26,3 +28,5 @@ export function contentAccessProject(value: unknown): string {
     throw new ContentAccessError("invalidInput");
   return value;
 }
+
+export type LegacyProjectOwnership = { actor: string; allowUnverified: boolean };

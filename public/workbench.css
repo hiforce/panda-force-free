@@ -1944,7 +1944,7 @@
   border-bottom: 1px solid var(--pf-line);
   cursor: pointer;
 }
-.project-session-option:has(input:disabled) {
+.project-session-option:not(.project-member-option):has(input:disabled) {
   opacity: 0.6;
   cursor: default;
 }
@@ -1969,6 +1969,58 @@
   font-size: 11px;
   color: var(--pf-muted);
   overflow-wrap: anywhere;
+}
+.project-member-picker {
+  min-inline-size: 0;
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid var(--pf-line);
+  border-radius: 8px;
+}
+.project-member-picker legend {
+  padding-inline: 4px;
+  color: var(--pf-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.project-member-picker .project-session-picker {
+  max-height: min(30dvh, 220px);
+  margin-block: 8px;
+}
+.project-member-picker .project-session-picker:empty,
+.project-member-picker [role="status"]:empty {
+  display: none;
+}
+.project-member-option {
+  align-items: center;
+  min-height: 44px;
+}
+.project-member-option:has(input:disabled) {
+  cursor: default;
+}
+.project-member-option input {
+  margin-top: 0;
+}
+.project-member-option:last-child {
+  border-bottom: 0;
+}
+.project-dialog:has(.project-member-picker) {
+  scroll-padding-block: 78px;
+}
+.project-dialog:has(.project-member-picker) > header,
+#projectForm footer {
+  position: sticky;
+  z-index: 1;
+  background: var(--pf-card);
+  padding-block: var(--pf-space-3);
+}
+.project-dialog:has(.project-member-picker) > header {
+  inset-block-start: -22px;
+  border-bottom: 1px solid var(--pf-line);
+}
+#projectForm footer {
+  inset-block-end: -22px;
+  border-top: 1px solid var(--pf-line);
 }
 #associationMore[hidden] {
   display: none;

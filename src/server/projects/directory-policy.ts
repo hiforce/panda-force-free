@@ -171,7 +171,7 @@ export class ProjectDirectoryPolicy {
       if (input.type === "engine/notification" && isRecord(input.payload) && !this.envelope(input.payload)) return null;
     }
     if (isRecord(input) && input.type === "project-catalog/changed")
-      return { ...input, ...this.snapshot(input as unknown as ProjectSnapshot) };
+      return { type: input.type, revision: input.revision, reloadRequired: true };
     if (this.allowExternal || !isRecord(input)) return input;
     // The local goal reader emits outside the native notification pipeline.
     if (

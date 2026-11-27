@@ -4,4 +4,5 @@ export interface ContentProject {
   name: string;
   code?: string;
   description?: string;
+  canManageMembers?: boolean;
 }

@@ -88,5 +88,21 @@
   "directoryEmptyHint": "在内容页描述一个想法，生成的文档会整理在这里。",
   "manageDirectory": "管理目录",
   "directoryHint": "按层级浏览文档、搜索标题，或打开文档继续编辑。",
-  "breadcrumb": "项目路径"
+  "breadcrumb": "项目路径",
+  "errorProjectMembers": "请选择有效的项目成员。",
+  "loadingProjectMembers": "正在加载成员…",
+  "noOtherProjectMembers": "暂无其他可选账号。",
+  "projectMembers": "项目成员",
+  "projectMembersChanged": "成员列表已更新，请重新加载并确认你的选择。",
+  "projectMembersHint": "选择可以打开此项目的成员。",
+  "projectMembersSaveFailed": "无法保存成员，请重试。",
+  "projectMembersSaved": "成员已保存。",
+  "projectMembersUnavailable": "无法加载成员列表。",
+  "projectOwner": "所有者",
+  "saveProjectMembers": "保存成员",
+  "savingProjectMembers": "正在保存成员…",
+  "legacyProjectMembersHint": "保存后，只有所有者和所选成员可以打开此项目。",
+  "enableProjectMembers": "启用并保存成员",
+  "legacyProjectOwnerHint": "无法确认原创建者，请指定项目所有者。",
+  "chooseLegacyProjectOwner": "选择所有者"
 }

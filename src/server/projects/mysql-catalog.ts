@@ -1,3 +1,4 @@
+import { ContentAccessError } from "../content-access/contracts.js";
 import type { SQL } from "bun";
 import { validSessionReference } from "../../shared/engine/session-reference.js";
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -40,7 +41,7 @@ export class MySQLProjectCatalog {
     try {
       return await work();
     } catch (error) {
-      if (error instanceof ProjectError) throw error;
+      if (error instanceof ProjectError || error instanceof ContentAccessError) throw error;
       const failure = new ProjectError(503, "projects.errorWorkspaceUnavailable");
       failure.cause = error;
       throw failure;
@@ -275,7 +276,7 @@ export class MySQLProjectCatalog {
         const binding = await this.reserve(project, input.root);
         await this
           .sql`INSERT INTO panda_force_project_workspace_creations(operationId,requestHash,projectId) VALUES(${input.operationId},${input.requestHash},${project.id})`;
-        if ((await input.reserve?.(project, input.creator)) !== undefined)
+        if ((await input.reserve?.(project, input.creator, input.members)) !== undefined)
           throw new ProjectError(503, "projects.errorWorkspaceUnavailable");
         return binding;
       }),

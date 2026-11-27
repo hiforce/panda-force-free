@@ -5,8 +5,16 @@ import { ProjectError } from "../catalog.js";
 import { ProjectWorkspaceRepository, type ProjectWorkspaceBinding } from "./repository.js";
 
 type Awaitable<T> = T | Promise<T>;
-export type ProjectMetadataReservation = (project: ProductProject, creator?: string) => undefined;
-export type AsyncProjectMetadataReservation = (project: ProductProject, creator?: string) => Awaitable<undefined>;
+export type ProjectMetadataReservation = (
+  project: ProductProject,
+  creator?: string,
+  members?: readonly string[],
+) => undefined;
+export type AsyncProjectMetadataReservation = (
+  project: ProductProject,
+  creator?: string,
+  members?: readonly string[],
+) => Awaitable<undefined>;
 export interface ProjectWorkspaceMetadata {
   get(project: string): Awaitable<ProjectWorkspaceBinding | null>;
   operation(id: string): Awaitable<{ requestHash: string; projectId: string } | null>;
@@ -19,6 +27,7 @@ export interface ProjectWorkspaceMetadata {
     requestHash: string;
     root: string;
     creator?: string;
+    members?: readonly string[];
     reserve?: AsyncProjectMetadataReservation;
   }): Awaitable<ProjectWorkspaceBinding>;
 }
@@ -60,7 +69,7 @@ export function sqliteWorkspaceMetadata(catalog: SQLiteWorkspaceCatalog): Projec
         const binding = repository.reserve(project, input.root);
         repository.recordOperation(input.operationId, input.requestHash, project.id);
         try {
-          if (input.reserve?.(project, input.creator) !== undefined)
+          if (input.reserve?.(project, input.creator, input.members) !== undefined)
             throw new ProjectError(503, "projects.errorWorkspaceUnavailable");
         } catch (error) {
           if (error instanceof ProjectError) throw error;

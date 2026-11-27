@@ -88,5 +88,21 @@
   "directoryEmptyHint": "在內容頁描述一個想法，產生的文件會整理在這裏。",
   "manageDirectory": "管理目錄",
   "directoryHint": "按層級瀏覽文件、搜尋標題，或開啟文件繼續編輯。",
-  "breadcrumb": "項目路徑"
+  "breadcrumb": "項目路徑",
+  "errorProjectMembers": "請選擇有效的項目成員。",
+  "loadingProjectMembers": "正在載入成員…",
+  "noOtherProjectMembers": "暫時沒有其他可選帳戶。",
+  "projectMembers": "項目成員",
+  "projectMembersChanged": "成員清單已更新，請重新載入並確認你的選擇。",
+  "projectMembersHint": "選擇可以開啟此項目的成員。",
+  "projectMembersSaveFailed": "無法儲存成員，請重試。",
+  "projectMembersSaved": "已儲存成員。",
+  "projectMembersUnavailable": "無法載入成員清單。",
+  "projectOwner": "擁有者",
+  "saveProjectMembers": "儲存成員",
+  "savingProjectMembers": "正在儲存成員…",
+  "legacyProjectMembersHint": "儲存後，只有擁有者和所選成員可以開啟此項目。",
+  "enableProjectMembers": "啟用並儲存成員",
+  "legacyProjectOwnerHint": "無法核實原建立者，請指定項目擁有者。",
+  "chooseLegacyProjectOwner": "選擇擁有者"
 }

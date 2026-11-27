@@ -67,10 +67,17 @@ export function bindContentAccessSettings(
         get("[data-access-grants]"),
         snapshot.grants.length
           ? snapshot.grants
-              .map(
-                (grant) =>
-                  `<li><code data-i18n-ignore>${e(grant.owner)}</code><div class="resource-actions"><span>${e(t(grant.role === "reader" ? "cli.accessReader" : grant.role === "contributor" ? "cli.accessContributor" : "cli.accessBlocked"))}</span><button type="button" class="wb-button" data-access-edit="${e(grant.owner)}" data-access-role="${grant.role}">${e(t("cli.accessEdit"))}</button></div></li>`,
-              )
+              .map((grant) => {
+                const creator = grant.owner === snapshot.projectOwner;
+                const label = creator
+                  ? "projects.projectOwner"
+                  : grant.role === "reader"
+                    ? "cli.accessReader"
+                    : grant.role === "contributor"
+                      ? "cli.accessContributor"
+                      : "cli.accessBlocked";
+                return `<li><code data-i18n-ignore>${e(grant.owner)}</code><div class="resource-actions"><span>${e(t(label))}</span>${creator ? "" : `<button type="button" class="wb-button" data-access-edit="${e(grant.owner)}" data-access-role="${grant.role}">${e(t("cli.accessEdit"))}</button>`}</div></li>`;
+              })
               .join("")
           : `<li>${e(t("cli.accessNoOverrides"))}</li>`,
       );

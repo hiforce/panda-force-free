@@ -9,10 +9,11 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
   const pendingAssignments = new Map();
   const removedHistorySessions = new Set();
   const historySummaries = new Map();
-  let invalidatedRevision = -1;
+  let invalidation = 0;
   function apply(value) {
     if (value?.reloadRequired === true && Number.isSafeInteger(value.revision)) {
-      invalidatedRevision = Math.max(invalidatedRevision, value.revision);
+      invalidation++;
+      directoryIndex.invalidate();
       void load().catch(() => {});
       return;
     }
@@ -44,6 +45,7 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
   }
   /** @returns {Promise<void>} */
   function load() {
+    const requestedAt = invalidation;
     let succeeded = false;
     return (loading ||= read("/api/projects")
       .then((value) => {
@@ -52,7 +54,7 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
       })
       .finally(() => {
         loading = null;
-        if (succeeded && snapshot.revision < invalidatedRevision) void load().catch(() => {});
+        if (succeeded && requestedAt !== invalidation) void load().catch(() => {});
       }));
   }
   function sessions() {
@@ -107,6 +109,17 @@ export function createProjectCatalog({ state, onChange = () => {} }) {
       return result.projects.find((p) =>
         fields.id ? p.id === fields.id : p.code === fields.code.trim().toLowerCase(),
       );
+    },
+    projectMembers: (projectId) =>
+      read("/api/projects/members" + (projectId ? "?" + new URLSearchParams({ project: projectId }) : "")),
+    async saveProjectMembers(projectId, revision, members, ownerId) {
+      const result = await read("/api/projects/members?" + new URLSearchParams({ project: projectId }), {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ revision, members, ...(ownerId ? { ownerId } : {}) }),
+      });
+      void load().catch(() => {});
+      return result;
     },
     assign: (projectId, sessionIds, revision) =>
       mutate("/api/projects/assign", { projectId, sessionIds, ...(revision !== undefined ? { revision } : {}) }),
