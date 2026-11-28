@@ -420,7 +420,7 @@
     {
       "path": "panda-docs/bun.lock",
       "bytes": 337234,
-      "sha256": "7d5a0f6aa898de6ab895b3b974ba342a32abed6c2f4456870ccce26f9fae3765",
+      "sha256": "aee5fe263b46108cfc0251081af80d84baba40d12d21b7af048b6e9d9595d77f",
       "mode": "100644"
     },
     {
@@ -24988,5 +24988,5 @@
       "mode": "100644"
     }
   ],
-  "contentSha256": "28c88f96ca96ed9de4a9c653c4be4f31c09f728fa1526d737891f56842377ddc"
+  "contentSha256": "76ff46ac1f9bf33625f9afdc106634fd663c3b272a9d7e8bb145eb9c7a1b885a"
 }
