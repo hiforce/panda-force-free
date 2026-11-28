@@ -7,7 +7,7 @@ import type {
 import { applicationRunFailure } from "../../../shared/engine/application-failure.js";
 import type { CodexConnection, CodexTransport, CodexTransportFactory } from "../codex-transport.js";
 import { createCodexBridge } from "../../bridge/codex-process.js";
-import { codexApplicationThread } from "./codex-policy.js";
+import { codexApplicationThread, codexCreationToolNamespace } from "./codex-policy.js";
 import { codexApplicationCalls } from "./codex-calls.js";
 import { ActiveRunBudget, type RunBudgetClock } from "../active-budget.js";
 import { rememberApplicationSession } from "./sessions.js";
@@ -56,6 +56,7 @@ export function createCodexApplicationEngine(
         input.tools.some((tool) => !/^[a-z][a-z0-9_]{1,63}$/.test(tool.name) || !isRecord(tool.inputSchema))
       )
         throw new Error("Invalid application engine input");
+      const namespace = options.purpose === "creation" ? codexCreationToolNamespace : undefined;
       let stopping = false,
         closing = false,
         scope: ApplicationRunScope | null = null,
@@ -88,6 +89,7 @@ export function createCodexApplicationEngine(
         },
         calls = codexApplicationCalls({
           tools: input.tools,
+          namespace,
           callbacks: {
             ...callbacks,
             async call(call) {
@@ -236,7 +238,13 @@ export function createCodexApplicationEngine(
           model ||= applicationDefaultModel(catalog);
           effort = applicationDefaultEffort(catalog, model);
         }
-        const policy = codexApplicationThread(options.scratchDirectory, input.instructions, input.tools, model);
+        const policy = codexApplicationThread(
+          options.scratchDirectory,
+          input.instructions,
+          input.tools,
+          model,
+          namespace,
+        );
         const started = await transport.request(
           input.sessionId ? "thread/resume" : "thread/start",
           input.sessionId

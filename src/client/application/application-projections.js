@@ -78,7 +78,6 @@ export function assembleApplicationProjections({
         workspacePort.applySelectedProjectWorkspace();
         workspacePort.syncProjectControl();
       },
-      accountMenu: (force) => accountPort.toggleAccountMenu(force),
       item: ({ item, turnId, root, live }) => messagesPort.upsertItem(item, turnId, root, live),
     });
   }

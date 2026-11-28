@@ -8,6 +8,9 @@ export const CLI_CAPABILITIES = [
   "knowledge:approve",
   "memory:read",
   "memory:organize",
+  "media:read",
+  "media:connect",
+  "media:admin",
 ] as const;
 export type CliCapability = (typeof CLI_CAPABILITIES)[number];
 export type CliClientKind = "codex" | "claude" | "cli";

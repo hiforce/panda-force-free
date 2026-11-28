@@ -2,7 +2,7 @@ import { cliOutput, cliErrorText } from "./output.js";
 import { pandaIntegration } from "./integrations.js";
 import type { Readable, Writable } from "node:stream";
 import { CLI_LOCAL_COMMANDS } from "../shared/cli/local-commands.js";
-import { CLI_COMMANDS } from "../shared/cli/commands.js";
+import { CLI_COMMANDS, cliCommandFlag } from "../shared/cli/commands.js";
 import { cliCommandSchema } from "../shared/cli/schema.js";
 import { CliError, cliObject } from "../shared/cli/contracts.js";
 import { cliArguments, knownFlags, cliFlagName } from "./arguments.js";
@@ -12,6 +12,7 @@ import { servePandaMcp } from "./mcp.js";
 import { CLI_VERSION } from "../shared/cli/version.js";
 import { pandaCliManual } from "../shared/cli/manual.js";
 import { runMemoryCommand } from "./memory.js";
+import { creationCallback } from "./creation-callback.js";
 import type { MemoryOrganizationCli } from "../shared/project-memory/organization.js";
 
 async function boundedInput(input: Readable) {
@@ -47,6 +48,19 @@ export async function runPandaCli(
     const { words, flags } = cliArguments(argv);
     const requested = words.join(" "),
       command = flags.help ? "help" : flags.version ? "version" : requested;
+    if (command === "creation callback") {
+      if (flags.stdin !== true || flags.json !== true || Object.keys(flags).length !== 2)
+        throw new CliError("invalidInput");
+      const input = await boundedInput(io.input);
+      let value: unknown;
+      try {
+        value = JSON.parse(input);
+      } catch {
+        throw new CliError("invalidInput");
+      }
+      io.output.write(JSON.stringify(await creationCallback(value)) + "\n");
+      return 0;
+    }
     if (words[0] === "memory" && command === requested && ["memory context", "memory submit"].includes(command)) {
       const result = await runMemoryCommand(command, flags, io.input, memory);
       io.output.write(json ? JSON.stringify(result) + "\n" : cliOutput(result));
@@ -94,6 +108,10 @@ export async function runPandaCli(
       knownFlags(flags, ["file"]);
       if (typeof flags.file !== "string") throw new CliError("invalidInput");
       result = await profiles.register(profile, await inputFile(flags.file));
+    } else if (command === "auth setup") {
+      knownFlags(flags, ["base-url", "api-key-stdin"]);
+      if (typeof flags["base-url"] !== "string" || flags["api-key-stdin"] !== true) throw new CliError("invalidInput");
+      result = await client.setup(flags["base-url"], await boundedInput(io.input));
     } else if (command === "auth login") {
       knownFlags(flags, ["api-key-stdin"]);
       if (flags["api-key-stdin"] !== true) throw new CliError("invalidInput");
@@ -125,7 +143,8 @@ export async function runPandaCli(
     } else {
       const spec = CLI_COMMANDS.find((spec) => spec.words.join(" ") === command);
       if (!spec) throw new CliError("notFound", 404);
-      knownFlags(flags, [...spec.fields.map(cliFlagName), "input"]);
+      const secret = "stdinSecret" in spec ? spec.stdinSecret : undefined;
+      knownFlags(flags, [...spec.fields.map((field) => cliCommandFlag(spec, field)), ...(secret ? [] : ["input"])]);
       let args: Record<string, unknown>;
       if (typeof flags.input === "string") {
         if (spec.fields.some((field) => cliFlagName(field) in flags)) throw new CliError("invalidInput");
@@ -133,7 +152,9 @@ export async function runPandaCli(
       } else {
         args = {};
         for (const field of spec.fields)
-          if (cliFlagName(field) in flags) {
+          if (field === secret) {
+            if (flags[cliCommandFlag(spec, field)] === true) args[field] = await boundedInput(io.input);
+          } else if (cliFlagName(field) in flags) {
             const value = flags[cliFlagName(field)];
             args[field] =
               ["ids", "contentKinds"].includes(field) && typeof value === "string"

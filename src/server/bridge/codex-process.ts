@@ -1,9 +1,12 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import type { Socket } from "node:net";
+import { StringDecoder } from "node:string_decoder";
 import { WebSocket, type RawData } from "ws";
 import { errorMessage } from "../../shared/errors.js";
 import { nativeEnvelope } from "../protocol/native.js";
 import { errorCode } from "./../../shared/errors.js";
 import { SharedWebSocket, sendSharedMessage } from "./shared-websocket.js";
+import { nativeProcessLaunchSocket, openNativeProcessSocket } from "../engines/native-process.js";
 
 const REQUEST_TIMEOUT_MS = 30000;
 const RESTART_DELAY_MS = 1000;
@@ -51,9 +54,12 @@ export function createCodexBridge({
   onConnected,
   onDisconnected,
 }: CodexTransportOptions): CodexTransport {
+  const relay = connection.mode === "shared" ? undefined : nativeProcessLaunchSocket();
   let seq = 1;
   let codex: ChildProcessWithoutNullStreams | null = null;
   let codexSocket: WebSocket | null = null;
+  let codexRelay: Socket | null = null;
+  let codexRelayReady = false;
   let stdoutBuffer = "";
   let connected = false;
   let restartTimer: ReturnType<typeof setTimeout> | null = null;
@@ -63,7 +69,7 @@ export function createCodexBridge({
 
   function start() {
     if (isShuttingDown()) return;
-    if (codexSocket) return;
+    if (codexSocket || codexRelay) return;
     if (codex && codex.exitCode === null) return;
     if (restartTimer) clearTimeout(restartTimer);
     restartTimer = null;
@@ -114,7 +120,31 @@ export function createCodexBridge({
       });
       return;
     }
-    const child = spawn("codex", ["app-server", "--stdio", ...(processArguments ?? [])], {
+    const args = ["app-server", "--stdio", ...(processArguments ?? [])];
+    if (relay) {
+      const decoder = new StringDecoder("utf8");
+      const socket = openNativeProcessSocket(
+        relay,
+        { command: "codex", args, cwd: defaultCwd, env: processEnvironment ?? process.env },
+        () => {
+          codexRelayReady = true;
+          void initialize().catch(() => socket.destroy());
+        },
+        (data) => receiveStdio(decoder.write(data)),
+      );
+      codexRelay = socket;
+      connected = false;
+      stdoutBuffer = "";
+      socket.on("error", () => socket.destroy());
+      socket.once("close", () => {
+        if (codexRelay !== socket) return;
+        codexRelay = null;
+        codexRelayReady = false;
+        handleDisconnect(null, null);
+      });
+      return;
+    }
+    const child = spawn("codex", args, {
       cwd: defaultCwd,
       env: processEnvironment ?? process.env,
       stdio: ["pipe", "pipe", "pipe"],
@@ -124,21 +154,7 @@ export function createCodexBridge({
     connected = false;
     stdoutBuffer = "";
     child.stdout.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => {
-      stdoutBuffer += chunk;
-      for (;;) {
-        const pos = stdoutBuffer.indexOf("\n");
-        if (pos < 0) break;
-        const line = stdoutBuffer.slice(0, pos).trim();
-        stdoutBuffer = stdoutBuffer.slice(pos + 1);
-        if (!line) continue;
-        try {
-          handleMessage(JSON.parse(line));
-        } catch (error) {
-          console.error("[panda-force] invalid app-server JSON:", line, error);
-        }
-      }
-    });
+    child.stdout.on("data", receiveStdio);
     child.stderr.setEncoding("utf8");
     child.stderr.on("data", (data) => console.error("[codex app-server]", String(data).trimEnd()));
     child.on("error", (error) => {
@@ -158,6 +174,22 @@ export function createCodexBridge({
     });
   }
 
+  function receiveStdio(chunk: string) {
+    stdoutBuffer += chunk;
+    for (;;) {
+      const pos = stdoutBuffer.indexOf("\n");
+      if (pos < 0) break;
+      const line = stdoutBuffer.slice(0, pos).trim();
+      stdoutBuffer = stdoutBuffer.slice(pos + 1);
+      if (!line) continue;
+      try {
+        handleMessage(JSON.parse(line));
+      } catch (error) {
+        console.error("[panda-force] invalid app-server JSON:", line, error);
+      }
+    }
+  }
+
   function handleDisconnect(code: number | null, signal: string | null) {
     connected = false;
     for (const item of pending.values()) item.reject(disconnectedError(code));
@@ -173,6 +205,10 @@ export function createCodexBridge({
     // A shared daemon belongs to all clients, including SSH. Only detach PandaForce.
     if (codexSocket) {
       codexSocket.terminate();
+      return;
+    }
+    if (codexRelay) {
+      codexRelay.destroy();
       return;
     }
     const child = codex;
@@ -196,7 +232,8 @@ export function createCodexBridge({
       sendSharedMessage(codexSocket, message);
       return;
     }
-    codex!.stdin.write(JSON.stringify(message) + "\n");
+    if (codexRelay && !codexRelayReady) throw new Error("Codex app-server is connecting");
+    (codexRelay ?? codex!.stdin).write(JSON.stringify(message) + "\n");
   }
 
   function requestOnce(method: string, params: Record<string, unknown>, timeoutMs: number) {
@@ -311,8 +348,8 @@ export function createCodexBridge({
     get connected() {
       return connected;
     },
-    /** True once neither a child process nor a shared socket remains. */
-    fullyStopped: () => !codex && !codexSocket,
+    /** True once the transport has released its child and sockets. */
+    fullyStopped: () => !codex && !codexSocket && !codexRelay,
     cancelRestart() {
       if (restartTimer) clearTimeout(restartTimer);
       restartTimer = null;

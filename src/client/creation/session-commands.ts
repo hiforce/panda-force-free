@@ -111,6 +111,12 @@ export class CreationSessionCommands {
               })),
         ]);
         if (epoch !== this.state.epoch) return;
+        const output = !update ? (this.state.output ?? task?.outputType ?? target?.outputType) : undefined;
+        const media = !update ? (this.state.media ?? (this.state.output ? undefined : task?.media)) : undefined;
+        if ((output === "image" || output === "slides") && !media)
+          throw new Error(this.port.t("creation.mediaRequired"));
+        if (media?.source === "harness" && !this.state.runtime?.creationCapabilities?.nativeImage)
+          throw new Error(this.port.t("creation.mediaUnavailable"));
         this.state.pending = {
           id,
           taskId: update?.id || task?.id || route.id || undefined,
@@ -128,6 +134,8 @@ export class CreationSessionCommands {
                   ...(control.effort ? { effort: control.effort } : {}),
                 }),
             ...target,
+            ...(output ? { outputType: output } : {}),
+            ...(media ? { media } : {}),
           },
         };
         this.port.persist();

@@ -2,7 +2,7 @@
 title: Package and publish manually
 ---
 
-Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current public release is `hiforceai/panda-force:0.2.3` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
+Maintainers build a tested source export and push versioned images to the selected registry. End users should pull a published image; local builds are a separate source-development path. The current development image is `hiforceai/panda-force:0.2.4` for Linux amd64. Application builds reuse the matched, digest-pinned public Rocky creative build/runtime bases. Verify a release digest after pushing and test a pristine container before announcing it.
 
 ```bash
 PANDA_FORCE_IMAGE=hiforceai/panda-force:VERSION
@@ -38,6 +38,15 @@ bun scripts/release/prepare-update.mjs \
 ```
 
 Three-way application preserves independent public changes and stops on conflicts. The tool neither commits nor pushes. Do not merge private Git branches into the public repository. New commercial material in an existing filename still needs explicit review; a path whitelist cannot make that licensing decision.
+
+## 0.2.4
+
+The `develop` branch uses the Linux amd64 image `hiforceai/panda-force:0.2.4`. [Install](installation.md) or [upgrade](updates.md).
+
+- Configure API and CLI creation executors for image, audio, video and text. Manage supported provider credentials separately and reuse them across executors.
+- Register storage connections independently, assign new originals to a saved destination, and browse and download files from a dedicated tab. On mobile, storage actions use compact icon buttons.
+- Open Executors, Remote and Storage from the sidebar. The Settings shortcut, account menu and browser encryption-key page have also been updated.
+- This image reuses the 0.2.3 public build and runtime bases.
 
 ## 0.2.3
 

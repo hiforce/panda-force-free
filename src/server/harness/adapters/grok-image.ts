@@ -1,9 +1,11 @@
 import { constants } from "node:fs";
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, open, readFile, readdir, realpath, rename, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { HarnessError } from "../../../shared/harness/contracts.js";
 import type { ApplicationImageRenderer } from "../../engines/application-tools/runtime-port.js";
+import { captureNativeProcess, nativeProcessLaunchSocket, nativeProcessScratch } from "../../engines/native-process.js";
 import { brokerCredentialSource, credentialLease } from "../auth/remote.js";
 import { accessCredentials } from "../auth/snapshot.js";
 import type { HarnessCredentialLease } from "../auth/contracts.js";
@@ -36,6 +38,7 @@ const requirements = [
   "",
 ].join("\n");
 const imageLimit = 32 * 1024 * 1024;
+const execute = promisify(execFile);
 
 async function readGeneratedImage(home: string) {
   const images = (await readdir(home, { recursive: true, withFileTypes: true })).filter(
@@ -70,11 +73,30 @@ export function grokImageRenderer(
     provider: "grok-build",
     maxReferences: 0,
     maxReferenceBytes: 0,
+    async version() {
+      const args = ["--no-auto-update", "--version"],
+        env = { PATH: environment.PATH, GROK_DISABLE_AUTOUPDATER: "1" },
+        relay = nativeProcessLaunchSocket();
+      const stdout = relay
+        ? (
+            await captureNativeProcess(
+              relay,
+              { command: profile.command, args, env, cwd: await nativeProcessScratch() },
+              Buffer.alloc(0),
+              2048,
+              AbortSignal.timeout(3500),
+            )
+          ).toString("utf8")
+        : (await execute(profile.command, args, { env, timeout: 3500, maxBuffer: 2048 })).stdout;
+      const version = /^grok (\d+\.\d+\.\d+)(?: \([a-f0-9]+\))?$/i.exec(stdout.trim())?.[1];
+      if (!version) throw new HarnessError("invalidProtocol", 503);
+      return version;
+    },
     async render(prompt, references, signal) {
       if (references.length) throw new HarnessError("invalidInput");
       const execution = AbortSignal.any([signal, AbortSignal.timeout(360_000)]);
       execution.throwIfAborted();
-      const root = await realpath(await mkdtemp(join(tmpdir(), "pf-grok-image-")));
+      const root = await realpath(await mkdtemp(join(await nativeProcessScratch(), "pf-grok-image-")));
       const home = join(root, "home"),
         cwd = join(root, "workspace");
       let lease: HarnessCredentialLease | undefined, transport: HarnessStdioTransport | undefined;

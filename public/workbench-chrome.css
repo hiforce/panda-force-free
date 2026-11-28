@@ -148,6 +148,10 @@
 .chrome-option:hover {
   background: var(--pf-soft);
 }
+.chrome-option:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
 .chrome-option.selected {
   background: color-mix(in srgb, var(--pf-accent) 7%, var(--pf-card));
 }
@@ -227,6 +231,9 @@
   }
   .workbench-chrome {
     gap: 2px;
+  }
+  .chrome-profile {
+    margin-inline-start: 0;
   }
   .chrome-control,
   .chrome-menu-close,

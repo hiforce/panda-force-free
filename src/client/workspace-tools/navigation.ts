@@ -5,6 +5,7 @@ import { requireElement } from "../dom.js";
 import { localizeAttribute, localizeText, messageAttributes, messageHtml, setMessageHtml } from "../i18n.js";
 import { STORAGE_KEYS, storage } from "../storage.js";
 import { createRemoteWorkspace } from "./remote-workspace.js";
+import { createStorageWorkspace } from "./storage-workspace.js";
 import { createWorkspaceToolRegistry, type WorkspaceTool } from "./registry.js";
 
 type ToolLink = { id: string; name: string; href: string };
@@ -32,6 +33,13 @@ export function createWorkspaceToolNavigation(
       icon: "terminal",
       available: () => !principal().restricted,
       create: createRemoteWorkspace,
+    },
+    {
+      id: "storage",
+      label: "storageConnections.title",
+      icon: "database",
+      available: () => !principal().restricted,
+      create: createStorageWorkspace,
     },
   ]);
   const nav = document.createElement("nav");
@@ -63,6 +71,7 @@ export function createWorkspaceToolNavigation(
   function render(id = selected) {
     selected = id;
     const menu =
+      `<a class="workspace-tool-executors" href="/settings/media-executors">${codexIcon("plug")}<span>${msg("creation.mediaSettings")}</span></a>` +
       registry
         .all()
         .map(

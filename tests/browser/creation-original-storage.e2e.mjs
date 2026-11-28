@@ -101,6 +101,34 @@ try {
           `[data-discovery-grid] [data-skill-id="${kind === "image" ? "science-illustration" : "short-film-storyboard"}"]`,
         )
         .click();
+      await page.locator("[data-creation-output]").selectOption(kind);
+      if (kind === "image") {
+        const { runtime } = await api("/api/model-catalog?scope=creation&runtimeId=codex");
+        assert.equal(runtime.protocol, "codex-app-server/model-list");
+        assert.equal(runtime.creationCapabilities.nativeImageStatus, "available");
+        const options = await api("/api/personal/document-creations/options");
+        const missingSource = await context.request.post(app.base + "/api/personal/document-creations", {
+          data: {
+            id: randomUUID(),
+            projectId: "personal",
+            treeVersion: 0,
+            parentId: null,
+            profileId: options.defaultProfileId,
+            runtimeId: "codex",
+            model: "gpt-fixture",
+            locale,
+            prompt: "Generate a history illustration",
+            selections: [],
+            outputType: "image",
+          },
+          headers: { Origin: app.base },
+        });
+        assert.equal(missingSource.status(), 409);
+        assert.equal((await missingSource.json()).code, "runtimeSelectionUnavailable");
+        const source = page.locator("[data-media-executor]");
+        await source.locator('option[value="harness"]').waitFor({ state: "attached" });
+        await source.selectOption("harness");
+      }
       await page
         .locator("#prompt")
         .fill(
@@ -126,23 +154,23 @@ try {
       if (kind === "video")
         assert(detail.asset.resources.length > 0, "Composition source must be retained with the video");
       await page.locator("[data-creation-open]").click();
-      const dialog = page.locator(".creative-asset-dialog[open]");
-      await dialog.locator("a[download]").first().waitFor();
+      await page.waitForURL((url) => url.searchParams.get("asset") === task.artifact.assetId);
+      const viewer = page.locator("[data-personal-reader]:visible");
+      const originalLink = viewer.locator("a[download]").first();
+      await originalLink.waitFor();
       if (kind === "image")
         await waitFor(() =>
-          dialog
+          viewer
             .locator("img[data-asset-native]")
             .evaluate((element) => element.complete && element.naturalWidth === 256),
         );
       else
         await waitFor(() =>
-          dialog
+          viewer
             .locator("video[data-asset-native]")
             .evaluate((element) => element.readyState > 0 && element.videoHeight === 1280 && element.duration === 6),
         );
-      const content = await context.request.get(
-        app.base + (await dialog.locator("a[download]").first().getAttribute("href")),
-      );
+      const content = await context.request.get(app.base + (await originalLink.getAttribute("href")));
       assert(content.ok());
       const original = await content.body();
       if (kind === "image") assert.deepEqual(original, image);
@@ -151,7 +179,7 @@ try {
         assert(original.length > 10000);
       }
       const download = page.waitForEvent("download");
-      await dialog.locator("a[download]").first().click();
+      await originalLink.click();
       assert.deepEqual(await readFile(await (await download).path()), original);
       await page.screenshot({ path: `${out}/${kind}-${width}.png` });
       assert.deepEqual([...origins], [app.base]);

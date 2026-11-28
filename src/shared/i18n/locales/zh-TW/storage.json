@@ -49,5 +49,14 @@
   "repairSave": "儲存替換憑證",
   "chooseKinds": "請至少選取一種檔案類型。",
   "credentialsRequired": "請同時填寫存取金鑰 ID 及秘密存取金鑰。",
-  "requiredFields": "請填寫連線名稱、儲存貯體及區域。"
+  "requiredFields": "請填寫連線名稱、儲存貯體及區域。",
+  "placementTitle": "原件儲存規則",
+  "destination": "儲存位置",
+  "manageConnections": "管理儲存連線",
+  "missingDestination": "此連線無法使用",
+  "addDestinationHint": "在「儲存」新增 S3 相容連線後，即可在此選擇雲端儲存位置。",
+  "destinationKinds": "儲存至所選連線的檔案類型",
+  "otherKindsLocal": "未勾選的檔案類型會儲存在應用程式的本機空間。",
+  "savePlacement": "儲存規則",
+  "drivePlacementHint": "Google Drive 連線可在「儲存」管理。原件支援應用程式本機空間或 S3 相容儲存。"
 }

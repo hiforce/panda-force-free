@@ -1,3 +1,5 @@
+import type { CreationMediaBinding, CreationMediaChoice } from "../../shared/creation/media-executors.js";
+import { bindingChoice, requestedMedia } from "./media-executors/selection.js";
 import type { CreationResult } from "./ports.js";
 import type { CreationInputs, CreationEngineProfile, CreationRequest } from "./input.js";
 import type { SkillCapture } from "../../shared/skills/registry.js";
@@ -14,6 +16,7 @@ export interface CreationSubmissionAuthority {
   /** Called again after asynchronous capture and staging; project existence is not a durable permission grant. */
   authorize(owner: string, projectId: string): Promise<void>;
   target(owner: string, request: CreationRequest): Promise<void>;
+  media?(owner: string, profile: CreationEngineProfile, selection: CreationMediaChoice): Promise<CreationMediaBinding>;
   revision?: import("./ports.js").CreationDocumentRevisions["read"];
   original?(
     owner: string,
@@ -63,6 +66,7 @@ export class CreationSubmissions {
         locale: task.spec.target.locale,
         prompt: input.prompt,
         ...(input.outputType === undefined ? {} : { outputType: input.outputType }),
+        ...(input.media ? { media: bindingChoice(input.media) } : {}),
         ...(input.dialogue ? { dialogue: true } : {}),
         profileId: input.profile.id,
         ...(input.profile.runtimeId ? { runtimeId: input.profile.runtimeId } : {}),
@@ -90,6 +94,7 @@ export class CreationSubmissions {
         "effort",
         "attachments",
         "outputType",
+        "media",
         "dialogue",
       ]),
       task = await this.tasks.find(owner, creationUuid(id));
@@ -129,6 +134,13 @@ export class CreationSubmissions {
       ...((request.outputType ?? input.outputType) === undefined
         ? {}
         : { outputType: request.outputType ?? input.outputType }),
+      ...(request.media !== undefined
+        ? { media: request.media }
+        : input.media &&
+            requestedMedia(String(request.outputType ?? input.outputType)) === input.media.kind &&
+            (request.runtimeId === undefined || request.runtimeId === input.profile.runtimeId)
+          ? { media: bindingChoice(input.media) }
+          : {}),
       ...(request.model === undefined ? {} : { model: request.model }),
       ...(request.effort === undefined ? {} : { effort: request.effort }),
       ...(attachments === undefined ? {} : { attachments }),
@@ -173,6 +185,7 @@ export class CreationSubmissions {
     let document: import("../../shared/documents/contracts.js").DocumentRevisionReference | undefined;
     let documentProjectId: string | undefined, documentTreeVersion: number | undefined;
     let recoveredProfile: CreationEngineProfile | undefined;
+    let recoveredMedia: CreationMediaBinding | undefined, recoveredPolicy: true | undefined;
     if (request.previousTaskId) {
       const task = await this.tasks.find(owner, request.previousTaskId);
       if (!task || task.spec.projectId !== request.projectId) throw new CreationError("notFound");
@@ -219,7 +232,11 @@ export class CreationSubmissions {
         ].slice(-5);
       }
       documentFileLineage = input.documentFileLineage;
-      if (recovery) recoveredProfile = input.profile;
+      if (recovery) {
+        recoveredProfile = input.profile;
+        recoveredMedia = input.media;
+        recoveredPolicy = input.mediaPolicy;
+      }
       let source = task,
         saved = source.artifact ?? (await this.savedArtifact?.(owner, source.spec.id));
       for (let depth = 0; !saved && !source.spec.target.document && depth < 32; depth++) {
@@ -260,6 +277,14 @@ export class CreationSubmissions {
     if (recoveredProfile && recoveredProfile.engineId !== permitted.engineId) throw new CreationError("unavailable");
     const profile = structuredClone(recoveredProfile || permitted);
     if (profile.id !== request.profileId) throw new CreationError("unavailable");
+    const mediaPolicy = recoveryFrom ? recoveredPolicy : this.authority.media ? true : undefined;
+    let media = recoveredMedia;
+    if (!recoveryFrom && this.authority.media) {
+      const kind = requestedMedia(request.outputType);
+      if ((kind === "image" && !request.media) || (request.media && request.media.kind !== kind))
+        throw new CreationError("runtimeSelectionUnavailable");
+      if (request.media) media = await this.authority.media(owner, profile, request.media);
+    }
     const skills = await this.authority.capture(owner, request, signature);
     const outputType =
       request.outputType === "auto" && skills.composition.outputType === "image" ? "image" : request.outputType;
@@ -273,6 +298,8 @@ export class CreationSubmissions {
       requestDigest: signature,
       prompt: request.prompt,
       ...(outputType === undefined ? {} : { outputType }),
+      ...(mediaPolicy ? { mediaPolicy } : {}),
+      ...(media ? { media } : {}),
       ...(request.dialogue ? { dialogue: true } : {}),
       ...(discussion?.length ? { discussion } : {}),
       profile,

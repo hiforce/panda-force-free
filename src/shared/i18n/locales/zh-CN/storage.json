@@ -49,5 +49,14 @@
   "repairSave": "保存替换凭据",
   "chooseKinds": "请至少选择一种文件类型。",
   "credentialsRequired": "请同时填写访问密钥 ID 和秘密访问密钥。",
-  "requiredFields": "请填写连接名称、存储桶和区域。"
+  "requiredFields": "请填写连接名称、存储桶和区域。",
+  "placementTitle": "原件存放规则",
+  "destination": "存放位置",
+  "manageConnections": "管理存储连接",
+  "missingDestination": "此连接不可用",
+  "addDestinationHint": "在「存储」添加 S3 兼容连接后，即可在这里选择云端目的地。",
+  "destinationKinds": "存到所选连接的文件类型",
+  "otherKindsLocal": "未勾选的文件类型存到应用本地。",
+  "savePlacement": "保存存放规则",
+  "drivePlacementHint": "Google Drive 连接可在「存储」管理。原件支持应用本地或 S3 兼容存储。"
 }

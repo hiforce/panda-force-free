@@ -196,6 +196,7 @@ export function applicationRuntimes(options: {
         provider: plugin.provider,
         maxReferences: plugin.maxReferences,
         maxReferenceBytes: plugin.maxReferenceBytes,
+        ...(plugin.version ? { version: () => plugin.version!() } : {}),
         async render(prompt, references, signal) {
           const active = await options.registry.require(await applicationPrincipal(owner, runtimeId), runtimeId);
           if (active.profileId !== runtime.profileId || !options.registry.allowsApplication(active, "creation"))

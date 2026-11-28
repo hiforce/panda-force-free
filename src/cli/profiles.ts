@@ -57,11 +57,21 @@ export class CliProfiles {
   }
   async registration(profile: string) {
     try {
-      const dir = this.directory(profile);
+      const registration = await this.savedRegistration(profile);
+      if (registration) return registration;
+    } catch {
+      // Preserve the public authentication error for unavailable local credentials.
+    }
+    throw new CliError("authenticationRequired", 401);
+  }
+  async savedRegistration(profile: string) {
+    const dir = this.directory(profile);
+    try {
       for (const path of [dirname(dirname(dir)), dirname(dir), dir]) await assertPrivateDirectory(path);
       return cliRegistration(await readPrivateJson(join(dir, "registration.json"), true));
-    } catch {
-      throw new CliError("authenticationRequired", 401);
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return undefined;
+      throw error;
     }
   }
   async login(profile: string, apiKey: string) {

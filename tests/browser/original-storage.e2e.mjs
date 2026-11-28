@@ -31,7 +31,7 @@ try {
       await app.signIn(context);
       await context.addInitScript(
         ({ locale, theme }) => {
-          if (location.protocol.startsWith("http")) {
+          if (window === window.top && location.protocol.startsWith("http")) {
             localStorage.setItem("panda-force-locale", locale);
             localStorage.setItem("panda-force-theme", theme);
           }
@@ -58,6 +58,18 @@ try {
         created = await s3.request("PUT", "/" + bucket);
       assert.equal(created.status, 200);
       await created.body?.cancel();
+      const connectionId = randomUUID();
+      await api("/api/system/storage-connections", {
+        id: connectionId,
+        provider: "s3",
+        name: "Originals " + locale,
+        bucket,
+        region: "us-east-1",
+        endpoint: s3.endpoint,
+        prefix: "generated",
+        forcePathStyle: true,
+        ...s3.credentials,
+      });
       const page = await context.newPage(),
         errors = [],
         origins = new Set();
@@ -81,7 +93,7 @@ try {
       await page.locator('[data-settings-page="storage"]').click();
       const panel = page.locator(".original-storage-settings"),
         field = (name) => panel.locator(`[data-storage-field="${name}"]`);
-      await field("mode").waitFor();
+      await field("profileId").waitFor();
       const sheet = await context.request.get(app.base + "/original-storage.css");
       assert.equal(sheet.status(), 200);
       assert.match(sheet.headers()["content-type"], /text\/css/);
@@ -94,31 +106,20 @@ try {
         "0px",
       );
       assert.equal(await page.locator("[data-database-settings]").count(), 1);
-      await field("mode").selectOption("s3");
-      await field("profileId").selectOption("");
-      await field("label").fill("Originals " + locale);
-      await field("bucket").fill(bucket);
-      await field("region").fill("us-east-1");
-      await field("prefix").fill("generated");
-      const advanced = panel.locator('[data-storage-detail="connection"]');
-      if (!(await advanced.evaluate((element) => element.open))) await advanced.locator("summary").click();
-      await field("endpoint").fill(s3.endpoint);
-      await field("forcePathStyle").check();
-      const keys = panel.locator('[data-storage-detail="credentials"]');
-      if (!(await keys.evaluate((element) => element.open))) await keys.locator("summary").click();
-      await panel.locator('[data-storage-form="configure"] [data-storage-save]').click();
-      const validation = panel.locator('[data-storage-inline-notice="configure"]');
-      assert((await validation.innerText()).trim().length > 0);
       assert.equal(
-        await validation.evaluate((element) => {
-          const rect = element.getBoundingClientRect();
-          return rect.bottom > 56 && rect.top < innerHeight;
-        }),
-        true,
+        await panel.locator('[type="password"],[data-storage-field="bucket"],[data-storage-field="endpoint"]').count(),
+        0,
       );
-      assert.equal(await field("bucket").inputValue(), bucket);
-      await field("accessKeyId").fill(s3.credentials.accessKeyId);
-      await field("secretAccessKey").fill(s3.credentials.secretAccessKey);
+      assert.equal(await panel.locator('a[href="/tools/storage"]').count(), 1);
+      await field("profileId").selectOption(connectionId);
+      const validation = panel.locator("[data-storage-inline-notice]");
+      await panel.locator('[data-storage-kind="image"]').uncheck();
+      await panel.locator('[data-storage-kind="video"]').uncheck();
+      await panel.locator("[data-storage-save]").click();
+      assert((await validation.innerText()).trim().length > 0);
+      assert.equal(await field("profileId").inputValue(), connectionId);
+      await panel.locator('[data-storage-kind="image"]').check();
+      await panel.locator('[data-storage-kind="video"]').check();
       let saves = 0;
       if (locale === "en")
         await page.route("**/api/system/storage", async (route) => {
@@ -128,10 +129,10 @@ try {
           assert(response.ok());
           await route.abort("connectionfailed");
         });
-      await panel.locator('[data-storage-form="configure"] [data-storage-save]').click();
+      await panel.locator("[data-storage-save]").click();
       if (locale === "en") {
         await panel.locator(".original-storage-recovery").waitFor();
-        assert.equal(await field("bucket").isDisabled(), true);
+        assert.equal(await field("profileId").isDisabled(), true);
         const receipt = await page.evaluate(() => JSON.parse(sessionStorage.getItem("pf-original-storage-save")));
         assert.deepEqual(Object.keys(receipt).sort(), ["id", "revision"]);
         assert(!JSON.stringify(receipt).includes(s3.credentials.secretAccessKey));
@@ -140,19 +141,15 @@ try {
         assert.equal(saves, 1);
         await page.unroute("**/api/system/storage");
       }
-      await waitFor(async () =>
-        (await api("/api/system/storage")).profiles.some((profile) => profile.bucket === bucket),
-      );
-      await waitFor(async () => (await field("secretAccessKey").inputValue()) === "");
-      assert.equal(await field("mode").inputValue(), "s3");
+      await waitFor(async () => (await api("/api/system/storage")).activeProfileId === connectionId);
+      assert.equal(await field("profileId").inputValue(), connectionId);
       const loaded = await api("/api/system/storage");
       assert(!JSON.stringify(loaded).includes(s3.credentials.accessKeyId));
       assert(!JSON.stringify(loaded).includes(s3.credentials.secretAccessKey));
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       await panel.locator("[data-storage-title]").scrollIntoViewIfNeeded();
       await page.screenshot({ path: `${out}/settings-${locale}-${width}.png` });
-      // Real settings navigation clears all entered credentials, while the saved connection remains selected.
-      await field("secretAccessKey").fill("not-saved-secret");
+      // Real settings navigation retains the saved connection and changes locale.
       const settingsNav = async () => {
         if (width < 700)
           await page
@@ -183,8 +180,8 @@ try {
       }
       await settingsNav();
       await page.locator('[data-settings-page="storage"]').click();
-      await field("mode").waitFor();
-      assert.equal(await field("secretAccessKey").inputValue(), "");
+      await field("profileId").waitFor();
+      assert.equal(await field("profileId").inputValue(), connectionId);
       const catalog = await api("/api/projects"),
         code = "s3-" + locale.toLowerCase(),
         savedProject = await api("/api/projects", {
@@ -227,6 +224,27 @@ try {
         assert.equal(value.originalStore, "object");
         saved.push(value);
       }
+      await page.goto(app.base + "/tools/storage");
+      const detailsButton = page.locator(`[data-storage-details-id="${connectionId}"]`);
+      await detailsButton.click();
+      const details = page.locator('dialog[aria-labelledby="storage-details-title"]');
+      await details.getByText(bucket, { exact: true }).waitFor();
+      const replacement = details.locator("[data-storage-replace]");
+      await replacement.locator("summary").click();
+      await replacement.locator('[name="storage-accessKeyId"]').fill(s3.credentials.accessKeyId);
+      await replacement.locator('[name="storage-secretAccessKey"]').fill(s3.credentials.secretAccessKey);
+      await details.locator('button[type="submit"]').click();
+      await details.waitFor({ state: "hidden" });
+      const afterKeys = await api("/api/system/storage-connections");
+      assert.equal(afterKeys.connections.find((connection) => connection.id === connectionId).credentialRevision, 2);
+      assert.deepEqual(await api("/api/system/storage"), loaded);
+      await api("/api/system/storage", {
+        revision: loaded.revision,
+        operationId: randomUUID(),
+        action: "placement",
+        mode: "local",
+        kinds: loaded.kinds,
+      });
       await page.goto(app.base + "/documents?project=" + project.id);
       await page.locator("#workspacePreparation").waitFor({ state: "hidden" });
       await page.locator('[data-authoring-action="new"]').click();
@@ -309,7 +327,8 @@ try {
         width,
         theme,
         realS3Settings: true,
-        credentialsClearedOnNavigation: true,
+        credentialsManagedSeparately: true,
+        oldOriginalsRetainedAfterSwitchingToLocal: true,
         signedInOriginalViewAndDownload: true,
         videoSeek: true,
         trashRestore: true,

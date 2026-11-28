@@ -4,6 +4,7 @@ import type { CodexConnection, CodexTransportFactory } from "../codex-transport.
 import { createCodexApplicationEngine } from "./codex.js";
 import { harnessOutputReader } from "../../harness/workspaces.js";
 import { trackApplicationDirectory, registerApplicationRoot } from "./sessions.js";
+import { nativeProcessScratch, nativeProcessSocket } from "../native-process.js";
 
 export interface ApplicationEngineProfile {
   engineId: string;
@@ -45,8 +46,12 @@ export function isolatedApplicationEngines(
         async run(...args: Parameters<ReturnType<typeof createCodexApplicationEngine>["run"]>) {
           const [input, callbacks] = args;
           callbacks.signal.throwIfAborted();
-          await mkdir(options.scratchRoot, { recursive: true, mode: 0o700 });
-          const info = await lstat(options.scratchRoot);
+          const scratchRoot = nativeProcessSocket()
+            ? join(await nativeProcessScratch(), "runs", options.purpose)
+            : options.scratchRoot;
+          registerApplicationRoot(scratchRoot);
+          await mkdir(scratchRoot, { recursive: true, mode: 0o700 });
+          const info = await lstat(scratchRoot);
           if (!info.isDirectory() || info.isSymbolicLink())
             throw new Error("Application scratch directory unavailable");
           const directory = callbacks.directory;
@@ -69,7 +74,7 @@ export function isolatedApplicationEngines(
             )
               throw Error("Persistent application workspace unavailable");
             scratch = directory.path;
-          } else scratch = await mkdtemp(join(options.scratchRoot, "run-"));
+          } else scratch = await mkdtemp(join(scratchRoot, "run-"));
           const untrack = trackApplicationDirectory(scratch);
           try {
             callbacks.signal.throwIfAborted();

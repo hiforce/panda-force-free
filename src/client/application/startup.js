@@ -234,21 +234,19 @@ export function assembleStartup({
     workspacePreparation.registerRetry("permissions", () => modelsPort.loadPermissionProfilesRaw());
 
     $("#accountLogout").onclick = async () => {
-      viewUpdates.request("accountMenu", false);
       if (
         !(await confirmAction({
           title: "workbench.logOutOfModelAccount",
           message: "workbench.logOutOfTheModelAccountUsedByThisWorkspace",
           confirmText: "common.logOut",
           cancelText: "common.cancel",
-          returnFocus: $("#accountButton"),
+          returnFocus: $("#accountLogout"),
         }))
       )
         return;
       try {
         await transportPort.rpc("account/logout");
         await clearSessionCaches();
-        viewUpdates.request("accountMenu", false);
         await accountPort.loadAccount(true);
       } catch (error) {
         noticesPort.addPersistentError(errorMessage(error));

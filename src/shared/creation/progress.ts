@@ -14,6 +14,7 @@ export const creationOperations = {
   panda_slides_edit: "creation.progressEditSlides",
   panda_web_render: "creation.progressRenderWeb",
   panda_videos_render: "creation.progressRenderVideo",
+  panda_videos_generate: "creation.progressGenerateVideo",
   panda_artifacts_save: "creation.progressSaveArtifact",
   panda_artifacts_import_file: "creation.progressImportArtifact",
   nativeWork: "creation.progressNativeWork",

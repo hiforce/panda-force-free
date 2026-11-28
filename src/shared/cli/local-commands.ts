@@ -1,5 +1,6 @@
 export const CLI_LOCAL_COMMANDS = [
   ["register --file FILE", "Register a saved Panda client."],
+  ["auth setup --base-url URL --api-key-stdin", "Verify a Panda server and save the scoped client profile."],
   ["auth login --api-key-stdin", "Read the API key from standard input."],
   ["auth status", "Check current client access."],
   ["auth profiles [--offset NUMBER]", "List saved CLI profiles."],
@@ -7,6 +8,7 @@ export const CLI_LOCAL_COMMANDS = [
   ["auth logout", "Remove the saved local credential."],
   ["doctor", "Check connectivity and access."],
   ["mcp serve", "Serve the registered tools over MCP stdio."],
+  ["creation callback --stdin --json", "Run one leased Creation tool call through the Panda relay."],
   ["integrations install|inspect|uninstall --target codex|claude --directory DIR", "Manage the Panda skill files."],
   ["memory context --job JOB --json", "Read the source slice and current entries available to the organization job."],
   ["memory submit --job JOB --stdin --json", "Propose supported entries for the organization job."],

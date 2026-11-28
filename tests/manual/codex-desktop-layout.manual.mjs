@@ -35,7 +35,7 @@ const result = {
   accountAvatar: await page
     .locator("#accountAvatar > img, #accountAvatar.account-initials, #accountAvatar.account-settings-icon")
     .count(),
-  accountButton: await box("#accountButton"),
+  sidebarSettings: await box("#sidebarSettings"),
   sidebar: await box("#sidebar"),
   newTask: await box("#newTask"),
   search: await box("#sidebarSearchButton"),
@@ -67,13 +67,13 @@ const valid =
   result.projectRow.height === 30 &&
   result.firstThread.height === 30 &&
   result.footer.height === 46 &&
-  result.accountButton.height === 30 &&
+  result.sidebarSettings.height >= 44 &&
   result.newTask.paddingLeft === 8 &&
   result.firstThread.paddingLeft === 32 &&
-  result.accountButton.paddingLeft === 8 &&
+  result.sidebarSettings.paddingLeft === 8 &&
   result.newTask.borderRadius === 10 &&
   result.firstThread.borderRadius === 10 &&
-  result.accountButton.borderRadius === 10 &&
+  result.sidebarSettings.borderRadius === 10 &&
   result.projectGroups >= 1 &&
   result.expandedProjects >= 1 &&
   result.sidebar.transitionDuration.split(",").every((value) => value.trim() === "0.5s") &&

@@ -65,6 +65,7 @@ try {
         selections: [],
         profileId: options.defaultProfileId,
         outputType: "image",
+        media: { kind: "image", source: "harness" },
         dialogue: true,
         prompt: "Create a fixture illustration",
       });

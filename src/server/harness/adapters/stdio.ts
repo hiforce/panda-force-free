@@ -1,8 +1,15 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { connect, type Socket } from "node:net";
 import { StringDecoder } from "node:string_decoder";
+import type { WebSocket } from "ws";
 import { HarnessError, type HarnessErrorCode } from "../../../shared/harness/contracts.js";
 import { isRecord } from "../../../shared/records.js";
+import { SharedWebSocket } from "../../bridge/shared-websocket.js";
+import {
+  nativeProcessLaunchSocket,
+  openNativeProcessSocket,
+  type NativeProcessPlan,
+} from "../../engines/native-process.js";
 
 export class HarnessTransportError extends HarnessError {
   constructor(
@@ -14,20 +21,21 @@ export class HarnessTransportError extends HarnessError {
     super(code, 503);
   }
 }
-interface ProcessConnection {
-  command: string;
-  args: readonly string[];
-  cwd: string;
-  env: NodeJS.ProcessEnv;
-}
 interface TransportEvents {
   protocol?: "jsonrpc" | "zcode";
   onNotification?(method: string, params: Record<string, unknown>): Promise<void> | void;
   onRequest?(method: string, params: Record<string, unknown>): Promise<unknown>;
   onDisconnect?(error: HarnessTransportError): void;
 }
-export type HarnessStdioOptions = ProcessConnection & TransportEvents;
-export type HarnessNativeConnection = ProcessConnection | { socketPath: string; cwd: string };
+export type HarnessStdioOptions = NativeProcessPlan & TransportEvents;
+export interface HarnessRemoteAcpConnection {
+  cwd: string;
+  remoteWorkspace: string;
+  remoteEndpoint: URL;
+  apiKey: string;
+  certificateAuthority?: string;
+}
+export type HarnessNativeConnection = NativeProcessPlan | { socketPath: string; cwd: string };
 interface Pending {
   method: string;
   resolve(value: unknown): void;
@@ -40,6 +48,7 @@ const MAX_FRAME_BYTES = 4 * 1024 * 1024;
 export class HarnessStdioTransport {
   private child: ChildProcessWithoutNullStreams | null = null;
   private socket: Socket | null = null;
+  private remote: WebSocket | null = null;
   private sequence = 0;
   private pending = new Map<number, Pending>();
   private buffer = "";
@@ -50,11 +59,19 @@ export class HarnessStdioTransport {
   private starting: Promise<void> | null = null;
   private stopped = false;
   private failure: HarnessTransportError | null = null;
-  constructor(private readonly options: HarnessNativeConnection & TransportEvents) {}
+  constructor(private readonly options: (HarnessNativeConnection | HarnessRemoteAcpConnection) & TransportEvents) {}
   start(): Promise<void> {
     if (this.starting) return this.starting;
     if (this.stopped) return Promise.reject(new HarnessTransportError("unavailable", false));
+    if ("remoteEndpoint" in this.options) return (this.starting = this.startRemote(this.options));
     if ("socketPath" in this.options) return (this.starting = this.startSocket(this.options.socketPath));
+    let relay: string | undefined;
+    try {
+      relay = nativeProcessLaunchSocket();
+    } catch {
+      return Promise.reject(new HarnessTransportError("unavailable", false));
+    }
+    if (relay) return (this.starting = this.startSocket(relay, this.options));
     const { command, args, cwd, env } = this.options;
     this.starting = new Promise<void>((resolve, reject) => {
       const child = spawn(command, [...args], {
@@ -79,13 +96,66 @@ export class HarnessStdioTransport {
     });
     return this.starting;
   }
-  private startSocket(path: string) {
+  private startRemote({ remoteEndpoint, apiKey, certificateAuthority }: HarnessRemoteAcpConnection) {
     return new Promise<void>((resolve, reject) => {
-      const socket = connect(path);
+      if (
+        remoteEndpoint.protocol !== "wss:" ||
+        remoteEndpoint.username ||
+        remoteEndpoint.password ||
+        remoteEndpoint.search ||
+        remoteEndpoint.hash ||
+        !/^[\x21-\x7e]{1,4096}$/.test(apiKey)
+      )
+        return reject(new HarnessTransportError("invalidInput", false));
+      let socket: WebSocket;
+      try {
+        socket = new SharedWebSocket(remoteEndpoint, {
+          headers: { Authorization: "Bearer " + apiKey },
+          followRedirects: false,
+          handshakeTimeout: 10000,
+          maxPayload: MAX_FRAME_BYTES,
+          perMessageDeflate: false,
+          rejectUnauthorized: true,
+          ...(certificateAuthority ? { ca: certificateAuthority } : {}),
+        });
+      } catch {
+        return reject(new HarnessTransportError("unavailable", false));
+      }
+      this.remote = socket;
+      let opened = false;
+      const disconnect = (code: HarnessErrorCode) => {
+        const failure = new HarnessTransportError(code, opened);
+        reject(failure);
+        this.fail(failure);
+      };
+      socket.once("open", () => {
+        opened = true;
+        resolve();
+      });
+      socket.once("unexpected-response", (request, response) => {
+        disconnect(response.statusCode === 401 || response.statusCode === 403 ? "authentication" : "unavailable");
+        response.destroy();
+        request.destroy();
+      });
+      socket.on("error", () => disconnect(opened ? "deliveryUncertain" : "unavailable"));
+      socket.once("close", () => disconnect(opened ? "deliveryUncertain" : "unavailable"));
+      socket.on("message", (data, binary) => {
+        if (binary) return;
+        if (!Buffer.isBuffer(data)) return disconnect("invalidProtocol");
+        this.receiveMessage(data.toString("utf8"));
+      });
+    });
+  }
+  private startSocket(path: string, launch?: NativeProcessPlan) {
+    return new Promise<void>((resolve, reject) => {
+      const consume = (data: Buffer) => this.receive(this.decoder.write(data));
+      const socket = launch ? openNativeProcessSocket(path, launch, resolve, consume) : connect(path);
       this.socket = socket;
       const unavailable = new HarnessTransportError("unavailable", false);
-      socket.once("connect", resolve);
-      socket.on("data", (data: Buffer) => this.receive(this.decoder.write(data)));
+      if (!launch) {
+        socket.once("connect", resolve);
+        socket.on("data", consume);
+      }
       socket.on("error", () => {
         reject(unavailable);
         this.fail(new HarnessTransportError("deliveryUncertain", true));
@@ -108,66 +178,68 @@ export class HarnessStdioTransport {
       }
       const line = this.buffer.slice(0, end);
       this.buffer = this.buffer.slice(end + 1);
-      if (Buffer.byteLength(line) > MAX_FRAME_BYTES) {
-        this.fail(new HarnessTransportError("invalidProtocol", true));
-        return;
-      }
-      if (!line.trim()) continue;
-      let frame: Record<string, unknown>;
-      try {
-        const parsed: unknown = JSON.parse(line);
-        if (
-          !isRecord(parsed) ||
-          (this.options.protocol === "zcode" ? parsed.jsonrpc !== undefined : parsed.jsonrpc !== "2.0")
-        )
-          throw Error();
-        frame = parsed;
-      } catch {
-        this.fail(new HarnessTransportError("invalidProtocol", true));
-        return;
-      }
-      if (typeof frame.method === "string") {
-        const params = isRecord(frame.params) ? frame.params : {};
-        if (frame.id !== undefined) {
-          if (typeof frame.id !== "string" && typeof frame.id !== "number") {
-            this.fail(new HarnessTransportError("invalidProtocol", true));
-            return;
-          }
-          const { id, method } = frame;
-          void this.notifications.then(() => this.reply(id, method, params));
-        } else {
-          const bytes = Buffer.byteLength(line);
-          this.notificationBytes += bytes;
-          if (this.notificationBytes > MAX_FRAME_BYTES) {
-            this.fail(new HarnessTransportError("invalidProtocol", true));
-            return;
-          }
-          if (this.notificationBytes > MAX_FRAME_BYTES / 4) (this.socket ?? this.child?.stdout)?.pause();
-          this.notifications = this.notifications
-            .then(async () => {
-              if (!this.stopped) await this.options.onNotification?.(frame.method as string, params);
-            })
-            .catch(() => {
-              this.notificationFailure = new HarnessTransportError("unavailable", true);
-              this.fail(this.notificationFailure);
-            })
-            .finally(() => {
-              this.notificationBytes -= bytes;
-              if (this.notificationBytes < MAX_FRAME_BYTES / 8) (this.socket ?? this.child?.stdout)?.resume();
-            });
+      if (line.trim()) this.receiveMessage(line);
+      if (this.failure) return;
+    }
+  }
+  private receiveMessage(message: string) {
+    if (this.failure || this.stopped) return;
+    const size = Buffer.byteLength(message);
+    let frame: Record<string, unknown>;
+    try {
+      if (size > MAX_FRAME_BYTES) throw Error();
+      const parsed: unknown = JSON.parse(message);
+      if (
+        !isRecord(parsed) ||
+        (this.options.protocol === "zcode" ? parsed.jsonrpc !== undefined : parsed.jsonrpc !== "2.0")
+      )
+        throw Error();
+      frame = parsed;
+    } catch {
+      this.fail(new HarnessTransportError("invalidProtocol", true));
+      return;
+    }
+    if (typeof frame.method === "string") {
+      const params = isRecord(frame.params) ? frame.params : {};
+      if (frame.id !== undefined) {
+        if (typeof frame.id !== "string" && typeof frame.id !== "number") {
+          this.fail(new HarnessTransportError("invalidProtocol", true));
+          return;
         }
-      } else if (typeof frame.id === "number") {
-        const pending = this.pending.get(frame.id);
-        if (!pending) continue;
-        this.pending.delete(frame.id);
-        if (pending.timer) clearTimeout(pending.timer);
-        void this.notifications.then(() => {
-          if (this.notificationFailure) pending.reject(this.notificationFailure);
-          else if (frame.error !== undefined)
-            pending.reject(this.remoteError(frame.error, pending.dispatched, pending.method));
-          else pending.resolve(frame.result ?? {});
-        });
+        const { id, method } = frame;
+        void this.notifications.then(() => this.reply(id, method, params));
+      } else {
+        this.notificationBytes += size;
+        if (this.notificationBytes > MAX_FRAME_BYTES) {
+          this.fail(new HarnessTransportError("invalidProtocol", true));
+          return;
+        }
+        if (this.notificationBytes > MAX_FRAME_BYTES / 4) (this.remote ?? this.socket ?? this.child?.stdout)?.pause();
+        this.notifications = this.notifications
+          .then(async () => {
+            if (!this.stopped) await this.options.onNotification?.(frame.method as string, params);
+          })
+          .catch(() => {
+            this.notificationFailure = new HarnessTransportError("unavailable", true);
+            this.fail(this.notificationFailure);
+          })
+          .finally(() => {
+            this.notificationBytes -= size;
+            if (this.notificationBytes < MAX_FRAME_BYTES / 8)
+              (this.remote ?? this.socket ?? this.child?.stdout)?.resume();
+          });
       }
+    } else if (typeof frame.id === "number") {
+      const pending = this.pending.get(frame.id);
+      if (!pending) return;
+      this.pending.delete(frame.id);
+      if (pending.timer) clearTimeout(pending.timer);
+      void this.notifications.then(() => {
+        if (this.notificationFailure) pending.reject(this.notificationFailure);
+        else if (frame.error !== undefined)
+          pending.reject(this.remoteError(frame.error, pending.dispatched, pending.method));
+        else pending.resolve(frame.result ?? {});
+      });
     }
   }
   private remoteError(value: unknown, dispatched: boolean, method: string) {
@@ -205,11 +277,19 @@ export class HarnessStdioTransport {
     }
   }
   private write(frame: object) {
-    const writer = this.socket ?? this.child?.stdin;
+    const writer = this.remote ?? this.socket ?? this.child?.stdin;
     if (!writer || this.failure || this.stopped) throw this.failure ?? new HarnessTransportError("unavailable", false);
-    const bytes = JSON.stringify(this.options.protocol === "zcode" ? frame : { jsonrpc: "2.0", ...frame }) + "\n";
+    const bytes =
+      JSON.stringify(this.options.protocol === "zcode" ? frame : { jsonrpc: "2.0", ...frame }) +
+      (this.remote ? "" : "\n");
     if (Buffer.byteLength(bytes) > MAX_FRAME_BYTES) throw new HarnessTransportError("invalidInput", false);
-    writer.write(bytes);
+    if (this.remote) {
+      this.remote.send(bytes, (error) => {
+        if (error) this.fail(new HarnessTransportError("deliveryUncertain", true));
+      });
+      return;
+    }
+    (this.socket ?? this.child?.stdin)!.write(bytes);
   }
   async request(
     method: string,
@@ -255,6 +335,7 @@ export class HarnessStdioTransport {
       item.reject(new HarnessTransportError(error.code, item.dispatched));
     }
     this.pending.clear();
+    this.remote?.terminate();
     this.socket?.destroy();
     this.options.onDisconnect?.(error);
     if (this.child?.pid) {
@@ -272,6 +353,8 @@ export class HarnessStdioTransport {
       item.reject(new HarnessTransportError("deliveryUncertain", item.dispatched));
     }
     this.pending.clear();
+    this.remote?.terminate();
+    this.remote = null;
     this.socket?.destroy();
     this.socket = null;
     const child = this.child;

@@ -29,7 +29,7 @@ _模拟对话截图。截图来自实际界面，项目、消息和测试结果�
 
 也可以[用技能创作插画、幻灯片、网页或文档](#先来做点好玩的)，以及[通过 Bot API 交给助理处理重复任务](#认识你的-bot)。
 
-> **PandaForce 0.2.3** 支持 Grok Build 原生 Imagine 生图，并让创作生图留在所选的 Harness。[安装发行版 →](#安装-023) · [发行说明 →](./panda-docs/docs/releases.md#023) · [Harness 配置 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
+> **`develop` 分支的 PandaForce 0.2.4** 带来可配置的创作执行器、可复用存储连接和文件浏览器。[安装开发版镜像 →](#安装-024) · [发行说明 →](./panda-docs/docs/releases.md#024) · [Harness 配置 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
 ## 先来做点好玩的
 
@@ -164,16 +164,16 @@ curl --fail-with-body --silent --show-error \
 
 ## 多个 Harness Runtime
 
-0.2.3 镜像包含 **Codex CLI 0.171.0** 、**Grok Build 1.0.89** 和 **ZCode CLI 0.17.1**。会话、助理/Bot 和支持的创作设置统一按 **Harness Runtime → 模型 → 推理强度**选择。当前轮完成后可以切换会话引擎，交接选定上下文，文件继续保留在工作区。[多实例配置指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md#同时使用多个命名实例)介绍独立账户与可选的 Antigravity 配置。
+0.2.4 镜像包含 **Codex CLI 0.171.0** 、**Grok Build 1.0.89** 和 **ZCode CLI 0.17.1**。会话、助理/Bot 和支持的创作设置统一按 **Harness Runtime → 模型 → 推理强度**选择。当前轮完成后可以切换会话引擎，交接选定上下文，文件继续保留在工作区。[多实例配置指南](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md#同时使用多个命名实例)介绍独立账户与可选的 Antigravity 配置。
 
 Codex 使用应用的 app-server 连接，Grok 使用按需启动的 ACP 进程；可选账户服务负责原生命令行凭据续期，无需在宿主机保持 Grok/tmux 会话。模型账户与 PandaForce 管理员相互独立。[容器分工、登录、持久化与恢复 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
-## 安装 0.2.3
+## 安装 0.2.4
 
-从 **`main` 分支**获取安装配置，运行正式镜像 **`hiforceai/panda-force:0.2.3`**，平台为 **Linux amd64**。镜像采用 **Rocky Linux 9**，包含三种 Harness CLI、Bun、Node.js、Python、Office、PDF/OCR、字体、图像/研究/写作库、Chromium 和 FFmpeg。宿主机准备 Git、Docker 和 Compose 即可。[基础镜像的内容与用途 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)
+从 **`develop` 分支**获取安装配置，运行开发版镜像 **`hiforceai/panda-force:0.2.4`**，平台为 **Linux amd64**。镜像采用 **Rocky Linux 9**，包含三种 Harness CLI、Bun、Node.js、Python、Office、PDF/OCR、字体、图像/研究/写作库、Chromium 和 FFmpeg。宿主机准备 Git、Docker 和 Compose 即可。[基础镜像的内容与用途 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/base-images.md)
 
 ```bash
-git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch develop --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
@@ -198,7 +198,7 @@ docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml \
   run --rm grok-auth grok --no-auto-update login --device-auth
 ```
 
-打开 **设置 → Harness Runtime** 检查 Grok Build，然后选择模型与强度。明确的 **hi** 测试会使用你的模型账户发送一次真实小型请求。应用与 Grok 辅助服务默认使用同一份 0.2.3 镜像。[完整配置与账户卷说明 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
+打开 **设置 → Harness Runtime** 检查 Grok Build，然后选择模型与强度。明确的 **hi** 测试会使用你的模型账户发送一次真实小型请求。应用与 Grok 辅助服务默认使用同一份 0.2.4 镜像。[完整配置与账户卷说明 →](./panda-docs/i18n/zh-Hans/docusaurus-plugin-content-docs/current/harness-runtimes.md)
 
 **ZCode 会话运行环境（实验性）**
 

@@ -1,0 +1,63 @@
+# Combine with docker-compose.yml. Give the terminal only the shared workspace and its own socket.
+x-terminal-image: &terminal-image
+  image: ${PANDA_FORCE_TERMINAL_WORKER_IMAGE:?Set the verified PandaForce image that includes the terminal worker}
+  pull_policy: ${PANDA_FORCE_TERMINAL_WORKER_PULL_POLICY:-missing}
+
+services:
+  panda-terminal-init:
+    <<: *terminal-image
+    user: "0:0"
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        case "$$TERMINAL_UID" in ""|0|*[!0-9]*) exit 1;; esac
+        case "$$APPLICATION_GID" in ""|0|*[!0-9]*) exit 1;; esac
+        chown "$$TERMINAL_UID:$$APPLICATION_GID" /ipc
+        chmod 0750 /ipc
+    environment:
+      TERMINAL_UID: ${PUID:-1000}
+      APPLICATION_GID: ${PGID:-1000}
+    volumes:
+      - panda-terminal-ipc:/ipc
+    network_mode: none
+    read_only: true
+
+  panda-terminal-worker:
+    <<: *terminal-image
+    user: "${PUID:-1000}:${PGID:-1000}"
+    working_dir: /app
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    environment:
+      PANDA_FORCE_SERVICE_ROLE: terminal
+      HOME: /tmp
+      SHELL: /bin/bash
+      PANDA_FORCE_TERMINAL_SOCKET: /ipc/worker.sock
+      PANDA_FORCE_TERMINAL_WORKSPACE: /home/codex/workspace
+    volumes:
+      - panda-terminal-ipc:/ipc
+      - ${PANDA_FORCE_WORKSPACE_HOST:-${CODEX_WORKSPACE_HOST:-panda-force-workspace}}:/home/codex/workspace
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    depends_on:
+      panda-terminal-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        ["CMD", "curl", "--fail", "--silent", "--unix-socket", "/ipc/worker.sock", "http://localhost/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  panda-force:
+    environment:
+      PANDA_FORCE_TERMINAL_SOCKET: /terminal-ipc/worker.sock
+    volumes:
+      - panda-terminal-ipc:/terminal-ipc:ro
+
+volumes:
+  panda-terminal-ipc:

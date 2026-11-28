@@ -38,10 +38,12 @@ import m0_35 from "./locales/zh-CN/skills.json";
 import m0_36 from "./locales/zh-CN/social.json";
 import m0_37 from "./locales/zh-CN/sources.json";
 import m0_38 from "./locales/zh-CN/storage.json";
-import m0_39 from "./locales/zh-CN/templates.json";
-import m0_40 from "./locales/zh-CN/usage.json";
-import m0_41 from "./locales/zh-CN/users.json";
-import m0_42 from "./locales/zh-CN/workbench.json";
+import m0_39 from "./locales/zh-CN/storageBrowser.json";
+import m0_40 from "./locales/zh-CN/storageConnections.json";
+import m0_41 from "./locales/zh-CN/templates.json";
+import m0_42 from "./locales/zh-CN/usage.json";
+import m0_43 from "./locales/zh-CN/users.json";
+import m0_44 from "./locales/zh-CN/workbench.json";
 import m1_0 from "./locales/zh-HK/accounts.json";
 import m1_1 from "./locales/zh-HK/approvals.json";
 import m1_2 from "./locales/zh-HK/auth.json";
@@ -81,10 +83,12 @@ import m1_35 from "./locales/zh-HK/skills.json";
 import m1_36 from "./locales/zh-HK/social.json";
 import m1_37 from "./locales/zh-HK/sources.json";
 import m1_38 from "./locales/zh-HK/storage.json";
-import m1_39 from "./locales/zh-HK/templates.json";
-import m1_40 from "./locales/zh-HK/usage.json";
-import m1_41 from "./locales/zh-HK/users.json";
-import m1_42 from "./locales/zh-HK/workbench.json";
+import m1_39 from "./locales/zh-HK/storageBrowser.json";
+import m1_40 from "./locales/zh-HK/storageConnections.json";
+import m1_41 from "./locales/zh-HK/templates.json";
+import m1_42 from "./locales/zh-HK/usage.json";
+import m1_43 from "./locales/zh-HK/users.json";
+import m1_44 from "./locales/zh-HK/workbench.json";
 import m2_0 from "./locales/zh-TW/accounts.json";
 import m2_1 from "./locales/zh-TW/approvals.json";
 import m2_2 from "./locales/zh-TW/auth.json";
@@ -124,10 +128,12 @@ import m2_35 from "./locales/zh-TW/skills.json";
 import m2_36 from "./locales/zh-TW/social.json";
 import m2_37 from "./locales/zh-TW/sources.json";
 import m2_38 from "./locales/zh-TW/storage.json";
-import m2_39 from "./locales/zh-TW/templates.json";
-import m2_40 from "./locales/zh-TW/usage.json";
-import m2_41 from "./locales/zh-TW/users.json";
-import m2_42 from "./locales/zh-TW/workbench.json";
+import m2_39 from "./locales/zh-TW/storageBrowser.json";
+import m2_40 from "./locales/zh-TW/storageConnections.json";
+import m2_41 from "./locales/zh-TW/templates.json";
+import m2_42 from "./locales/zh-TW/usage.json";
+import m2_43 from "./locales/zh-TW/users.json";
+import m2_44 from "./locales/zh-TW/workbench.json";
 export const serverMessages = {
   "zh-CN": {
     "accounts": m0_0,
@@ -169,10 +175,12 @@ export const serverMessages = {
     "social": m0_36,
     "sources": m0_37,
     "storage": m0_38,
-    "templates": m0_39,
-    "usage": m0_40,
-    "users": m0_41,
-    "workbench": m0_42,
+    "storageBrowser": m0_39,
+    "storageConnections": m0_40,
+    "templates": m0_41,
+    "usage": m0_42,
+    "users": m0_43,
+    "workbench": m0_44,
   },
   "zh-HK": {
     "accounts": m1_0,
@@ -214,10 +222,12 @@ export const serverMessages = {
     "social": m1_36,
     "sources": m1_37,
     "storage": m1_38,
-    "templates": m1_39,
-    "usage": m1_40,
-    "users": m1_41,
-    "workbench": m1_42,
+    "storageBrowser": m1_39,
+    "storageConnections": m1_40,
+    "templates": m1_41,
+    "usage": m1_42,
+    "users": m1_43,
+    "workbench": m1_44,
   },
   "zh-TW": {
     "accounts": m2_0,
@@ -259,9 +269,11 @@ export const serverMessages = {
     "social": m2_36,
     "sources": m2_37,
     "storage": m2_38,
-    "templates": m2_39,
-    "usage": m2_40,
-    "users": m2_41,
-    "workbench": m2_42,
+    "storageBrowser": m2_39,
+    "storageConnections": m2_40,
+    "templates": m2_41,
+    "usage": m2_42,
+    "users": m2_43,
+    "workbench": m2_44,
   },
 };

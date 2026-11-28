@@ -21,7 +21,13 @@ export class CliCredentials {
     private readonly store: CliCredentialStore,
     private readonly now = Date.now,
   ) {}
-  async issue(owner: string, server: string, input: unknown, authorize: (project: string) => Promise<void>) {
+  async issue(
+    owner: string,
+    server: string,
+    input: unknown,
+    authorize: (project: string) => Promise<void>,
+    stage?: (registration: CliRegistration, apiKey: string) => Promise<void>,
+  ) {
     const p = cliObject(input, ["name", "kind", "projects", "projectScope", "capabilities", "expiresInDays"]),
       name = cliText(p.name, 80);
     const projectScope = p.projectScope ?? "selected";
@@ -54,6 +60,15 @@ export class CliCredentials {
       keyId = randomBytes(12).toString("hex"),
       apiKey = "pfk_" + keyId + "_" + randomBytes(32).toString("base64url"),
       expiresAt = now + Number(p.expiresInDays) * 86400000;
+    const registration: CliRegistration = {
+      schema: 1,
+      protocol: 1,
+      server: canonicalServer,
+      clientId,
+      kind: p.kind as CliClientKind,
+      credentialRef: "credentials.json",
+    };
+    await stage?.(registration, apiKey);
     await this.store.issue(
       { id: clientId, owner, name, kind: p.kind as CliClientKind, createdAt: now, revokedAt: null },
       {
@@ -70,22 +85,10 @@ export class CliCredentials {
         lastUsedAt: null,
       },
     );
-    const registration: CliRegistration = {
-      schema: 1,
-      protocol: 1,
-      server: canonicalServer,
-      clientId,
-      kind: p.kind as CliClientKind,
-      credentialRef: "credentials.json",
-    };
     return { registration, apiKey, expiresAt, projects, projectScope, capabilities };
   }
-  async authenticate(clientId: unknown, apiKey: unknown): Promise<CliGrant> {
-    if (
-      typeof clientId !== "string" ||
-      typeof apiKey !== "string" ||
-      !/^pfk_[a-f0-9]{24}_[a-zA-Z0-9_-]{43}$/.test(apiKey)
-    )
+  private async verify(apiKey: unknown, matchesClient: (id: string) => boolean) {
+    if (typeof apiKey !== "string" || !/^pfk_[a-f0-9]{24}_[a-zA-Z0-9_-]{43}$/.test(apiKey))
       throw new CliError("authenticationRequired", 401);
     const row = await this.store.find(apiKey.slice(4, 28)),
       actual = Buffer.from(digest(apiKey), "hex"),
@@ -93,8 +96,8 @@ export class CliCredentials {
     if (
       !timingSafeEqual(actual, expected) ||
       !row ||
-      row.client.id !== clientId ||
-      row.key.clientId !== clientId ||
+      !matchesClient(row.client.id) ||
+      row.key.clientId !== row.client.id ||
       row.client.owner !== row.key.owner ||
       row.client.revokedAt !== null ||
       row.key.revokedAt !== null ||
@@ -102,6 +105,15 @@ export class CliCredentials {
     )
       throw new CliError("authenticationRequired", 401);
     await this.store.touch(row.key.keyId, this.now());
+    return row;
+  }
+  async registrationForSetup(apiKey: unknown): Promise<Pick<CliRegistration, "clientId" | "kind">> {
+    const { client } = await this.verify(apiKey, () => true);
+    return { clientId: client.id, kind: client.kind };
+  }
+  async authenticate(clientId: unknown, apiKey: unknown): Promise<CliGrant> {
+    if (typeof clientId !== "string") throw new CliError("authenticationRequired", 401);
+    const row = await this.verify(apiKey, (id) => id === clientId);
     const { owner, keyId, projects, projectScope, capabilities, expiresAt } = row.key;
     return {
       owner,

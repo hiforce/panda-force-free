@@ -194,6 +194,32 @@ test("completion arriving before the start acknowledgement is retained until its
   expect(f.turns()).toBe(1);
 });
 
+test("creation keeps its own tools directly callable and rejects a foreign namespace", async () => {
+  const f = fixture({ purpose: "creation" });
+  let called = 0;
+  f.callbacks.call = async () => {
+    called++;
+    return { success: true, text: "Saved" };
+  };
+  const running = f.run();
+  await until(() => f.turns() === 1);
+  const thread = f.requests.find(({ method }) => method === "thread/start")!.params!;
+  expect(thread.dynamicTools).toMatchObject([
+    { type: "namespace", name: "panda_creation", tools: [{ type: "function", name: "panda_documents_create" }] },
+  ]);
+  const config = thread.config as Record<string, unknown>;
+  expect(config["features.code_mode"]).toEqual({ enabled: false, direct_only_tool_namespaces: ["panda_creation"] });
+  expect(config["features.code_mode_host"]).toBe(false);
+  f.call(52, { namespace: "elsewhere" });
+  f.call(53, { namespace: "panda_creation" });
+  await until(() => f.responses.length === 2);
+  expect(f.responses.find(({ id }) => id === 52)).toMatchObject({ error: { code: -32601 } });
+  expect(f.responses.find(({ id }) => id === 53)).toMatchObject({ result: { success: true } });
+  expect(called).toBe(1);
+  f.complete();
+  expect((await running).status).toBe("completed");
+});
+
 test("foreign requests, undeclared tools and ordinary approvals never enter the application dispatcher", async () => {
   const f = fixture();
   let calls = 0;

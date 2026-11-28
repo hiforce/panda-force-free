@@ -1,4 +1,4 @@
-import { CliError, cliObject, type CliErrorCode } from "../shared/cli/contracts.js";
+import { CliError, cliObject, cliRegistration, cliServer, type CliErrorCode } from "../shared/cli/contracts.js";
 import { CLI_COMMANDS, type CliCommandId } from "../shared/cli/commands.js";
 import { cliCommandArguments } from "../shared/cli/schema.js";
 import type { CliProfiles } from "./profiles.js";
@@ -21,15 +21,39 @@ export class PandaClient {
     private readonly transport = fetch,
     private readonly timeoutMs = 60000,
   ) {}
+  async setup(baseUrl: string, apiKey: string) {
+    const server = cliServer(baseUrl);
+    if (!/^pfk_[a-f0-9]{24}_[a-zA-Z0-9_-]{43}$/.test(apiKey)) throw new CliError("authenticationRequired", 401);
+    const response = await this.send(server, apiKey, "setup");
+    const registration = cliRegistration({
+      ...cliObject(response.data, ["clientId", "kind"]),
+      server,
+      schema: 1,
+      protocol: 1,
+      credentialRef: "credentials.json",
+    });
+    await this.profiles.register(this.profile, registration);
+    await this.profiles.login(this.profile, apiKey);
+    return { connected: true, profile: this.profile, server, kind: registration.kind };
+  }
   async request(path: "session" | "execute", input?: { command: CliCommandId; args: Record<string, unknown> }) {
     const { registration, apiKey } = await this.profiles.credentials(this.profile);
+    return this.send(registration.server, apiKey, path, registration.clientId, input);
+  }
+  private async send(
+    server: string,
+    apiKey: string,
+    path: "setup" | "session" | "execute",
+    clientId?: string,
+    input?: { command: CliCommandId; args: Record<string, unknown> },
+  ) {
     let response: Response;
     try {
-      response = await this.transport(registration.server + "/api/cli/v1/" + path, {
+      response = await this.transport(server + "/api/cli/v1/" + path, {
         method: input ? "POST" : "GET",
         headers: {
           authorization: "Bearer " + apiKey,
-          "x-panda-client-id": registration.clientId,
+          ...(clientId ? { "x-panda-client-id": clientId } : {}),
           "x-panda-cli-protocol": "1",
           "content-type": "application/json",
         },

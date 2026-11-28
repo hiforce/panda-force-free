@@ -80,6 +80,7 @@ try {
       await page.waitForURL("**/creation/" + first.id + "?creationScope=personal");
       await answer();
       const original = await saved(first.id);
+      await page.locator("[data-creation-open]").waitFor();
       let filename = original.artifact.file.path;
       assert(!relative(app.dir, filename).startsWith(".."));
       assert.equal(original.workspaceDirectory, dirname(filename));
@@ -91,7 +92,9 @@ try {
             (call) =>
               call.method === "thread/start" &&
               call.params.cwd === dirname(filename) &&
-              call.params.dynamicTools?.some((tool) => tool.name === "panda_documents_create"),
+              call.params.dynamicTools?.some((group) =>
+                group.tools?.some((tool) => tool.name === "panda_documents_create"),
+              ),
           ),
       );
       if (fileMove)
@@ -110,7 +113,9 @@ try {
         (r) => r.url().endsWith("/document-creations/message") && r.request().method() === "POST",
       );
       await page.locator("#sendButton").click();
-      const next = (await (await follow).json()).task;
+      const response = await follow;
+      assert.equal(response.status(), 202, await response.text());
+      const next = (await response.json()).task;
       await page.waitForURL("**/creation/" + next.id + "?creationScope=personal");
       await answer();
       const updated = await saved(next.id);
@@ -132,8 +137,9 @@ try {
         1,
       );
       await page.locator("#prompt").fill("Keep this unsent draft during locale changes and reload.");
-      if (width < 1081) await page.locator("#sessionInfoButton").click();
-      await page.locator("#sessionInspector").waitFor({ state: "visible" });
+      const inspector = page.locator("#sessionInspector");
+      if (!(await inspector.isVisible())) await page.locator("#sessionInfoButton").click();
+      await inspector.waitFor({ state: "visible" });
       await waitFor(async () => (await page.locator("#sessionDomainSections").textContent()).includes(filename));
       await page.evaluate(
         (locale) => globalThis.__pandaForceI18n.setPreference(locale === "en" ? "zh-CN" : "en"),

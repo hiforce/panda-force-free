@@ -87,9 +87,8 @@ try {
   await page.setViewportSize({ width: 1280, height: 900 });
   if (await page.locator("#workspacePreparation").isVisible())
     await page.locator("#workspacePreparationContinue").click();
-  await page.locator("#accountButton").click();
-  await page.locator("[data-settings-page=profile]").click();
-  await page.locator("#pandaLogout").click();
+  await page.locator('[data-chrome-menu="profile"]').click();
+  await page.locator('[data-chrome-action="logout"]').click();
   await page.getByRole("heading", { name: "Welcome back", exact: true }).waitFor();
   assert.equal(await page.locator("#passwordGate").getAttribute("aria-label"), "PandaForce login");
   assert.equal((await context.request.get(f.base + "/api/config")).status(), 401);

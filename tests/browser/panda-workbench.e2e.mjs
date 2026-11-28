@@ -216,7 +216,7 @@ try {
   );
   assert.ok([400, 403].includes(traversal.status()));
   result.checks.push("Server-enforced project path and traversal boundary");
-  await page.locator("#accountButton").click();
+  await page.locator("#sidebarSettings").click();
   await page.locator("#settingsDialog").waitFor();
   assert.equal(await page.locator("[data-settings-group]:visible").count(), 2);
   assert.deepEqual(
@@ -454,7 +454,7 @@ try {
   await mp.locator("#workspacePreparation").waitFor({ state: "hidden" });
   await mp.screenshot({ path: join(artifacts, "projects-mobile.png") });
   await mp.locator("#workspaceNavigationToggle").click();
-  await mp.locator("#accountButton").click();
+  await mp.locator("#sidebarSettings").click();
   await mp.locator("#settingsSearch").fill("语言");
   await mp.locator("[data-settings-page=general-settings]").click();
   await mp.locator("#languageSelect").waitFor({ state: "visible" });

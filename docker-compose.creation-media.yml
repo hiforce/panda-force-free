@@ -1,0 +1,28 @@
+# Combine with the standard application and the three worker overlays.
+services:
+  panda-force:
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      PANDA_FORCE_HARNESS_PROCESS_SOCKET: /harness-ipc/worker.sock
+      PANDA_FORCE_HARNESS_PROCESS_SCRATCH: /hps
+      PANDA_FORCE_CREATION_SCRATCH_DIR: /hps/creation/scratch
+      PANDA_FORCE_CREATION_WORKSPACE_DIR: ${PANDA_FORCE_CREATION_WORKSPACE_DIR:-/hps/creation/workspaces}
+      PANDA_FORCE_MEDIA_EXECUTOR_SOCKET: /media-ipc/worker.sock
+      PANDA_FORCE_MEDIA_EXECUTOR_TOKEN_FILE: /media-ipc/token
+    volumes:
+      - panda-harness-process-ipc:/harness-ipc:ro
+      - panda-harness-process-scratch:/hps
+      - panda-media-ipc:/media-ipc:ro
+    depends_on:
+      panda-harness-process-init:
+        condition: service_completed_successfully
+      panda-media-worker:
+        condition: service_healthy
+      panda-terminal-worker:
+        condition: service_healthy
+
+  panda-harness-process-worker:
+    network_mode: service:panda-force
+    volumes:
+      - ${PANDA_FORCE_MODEL_HOME_HOST:-${CODEX_HOME_HOST:-panda-force-model-state}}:/home/codex/.codex

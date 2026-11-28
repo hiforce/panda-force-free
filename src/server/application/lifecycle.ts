@@ -11,6 +11,7 @@ interface BackgroundWorkers {
   search: Starts;
   editorial: Starts;
   creation: Starts;
+  media?: Starts;
   knowledge: Starts;
   previews: Starts;
   goals: Starts;
@@ -28,6 +29,7 @@ interface BackgroundShutdown {
   search: Closes;
   knowledge: Closes;
   creation: Closes;
+  media?: Closes;
   personal: Closes;
   publication: Stops;
   editorial: Stops;
@@ -59,6 +61,7 @@ export function startApplicationBackground(workers: BackgroundWorkers) {
   workers.search.start();
   workers.editorial.start();
   workers.creation.start();
+  workers.media?.start();
   workers.knowledge.start();
   workers.previews.start();
   workers.goals.start();
@@ -71,7 +74,7 @@ export function startApplicationIngress(workers: IngressWorkers) {
 }
 /** Stop request-producing clients first; template workers keep their sources until dependent runs drain. */
 export async function drainApplicationBackground(ports: BackgroundShutdown) {
-  await ports.cli.close();
+  await Promise.all([ports.cli.close(), ports.media?.close()]);
   await Promise.all([
     ports.bots.close(),
     ports.originals?.close(),

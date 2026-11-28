@@ -1,7 +1,6 @@
 const TARGETS = new Set([
   "composerPlaceholder",
   "workspaceContext",
-  "accountMenu",
   "item",
   "workbench",
   "sidebar",

@@ -320,7 +320,17 @@ const handleLine=line=>{
         applicationCalls.set(saved.id,{...pending,kind:'context',gated:true});
         handleLine(JSON.stringify(saved));
       }else if(pending.kind==='context'&&${Boolean(applicationImage || applicationArtifact)}){
-        const artifact=${JSON.stringify(applicationArtifact)},callId='render-'+pending.run;applicationCalls.set(callId,{...pending,kind:'image',artifactKind:artifact?.kind||'image'});send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:artifact?.kind==='slides'?'panda_slides_render':artifact?.kind==='web'?'panda_web_render':artifact?.kind==='video'?'panda_videos_render':'panda_images_render',arguments:artifact?.arguments||{slot:1,prompt:'A finished computer history illustration'}}});
+        const artifact=${JSON.stringify(applicationArtifact)},callId='render-'+pending.run;
+        const needsIllustration=artifact?.kind==='slides'&&${Boolean(applicationImage)};
+        const tool=needsIllustration?'panda_images_render':artifact?.kind==='slides'?'panda_slides_render':artifact?.kind==='web'?'panda_web_render':artifact?.kind==='video'?'panda_videos_render':'panda_images_render';
+        const args=needsIllustration||!artifact?{slot:1,prompt:'A finished computer history illustration'}:artifact.arguments;
+        applicationCalls.set(callId,{...pending,kind:needsIllustration?'slide-illustration':'image',artifactKind:artifact?.kind||'image'});
+        send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool,arguments:args}});
+      }else if(pending.kind==='slide-illustration'&&m.result?.success){
+        const imageHandle=JSON.parse(m.result.contentItems[0].text).handle,callId='render-slides-'+pending.run;
+        const artifact=${JSON.stringify(applicationArtifact)},args=artifact.arguments;
+        applicationCalls.set(callId,{...pending,kind:'image',artifactKind:'slides'});
+        send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_slides_render',arguments:{...args,pages:args.pages.map(page=>page.layout==='picture'?{...page,imageHandle}:page)}}});
       }else if(pending.kind==='image'&&m.result?.success){
         const handle=JSON.parse(m.result.contentItems[0].text).handle,callId='save-image-'+pending.run;applicationCalls.set(callId,{...pending,kind:'save'});send({id:callId,method:'item/tool/call',params:{threadId:pending.thread,turnId:pending.run,callId,tool:'panda_artifacts_save',arguments:{kind:pending.artifactKind||'image',handle,title:'Computer history'}}});
       }else if(pending.kind==='context'&&m.result?.success&&JSON.parse(m.result.contentItems[0].text).materials.length){
@@ -376,8 +386,9 @@ const handleLine=line=>{
     const imageRenderer=${Boolean(applicationImage)}&&p.permissions==='panda_image_renderer';
     const thread={id:imageRenderer||managedHome?crypto.randomUUID():'new-'+(++count),name:${unnamedSessions} ? null : 'New session '+count,preview:'',cwd:p.cwd,status:{type:'idle'},createdAt:Date.now()/1000,updatedAt:Date.now()/1000,turns:[],canAcceptDirectInput:true};
     if((${rejectEphemeralResumes}||managedHome)&&p.ephemeral)ephemeralThreads.add(thread.id);
-    if(${applicationCreation}&&p.dynamicTools?.some(tool=>tool.name==='panda_documents_create'))applicationThreads.add(thread.id);
-    if(p.dynamicTools?.some(tool=>tool.name==='panda_creation_turn'))applicationDialogs.add(thread.id);
+    const creationTools=p.dynamicTools?.flatMap(tool=>tool.type==='namespace'?tool.tools:[tool]);
+    if(${applicationCreation}&&creationTools?.some(tool=>tool.name==='panda_documents_create'))applicationThreads.add(thread.id);
+    if(creationTools?.some(tool=>tool.name==='panda_creation_turn'))applicationDialogs.add(thread.id);
     if(${applicationChat}&&p.dynamicTools?.some(tool=>tool.name==='panda_bot_chat_reply'))chatThreads.add(thread.id);
     if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_draft'))knowledgeThreads.set(thread.id,'draft');
     if(${applicationKnowledge}&&p.dynamicTools?.some(tool=>tool.name==='panda_knowledge_review_decision'))knowledgeThreads.set(thread.id,'review');

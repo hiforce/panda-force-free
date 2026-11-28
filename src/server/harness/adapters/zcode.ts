@@ -96,6 +96,7 @@ export class ZCodeHarnessAgent implements HarnessAgent {
   initialize() {
     return (this.discovery ??= this.transport.request("runtime/capabilities").then((value) => {
       if (record(value).sessionWorkspaceRouting !== true) throw new HarnessError("invalidProtocol", 503);
+      this.info.protocol = "zcode-app-server/session-workspace";
       return this.info;
     }));
   }

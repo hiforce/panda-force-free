@@ -24,6 +24,8 @@ import { getWorkspacePreparation } from "./workspace-preparation.js";
 import { mountRemoteConsole } from "./workspace-tools/remote-console.js";
 import { remoteTerminalId } from "../shared/workspace-tools/remote.js";
 
+import { storageBrowserId } from "../shared/workspace-tools/storage-browser.js";
+
 applyThemePreference();
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => applyThemePreference());
 
@@ -52,12 +54,13 @@ function showAuthFailure(message) {
 
 async function loadApp() {
   const terminalId = remoteTerminalId(location.pathname);
-  const preparation = terminalId ? null : getWorkspacePreparation();
+  const browserId = storageBrowserId(location.pathname);
+  const preparation = terminalId || browserId ? null : getWorkspacePreparation();
   if (preparation) {
     preparation.begin();
     startStartupReads();
   }
-  for (const href of ["/vendor/katex/katex.min.css", "/vendor/xterm/xterm.css"]) {
+  for (const href of browserId ? [] : ["/vendor/katex/katex.min.css", "/vendor/xterm/xterm.css"]) {
     if (findElement(`link[href="${href}"]`)) continue;
     const link = document.createElement("link");
     link.rel = "stylesheet";
@@ -67,6 +70,14 @@ async function loadApp() {
   try {
     await prepareInterfaceStyles();
     dismissStartupScreen();
+    if (browserId) {
+      const page = document.createElement("main");
+      page.className = "storage-browser-page";
+      document.body.append(page);
+      const { mountStorageBrowser } = await import("./workspace-tools/storage-browser.js");
+      mountStorageBrowser(page, browserId, t);
+      return true;
+    }
     if (terminalId) {
       const page = document.createElement("main");
       page.className = "remote-console-page";
@@ -130,7 +141,7 @@ async function start() {
     $("#passwordGate").hidden = true;
     if (status.passwordRequired) installPandaForceSession(status, { translate: t, i18n });
     if (!(await loadApp())) return;
-    if (!remoteTerminalId(location.pathname)) void initializeDatabaseSetup(t);
+    if (!remoteTerminalId(location.pathname) && !storageBrowserId(location.pathname)) void initializeDatabaseSetup(t);
   };
   if (status.authenticated && !status.migrationRequired) {
     await finish();

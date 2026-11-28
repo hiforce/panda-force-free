@@ -6,6 +6,7 @@ export class OAuthHttp implements OAuthJsonTransport {
   constructor(
     private send: typeof fetch = fetch,
     private timeoutMs = 15000,
+    private maxBytes = 65536,
   ) {}
   async request(url: string, init: RequestInit): Promise<Record<string, unknown>> {
     const controller = new AbortController(),
@@ -14,9 +15,9 @@ export class OAuthHttp implements OAuthJsonTransport {
     let response: Response | undefined;
     try {
       response = await this.send(url, { ...init, redirect: "error", signal: controller.signal });
-      if (response.status === 429) throw new OAuthError("authorizationRateLimited");
-      if ([400, 401, 403].includes(response.status)) throw new OAuthError("authorizationRejected");
-      if (!response.ok) throw new OAuthError("authorizationUnavailable");
+      if (response.status === 429) throw new OAuthError("authorizationRateLimited", response.status);
+      if ([400, 401, 403].includes(response.status)) throw new OAuthError("authorizationRejected", response.status);
+      if (!response.ok) throw new OAuthError("authorizationUnavailable", response.status);
       if (!response.headers.get("content-type")?.toLowerCase().includes("application/json") || !response.body)
         throw new OAuthError("invalidOAuthResponse");
       reader = response.body.getReader();
@@ -26,7 +27,7 @@ export class OAuthHttp implements OAuthJsonTransport {
         const part = await reader.read();
         if (part.done) break;
         bytes += part.value.length;
-        if (bytes > 65536) throw new OAuthError("invalidOAuthResponse");
+        if (bytes > this.maxBytes) throw new OAuthError("invalidOAuthResponse");
         chunks.push(part.value);
       }
       let value: unknown;

@@ -45,6 +45,8 @@ export function createNativeCreationFeature(
     materials?: import("../materials.js").CreationMaterialPort;
     assets?: import("./media-output.js").CreationAssetAccess;
     storage?: Parameters<typeof createCreationFeature>[0]["storage"];
+    media?: Pick<import("../media-executors/contracts.js").CreationMediaExecutorPort, "bind">;
+    mediaJobs?: import("./media-executors/jobs.js").CreationMediaJobs;
   },
   env: NodeJS.ProcessEnv = process.env,
 ) {
@@ -72,11 +74,13 @@ export function createNativeCreationFeature(
         : undefined;
     return createCreationFeature({
       ...options,
+      enforceMediaSelection: true,
       workspaceRoot,
       ...(journal && renderer && options.assets
         ? {
             image: {
               applicationImages: options.runtimes,
+              mediaJobs: options.mediaJobs,
               journal,
               renderer,
               assets: options.assets,
@@ -117,6 +121,8 @@ export function createNativeCreationFeature(
     // An optional execution ledger must not prevent ordinary document editing or authentication from starting.
     return {
       service: undefined,
+      creationCapabilities: undefined,
+      recoverMedia: async () => false,
       routes: creationRoutes(
         {
           options: async () => ({

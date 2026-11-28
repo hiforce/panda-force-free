@@ -9,11 +9,13 @@ import type { CliContentCommands } from "../commands.js";
 import type { FileOriginalQueries } from "../../content-sources/reader.js";
 import type { ProjectMemory } from "../../project-memory/service.js";
 import { executeSavedSourceCommand } from "./saved-sources.js";
+import { executeCliMedia, type CliMediaOptions } from "./media.js";
 type Knowledge = Pick<
   KnowledgeTasks,
   "list" | "history" | "status" | "detail" | "previous" | "submit" | "answer" | "edit" | "approve" | "cancel" | "retry"
 >;
 export function cliContentCommands(options: {
+  media?: CliMediaOptions;
   originals?(owner: string, project: string): Promise<FileOriginalQueries>;
   documents(
     owner: string,
@@ -33,6 +35,11 @@ export function cliContentCommands(options: {
   return {
     async execute(owner, id, args, signal) {
       try {
+        if (id.startsWith("media.")) {
+          await options.authorize(owner, "personal");
+          signal.throwIfAborted();
+          return await executeCliMedia(options.media, owner, id, args, signal);
+        }
         const project = cliId(args.project);
         await options.authorize(owner, project);
         signal.throwIfAborted();

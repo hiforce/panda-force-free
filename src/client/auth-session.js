@@ -177,32 +177,52 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
   const button = document.createElement("button");
   button.type = "button";
   button.id = "pandaLogout";
-  button.className = "account-menu-row";
+  button.className = "wb-button";
   localizeText(
     button,
     "common.logoutIdentity",
     { account: status.identity?.username || status.identity?.account || "PandaForce" },
     t,
   );
-  button.onclick = async () => {
-    button.disabled = true;
-    try {
-      const response = await originalFetch("/api/auth/logout", { method: "POST" });
-      if (!response.ok) throw new Error("Unable to sign out");
-      const pendingCleanup = [];
-      dispatchEvent(
-        new CustomEvent("panda-force:logged-out", {
-          detail: { waitUntil: (promise) => pendingCleanup.push(promise) },
-        }),
-      );
-      await Promise.allSettled(pendingCleanup);
-      navigating = true;
-      location.assign(status.authMode === "idaas" ? "/auth/logged-out" : "/");
-    } catch {
-      button.disabled = false;
+  let logoutRequest = null;
+  async function signOut() {
+    const response = await originalFetch("/api/auth/logout", { method: "POST" });
+    if (!response.ok) throw new Error("Unable to sign out");
+    const pendingCleanup = [];
+    dispatchEvent(
+      new CustomEvent("panda-force:logged-out", {
+        detail: { waitUntil: (promise) => pendingCleanup.push(promise) },
+      }),
+    );
+    await Promise.allSettled(pendingCleanup);
+    navigating = true;
+    location.assign(status.authMode === "idaas" ? "/auth/logged-out" : "/");
+  }
+  function requestLogout() {
+    if (!logoutRequest) {
+      button.disabled = true;
+      logoutError.hidden = true;
+      logoutRequest = signOut().catch((error) => {
+        logoutRequest = null;
+        button.disabled = false;
+        throw error;
+      });
     }
+    return logoutRequest;
+  }
+  const logoutError = document.createElement("p");
+  logoutError.hidden = true;
+  logoutError.setAttribute("role", "alert");
+  localizeText(logoutError, "shell.logoutFailed", undefined, t);
+  button.onclick = () => {
+    void requestLogout().catch(() => {
+      logoutError.hidden = false;
+    });
   };
-  findElement('[data-settings-content="profile"]')?.append(button);
+  lifecycle.on(document, "panda-force:sign-out", (event) => {
+    if (event instanceof CustomEvent) event.detail.waitUntil(requestLogout());
+  });
+  findElement('[data-settings-content="profile"] .wb-card')?.append(button, logoutError);
   const handle = {
     check,
     dispose() {
@@ -213,6 +233,7 @@ export function installPandaForceSession(status, { translate: t = getBrowserI18n
       unsubscribeLocale?.();
       notice?.remove();
       button.remove();
+      logoutError.remove();
       sessions.delete(document);
     },
   };

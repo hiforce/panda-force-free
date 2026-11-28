@@ -21,6 +21,8 @@ export class CreationSessionState {
   runtime?: HarnessRuntimeView;
   runtimePreferenceSaved = false;
   catalogEpoch = 0;
+  output?: import("../../shared/creation/contracts.js").CreationRequestedOutput;
+  media?: import("../../shared/creation/media-executors.js").CreationMediaChoice;
   model = "";
   effort = "";
   readonly conversation = new CreationConversationHistory();

@@ -18,6 +18,8 @@ export function createWorkbenchChrome(options) {
   let menu = "",
     generation = 0,
     bound = false;
+  /** @type {"idle" | "pending" | "failed"} */
+  let logoutState = "idle";
   /** @type {HTMLElement | null} */
   let trigger = null;
   function position() {
@@ -28,7 +30,7 @@ export function createWorkbenchChrome(options) {
   }
   function render() {
     if (!menu) return;
-    setMessageHtml(dialog, renderChromeMenu(menu, { t, i18n, layout, mobile: mobile.matches, options }));
+    setMessageHtml(dialog, renderChromeMenu(menu, { t, i18n, layout, mobile: mobile.matches, logoutState, options }));
     position();
   }
   function close(restore = true) {
@@ -117,6 +119,31 @@ export function createWorkbenchChrome(options) {
     else if (kind === "settings") {
       close(false);
       options.openSettings(value);
+    } else if (kind === "logout") {
+      if (logoutState === "pending") return;
+      logoutState = "pending";
+      render();
+      requireElement("h2", dialog).focus({ preventScroll: true });
+      let pending;
+      document.dispatchEvent(
+        new CustomEvent("panda-force:sign-out", {
+          detail: {
+            waitUntil: (promise) => {
+              pending = promise;
+            },
+          },
+        }),
+      );
+      try {
+        if (!pending) throw new Error("Sign-out handler is unavailable");
+        await pending;
+      } catch {
+        logoutState = "failed";
+        if (menu === "profile") {
+          render();
+          requireElement('[data-chrome-action="logout"]', dialog).focus({ preventScroll: true });
+        }
+      }
     }
   }
   function outside(event) {

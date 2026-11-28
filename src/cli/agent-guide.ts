@@ -1,4 +1,4 @@
-import { CLI_COMMANDS } from "../shared/cli/commands.js";
+import { CLI_MCP_COMMANDS } from "../shared/cli/commands.js";
 import { cliCommandSchema } from "../shared/cli/schema.js";
 export function pandaAgentSkill(profile: string) {
   return `---
@@ -38,7 +38,7 @@ export function agentPackage(profile: string) {
         {
           schema: 1,
           protocol: 1,
-          commands: CLI_COMMANDS.map((spec) => ({ ...spec, inputSchema: cliCommandSchema(spec) })),
+          commands: CLI_MCP_COMMANDS.map((spec) => ({ ...spec, inputSchema: cliCommandSchema(spec) })),
         },
         null,
         2,

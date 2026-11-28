@@ -8,10 +8,14 @@ import { createSearchSettings } from "../search/settings.js";
 import { createEncryptionKeySettings } from "../encryption-keys/settings.js";
 import { createProjectMemorySettings } from "./project-memory.js";
 import { createUsersSettings } from "../users/settings.js";
+import { createExecutorCredentialSettings } from "./executor-credentials.js";
+import { createExecutorSettings } from "./executors.js";
 
 /** Administrative page factories remain independent from the workspace entry and hold no mounted state. */
 export const settingsPageFactories = {
   harness: createHarnessSettings,
+  mediaExecutors: createExecutorSettings,
+  mediaCredentials: createExecutorCredentialSettings,
   bots: createBotSettings,
   botWorkspace: createBotWorkspace,
   clients: createCliSettings,

@@ -1,3 +1,4 @@
+import { registeredStorageId } from "../../shared/workspace-tools/storage.js";
 import { originalStorageKinds } from "../../shared/storage/contracts.js";
 import type { OriginalStorageMutation, OriginalStorageCredentials } from "../../shared/storage/contracts.js";
 import { isRecord } from "../../shared/records.js";
@@ -31,6 +32,10 @@ export function storageOperationId(value: unknown) {
 export function storageProfileId(value: unknown) {
   const id = storageText(value, 42);
   return /^s-[a-f0-9]{40}$/.test(id) ? id : fail();
+}
+export function storageTargetId(value: unknown) {
+  const id = storageText(value, 42);
+  return registeredStorageId.test(id) ? id : storageProfileId(id);
 }
 export function storageDigest(value: unknown) {
   const digest = storageText(value, 64);
@@ -99,6 +104,15 @@ export function storageMutation(value: unknown): OriginalStorageMutation {
       credentialRevision: storageInteger(input.credentialRevision, 1),
       credentials: storageCredentials(input.credentials),
     };
+  }
+  if (input.action === "placement") {
+    storageRecord(input, ["revision", "operationId", "action", "mode", "kinds", "profileId"]);
+    const kinds = storageKinds(input.kinds);
+    if (input.mode === "local" && input.profileId === undefined)
+      return { ...base, action: "placement", mode: "local", kinds };
+    if (input.mode === "s3" && kinds.length)
+      return { ...base, action: "placement", mode: "s3", kinds, profileId: storageTargetId(input.profileId) };
+    return fail();
   }
   storageRecord(input, ["revision", "operationId", "action", "mode", "kinds", "profile"]);
   if (input.action !== "configure" || (input.mode !== "local" && input.mode !== "s3")) return fail();
@@ -211,12 +225,14 @@ export function storageConfigurationRecord(value: unknown): StorageConfiguration
         accessKeyHint: storageText(p.accessKeyHint, 4),
       };
     }),
-    activeProfileId = r.activeProfileId === null ? null : storageProfileId(r.activeProfileId),
+    activeProfileId = r.activeProfileId === null ? null : storageTargetId(r.activeProfileId),
     revision = storageInteger(r.revision, 1),
     kinds = storageKinds(r.kinds);
   if (
     new Set(profiles.map((p) => p.id)).size !== profiles.length ||
-    (activeProfileId && !profiles.some((p) => p.id === activeProfileId)) ||
+    (activeProfileId &&
+      !registeredStorageId.test(activeProfileId) &&
+      !profiles.some((p) => p.id === activeProfileId)) ||
     (r.mode === "s3" && (!activeProfileId || !kinds.length))
   )
     return fail();

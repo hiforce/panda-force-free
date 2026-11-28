@@ -1,3 +1,4 @@
+import { storageBrowserId } from "../shared/workspace-tools/storage-browser.js";
 import { remoteTerminalId } from "../shared/workspace-tools/remote.js";
 
 const routes = new Set([
@@ -47,6 +48,7 @@ export function workbenchLinkPath(anchor, event, base = location.href) {
     url.origin !== current.origin ||
     !["http:", "https:"].includes(url.protocol) ||
     remoteTerminalId(url.pathname) ||
+    storageBrowserId(url.pathname) ||
     (page && page !== "settings" && !routes.has(page)) ||
     (url.pathname === current.pathname && url.search === current.search && url.hash)
   )

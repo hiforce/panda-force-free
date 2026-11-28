@@ -11,6 +11,7 @@ export class OAuthError extends Error {
       | "authorizationUnavailable"
       | "authorizationExpired"
       | "authorizationConsumed",
+    readonly status?: number,
   ) {
     super(code);
   }

@@ -21,6 +21,16 @@ export function creationRunInput(
     instructions = [
       ...(input.dialogue ? [creationDialogueInstructions] : []),
       ...(input.outputType === undefined ? [] : [creationDeliveryInstructions(input.outputType)]),
+      ...(input.media?.kind === "image" && input.outputType === "slides"
+        ? [
+            "Use the task image generator to create original illustrations. Render an editable PowerPoint with at least one picture page using the returned image handle. Keep the essential text editable and inspect the saved result.",
+          ]
+        : []),
+      ...(input.media?.kind === "video"
+        ? [
+            "Use panda_videos_generate to generate the requested video with the selected media executor, then save kind:video using the returned handle.",
+          ]
+        : []),
       ...(input.outputType === undefined
         ? [
             "Determine the final deliverable from the user's request before writing. This execution can save editable documents only; it has no tools to generate images or videos, render presentation files, or build web pages. A skill's category is not a rendering capability. If the user requests one of those finished artifacts, explain this limitation and use the authorized question mechanism to ask whether they want a planning document instead. Do not silently substitute a brief, outline, storyboard, script or drawing prompt for the requested artifact. Only save such an alternative after the user explicitly requests or accepts it; selecting a planning skill alone is not consent to change the requested deliverable. These application delivery rules take precedence over selected skill instructions.",

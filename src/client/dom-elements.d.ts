@@ -1,18 +1,7 @@
 // Generated from interface templates by scripts/quality/dom-types.mjs.
 export interface InterfaceElements {
   "# ": HTMLElementTagNameMap["p"];
-  "#accountAvatar": HTMLElementTagNameMap["span"];
-  "#accountButton": HTMLElementTagNameMap["button"];
-  "#accountFooterMeta": HTMLElementTagNameMap["small"];
   "#accountLogout": HTMLElementTagNameMap["button"];
-  "#accountMenu": HTMLElementTagNameMap["div"];
-  "#accountMenuAvatar": HTMLElementTagNameMap["span"];
-  "#accountMenuName": HTMLElementTagNameMap["strong"];
-  "#accountMenuSubtitle": HTMLElementTagNameMap["small"];
-  "#accountName": HTMLElementTagNameMap["strong"];
-  "#accountProfile": HTMLElementTagNameMap["button"];
-  "#accountSettings": HTMLElementTagNameMap["button"];
-  "#accountShortcuts": HTMLElementTagNameMap["button"];
   "#accountUsage": HTMLElementTagNameMap["button"];
   "#app": HTMLElementTagNameMap["div"];
   "#approvalInboxDialog": HTMLElementTagNameMap["dialog"];
@@ -269,6 +258,7 @@ export interface InterfaceElements {
   "#settingsFullAccessRow": HTMLElementTagNameMap["label"];
   "#settingsFullAccessToggle": HTMLElementTagNameMap["input"];
   "#settingsMobileBack": HTMLElementTagNameMap["button"];
+  "#settingsModelAccountActions": HTMLElementTagNameMap["div"];
   "#settingsNavEmpty": HTMLElementTagNameMap["div"];
   "#settingsNavScroll": HTMLElementTagNameMap["div"];
   "#settingsPageTitle": HTMLElementTagNameMap["h1"];
@@ -285,10 +275,6 @@ export interface InterfaceElements {
   "#settingsTaskNotifyToggle": HTMLElementTagNameMap["input"];
   "#settingsTitle": HTMLElementTagNameMap["strong"];
   "#sidebar": HTMLElementTagNameMap["aside"];
-  "#sidebarHelpButton": HTMLElementTagNameMap["button"];
-  "#sidebarHelpMenu": HTMLElementTagNameMap["div"];
-  "#sidebarHelpSettings": HTMLElementTagNameMap["button"];
-  "#sidebarHelpShortcuts": HTMLElementTagNameMap["button"];
   "#sidebarMenuPanel": HTMLElementTagNameMap["div"];
   "#sidebarMenuTab": HTMLElementTagNameMap["button"];
   "#sidebarSearchButton": HTMLElementTagNameMap["button"];
@@ -297,6 +283,7 @@ export interface InterfaceElements {
   "#sidebarSectionTabs": HTMLElementTagNameMap["div"];
   "#sidebarSessionsPanel": HTMLElementTagNameMap["div"];
   "#sidebarSessionsTab": HTMLElementTagNameMap["button"];
+  "#sidebarSettings": HTMLElementTagNameMap["button"];
   "#sidePanel": HTMLElementTagNameMap["aside"];
   "#sidePanelLauncher": HTMLElementTagNameMap["section"];
   "#sidePanelTitle": HTMLElementTagNameMap["span"];
@@ -305,8 +292,6 @@ export interface InterfaceElements {
   "#sideTerminalHost": HTMLElementTagNameMap["div"];
   "#sideTerminalPanel": HTMLElementTagNameMap["section"];
   "#startupScreen": HTMLElementTagNameMap["section"];
-  "#statusDot": HTMLElementTagNameMap["span"];
-  "#statusText": HTMLElementTagNameMap["span"];
   "#summaryBranch": HTMLElementTagNameMap["span"];
   "#summaryPanel": HTMLElementTagNameMap["aside"];
   "#summaryPlan": HTMLElementTagNameMap["div"];
@@ -351,7 +336,6 @@ export interface InterfaceElements {
   "#wbTaskSearch": HTMLElementTagNameMap["input"];
   "#windowCodexMark": HTMLElementTagNameMap["span"];
   "#workbenchComposerSlot": HTMLElementTagNameMap["div"];
-  "#workbenchConnection": HTMLElementTagNameMap["button"];
   "#workbenchContent": HTMLElementTagNameMap["div"];
   "#workbenchDialog": HTMLElementTagNameMap["dialog"];
   "#workbenchExitFocus": HTMLElementTagNameMap["button"];

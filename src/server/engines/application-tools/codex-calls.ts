@@ -10,6 +10,7 @@ import { reportDiagnostic } from "../../../shared/diagnostics.js";
 /** Native request IDs never leave this adapter or enter the browser's conversation approval map. */
 export function codexApplicationCalls(options: {
   tools: readonly ApplicationToolDefinition[];
+  namespace?: string;
   callbacks: ApplicationRunCallbacks;
   scope(): ApplicationRunScope | null;
   ready: Promise<void>;
@@ -38,6 +39,7 @@ export function codexApplicationCalls(options: {
         if (
           typeof params.tool !== "string" ||
           !names.has(params.tool) ||
+          (params.namespace != null && params.namespace !== options.namespace) ||
           typeof params.callId !== "string" ||
           !params.callId ||
           params.callId.length > 128 ||

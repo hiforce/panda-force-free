@@ -11,10 +11,17 @@ import type {
   HarnessPrompt,
 } from "../ports.js";
 import { AcpTurnEvents, acpPrompt, acpRecord as record, acpText as text, type AcpEmit } from "./acp.js";
-import { HarnessStdioTransport, HarnessTransportError, type HarnessStdioOptions } from "./stdio.js";
+import {
+  HarnessStdioTransport,
+  HarnessTransportError,
+  type HarnessRemoteAcpConnection,
+  type HarnessStdioOptions,
+} from "./stdio.js";
 
 export type AcpLaunchOptions =
-  Pick<HarnessStdioOptions, "command" | "cwd" | "env"> | { socketPath: string; cwd: string };
+  | Pick<HarnessStdioOptions, "command" | "cwd" | "env">
+  | { socketPath: string; cwd: string }
+  | HarnessRemoteAcpConnection;
 interface AcpSessionOptions {
   args: readonly string[];
   effortId: string;
@@ -28,7 +35,7 @@ interface AcpSessionOptions {
   allowApplicationTool?(tool: Record<string, unknown>): boolean | Promise<boolean>;
 }
 
-/** An ACP subprocess owns its native model configuration and session state. */
+/** The ACP agent owns its native model configuration and session state. */
 export class AcpSessionAgent implements HarnessAgent {
   private readonly transport: HarnessStdioTransport;
   private readonly events = new AcpTurnEvents();
@@ -63,9 +70,11 @@ export class AcpSessionAgent implements HarnessAgent {
     private readonly launch: AcpLaunchOptions,
     private readonly settings: AcpSessionOptions,
   ) {
+    if ("remoteEndpoint" in launch && (settings.applicationTransport === "http" || settings.application?.nativeOutput))
+      throw new HarnessError("capabilityUnavailable", 409);
     this.info.capabilities.permissionModes = settings.permissionModes;
     this.transport = new HarnessStdioTransport({
-      ...("socketPath" in launch ? launch : { ...launch, args: settings.args }),
+      ...("command" in launch ? { ...launch, args: settings.args } : launch),
       onNotification: (method, params) => this.notification(method, params),
       onRequest: (method, params) => this.request(method, params),
     });
@@ -81,10 +90,11 @@ export class AcpSessionAgent implements HarnessAgent {
         }),
       );
       if (result.protocolVersion !== 1) throw new HarnessError("invalidProtocol", 503);
+      this.info.protocol = "acp/1";
       const capabilities = record(result.agentCapabilities);
       const prompts = record(capabilities.promptCapabilities);
       if (
-        this.settings.application &&
+        (this.settings.application || "remoteEndpoint" in this.launch) &&
         record(capabilities.mcpCapabilities)[this.settings.applicationTransport ?? "acp"] !== true
       )
         throw new HarnessError("capabilityUnavailable", 409);
@@ -95,7 +105,7 @@ export class AcpSessionAgent implements HarnessAgent {
         if (state !== "authenticated" && state !== "unknown") throw new HarnessError("invalidProtocol", 503);
       }
       this.info.capabilities.imageInput = prompts.image === true;
-      this.info.capabilities.fileInput = prompts.embeddedContext === true;
+      this.info.capabilities.fileInput = !("remoteEndpoint" in this.launch) && prompts.embeddedContext === true;
       if ("resume" in record(capabilities.sessionCapabilities)) this.restoreMethod = "session/resume";
       else if (capabilities.loadSession === true) this.restoreMethod = "session/load";
       this.info.capabilities.load = !!this.restoreMethod;
@@ -120,7 +130,7 @@ export class AcpSessionAgent implements HarnessAgent {
     if (!method) throw new HarnessError("capabilityUnavailable", 409);
     const result = record(
       await this.transport.request(method, {
-        cwd,
+        cwd: "remoteWorkspace" in this.launch ? this.launch.remoteWorkspace : cwd,
         mcpServers:
           !application || application.scope === "project-memory"
             ? []
@@ -335,6 +345,8 @@ export class AcpSessionAgent implements HarnessAgent {
       throw new HarnessError("forbidden", 403);
     if (params.method === "server/discover")
       return { result: { supportedVersions: ["2026-07-28"], capabilities: { tools: {} } } };
+    if (params.method === "tools/call" && application.scope === "creation" && (!this.emit || this.cancelled))
+      throw new HarnessError("forbidden", 403);
     const response = await fetch(application.mcpServer.url, {
       method: "POST",
       headers: {
@@ -345,10 +357,12 @@ export class AcpSessionAgent implements HarnessAgent {
       signal: AbortSignal.timeout(180000),
     });
     if (!response.ok) throw new HarnessError("capabilityUnavailable", 409);
-    const result = record(await response.json());
+    return this.applicationResponse(params.method, record(await response.json()));
+  }
+  private applicationResponse(method: unknown, result: Record<string, unknown>) {
     if (result.error) return { error: result.error };
     return {
-      result: params.method === "tools/call" ? { ...record(result.result), resultType: "complete" } : result.result,
+      result: method === "tools/call" ? { ...record(result.result), resultType: "complete" } : result.result,
     };
   }
 

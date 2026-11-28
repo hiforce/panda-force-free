@@ -25,9 +25,7 @@ export function assembleLocalization({
     if (!workspacePort.folderBrowse.selected)
       localizeText($("#folderSelection"), "common.noFolderSelected", undefined, t);
     if (state.account) accountPort.renderAccount(state.account);
-    else
-      for (const id of ["accountName", "accountMenuName", "settingsAccountName"])
-        localizeText($(`#${id}`), "common.settings", undefined, t);
+    else localizeText($("#settingsAccountName"), "common.settings", undefined, t);
     modelsPort.syncPermissionControl();
     modelsPort.syncModelLabel();
     composerPort.renderComposerSkills();

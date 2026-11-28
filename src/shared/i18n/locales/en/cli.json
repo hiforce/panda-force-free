@@ -335,5 +335,8 @@
   "botEffortDefault": "Model default",
   "botEffortHint": "Applies to the next chat message and newly started background tasks.",
   "botEffortChooseModel": "Choose a model to see its supported reasoning levels.",
-  "botEffortUnavailable": "The saved reasoning level is unavailable in the current catalog. It will be kept unless you change it."
+  "botEffortUnavailable": "The saved reasoning level is unavailable in the current catalog. It will be kept unless you change it.",
+  "mediaRead": "Read media connections",
+  "mediaConnect": "Manage media connections",
+  "mediaAdmin": "Register media CLI packages"
 }

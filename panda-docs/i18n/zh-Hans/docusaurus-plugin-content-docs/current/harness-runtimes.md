@@ -10,10 +10,10 @@ PandaForce 0.2.3 支持**多个 Harness Runtime**。运行实例决定原生引�
 
 ## 安装配套发行版
 
-从 `main` 分支获取安装配置，运行已发布的 `hiforceai/panda-force:0.2.3` 镜像：
+从 `develop` 分支获取安装配置，运行已发布的 `hiforceai/panda-force:0.2.4` 镜像：
 
 ```bash
-git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch develop --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
@@ -78,7 +78,7 @@ docker compose exec panda-force panda-tools doctor
 
 ## ZCode
 
-0.2.3 镜像内置 ZCode CLI 0.17.1。ZCode 是实验性的会话 Harness，支持文字回复、可见的思考与工具进度、审批和会话续接。应用会根据上游返回的数据展示用量。ZCode 配置完成后在会话中使用，创作和 Bot 继续使用各自支持的 Harness。
+0.2.4 镜像内置 ZCode CLI 0.17.1。ZCode 是实验性的会话 Harness，支持文字回复、可见的思考与工具进度、审批和会话续接。应用会根据上游返回的数据展示用量。ZCode 配置完成后在会话中使用，创作和 Bot 继续使用各自支持的 Harness。
 
 1. 将 [Provider 示例](https://github.com/hiforce/panda-force-free/blob/v0.2.3/deploy/harness/zcode-provider.example.json) 复制到仓库外的私有位置，在副本中填入自己的 BigModel Coding Plan API Key。保留示例的 Provider ID 和模型 ID，或同时修改 Compose 配置与 Provider 文件。确保容器的运行用户能读取该文件。
 2. 从发行版目录运行以下命令，将路径改为自己的配置文件。升级已有安装时沿用原来的 Compose 项目名和数据卷。
@@ -134,4 +134,23 @@ Claude Code 的权限菜单显示手动审批、自动接受编辑、规划、Au
 
 ## 源码开发
 
-需要定制应用的开发者请参阅[容器构建指南](building.md#development-container)，其中包含 Grok 叠加配置。本文的安装与账户命令使用已发布的 `hiforceai/panda-force:0.2.3` 镜像。
+需要定制应用的开发者请参阅[容器构建指南](building.md#development-container)，其中包含 Grok 叠加配置。本文的安装与账户命令使用已发布的 `hiforceai/panda-force:0.2.4` 镜像。
+
+## 可选的创作执行器
+
+需要配置创作执行器时，启动媒体、Harness 进程和终端工作服务。使用以下 Compose 扩展，并沿用已有安装的项目名称和数据卷。
+
+```bash
+export PANDA_FORCE_IMAGE=hiforceai/panda-force:0.2.4
+export PANDA_FORCE_MEDIA_WORKER_IMAGE="$PANDA_FORCE_IMAGE"
+export PANDA_FORCE_HARNESS_PROCESS_IMAGE="$PANDA_FORCE_IMAGE"
+export PANDA_FORCE_TERMINAL_WORKER_IMAGE="$PANDA_FORCE_IMAGE"
+
+docker compose -f docker-compose.yml \
+  -f docker-compose.media-worker.yml \
+  -f docker-compose.harness-process.yml \
+  -f docker-compose.terminal-worker.yml \
+  -f docker-compose.creation-media.yml up -d
+```
+
+从侧栏打开 **执行器** 选择供应商与模型。可在 **设置 → 凭证** 管理可复用的供应商凭证。CLI 执行器需要在媒体工作服务中安装相应的 CLI 包，并配置其清单。

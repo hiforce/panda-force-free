@@ -188,11 +188,6 @@ export function createWorkbench({
     (path) => navigate(path),
   );
   requireElement(".sidebar-top").append(navigation, tools.nav);
-  const connection = document.createElement("button");
-  connection.type = "button";
-  connection.className = "workbench-connection";
-  connection.id = "workbenchConnection";
-  requireElement(".sidebar-footer").prepend(connection);
   const bottom = document.createElement("nav");
   bottom.className = "workbench-mobile-nav";
   localizeAttribute(bottom, "aria-label", "workbench.workspaceNavigation", undefined, t);
@@ -559,11 +554,6 @@ export function createWorkbench({
         )
         .join(""),
     );
-    connection.hidden = globalThis.__pandaForceIdentity?.role === "member";
-    setMessageHtml(
-      connection,
-      `<span class="status-dot ${state.connected ? "connected" : "error"}"></span><span>${messageHtml(state.connected ? "common.codexConnected" : "auth.connectionUnavailable", undefined, t)}</span>`,
-    );
   }
   function renderPreparation() {
     const snapshot = knownPreparation;
@@ -845,11 +835,6 @@ export function createWorkbench({
       renderTaskResults();
     }
   });
-  connection.onclick = () =>
-    modal(
-      "common.connectionStatus",
-      `<p>${messageHtml(state.connected ? "common.codexConnected" : "auth.connectionUnavailable", undefined, t)}</p><p>${messageHtml("common.yourPandaforceAccountIsSeparateFromYourCodexAccount", undefined, t)}</p><p>${messageHtml("workbench.loadedSessions", undefined, t)}: ${state.threads.length}</p>${button("common.retryWorkspaceReads", "retry")}`,
-    );
   dialog.addEventListener("close", () => {
     if (returnFocus?.isConnected) returnFocus.focus();
     else requireElement("#newTask")?.focus();

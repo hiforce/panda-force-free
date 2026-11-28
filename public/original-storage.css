@@ -45,34 +45,50 @@
   padding: 0;
   margin-block-end: var(--pf-space-2);
 }
-.original-storage-settings summary {
-  min-height: var(--pf-touch-target);
-  align-content: center;
-  cursor: pointer;
-}
-.original-storage-settings details > :not(summary) {
-  margin-block-start: var(--pf-space-3);
-}
 .original-storage-heading p,
 .original-storage-hint {
   color: var(--pf-muted);
 }
-.original-storage-kinds,
 .original-storage-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--pf-space-2) var(--pf-space-4);
 }
-.original-storage-settings fieldset > button {
+.original-storage-placement {
+  max-inline-size: 820px;
+}
+.original-storage-target {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--pf-space-3);
+}
+.original-storage-target .wb-button {
   justify-self: start;
+}
+.original-storage-kinds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--pf-space-2);
+}
+.original-storage-kinds .wb-choice {
+  min-height: var(--pf-touch-target);
+  padding-inline: var(--pf-space-3);
+  border: 1px solid var(--pf-line);
+  border-radius: var(--pf-radius-sm);
+}
+.original-storage-kinds .wb-choice:has(:checked) {
+  background: var(--pf-soft);
+}
+.original-storage-inline-notice {
+  color: var(--pf-muted);
 }
 .original-storage-notice:empty {
   display: none;
 }
 .original-storage-notice,
-.original-storage-recovery,
-.original-storage-policy {
+.original-storage-recovery {
   display: grid;
   gap: var(--pf-space-2);
   padding: var(--pf-space-3);
@@ -80,13 +96,15 @@
   border-radius: var(--pf-radius-sm);
   background: var(--pf-soft);
 }
-.original-storage-repair {
-  border-block-start: 1px solid var(--pf-line);
-  padding-block-start: var(--pf-space-3);
-}
 @media (max-width: 767px) {
   .original-storage-heading {
     flex-direction: column;
+  }
+  .original-storage-target {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .original-storage-kinds {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

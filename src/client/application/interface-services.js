@@ -154,8 +154,8 @@ export function assembleUsage({ transportPort, $, t, i18n, state, mutations }) {
     applyPushedUsageLimits: panel.applyPushedLimits,
   };
 }
-/** @param {import("./ports.js").FeatureOptions<"identity" | "state" | "mutations" | "$" | "t" | "shortPath" | "viewUpdates", "models" | "panels", "settings">} options */
-export function assembleSettings({ $, t, shortPath, modelsPort, panelsPort, viewUpdates, state, mutations }) {
+/** @param {import("./ports.js").FeatureOptions<"identity" | "state" | "$" | "t" | "shortPath", "models" | "panels", "settings">} options */
+export function assembleSettings({ $, t, shortPath, modelsPort, panelsPort, state }) {
   const {
     openSettings,
     showSettings,
@@ -176,10 +176,11 @@ export function assembleSettings({ $, t, shortPath, modelsPort, panelsPort, view
     ],
     permissionLabel: () => modelsPort.selectedPermission().label,
     openUsageSummary: () => panelsPort.openUsageSummary(),
-    toggleAccountMenu: (force) => viewUpdates.request("accountMenu", force),
     syncPermissionSettings: () => modelsPort.syncPermissionSettings(),
     pageViews: {
       agent: createLazySettingsPage(t, "harness"),
+      "media-executors": createLazySettingsPage(t, "mediaExecutors"),
+      "media-credentials": createLazySettingsPage(t, "mediaCredentials"),
       users: createLazySettingsPage(t, "users"),
       "encryption-keys": createLazySettingsPage(t, "encryptionKeys"),
       "plugins-settings": createExtensionSettings(t),
@@ -210,34 +211,23 @@ export function assembleSettings({ $, t, shortPath, modelsPort, panelsPort, view
     closeSettings,
   };
 }
-/** @param {import("./ports.js").FeatureOptions<"state" | "mutations" | "$" | "t" | "state", "settings" | "models" | "panels" | "usage", "account">} options */
-export function assembleAccount({ $, t, state, settingsPort, modelsPort, panelsPort, usagePort, mutations }) {
-  const { loadAccount, renderAccount, toggleAccountMenu } = createAccountView({
+/** @param {import("./ports.js").FeatureOptions<"mutations" | "$" | "t", "settings" | "models" | "panels" | "usage", "account">} options */
+export function assembleAccount({ $, t, settingsPort, modelsPort, panelsPort, usagePort, mutations }) {
+  const { loadAccount, renderAccount } = createAccountView({
     $,
     t,
-    setSettingsPage: (page) => settingsPort.setSettingsPage(page),
     filterSettingsNavigation: (query) => settingsPort.filterSettingsNavigation(query),
     syncPermissionSettings: () => modelsPort.syncPermissionSettings(),
     syncPermissionControl: () => modelsPort.syncPermissionControl(),
-    state,
     mutations,
   });
   function bind() {
-    $("#accountButton").onclick = (e) => {
-      e.stopPropagation();
-      if (state.account?.type === "chatgpt") toggleAccountMenu();
-      else settingsPort.openSettings("general");
-    };
-    $("#accountSettings").onclick = () => settingsPort.openSettings("general-settings");
-    $("#accountProfile").onclick = () => settingsPort.openSettings("profile");
     $("#accountUsage").onclick = /** @param {Parameters<typeof panelsPort.openUsageSummary>} args */ (...args) =>
       panelsPort.openUsageSummary(...args);
     $("#refreshUsage").onclick = () => usagePort.loadUsage();
-    $("#accountShortcuts").onclick = () => settingsPort.openSettings("keyboard-shortcuts");
   }
   return {
     bind,
-    toggleAccountMenu,
     loadAccount,
     renderAccount,
   };

@@ -90,7 +90,7 @@ function result(value: unknown): ImageRenderReceipt {
     mime: row.mime as ImageRenderReceipt["mime"],
   };
   if (
-    (row.provider === "zcode" || row.provider === "grok-build") &&
+    (row.provider === "zcode" || row.provider === "grok-build" || row.provider === "media-executor") &&
     row.threadId === undefined &&
     row.turnId === undefined
   ) {

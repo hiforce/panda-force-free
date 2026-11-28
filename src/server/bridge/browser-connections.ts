@@ -5,7 +5,9 @@ import type { ProjectVisibility } from "../../shared/engine/types.js";
 import { errorStatus } from "../../shared/errors.js";
 import type { PasswordAuth } from "../auth/contracts.js";
 import type { RuntimeServices } from "../services.js";
-import { createTerminalSession, normalizeTerminalResize, resolveTerminalCwd } from "../terminal/session.js";
+import { resolveTerminalCwd } from "../terminal/session.js";
+import { openLocalTerminal, terminalFrameLimit } from "../terminal/socket.js";
+import { openTerminalRelay } from "../terminal/relay.js";
 import { sharedWorkspaceAllowed } from "../auth/users/access.js";
 import { matchesRequestOrigin } from "../auth/origin.js";
 import { REMOTE_TERMINAL_SOCKET } from "../../shared/workspace-tools/remote.js";
@@ -26,6 +28,8 @@ export function installBrowserConnections({
   defaultCwd,
   handleClient,
   openRemoteTerminal,
+  terminalSocket,
+  allowLocalTerminal = true,
 }: Pick<
   RuntimeServices,
   | "browserWire"
@@ -43,8 +47,10 @@ export function installBrowserConnections({
   passwordAuth: PasswordAuth;
   handleClient: (client: WebSocket, message: unknown) => Promise<void>;
   openRemoteTerminal?: (client: WebSocket, request: IncomingMessage, url: URL) => Promise<void>;
+  terminalSocket?: string;
+  allowLocalTerminal?: boolean;
 }) {
-  const terminalSessions = new Map<WebSocket, ReturnType<typeof createTerminalSession>>();
+  const terminalSessions = new Map<WebSocket, () => void>();
   const sseKeepalive = setInterval(() => {
     for (const client of sseClients) if (!client.writableEnded) client.write(": keepalive\n\n");
   }, 25_000);
@@ -54,7 +60,7 @@ export function installBrowserConnections({
     noServer: true,
     perMessageDeflate: { threshold: 1024, serverNoContextTakeover: true, clientNoContextTakeover: true },
   });
-  const terminalWss = new WebSocketServer({ noServer: true });
+  const terminalWss = new WebSocketServer({ noServer: true, maxPayload: terminalFrameLimit });
   const remoteWss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
   const initialVisibility = new WeakMap<WebSocket, ProjectVisibility>();
   server.on("upgrade", async (req, socket, head) => {
@@ -78,9 +84,16 @@ export function installBrowserConnections({
         status = 403;
         passwordVerified = false;
       }
-      if (remote && (!passwordVerified || !req.headers.origin || !matchesRequestOrigin({
-        hostHeader: req.headers.host, origin: req.headers.origin, fetchSite: req.headers["sec-fetch-site"],
-      }))) {
+      if (
+        remote &&
+        (!passwordVerified ||
+          !req.headers.origin ||
+          !matchesRequestOrigin({
+            hostHeader: req.headers.host,
+            origin: req.headers.origin,
+            fetchSite: req.headers["sec-fetch-site"],
+          }))
+      ) {
         status = passwordVerified ? 403 : status;
         passwordVerified = false;
         idaasSession = null;
@@ -154,7 +167,8 @@ export function installBrowserConnections({
   });
   remoteWss.on("connection", (client, req) => {
     client.on("error", () => client.terminate());
-    void Promise.resolve().then(() => openRemoteTerminal?.(client, req, new URL(req.url!, "http://localhost")))
+    void Promise.resolve()
+      .then(() => openRemoteTerminal?.(client, req, new URL(req.url!, "http://localhost")))
       .catch(() => client.close(1008));
   });
   wss.on("connection", (client) => {
@@ -174,53 +188,21 @@ export function installBrowserConnections({
     client.on("close", () => clients.delete(client));
   });
   terminalWss.on("connection", (client, req) => {
-    let terminal: ReturnType<typeof createTerminalSession> | null = null;
     try {
+      if (!terminalSocket && !allowLocalTerminal) {
+        client.close(1011, "Terminal unavailable");
+        return;
+      }
       const url = new URL(req.url || "/terminal", "http://localhost");
       const cwd = resolveTerminalCwd(url.searchParams.get("cwd"), browseRoots, defaultCwd);
-      terminal = createTerminalSession({
-        cwd,
-        cols: 100,
-        rows: 24,
-        onData: (data) => {
-          if (client.readyState === WebSocket.OPEN) client.send(data);
-        },
-        onExit: (event) => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(`\r\n[Process exited ${event.exitCode}]\r\n`);
-            client.close(1000, "Terminal exited");
-          }
-        },
-      });
-      terminalSessions.set(client, terminal);
+      const stop = terminalSocket ? openTerminalRelay(client, terminalSocket, cwd) : openLocalTerminal(client, cwd);
+      terminalSessions.set(client, stop);
+      client.once("close", () => terminalSessions.delete(client));
     } catch (error) {
       console.error("[panda-force] terminal failed", error);
       client.close(1011, "Terminal unavailable");
       return;
     }
-    client.on("message", (raw, isBinary) => {
-      if (
-        !terminal ||
-        (Array.isArray(raw) ? raw.reduce((total, part) => total + part.byteLength, 0) : raw.byteLength) > 1_000_000
-      )
-        return;
-      if (isBinary) {
-        terminal.write(Buffer.from(raw as Buffer).toString("utf8"));
-        return;
-      }
-      try {
-        const resize = normalizeTerminalResize(JSON.parse(String(raw)));
-        if (resize) terminal.resize(resize.cols, resize.rows);
-      } catch {
-        /* Terminal input is sent as binary; ignore malformed control frames. */
-      }
-    });
-    client.on("close", () => {
-      terminalSessions.delete(client);
-      terminal?.kill();
-      terminal = null;
-    });
-    client.on("error", () => client.close());
   });
 
   return {
@@ -231,8 +213,8 @@ export function installBrowserConnections({
       for (const client of sseClients) client.end();
       sseClients.clear();
       wss.close();
-      for (const [client, terminal] of terminalSessions) {
-        terminal.kill();
+      for (const [client, stop] of terminalSessions) {
+        stop();
         client.terminate();
       }
       terminalSessions.clear();

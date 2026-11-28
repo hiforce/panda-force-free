@@ -72,6 +72,7 @@ export class GrokHarnessAgent implements HarnessAgent {
         }),
       );
       if (result.protocolVersion !== 1) throw new HarnessError("invalidProtocol", 503);
+      this.info.protocol = "acp/1";
       const capabilities = record(result.agentCapabilities),
         prompts = record(capabilities.promptCapabilities);
       this.info.capabilities.imageInput = prompts.image === true;

@@ -305,9 +305,8 @@ try {
   page.off("framenavigated", trackNavigation);
   if (await page.locator("#workspacePreparation").isVisible())
     await page.locator("#workspacePreparationContinue").click();
-  await page.locator("#accountButton").click();
-  await page.locator("[data-settings-page=profile]").click();
-  await page.locator("#pandaLogout").click();
+  await page.locator('[data-chrome-menu="profile"]').click();
+  await page.locator('[data-chrome-action="logout"]').click();
   await page.waitForURL("**/auth/logged-out");
   await page.getByRole("heading", { level: 1, name: "See you next time" }).waitFor();
   assert.equal((await page.request.get(base + "/api/config")).status(), 401);

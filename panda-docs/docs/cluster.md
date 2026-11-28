@@ -24,7 +24,7 @@ The application database selected after first administrator creation (SQLite or 
 
 Use PostgreSQL reachable from every Pod, with a dedicated database and credentials authorized to create the coordination tables. Manage database backups and connection security yourself. Use a CSI volume provisioner supporting `ReadWriteOncePod` for the owner, so another Pod cannot mount the workspace concurrently. SQLite WAL, when selected, remains on that exclusive owner volume; it is never shared between gateway processes. [Kubernetes access modes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) and [SQLite WAL restrictions](https://sqlite.org/wal.html) explain these storage constraints.
 
-1. Download the template. The template selects `hiforceai/panda-force:0.2.3` for both roles and the init container. Override all of those references together when using another verified image or digest. Set `PANDA_FORCE_PUBLIC_URL` to your actual HTTPS origin on both roles. Configure `storageClassName` if there is no suitable default. Keep the owner at one replica and isolated engine mode.
+1. Download the template. The template selects `hiforceai/panda-force:0.2.4` for both roles and the init container. Override all of those references together when using another verified image or digest. Set `PANDA_FORCE_PUBLIC_URL` to your actual HTTPS origin on both roles. Configure `storageClassName` if there is no suitable default. Keep the owner at one replica and isolated engine mode.
 2. Create the namespace and Secret. Put your PostgreSQL URL in a local file named `database-url`, and a randomly generated signing key of at least 32 characters in `signing-key`. Keep those files private and out of Git. The two roles use the same values:
 
    ```bash

@@ -1,0 +1,78 @@
+# Mount the IPC volume only into the trusted PandaForce application. Harness containers never mount either volume.
+x-media-image: &media-image
+  image: ${PANDA_FORCE_MEDIA_WORKER_IMAGE:?Set the verified PandaForce application image that includes the media worker}
+  pull_policy: ${PANDA_FORCE_MEDIA_WORKER_PULL_POLICY:-missing}
+
+services:
+  panda-media-init:
+    <<: *media-image
+    user: "0:0"
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        case "$$WORKER_UID" in ""|0|*[!0-9]*) exit 1;; esac
+        case "$$APPLICATION_GID" in ""|0|*[!0-9]*) exit 1;; esac
+        [ ! -L /ipc/token ]
+        umask 077
+        if [ ! -e /ipc/token ]; then
+          bun -e 'import {randomBytes} from "node:crypto"; import {writeFileSync} from "node:fs"; writeFileSync("/ipc/token", randomBytes(32).toString("hex"), {flag:"wx", mode:0o600});'
+        fi
+        [ -f /ipc/token ]
+        chown "$$WORKER_UID:$$APPLICATION_GID" /state /ipc /ipc/token
+        chmod 0700 /state
+        chmod 0750 /ipc
+        chmod 0640 /ipc/token
+    environment:
+      WORKER_UID: ${PANDA_FORCE_MEDIA_WORKER_UID:-1001}
+      APPLICATION_GID: ${PGID:-1000}
+    volumes:
+      - panda-media-private:/state
+      - panda-media-ipc:/ipc
+    network_mode: none
+    read_only: true
+
+  panda-media-worker:
+    <<: *media-image
+    user: "${PANDA_FORCE_MEDIA_WORKER_UID:-1001}:${PGID:-1000}"
+    working_dir: /app
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    environment:
+      PANDA_FORCE_SERVICE_ROLE: creation-media
+      PANDA_FORCE_MEDIA_EXECUTOR_PRIVATE_STATE: /state
+      PANDA_FORCE_MEDIA_EXECUTOR_SOCKET: /ipc/worker.sock
+      PANDA_FORCE_MEDIA_EXECUTOR_TOKEN_FILE: /ipc/token
+      PANDA_FORCE_MEDIA_EXECUTOR_ENDPOINTS: ${PANDA_FORCE_MEDIA_EXECUTOR_ENDPOINTS:-}
+      PANDA_FORCE_MEDIA_CLI_MANIFESTS: ${PANDA_FORCE_MEDIA_CLI_MANIFESTS:-[]}
+      PANDA_FORCE_MEDIA_CLI_REGISTRATION_MANIFESTS: ${PANDA_FORCE_MEDIA_CLI_REGISTRATION_MANIFESTS:-[]}
+    volumes:
+      - panda-media-private:/state
+      - panda-media-ipc:/ipc
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    depends_on:
+      panda-media-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - bun
+        - -e
+        - >-
+          import {readFileSync} from "node:fs";
+          import {request} from "node:http";
+          const req=request({socketPath:"/ipc/worker.sock",path:"/v1/media/list",method:"POST",
+          headers:{"x-panda-media-token":readFileSync("/ipc/token","utf8").trim(),
+          "content-type":"application/json"}},res=>{res.resume();res.on("end",()=>process.exit(res.statusCode===200?0:1));});
+          req.on("error",()=>process.exit(1));req.end(JSON.stringify({owner:"worker-health"}));
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  panda-media-private:
+  panda-media-ipc:

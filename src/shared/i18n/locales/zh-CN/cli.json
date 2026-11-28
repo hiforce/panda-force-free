@@ -335,5 +335,8 @@
   "botEffortDefault": "使用模型默认强度",
   "botEffortHint": "用于下一条对话消息及之后开始执行的后台任务。",
   "botEffortChooseModel": "选择模型后，可设置该模型支持的思考强度。",
-  "botEffortUnavailable": "当前模型列表中没有已保存的强度；未修改时将保留原设置。"
+  "botEffortUnavailable": "当前模型列表中没有已保存的强度；未修改时将保留原设置。",
+  "mediaRead": "读取媒体连接",
+  "mediaConnect": "管理媒体连接",
+  "mediaAdmin": "注册媒体 CLI 包"
 }

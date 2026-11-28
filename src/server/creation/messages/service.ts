@@ -41,6 +41,7 @@ export class CreationMessages {
         "model",
         "effort",
         "outputType",
+        "media",
         "dialogue",
         "updateGeneration",
       ]);
@@ -55,6 +56,7 @@ export class CreationMessages {
       ...((row.outputType ?? source.outputType) === undefined
         ? {}
         : { outputType: row.outputType ?? source.outputType }),
+      ...(row.media === undefined ? {} : { media: row.media }),
       selections: row.selections ?? [],
       attachments: row.attachments ?? [],
       ...(row.runtimeId === undefined ? {} : { runtimeId: creationId(row.runtimeId) }),
@@ -76,6 +78,7 @@ export class CreationMessages {
     if (replayOnly) return null;
     if (request.runtimeId && request.runtimeId !== (source.profile.runtimeId ?? "codex"))
       throw new CreationError("conflict");
+    if (request.media) throw new CreationError("conflict");
     if (request.outputType !== source.outputType) throw new CreationError("conflict");
     const canUpdate = (current: CreationTask) =>
       ["queued", "running"].includes(current.state) &&

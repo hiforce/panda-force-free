@@ -15,6 +15,7 @@ import {
 import { creationRunInput } from "../run-input.js";
 import { richDocumentInput } from "../../documents/rich-codec.js";
 
+import { mediaBinding, requestedMedia } from "../media-executors/selection.js";
 import { creationOutputType } from "../output-type.js";
 import { creationEngineProfile, creationPrompt } from "../input-values.js";
 export { creationEngineProfile, creationPrompt } from "../input-values.js";
@@ -28,6 +29,8 @@ function snapshot(value: unknown): CreationInputSnapshot {
       "requestDigest",
       "prompt",
       "outputType",
+      "media",
+      "mediaPolicy",
       "dialogue",
       "discussion",
       "documentFileLineage",
@@ -39,12 +42,15 @@ function snapshot(value: unknown): CreationInputSnapshot {
       "recoveryFrom",
     ]),
     outputType = row.outputType === undefined ? undefined : creationOutputType(row.outputType),
+    media = row.media === undefined ? undefined : mediaBinding(row.media),
     skills = decodeSkillCapture(row.skills),
     taskId = creationUuid(row.taskId),
     owner = creationText(row.owner, 200),
     requestDigest = creationDigest(row.requestDigest);
   if (
     row.schema !== 1 ||
+    (row.mediaPolicy !== undefined && row.mediaPolicy !== true) ||
+    (media && requestedMedia(outputType) !== media.kind) ||
     (row.dialogue !== undefined && row.dialogue !== true) ||
     (row.discussion !== undefined && (!Array.isArray(row.discussion) || row.discussion.length > 5)) ||
     skills.id !== taskId ||
@@ -65,6 +71,8 @@ function snapshot(value: unknown): CreationInputSnapshot {
     requestDigest,
     prompt: creationPrompt(row.prompt),
     ...(outputType === undefined ? {} : { outputType }),
+    ...(media ? { media } : {}),
+    ...(row.mediaPolicy === true ? { mediaPolicy: true as const } : {}),
     ...(row.dialogue === true ? { dialogue: true as const } : {}),
     ...(Array.isArray(row.discussion)
       ? {

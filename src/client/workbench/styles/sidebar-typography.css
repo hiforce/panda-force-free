@@ -49,8 +49,7 @@
   font-size: var(--pf-text-body);
   line-height: 20px;
 }
-.sidebar .thread-meta,
-.sidebar .workbench-connection {
+.sidebar .thread-meta {
   font-size: var(--pf-text-meta);
   line-height: 16px;
 }
@@ -62,7 +61,7 @@
 .sidebar .thread-item.active .thread-name {
   font-weight: 500;
 }
-.sidebar .account-button,
+.sidebar .sidebar-settings,
 .sidebar .new-task {
   font-size: var(--pf-text-nav);
 }
@@ -237,14 +236,12 @@
     min-height: 56px;
   }
   .sidebar .thread-options,
-  .sidebar .sidebar-project-options,
-  .sidebar .sidebar-help-button {
+  .sidebar .sidebar-project-options {
     width: var(--pf-touch-target);
     height: var(--pf-touch-target);
     flex-basis: var(--pf-touch-target);
   }
-  .sidebar .sidebar-sessions-more,
-  .sidebar .workbench-connection {
+  .sidebar .sidebar-sessions-more {
     min-height: var(--pf-touch-target);
   }
 }

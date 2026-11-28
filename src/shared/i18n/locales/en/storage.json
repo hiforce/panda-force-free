@@ -49,5 +49,14 @@
   "repairSave": "Save replacement credentials",
   "chooseKinds": "Select at least one file type.",
   "credentialsRequired": "Enter both the access key ID and secret access key.",
-  "requiredFields": "Enter a connection name, bucket and region."
+  "requiredFields": "Enter a connection name, bucket and region.",
+  "placementTitle": "Original storage rules",
+  "destination": "Storage destination",
+  "manageConnections": "Manage storage connections",
+  "missingDestination": "Unavailable connection",
+  "addDestinationHint": "Add an S3-compatible connection in Storage to use cloud storage here.",
+  "destinationKinds": "Save these file types to the selected connection",
+  "otherKindsLocal": "Other file types are saved locally.",
+  "savePlacement": "Save storage rules",
+  "drivePlacementHint": "Google Drive connections are managed in Storage. Original files can use local or S3-compatible storage."
 }

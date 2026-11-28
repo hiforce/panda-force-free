@@ -680,77 +680,9 @@
           </div>
         </div>
         <div class="sidebar-footer">
-          <div class="account-menu" id="accountMenu" hidden="">
-            <div class="account-menu-identity">
-              <span class="account-menu-avatar account-initials" id="accountMenuAvatar">?</span
-              ><span
-                ><strong id="accountMenuName" data-pf-message="common.settings">Settings</strong
-                ><small id="accountMenuSubtitle"></small
-              ></span>
-            </div>
-            <div class="account-menu-separator"></div>
-            <button type="button" class="account-menu-row" id="accountProfile">
-              <span class="icon-slot" data-icon="userRound"></span><span data-pf-message="common.profile">Profile</span>
-            </button>
-            <button type="button" class="account-menu-row" id="accountUsage">
-              <span class="icon-slot" data-icon="info"></span><span data-pf-message="common.usage">Usage</span>
-            </button>
-            <button type="button" class="account-menu-row" id="accountSettings">
-              <span class="icon-slot" data-icon="wrench"></span><span data-pf-message="common.settings">Settings</span>
-            </button>
-            <button type="button" class="account-menu-row" id="accountShortcuts">
-              <span class="icon-slot" data-icon="command"></span
-              ><span data-pf-message="common.keyboardShortcuts">Keyboard shortcuts</span>
-            </button>
-            <div class="account-menu-separator"></div>
-            <div class="account-menu-status">
-              <span class="status-dot" id="statusDot"></span
-              ><span id="statusText" data-pf-message="common.connecting">Connecting</span>
-            </div>
-            <button type="button" class="account-menu-row" id="accountLogout">
-              <span class="icon-slot" data-icon="logOut"></span><span data-pf-message="common.logOut">Log out</span>
-            </button>
-          </div>
-          <div class="sidebar-footer-row">
-            <button
-              class="account-button"
-              id="accountButton"
-              type="button"
-              aria-expanded="false"
-              aria-controls="accountMenu"
-            >
-              <span class="account-avatar account-initials" id="accountAvatar">?</span>
-              <span class="account-button-copy"
-                ><strong id="accountName" data-pf-message="common.settings">Settings</strong
-                ><small id="accountFooterMeta" aria-hidden="true"></small
-              ></span>
-            </button>
-            <button
-              class="sidebar-help-button"
-              id="sidebarHelpButton"
-              type="button"
-              title="Help"
-              aria-label="Help"
-              aria-expanded="false"
-              aria-controls="sidebarHelpMenu"
-              data-pf-title="common.help"
-              data-pf-aria-label="common.help"
-            >
-              <span class="icon-slot" data-icon="circleHelp"></span>
-            </button>
-          </div>
-          <div class="sidebar-help-menu" id="sidebarHelpMenu" hidden="">
-            <button type="button" id="sidebarHelpSettings">
-              <span class="icon-slot" data-icon="wrench"></span><span data-pf-message="common.settings">Settings</span>
-            </button>
-            <button type="button" id="sidebarHelpShortcuts">
-              <span class="icon-slot" data-icon="command"></span
-              ><span data-pf-message="common.keyboardShortcuts">Keyboard shortcuts</span>
-            </button>
-            <a href="https://developers.openai.com/codex/" target="_blank" rel="noopener noreferrer"
-              ><span class="icon-slot" data-icon="circleHelp"></span><span data-pf-message="common.help">Help</span></a
-            >
-          </div>
+          <button class="sidebar-row sidebar-settings" id="sidebarSettings" type="button">
+            <span class="icon-slot" data-icon="settings"></span><span data-pf-message="common.settings">Settings</span>
+          </button>
           <span id="threadSource" hidden="" data-pf-message="common.local">local</span>
         </div>
       </aside>
@@ -1685,7 +1617,11 @@
             <details class="settings-nav-group" data-settings-group="services" open>
               <summary data-pf-message="creative.system"></summary>
               <button type="button" data-settings-page="agent">
-                <span class="icon-slot" data-icon="plug"></span><span data-pf-message="harness.title"></span></button
+                <span class="icon-slot" data-icon="plug"></span><span data-pf-message="harness.title"></span>
+              </button>
+              <button type="button" data-settings-page="media-credentials">
+                <span class="icon-slot" data-icon="shield"></span>
+                <span data-pf-message="creation.credentialSettings"></span></button
               ><button type="button" data-settings-page="plugins-settings">
                 <span class="icon-slot" data-icon="settings"></span
                 ><span data-pf-message="creative.extensions"></span></button
@@ -1947,6 +1883,15 @@
                 ><small id="settingsAccountMeta"></small
               ></span>
             </div>
+            <div class="settings-profile-actions" id="settingsModelAccountActions" hidden>
+              <button type="button" class="wb-button" id="accountUsage">
+                <span class="icon-slot" data-icon="info"></span><span data-pf-message="common.usage">Usage</span>
+              </button>
+              <button type="button" class="wb-button" id="accountLogout">
+                <span class="icon-slot" data-icon="logOut"></span>
+                <span data-pf-message="shell.logOutOfModelAccount">Log out of model account</span>
+              </button>
+            </div>
           </section>
 
           <section class="settings-page" data-settings-content="placeholder" hidden="">
@@ -1977,6 +1922,32 @@
               <span class="icon-slot" data-icon="chevronLeft"></span>
             </button>
             <div data-settings-view="agent"></div>
+          </section>
+          <section class="settings-page" data-settings-content="media-credentials" hidden>
+            <header class="settings-page-heading executor-page-heading">
+              <button type="button" class="settings-mobile-back icon-button" data-pf-aria-label="common.backToSettings">
+                <span class="icon-slot" data-icon="chevronLeft"></span>
+              </button>
+              <h1 data-pf-message="creation.credentialSettings">Credentials</h1>
+              <button type="button" class="wb-button primary" data-credential-add disabled>
+                <span class="icon-slot" data-icon="plus"></span>
+                <span data-pf-message="creation.credentialAdd"></span>
+              </button>
+            </header>
+            <div data-settings-view="media-credentials"></div>
+          </section>
+          <section class="settings-page" data-settings-content="media-executors" hidden>
+            <header class="settings-page-heading executor-page-heading">
+              <button type="button" class="settings-mobile-back icon-button" data-pf-aria-label="common.backToSettings">
+                <span class="icon-slot" data-icon="chevronLeft"></span>
+              </button>
+              <h1 data-pf-message="creation.mediaSettings">Executors</h1>
+              <button type="button" class="wb-button primary" data-media-configure="" data-executor-add disabled>
+                <span class="icon-slot" data-icon="plus"></span>
+                <span data-pf-message="creation.mediaAddExecutor"></span>
+              </button>
+            </header>
+            <div data-settings-view="media-executors"></div>
           </section>
           <section class="settings-page" data-settings-content="bots" hidden>
             <button

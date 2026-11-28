@@ -16,6 +16,7 @@ export interface ApplicationImageRenderer {
   readonly provider: ApplicationImageProvider;
   readonly maxReferences: number;
   readonly maxReferenceBytes: number;
+  version?(): Promise<string>;
   render(
     prompt: string,
     references: readonly { bytes: Uint8Array; mime: string }[],

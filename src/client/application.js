@@ -464,8 +464,6 @@ export function startApplication() {
       mutations: environment.stateFor("connection").mutations,
       state: environment.stateFor("connection").state,
       workspacePreparation: environment.workspacePreparation,
-      t: environment.t,
-      $: environment.$,
       startupPort: startup,
       synchronizationPort: synchronization,
       sidebarPort: sidebar,
@@ -567,9 +565,7 @@ export function startApplication() {
       shortPath: environment.shortPath,
       modelsPort: models,
       panelsPort: panels,
-      viewUpdates: environment.viewUpdates,
       state: environment.stateFor("settings").state,
-      mutations: environment.stateFor("settings").mutations,
     }),
   );
   install(
@@ -577,7 +573,6 @@ export function startApplication() {
     assembleAccount({
       $: environment.$,
       t: environment.t,
-      state: environment.stateFor("account").state,
       settingsPort: settings,
       modelsPort: models,
       panelsPort: panels,
@@ -617,7 +612,6 @@ export function startApplication() {
       usagePort: usage,
       identityPort: identity,
       modelsPort: models,
-      viewUpdates: environment.viewUpdates,
       settingsPort: settings,
       workbenchPort: workbench,
       navigationPort: navigation,

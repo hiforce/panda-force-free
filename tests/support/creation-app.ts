@@ -42,7 +42,7 @@ export async function creationAppFixture(
       root: string,
     ): Pick<
       Parameters<typeof createCreationFeature>[0],
-      "documents" | "archive" | "destinations" | "directories" | "image"
+      "documents" | "archive" | "destinations" | "directories" | "image" | "media"
     >;
   } = {},
 ) {
@@ -143,6 +143,7 @@ export async function creationAppFixture(
     scopes,
     save,
     root,
+    recoverMedia: (scope: Parameters<typeof feature.recoverMedia>[0]) => feature.recoverMedia(scope),
     onRun(value: CreationTestHandler) {
       handler = value;
     },

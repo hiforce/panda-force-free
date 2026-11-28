@@ -9,15 +9,16 @@ import { inputDigest } from "../build/creative-tools.mjs";
 export function checkInstallation(root = process.cwd()) {
   const text = (path) => readFileSync(resolve(root, path), "utf8");
   const json = (path) => JSON.parse(text(path));
-  const { version, installationVersion = version } = json("release/community/edition.json");
+  const { version, installationVersion = version, installationBranch = "main" } = json("release/community/edition.json");
   const image = `hiforceai/panda-force:${installationVersion}`;
-  const installClone = "git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git";
+  const installClone = `git clone --branch ${installationBranch} --depth 1 https://github.com/hiforce/panda-force-free.git`;
   const bases = json("scripts/build/base-images.json");
   const require = (value, message) => {
     if (!value) throw Error(message);
   };
   require(json("package.json").version === version, "Application and community versions differ");
   require(/^\d+\.\d+\.\d+$/.test(installationVersion), "Invalid published installation version");
+  require(["main", "develop"].includes(installationBranch), "Invalid installation branch");
   require(bases.defaultProfile === "rocky9-creative", "Release must select the reviewed creative profile");
   require(bases.creativeInputsSha256 ===
     inputDigest(resolve(root, "scripts/build/creative-tools")), "Creative inputs differ from the release bases");
@@ -119,7 +120,7 @@ export function checkInstallation(root = process.cwd()) {
       if (["installation.md", "harness-runtimes.md", "storage.md"].includes(name))
         require(!text(path).includes("panda-force:local"), `${path}: end-user instructions must use the release image`);
       if (["installation.md", "harness-runtimes.md"].includes(name))
-        require(text(path).includes(installClone), `${path}: ordinary installation must clone the main branch`);
+        require(text(path).includes(installClone), `${path}: installation must clone the selected branch`);
     }
   require(createHash("sha256").update(text("scripts/build/harness-engines.lock.json")).digest("hex") ===
     bases.engineLockSha256, "Harness lock differs from base metadata");

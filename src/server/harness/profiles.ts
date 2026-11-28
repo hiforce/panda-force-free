@@ -5,7 +5,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { existsSync, constants } from "node:fs";
 import { chmod, mkdir, readFile, open, realpath, mkdtemp, rm, unlink, rename, stat } from "node:fs/promises";
 import { join, resolve, isAbsolute } from "node:path";
-import { homedir, tmpdir } from "node:os";
+import { homedir } from "node:os";
 import { HARNESS_PERMISSION_MODES, HarnessError, type HarnessPermissionMode } from "../../shared/harness/contracts.js";
 import { isRecord } from "../../shared/records.js";
 import type { EngineDriver } from "../../shared/engine/contracts.js";
@@ -17,12 +17,14 @@ import { accessCredentials } from "./auth/snapshot.js";
 import { brokerCredentialSource, credentialLease } from "./auth/remote.js";
 import type { HarnessCredentialLease } from "./auth/contracts.js";
 import { createCodexDriver } from "../engines/codex.js";
+import { nativeProcessScratch } from "../engines/native-process.js";
 import { zcodeImageRenderer } from "./adapters/zcode-image.js";
 import { ZCodeHarnessAgent } from "./adapters/zcode.js";
 import { AntigravityHarnessAgent, antigravityApplicationAgent } from "./adapters/antigravity.js";
 import { AcpSessionAgent } from "./adapters/acp-session.js";
 import { managedCodexFactory } from "./codex-profile.js";
 import { resolveAppServerConnection } from "../bridge/app-server-connection.js";
+import { remoteAcpLaunch } from "./auth/remote-acp.js";
 
 function profileEntries(value: string | undefined): Record<string, unknown>[] {
   if (!value) return [];
@@ -288,8 +290,22 @@ export function harnessProfiles(
     });
   }
   for (const profile of profileEntries(env.PANDA_FORCE_CLAUDE_CODE_HARNESS_PROFILES)) {
-    const identity = profileIdentity(profile),
-      command = operatorPath(profile.command),
+    const identity = profileIdentity(profile);
+    if (profile.deployment === "remote") {
+      const launch = remoteAcpLaunch(profile);
+      profiles.push({
+        ...identity,
+        kind: "claude-code",
+        deployment: "remote",
+        conversationOnly: true,
+        applicationScopes: ["creation"],
+        factory: {
+          create: async (_runtime, { cwd, application }) => claudeAgent(await launch(cwd), application),
+        },
+      });
+      continue;
+    }
+    const command = operatorPath(profile.command),
       claudeCommand = operatorPath(profile.claudeCommand),
       accountHome = resolve(operatorPath(profile.accountHome));
     const deployment = profile.deployment ?? "local";
@@ -419,6 +435,7 @@ export function harnessProfiles(
       deployment: profile.deployment ?? "local",
       factory: {
         create: async (runtime, scope) => {
+          const scratch = await nativeProcessScratch();
           const home = runtimeHome(stateRoot, runtime.id, scope.owner, scope.scopeId);
           await mkdir(home, { recursive: true, mode: 0o700 });
           if ((await realpath(home)) !== home) throw new HarnessError("forbidden", 403);
@@ -443,15 +460,6 @@ export function harnessProfiles(
               await unlink(temporary).catch(() => {});
             }
           };
-          if (!profile.credentialSocket) {
-            // Legacy operator-owned snapshots stay supported without granting refresh capability to an agent.
-            try {
-              const credentials: unknown = JSON.parse(await readFile(join(profile.accountHome, "auth.json"), "utf8"));
-              await privateWrite("auth.json", JSON.stringify(accessCredentials(credentials)));
-            } catch {
-              throw new HarnessError("authentication", 503);
-            }
-          }
           await privateWrite(
             "config.toml",
             "[cli]\nauto_update = false\nuse_leader = false\n[features]\nshared_daemon = false\n",
@@ -504,10 +512,10 @@ export function harnessProfiles(
           nativeEnv.GROK_DISABLE_AUTOUPDATER = "1";
           nativeEnv.GROK_SHARED_DAEMON = "false";
           // Unix socket paths have a small OS limit; the durable account directory can be arbitrarily deep.
-          const socketDirectory = await mkdtemp(join(tmpdir(), "pf-grok-"));
+          const socketDirectory = await mkdtemp(join(scratch, "pf-grok-"));
           let credentials: HarnessCredentialLease | undefined;
           try {
-            if (profile.credentialSocket)
+            if (profile.credentialSocket) {
               credentials = await credentialLease(
                 brokerCredentialSource(profile.credentialSocket),
                 async (snapshot) => {
@@ -523,6 +531,15 @@ export function harnessProfiles(
                   await privateWrite("auth.json", JSON.stringify(snapshot.credentials));
                 },
               );
+            } else {
+              // Legacy operator-owned snapshots stay supported without granting refresh capability to an agent.
+              try {
+                const snapshot: unknown = JSON.parse(await readFile(join(profile.accountHome, "auth.json"), "utf8"));
+                await privateWrite("auth.json", JSON.stringify(accessCredentials(snapshot)));
+              } catch {
+                throw new HarnessError("authentication", 503);
+              }
+            }
             return new GrokHarnessAgent({
               command: profile.command,
               args: [

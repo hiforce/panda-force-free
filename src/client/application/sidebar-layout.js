@@ -91,10 +91,6 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
       viewUpdates.request("sidebar");
     }
   }
-  function setSidebarHelpOpen(open) {
-    $("#sidebarHelpMenu").hidden = !open;
-    $("#sidebarHelpButton").setAttribute("aria-expanded", String(open));
-  }
   function mobileSidebarEnabled() {
     return innerWidth < 768;
   }
@@ -127,18 +123,7 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
       setSidebarSearchOpen($("#sidebarSearchPanel").hidden);
     };
     $("#sidebarSearchClose").onclick = () => setSidebarSearchOpen(false);
-    $("#sidebarHelpButton").onclick = (event) => {
-      event.stopPropagation();
-      setSidebarHelpOpen($("#sidebarHelpMenu").hidden);
-    };
-    $("#sidebarHelpSettings").onclick = () => {
-      setSidebarHelpOpen(false);
-      settingsPort.openSettings("general-settings");
-    };
-    $("#sidebarHelpShortcuts").onclick = () => {
-      setSidebarHelpOpen(false);
-      settingsPort.openSettings("keyboard-shortcuts");
-    };
+    $("#sidebarSettings").onclick = () => settingsPort.openSettings("general-settings");
     $("#workspaceNavigationToggle").onclick = () => $("#toggleSidebar").click();
     $("#toggleSidebar").onclick = () =>
       setSidebarOpen(
@@ -154,6 +139,5 @@ export function assembleSidebarLayout({ viewUpdates, $, noticesPort, t, settings
     setSidebarOpen,
     syncSidebarLayout,
     setSidebarSearchOpen,
-    setSidebarHelpOpen,
   };
 }

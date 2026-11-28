@@ -113,15 +113,14 @@ try {
 
   console.log("Checking model account cancellation");
   await page.waitForFunction(() => globalThis.__pandaForceDebug.state.account?.type === "chatgpt");
-  await page.locator("#accountButton").click();
+  await page.locator('[data-chrome-menu="profile"]').click();
+  await page.locator('[data-chrome-action="settings"][data-value="profile"]').click();
   await page.locator("#accountLogout").click();
   await dialog.waitFor();
   assert.ok((await dialog.innerText()).includes("Your PandaForce login stays active"));
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
   assert.equal(calls("account/logout").length, 0);
   console.log("Checking model account consent");
-  await page.locator("#accountMenu").waitFor({ state: "hidden" });
-  await page.locator("#accountButton").click();
   await page.locator("#accountLogout").click();
   await dialog.getByRole("button", { name: "Log out", exact: true }).click();
   await waitFor(() => calls("account/logout").length === 1);

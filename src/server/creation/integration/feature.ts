@@ -43,6 +43,8 @@ import { FileCreationMediaOutput, type CreationAssetAccess } from "./media-outpu
 import { creationImageTools } from "./image-tools.js";
 import { CreationError } from "../contracts.js";
 import { creationCaptureCapabilities } from "./capabilities.js";
+import { stableJson } from "../../../shared/stable-json.js";
+import type { MediaJobScope } from "./media-executors/jobs.js";
 
 /** This composition owns its database and files. Documents, skills, auth and engine adapters keep their own lifetimes. */
 export function createCreationFeature(options: {
@@ -58,7 +60,10 @@ export function createCreationFeature(options: {
   profiles: CreationProfiles;
   engines: CreationEngines;
   materials?: import("../materials.js").CreationMaterialPort;
+  enforceMediaSelection?: boolean;
+  media?: Pick<import("../media-executors/contracts.js").CreationMediaExecutorPort, "bind">;
   image?: {
+    mediaJobs?: import("./media-executors/jobs.js").CreationMediaJobs;
     applicationImages?: Parameters<typeof creationImageTools>[0]["applicationImages"];
     journal: import("./rendering/image-journal.js").ImageRenderJournal;
     renderer: Parameters<typeof creationImageTools>[0]["renderer"];
@@ -266,6 +271,27 @@ export function createCreationFeature(options: {
     let closing: Promise<void> | null = null;
     return {
       service,
+      creationCapabilities: rendering?.capabilities,
+      async recoverMedia(scope: MediaJobScope) {
+        if (!options.profiles.settings.enabled || !options.image?.mediaJobs) return false;
+        try {
+          const task = await tasks.get(scope.owner, scope.creationId);
+          if (
+            task.spec.projectId !== scope.projectId ||
+            task.spec.inputDigest !== scope.inputDigest ||
+            task.outputDigest ||
+            (!task.cancelRequested && task.state !== "queued" && task.state !== "running")
+          )
+            return false;
+          await options.authorize(scope.owner, scope.projectId);
+          const input = await inputs.read(task.spec);
+          if (input.media?.source !== "executor" || stableJson(input.media) !== stableJson(scope.binding)) return false;
+          return task.cancelRequested ? ("cancel" as const) : true;
+        } catch (error) {
+          if (error instanceof CreationError && error.code === "notFound") return false;
+          throw error;
+        }
+      },
       routes: creationRoutes(service, options.owner),
       start: () => runner.start(),
       close: () =>

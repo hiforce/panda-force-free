@@ -447,7 +447,6 @@ export interface SettingsPort {
 
 export interface AccountPort {
   bind: () => void;
-  toggleAccountMenu: (force?: boolean) => void;
   loadAccount: (refresh?: boolean) => Promise<void>;
   renderAccount: (account: import("../../shared/engine/types.js").PublicAccount | null) => void;
 }
@@ -576,7 +575,6 @@ export interface SidebarLayoutPort {
   setSidebarOpen: (open: boolean, settings?: { temporary?: boolean }) => void;
   syncSidebarLayout: () => void;
   setSidebarSearchOpen: (open: boolean) => void;
-  setSidebarHelpOpen: (open: boolean) => void;
 }
 
 export interface SynchronizationPort {

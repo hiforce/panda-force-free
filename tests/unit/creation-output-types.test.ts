@@ -18,6 +18,7 @@ import { richDocumentFromMarkdown } from "../../src/server/documents/rich-codec.
 import { creationStateMessage } from "../../src/client/creation/state.js";
 import type { CreationTaskSpec } from "../../src/server/creation/contracts.js";
 import type { CreationTaskView } from "../../src/shared/creation/contracts.js";
+import type { CreationMediaBinding } from "../../src/shared/creation/media-executors.js";
 
 const directories: string[] = [];
 afterEach(async () => {
@@ -124,7 +125,12 @@ test("a saved media override cannot reroute another Harness to the primary Codex
       },
     },
   });
-  const open = (engineId: string, runtimeId: string | undefined, model = "selected-model") =>
+  const open = (
+    engineId: string,
+    runtimeId: string | undefined,
+    model = "selected-model",
+    media?: CreationMediaBinding,
+  ) =>
     renderer.open({
       task: spec,
       input: {
@@ -134,6 +140,7 @@ test("a saved media override cannot reroute another Harness to the primary Codex
         projectId,
         requestDigest: spec.inputDigest,
         prompt: "Draw a circle",
+        ...(media ? { media, mediaPolicy: true as const } : {}),
         profile: {
           id: "default",
           engineId,
@@ -169,6 +176,21 @@ test("a saved media override cannot reroute another Harness to the primary Codex
   const namedCodex = await open("harness-other-codex", "other-codex");
   expect(namedCodex.definitions.some(({ name }) => name === RENDER_IMAGE_TOOL)).toBe(false);
   expect(await namedCodex.call(render)).toMatchObject({ success: false });
+  expect(renderModels).toEqual([]);
+
+  const disconnected = await open("codex", "codex", "selected-model", {
+    kind: "image",
+    source: "executor",
+    executorId: randomUUID(),
+    preset: "grok-image",
+    presetVersion: 1,
+    model: "grok-imagine-image-2.0",
+    revision: 1,
+  });
+  expect(await disconnected.call(render)).toEqual({
+    success: false,
+    text: '{"error":"unavailable","saved":false}',
+  });
   expect(renderModels).toEqual([]);
 
   for (const runtimeId of ["codex", undefined]) {

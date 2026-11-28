@@ -26,39 +26,38 @@ for (const kind of ["image", "video", "slides", "web", "document"]) {
         supportedReasoningEfforts: [{ reasoningEffort: "medium" }],
       },
     ],
-    ...(kind === "image"
-      ? { applicationImage: image.toString("base64") }
-      : kind === "document"
-        ? {}
-        : {
-            applicationArtifact: {
-              kind,
-              arguments:
-                kind === "video"
+    ...(kind === "image" || kind === "slides" ? { applicationImage: image.toString("base64") } : {}),
+    ...(kind === "image" || kind === "document"
+      ? {}
+      : {
+          applicationArtifact: {
+            kind,
+            arguments:
+              kind === "video"
+                ? {
+                    slot: 1,
+                    aspect: "portrait",
+                    scenes: [
+                      { duration: 3, heading: "Computer history", text: "From early computers to everyday devices" },
+                    ],
+                  }
+                : kind === "slides"
                   ? {
                       slot: 1,
-                      aspect: "portrait",
-                      scenes: [
-                        { duration: 3, heading: "Computer history", text: "From early computers to everyday devices" },
+                      pages: [
+                        {
+                          layout: "picture",
+                          title: "Computer history",
+                          body: "From early computers to everyday devices",
+                        },
                       ],
                     }
-                  : kind === "slides"
-                    ? {
-                        slot: 1,
-                        pages: [
-                          {
-                            layout: "cover",
-                            title: "Computer history",
-                            body: "From early computers to everyday devices",
-                          },
-                        ],
-                      }
-                    : {
-                        slot: 1,
-                        html: "<!doctype html><html><body><h1>Computer history</h1><p>A complete saved page.</p></body></html>",
-                      },
-            },
-          }),
+                  : {
+                      slot: 1,
+                      html: "<!doctype html><html><body><h1>Computer history</h1><p>A complete saved page.</p></body></html>",
+                    },
+          },
+        }),
   });
   let saved;
   try {
@@ -100,6 +99,7 @@ for (const kind of ["image", "video", "slides", "web", "document"]) {
             locale: "en",
             prompt: "Create a finished computer history " + kind,
             outputType: kind,
+            ...(kind === "image" || kind === "slides" ? { media: { kind: "image", source: "harness" } } : {}),
             profileId: options.defaultProfileId,
             selections: options.defaultWorkflow ? [options.defaultWorkflow] : [],
           });
@@ -222,7 +222,8 @@ for (const kind of ["image", "video", "slides", "web", "document"]) {
           await card.locator('[data-creation-action="open"]').click();
         }
         if (kind !== "document") {
-          const dialog = page.locator(".creative-asset-dialog[open]");
+          await page.waitForURL((url) => url.searchParams.get("asset") === saved.artifact.assetId);
+          const dialog = page.locator("[data-personal-reader]:visible");
           await dialog.locator("a[download]").first().waitFor();
           if (kind === "image")
             await waitFor(() =>
@@ -244,7 +245,7 @@ for (const kind of ["image", "video", "slides", "web", "document"]) {
           if (kind === "video") assert(bytes.includes(Buffer.from("ftyp")));
           if (kind === "slides") assert.equal(bytes.subarray(0, 2).toString(), "PK");
           if (kind === "web") assert(bytes.includes(Buffer.from("A complete saved page.")));
-          await page.keyboard.press("Escape");
+          await page.goBack();
           await dialog.waitFor({ state: "hidden" });
           assert.equal(await page.locator("#prompt").inputValue(), "Keep this unsent follow-up");
           await page.screenshot({ path: `${out}/${kind}-${locale}-${width}.png` });

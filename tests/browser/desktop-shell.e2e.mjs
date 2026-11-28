@@ -49,20 +49,15 @@ await page.evaluate(() => {
     { id: "managed-blocked", description: "Managed profile", allowed: false },
   ]);
 });
-await page.click("#accountButton");
 const chatgpt = await page.evaluate(() => ({
   product: document.querySelector("#productModeButton strong")?.textContent.trim(),
   newChat: document.querySelector("#newTask span:nth-child(2)")?.textContent.trim(),
   search: document.querySelector("#threadSearch")?.placeholder,
   projects: document.querySelector("#projectButton")?.textContent.trim(),
-  footerName: document.querySelector("#accountName")?.textContent.trim(),
-  footerMeta: document.querySelector("#accountFooterMeta")?.textContent.trim(),
-  buttonLabel: document.querySelector("#accountButton")?.getAttribute("aria-label"),
-  profileHidden: document.querySelector("#accountProfile")?.hidden,
-  usageHidden: document.querySelector("#accountUsage")?.hidden,
-  logoutHidden: document.querySelector("#accountLogout")?.hidden,
+  settingsLabel: document.querySelector("#sidebarSettings")?.textContent.trim(),
+  settingsIcon: document.querySelectorAll('#sidebarSettings [data-icon="settings"] svg').length,
 }));
-await page.click("#accountSettings");
+await page.click("#sidebarSettings");
 await page.waitForFunction(() => document.querySelector("#settingsDialog").open);
 const settingsShell = await page.evaluate(() => ({
   groups: [...document.querySelectorAll("[data-settings-group] summary")].map((node) => node.textContent.trim()),
@@ -159,8 +154,7 @@ const fullAccess = await page.evaluate(() => ({
   turn: globalThis.__pandaForceDebug.permissionTurnPolicy("/tmp/project"),
 }));
 
-await page.click("#accountButton");
-await page.click("#accountSettings");
+await page.click("#sidebarSettings");
 await page.click("#settingsFullAccessRow .settings-switch");
 const fullAccessSettingOff = await page.evaluate(() => ({
   checked: document.querySelector("#settingsFullAccessToggle").checked,
@@ -189,18 +183,11 @@ await page.evaluate(() =>
     initials: "AP",
   }),
 );
-await page.click("#accountButton");
+await page.click("#sidebarSettings");
 await page.waitForFunction(() => document.querySelector("#settingsDialog").open);
 const apiKey = await page.evaluate(() => ({
-  footerName: document.querySelector("#accountName")?.textContent.trim(),
-  footerMeta: document.querySelector("#accountFooterMeta")?.textContent.trim(),
-  profileHidden: document.querySelector("#accountProfile")?.hidden,
-  usageHidden: document.querySelector("#accountUsage")?.hidden,
-  settingsHidden: document.querySelector("#accountSettings")?.hidden,
-  logoutHidden: document.querySelector("#accountLogout")?.hidden,
-  avatarClass: document.querySelector("#accountAvatar")?.className,
-  avatarIcon: document.querySelectorAll("#accountAvatar svg").length,
-  buttonLabel: document.querySelector("#accountButton")?.getAttribute("aria-label"),
+  name: document.querySelector("#settingsAccountName")?.textContent.trim(),
+  modelActionsHidden: document.querySelector("#settingsModelAccountActions")?.hidden,
 }));
 const apiSettings = await page.evaluate(() => ({
   autoReviewHidden: document.querySelector("#settingsAutoReviewRow")?.hidden,
@@ -272,12 +259,8 @@ await browser.close();
   qualityAssert.equal(chatgpt.newChat, "New session", "Condition: chatgpt.newChat!=='New session'");
   qualityAssert.equal(chatgpt.search, "Search sessions", "Condition: chatgpt.search!=='Search sessions'");
   qualityAssert.equal(chatgpt.projects, "Projects", "Condition: chatgpt.projects!=='Projects'");
-  qualityAssert.equal(chatgpt.footerName, "Desktop User", "Condition: chatgpt.footerName!=='Desktop User'");
-  qualityAssert.equal(chatgpt.footerMeta, "", "Condition: chatgpt.footerMeta!==''");
-  qualityAssert.equal(chatgpt.buttonLabel, "Open profile menu", "Condition: chatgpt.buttonLabel!=='Open profile menu'");
-  qualityAssert.ok(!chatgpt.profileHidden, "Condition: chatgpt.profileHidden");
-  qualityAssert.ok(!chatgpt.usageHidden, "Condition: chatgpt.usageHidden");
-  qualityAssert.ok(!chatgpt.logoutHidden, "Condition: chatgpt.logoutHidden");
+  qualityAssert.equal(chatgpt.settingsLabel, "Settings", "Sidebar settings label");
+  qualityAssert.equal(chatgpt.settingsIcon, 1, "Sidebar settings gear");
   qualityAssert.deepEqual(settingsShell.groups, ["System & services", "Account"]);
   qualityAssert.ok(settingsShell.pages.includes("Preferences"));
   qualityAssert.ok(settingsShell.pages.includes("Models & connections"));
@@ -404,19 +387,8 @@ await browser.close();
   qualityAssert.ok(fullAccessSettingOn.checked, "Condition: !fullAccessSettingOn.checked");
   qualityAssert.ok(fullAccessSettingOn.visible, "Condition: !fullAccessSettingOn.visible");
   qualityAssert.equal(fullAccessSettingOn.mode, "default", "Condition: fullAccessSettingOn.mode!=='default'");
-  qualityAssert.equal(apiKey.footerName, "API key", "Condition: apiKey.footerName!=='API key'");
-  qualityAssert.equal(apiKey.footerMeta, "", "Condition: apiKey.footerMeta!==''");
-  qualityAssert.equal(apiKey.buttonLabel, "Open settings", "Condition: apiKey.buttonLabel!=='Open settings'");
-  qualityAssert.equal(
-    apiKey.avatarClass,
-    "account-avatar account-settings-icon",
-    "Condition: apiKey.avatarClass!=='account-avatar account-settings-icon'",
-  );
-  qualityAssert.equal(apiKey.avatarIcon, 1, "Condition: apiKey.avatarIcon!==1");
-  qualityAssert.ok(apiKey.profileHidden, "Condition: !apiKey.profileHidden");
-  qualityAssert.ok(apiKey.usageHidden, "Condition: !apiKey.usageHidden");
-  qualityAssert.ok(!apiKey.settingsHidden, "Condition: apiKey.settingsHidden");
-  qualityAssert.ok(apiKey.logoutHidden, "Condition: !apiKey.logoutHidden");
+  qualityAssert.equal(apiKey.name, "API key", "Model identity remains in profile settings");
+  qualityAssert.ok(apiKey.modelActionsHidden, "ChatGPT account actions are hidden in API key mode");
   qualityAssert.ok(apiSettings.autoReviewHidden, "Condition: !apiSettings.autoReviewHidden");
   qualityAssert.ok(!mobileSettings.horizontalOverflow, "Condition: mobileSettings.horizontalOverflow");
   qualityAssert.equal(

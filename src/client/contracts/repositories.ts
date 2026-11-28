@@ -55,7 +55,6 @@ export interface ProjectionPayloads {
   sessionWorkspace: undefined;
   composerPlaceholder: undefined;
   workspaceContext: undefined;
-  accountMenu: boolean | undefined;
   item: { item: DataView<EngineItem>; turnId: string; root?: HTMLElement; live?: boolean };
   workbench: undefined;
   sidebar: undefined;

@@ -16,7 +16,6 @@ export function createSettingsPanel({
   agentRows,
   permissionLabel,
   openUsageSummary,
-  toggleAccountMenu,
   syncPermissionSettings,
   pageViews = /** @type {Record<string, { show(host: HTMLElement): void; hide(): void }>} */ ({}),
 }) {
@@ -45,6 +44,8 @@ export function createSettingsPanel({
     "publishing-styles": { title: "plugins.stylesTitle" },
     templates: { title: "templates.title" },
     agent: { title: "harness.title" },
+    "media-executors": { title: "creation.mediaSettings" },
+    "media-credentials": { title: "creation.credentialSettings" },
     profile: { title: "common.profile" },
     usage: { title: "common.usage" },
     storage: { title: "creative.storage" },
@@ -121,7 +122,15 @@ export function createSettingsPanel({
   function setSettingsPage(page = "general-settings", { updateRoute = true } = {}) {
     if (
       globalThis.__pandaForceIdentity?.role === "member" &&
-      !["general-settings", "appearance", "users", "keyboard-shortcuts", "encryption-keys"].includes(page)
+      ![
+        "general-settings",
+        "appearance",
+        "users",
+        "keyboard-shortcuts",
+        "encryption-keys",
+        "media-executors",
+        "media-credentials",
+      ].includes(page)
     )
       page = "users";
     const selected = normalizeSettingsPage(page),
@@ -194,7 +203,9 @@ export function createSettingsPanel({
         const available =
             button.dataset.settingsAvailable !== "false" &&
             (globalThis.__pandaForceIdentity?.role !== "member" ||
-              ["general-settings", "users", "encryption-keys"].includes(button.dataset.settingsPage ?? "")),
+              ["general-settings", "users", "encryption-keys", "media-executors", "media-credentials"].includes(
+                button.dataset.settingsPage ?? "",
+              )),
           keywords =
             {
               "general-settings": [
@@ -339,7 +350,6 @@ export function createSettingsPanel({
       openUsageSummary();
       return;
     }
-    toggleAccountMenu(false);
     syncPermissionSettings();
     localizeText($("#settingsPermissionValue"), permissionLabel(), undefined, t);
     setOpaqueText(

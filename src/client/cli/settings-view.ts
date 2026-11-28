@@ -24,6 +24,9 @@ export const capabilityLabels = {
   "knowledge:approve": "cli.approve",
   "memory:read": "cli.memoryRead",
   "memory:organize": "cli.memoryOrganize",
+  "media:read": "cli.mediaRead",
+  "media:connect": "cli.mediaConnect",
+  "media:admin": "cli.mediaAdmin",
 } as const;
 export function cliSettingsView(t: Translate, projects: { id: string; name: string }[], access: ContentAccessView) {
   return `<header class="resource-heading"><div><h1>${e(t("cli.title"))}</h1><p>${e(t("cli.description"))}</p></div><a class="wb-button" href="/api/cli/manual" target="_blank" rel="noopener">${e(t("cli.manual"))}</a></header>

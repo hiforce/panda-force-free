@@ -1,6 +1,6 @@
 import { CLI_VERSION } from "../shared/cli/version.js";
 import type { Readable, Writable } from "node:stream";
-import { CLI_COMMANDS } from "../shared/cli/commands.js";
+import { CLI_MCP_COMMANDS } from "../shared/cli/commands.js";
 import { cliCommandSchema, cliCommandArguments, cliCommandAllowed } from "../shared/cli/schema.js";
 import { CliError, cliObject, type CliCapability } from "../shared/cli/contracts.js";
 import type { PandaClient } from "./client.js";
@@ -58,7 +58,7 @@ export async function servePandaMcp(client: PandaClient, input: Readable, output
         if (!initialized) throw new CliError("invalidInput");
         if (request.method === "tools/list")
           result = {
-            tools: CLI_COMMANDS.filter((spec) => grant.capabilities.includes(spec.capability)).map((spec) => ({
+            tools: CLI_MCP_COMMANDS.filter((spec) => grant.capabilities.includes(spec.capability)).map((spec) => ({
               name: "panda_" + spec.id.replaceAll(".", "_"),
               description: spec.summary,
               inputSchema: cliCommandSchema(spec, grant.capabilities),
@@ -75,7 +75,7 @@ export async function servePandaMcp(client: PandaClient, input: Readable, output
           };
         else if (request.method === "tools/call") {
           const p = cliObject(request.params, ["name", "arguments", "_meta"]),
-            spec = CLI_COMMANDS.find((spec) => "panda_" + spec.id.replaceAll(".", "_") === p.name);
+            spec = CLI_MCP_COMMANDS.find((spec) => "panda_" + spec.id.replaceAll(".", "_") === p.name);
           if (!spec) throw new CliError("notFound", 404);
           try {
             const args = cliCommandArguments(spec, p.arguments);

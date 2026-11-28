@@ -1,17 +1,13 @@
-import { localizeText } from "../i18n.js";
-
 import { createBridgeError } from "../../shared/bridge-errors.js";
 
 // Routes transport envelopes and connection transitions; native event interpretation is delegated.
-/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "state" | "workspacePreparation" | "t" | "$", "transport" | "startup" | "synchronization" | "sidebar" | "notifications" | "approvals" | "projects" | "models" | "usage" | "history", "connection">} options */
+/** @param {import("./ports.js").FeatureOptions<"viewUpdates" | "mutations" | "state" | "workspacePreparation", "transport" | "startup" | "synchronization" | "sidebar" | "notifications" | "approvals" | "projects" | "models" | "usage" | "history", "connection">} options */
 export function assembleConnection({
   transportPort,
   viewUpdates,
   mutations,
   state,
   workspacePreparation,
-  t,
-  $,
   startupPort,
   synchronizationPort,
   sidebarPort,
@@ -44,7 +40,7 @@ export function assembleConnection({
         mutations.set("connected", true);
         transportPort.resetReconnectBackoff();
         transportPort.clearTransportReconnectTimer();
-        setStatus("connected", "common.codexConnected");
+        setStatus();
         if (shouldLoad) {
           startupPort.loadInitial();
         } else {
@@ -59,7 +55,7 @@ export function assembleConnection({
         mutations.set("connected", false);
         workspacePreparation.start("connection");
         usagePort.showUsageDisconnected();
-        setStatus("connecting", "common.connectingToCodex");
+        setStatus();
       }
       return;
     }
@@ -77,10 +73,8 @@ export function assembleConnection({
       notificationsPort.onNotification(message.payload.method, message.payload.params || {});
     if (["engine/request", "codex/request"].includes(message.type)) approvalsPort.onServerRequest(message.payload);
   }
-  function setStatus(kind, text) {
+  function setStatus() {
     viewUpdates.request("workbench");
-    $("#statusDot").className = "status-dot" + (kind === "connected" ? " connected" : kind === "error" ? " error" : "");
-    localizeText($("#statusText"), text || kind, undefined, t);
   }
   function onDisrupted() {
     workspacePreparation.start("connection");

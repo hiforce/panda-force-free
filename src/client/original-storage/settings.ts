@@ -4,18 +4,14 @@ import type {
   OriginalStorageSettings,
   OriginalStorageMutation,
   OriginalStorageOperation,
-  OriginalStorageCredentials,
 } from "../../shared/storage/contracts.js";
 import { originalStorageErrorMessages } from "../../shared/storage/messages.js";
 import { getBrowserI18n, setMessageHtml } from "../i18n.js";
 import { originalStorageRequest, OriginalStorageRequestError } from "./api.js";
-import {
-  applyOriginalStorageProfile,
-  clearOriginalStorageSecrets,
-  emptyOriginalStorageForm,
-  originalStorageHtml,
-  readOriginalStorageForm,
-} from "./view.js";
+import { emptyOriginalStorageForm, originalStorageHtml, readOriginalStorageForm } from "./view.js";
+import { storageConnectionsApi } from "../workspace-tools/storage-api.js";
+import type { RegisteredStorageConnection } from "../../shared/workspace-tools/storage.js";
+
 const recoveryKey = "pf-original-storage-save";
 function recovery() {
   try {
@@ -27,18 +23,19 @@ function recovery() {
     return null;
   }
 }
-/** Only operation identity survives navigation; credentials remain in memory and are cleared when the page closes. */
+/** An uncertain write can be checked by its operation ID after the settings page closes. */
 export function createOriginalStorageSettings(t: Translate) {
   const page = new SettingsPageLifetime();
   let host: HTMLElement | null = null,
     settings: OriginalStorageSettings | null = null,
+    connections: RegisteredStorageConnection[] | null = null,
     form = emptyOriginalStorageForm(),
     pending = recovery(),
     previous: OriginalStorageMutation | null = null,
     notice: MessageId | null = null,
     busy = false,
     formRevision = 0,
-    lastAction: "configure" | "credentials" | null = null;
+    feedbackAtSubmit = false;
   const get = <T extends HTMLElement>(selector: string) => host?.querySelector<T>(selector) ?? null;
   function remember() {
     try {
@@ -51,70 +48,58 @@ export function createOriginalStorageSettings(t: Translate) {
   function paintNotice() {
     const target = get("[data-storage-notice]");
     if (target) target.textContent = notice ? t(notice) : "";
-    for (const inline of host?.querySelectorAll<HTMLElement>("[data-storage-inline-notice]") ?? [])
-      inline.textContent = notice && inline.dataset.storageInlineNotice === lastAction ? t(notice) : "";
+    const inline = get("[data-storage-inline-notice]");
+    if (inline) inline.textContent = feedbackAtSubmit && !pending && notice ? t(notice) : "";
+    if (target) target.classList.toggle("sr-only", feedbackAtSubmit && !pending);
   }
   function revealFeedback() {
     if (!host || !notice) return;
     const active = document.activeElement;
     if (active !== document.body && active && !host.contains(active)) return;
     const target =
-      (!pending && lastAction ? get(`[data-storage-inline-notice="${lastAction}"]`) : null) ??
-      get("[data-storage-notice]");
+      (!pending && feedbackAtSubmit ? get("[data-storage-inline-notice]") : null) ?? get("[data-storage-notice]");
     target?.scrollIntoView({ block: "nearest" });
     if (active === document.body)
-      get<HTMLButtonElement>(
-        pending
-          ? '[data-storage-action="check"]'
-          : `[data-storage-form="${lastAction ?? "configure"}"] [data-storage-save]`,
-      )?.focus({ preventScroll: true });
+      get<HTMLButtonElement>(pending ? '[data-storage-action="check"]' : "[data-storage-save]")?.focus({
+        preventScroll: true,
+      });
   }
   function controls() {
     if (!host) return;
     for (const fieldset of host.querySelectorAll<HTMLFieldSetElement>("[data-storage-fields]"))
-      fieldset.disabled = busy || !!pending || !settings;
+      fieldset.disabled = busy || !!pending || !settings || !connections;
     for (const button of host.querySelectorAll<HTMLButtonElement>("[data-storage-action]")) button.disabled = busy;
     host.setAttribute("aria-busy", String(busy));
-    const save = get<HTMLButtonElement>('[data-storage-form="configure"] [data-storage-save]');
-    if (save) save.textContent = t(busy && previous ? "storage.saving" : "storage.save");
+    const save = get<HTMLButtonElement>("[data-storage-save]");
+    if (save) save.textContent = t(busy && previous ? "storage.saving" : "storage.savePlacement");
   }
   function render(capture = true) {
     if (!host) return;
     if (capture) form = readOriginalStorageForm(host, form);
-    const active = document.activeElement,
-      key =
-        active instanceof HTMLElement && host.contains(active)
-          ? (active.dataset.storageField ?? active.dataset.storageAction)
-          : undefined,
-      selection = active instanceof HTMLInputElement && active.type === "text" ? active.selectionStart : null,
-      details = [...host.querySelectorAll<HTMLDetailsElement>("[data-storage-detail]")].map(
-        (element) => [element.dataset.storageDetail, element.open] as const,
-      );
-    setMessageHtml(host, originalStorageHtml(t, settings, form, !!pending, !!previous));
-    for (const [name, open] of details) {
-      const element = get<HTMLDetailsElement>(`[data-storage-detail="${name}"]`);
-      if (element) element.open = open;
-    }
+    const active = document.activeElement;
+    const key =
+      active instanceof HTMLElement && host.contains(active)
+        ? (active.dataset.storageField ?? active.dataset.storageAction ?? active.dataset.storageKind)
+        : undefined;
+    setMessageHtml(host, originalStorageHtml(t, connections, form, !!pending, !!previous));
     paintNotice();
     controls();
-    if (key) {
-      const element = get<HTMLElement>(`[data-storage-field="${key}"],[data-storage-action="${key}"]`);
-      element?.focus({ preventScroll: true });
-      if (selection !== null && element instanceof HTMLInputElement) element.setSelectionRange(selection, selection);
-    }
+    if (key)
+      get<HTMLElement>(
+        `[data-storage-field="${key}"],[data-storage-action="${key}"],[data-storage-kind="${key}"]`,
+      )?.focus({ preventScroll: true });
   }
   function adopt(value: OriginalStorageSettings) {
     settings = value;
     formRevision = value.revision;
-    form.mode = value.mode;
-    form.kinds = [...value.kinds];
-    applyOriginalStorageProfile(
-      form,
-      value.profiles.find((profile) => profile.id === value.activeProfileId),
-    );
-    if (!value.profiles.some((profile) => profile.id === form.repairProfile))
-      form.repairProfile = value.profiles[0]?.id ?? "";
-    clearOriginalStorageSecrets(form);
+    form = { kinds: [...value.kinds], profileId: value.mode === "s3" ? (value.activeProfileId ?? "") : "" };
+  }
+  async function load() {
+    const [value, catalog] = await Promise.all([
+      originalStorageRequest<OriginalStorageSettings>("", undefined, page.signal),
+      storageConnectionsApi.list(page.signal),
+    ]);
+    return { value, connections: catalog.connections };
   }
   function showError(error: unknown) {
     notice =
@@ -125,13 +110,15 @@ export function createOriginalStorageSettings(t: Translate) {
     if (!host || busy) return;
     const current = page.epoch;
     busy = true;
-    lastAction = null;
+    feedbackAtSubmit = false;
     notice = "storage.loading";
     paintNotice();
     controls();
     try {
-      const value = await originalStorageRequest<OriginalStorageSettings>("", undefined, page.signal);
+      const latest = await load();
       if (current !== page.epoch) return;
+      const { value } = latest;
+      connections = latest.connections;
       if (adoptForm) adopt(value);
       else settings = value;
       if (clearPending) {
@@ -150,79 +137,32 @@ export function createOriginalStorageSettings(t: Translate) {
       }
     }
   }
-  function credentials(
-    accessKeyId: string,
-    secretAccessKey: string,
-    sessionToken: string,
-    required: boolean,
-  ): OriginalStorageCredentials | undefined {
-    if (!accessKeyId && !secretAccessKey && !sessionToken && !required) return undefined;
-    if (!accessKeyId || !secretAccessKey) {
-      notice = "storage.credentialsRequired";
-      return undefined;
-    }
-    return { accessKeyId, secretAccessKey, ...(sessionToken ? { sessionToken } : {}) };
-  }
-  async function submit(action: "configure" | "credentials", repeat = false) {
-    if (!host || busy || !settings || (pending && !repeat)) return;
+  async function submit(repeat = false) {
+    if (!host || busy || !settings || !connections || (pending && !repeat)) return;
     form = readOriginalStorageForm(host, form);
     notice = null;
-    lastAction = repeat && previous ? previous.action : action;
+    feedbackAtSubmit = true;
     let input: OriginalStorageMutation;
     if (repeat) {
       if (!previous) return;
       input = previous;
     } else {
-      const base = { revision: formRevision, operationId: crypto.randomUUID() };
-      if (action === "credentials") {
-        const profile = settings.profiles.find((value) => value.id === form.repairProfile),
-          keys = credentials(form.repairAccessKeyId, form.repairSecretAccessKey, form.repairSessionToken, true);
-        if (!profile || !keys) {
-          paintNotice();
-          revealFeedback();
-          return;
-        }
-        input = {
-          ...base,
-          action,
-          profileId: profile.id,
-          credentialRevision: profile.credentialRevision,
-          credentials: keys,
-        };
-      } else {
-        if (form.mode === "s3" && !form.kinds.length) notice = "storage.chooseKinds";
-        else if (form.mode === "s3" && (!form.label.trim() || !form.bucket.trim() || !form.region.trim()))
-          notice = "storage.requiredFields";
-        const keys =
-          form.mode === "s3"
-            ? credentials(form.accessKeyId, form.secretAccessKey, form.sessionToken, !form.profileId)
-            : undefined;
-        if (notice) {
-          paintNotice();
-          revealFeedback();
-          return;
-        }
-        input = {
-          ...base,
-          action,
-          mode: form.mode,
-          kinds: [...form.kinds],
-          ...(form.mode === "s3"
-            ? {
-                profile: {
-                  ...(form.profileId ? { id: form.profileId } : {}),
-                  label: form.label.trim(),
-                  bucket: form.bucket.trim(),
-                  region: form.region.trim(),
-                  prefix: form.prefix.trim(),
-                  endpoint: form.endpoint.trim(),
-                  forcePathStyle: form.forcePathStyle,
-                  ...(keys ? { credentials: keys } : {}),
-                },
-              }
-            : {}),
-        };
+      const { profileId, kinds } = form;
+      if (profileId && !kinds.length) notice = "storage.chooseKinds";
+      else if (profileId && !connections.some((row) => row.id === profileId && row.provider !== "google-drive"))
+        notice = "storage.missingDestination";
+      if (notice) {
+        paintNotice();
+        revealFeedback();
+        return;
       }
+      input = {
+        revision: formRevision,
+        operationId: crypto.randomUUID(),
+        action: "placement",
+        kinds,
+        ...(profileId ? { mode: "s3", profileId } : { mode: "local" }),
+      };
     }
     previous = input;
     pending = { id: input.operationId, revision: input.revision };
@@ -307,10 +247,10 @@ export function createOriginalStorageSettings(t: Translate) {
       form = readOriginalStorageForm(host, form);
       host.replaceChildren();
     }
-    clearOriginalStorageSecrets(form);
+    connections = null;
     previous = null;
     notice = null;
-    lastAction = null;
+    feedbackAtSubmit = false;
     host = null;
     busy = false;
   }
@@ -333,16 +273,9 @@ export function createOriginalStorageSettings(t: Translate) {
       (event) => {
         const target = event.target as HTMLElement;
         form = readOriginalStorageForm(element, form);
-        if (target.dataset.storageField === "mode") {
-          const s3 = get("[data-storage-s3]");
-          if (s3) s3.hidden = form.mode !== "s3";
-        }
         if (target.dataset.storageField === "profileId") {
-          applyOriginalStorageProfile(
-            form,
-            settings?.profiles.find((profile) => profile.id === form.profileId),
-          );
-          render(false);
+          const kinds = get("[data-storage-s3]");
+          if (kinds) kinds.hidden = !form.profileId;
         }
       },
       { signal: page.signal },
@@ -353,7 +286,7 @@ export function createOriginalStorageSettings(t: Translate) {
         const form = event.target as HTMLFormElement;
         if (!form.dataset.storageForm) return;
         event.preventDefault();
-        void submit(form.dataset.storageForm === "credentials" ? "credentials" : "configure");
+        void submit();
       },
       { signal: page.signal },
     );
@@ -364,7 +297,7 @@ export function createOriginalStorageSettings(t: Translate) {
         if (action === "reload") void refresh();
         else if (action === "current") void refresh(true, true);
         else if (action === "check") void checkSave();
-        else if (action === "retry") void submit("configure", true);
+        else if (action === "retry") void submit(true);
       },
       { signal: page.signal },
     );

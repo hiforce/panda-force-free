@@ -1,6 +1,80 @@
 import type { CliCapability } from "./contracts.js";
 export const CLI_COMMANDS = [
   {
+    id: "media.list",
+    words: ["media", "list"],
+    capability: "media:read",
+    summary: "List executor presets, connections and named credentials.",
+    fields: [],
+    required: [],
+    personal: true,
+  },
+  {
+    id: "media.connect",
+    words: ["media", "connect"],
+    capability: "media:connect",
+    summary: "Test and save an executor using a named credential or a key from standard input.",
+    fields: ["id", "revision", "preset", "model", "name", "baseUrl", "apiKey", "credentialId"],
+    required: ["id", "revision", "preset"],
+    personal: true,
+    stdinSecret: "apiKey",
+  },
+  {
+    id: "media.credentials.save",
+    words: ["media", "credentials", "save"],
+    capability: "media:connect",
+    summary: "Create or update a named executor credential. Pass a new provider key through standard input.",
+    fields: ["id", "revision", "target", "name", "baseUrl", "apiKey"],
+    required: ["id", "revision", "target", "name"],
+    personal: true,
+    stdinSecret: "apiKey",
+  },
+  {
+    id: "media.credentials.remove",
+    words: ["media", "credentials", "remove"],
+    capability: "media:connect",
+    summary: "Remove a named executor credential and revoke access through its references.",
+    fields: ["id", "revision"],
+    required: ["id", "revision"],
+    personal: true,
+  },
+  {
+    id: "media.remove",
+    words: ["media", "remove"],
+    capability: "media:connect",
+    summary: "Remove an owned executor connection at its expected revision.",
+    fields: ["id", "revision"],
+    required: ["id", "revision"],
+    personal: true,
+  },
+  {
+    id: "media.cli.list",
+    words: ["media", "cli", "list"],
+    capability: "media:admin",
+    summary: "List the CLI packages prepared by the media worker.",
+    fields: [],
+    required: [],
+    personal: true,
+  },
+  {
+    id: "media.cli.instructions",
+    words: ["media", "cli", "instructions"],
+    capability: "media:admin",
+    summary: "Read the reviewed installation and usage instructions for a CLI package.",
+    fields: ["id", "revision"],
+    required: ["id", "revision"],
+    personal: true,
+  },
+  {
+    id: "media.cli.register",
+    words: ["media", "cli", "register"],
+    capability: "media:admin",
+    summary: "Verify and register the exact reviewed package on the media worker.",
+    fields: ["id", "revision", "fingerprint"],
+    required: ["id", "revision", "fingerprint"],
+    personal: true,
+  },
+  {
     id: "memory.search",
     words: ["memory", "search"],
     capability: "memory:read",
@@ -177,7 +251,12 @@ export const CLI_COMMANDS = [
   fields: readonly string[];
   required: readonly string[];
   semanticCapability?: CliCapability;
+  personal?: true;
+  stdinSecret?: string;
 }[];
 export type CliCommand = (typeof CLI_COMMANDS)[number];
 export type CliCommandId = CliCommand["id"];
 export const cliFlagName = (field: string) => field.replace(/[A-Z]/g, (char) => "-" + char.toLowerCase());
+export const cliCommandFlag = (spec: CliCommand, field: string) =>
+  "stdinSecret" in spec && spec.stdinSecret === field ? cliFlagName(field) + "-stdin" : cliFlagName(field);
+export const CLI_MCP_COMMANDS = CLI_COMMANDS.filter((spec) => !("personal" in spec));

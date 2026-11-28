@@ -29,9 +29,11 @@ title: 状态、文件与备份
 
 ## 为创作原件配置 S3
 
-安装管理员可以在**设置 → 存储**为新的图片、视频、幻灯片、网页及其他创作文件选择本地存储或 S3 兼容连接。选择文件类型，再配置 bucket、region、可选对象前缀与凭据。高级选项包括根 endpoint 和 path-style；endpoint 为空时使用区域 AWS S3 地址。服务商需支持应用使用的条件写入、元数据、确切版本与字节范围操作。
+在侧栏打开 **存储**，添加 S3 兼容存储、阿里云 OSS 或 Google Drive 连接。通过 **连接详情** 可更换对象存储凭据。在 **设置 → 存储** 选择本地或已保存的对象存储连接，再勾选要分流的新原件类型。服务商需支持应用使用的条件写入、元数据、确切版本与字节范围操作。Google Drive 可在连接的授权范围内浏览。
 
-默认使用本地存储。保存配置不会联络服务商，也不会迁移已有文件；新写入会先检查读取权限与连接。修改连接后，已有原件保持其已保存位置；旧连接需要更换凭据时，使用对应的修复表单。凭据字段留空保留已保存值，离开页面清除新输入的敏感值。Secret Key 保留在服务端；签名 URL 包含非保密的 Access Key 标识与限于该对象的签名。连接需要读、写与清理权限，启用版本控制时还需要访问应用保存的对象版本。
+点连接旁的 **浏览** 打开文件浏览器，可进入各级目录、筛选已加载的列表和下载文件。对象存储从配置的前缀开始浏览，凭据需有列举对应前缀的权限。Google Drive 显示当前连接已授权的文件和目录。
+
+默认使用本地存储。保存配置不会联络服务商，也不会迁移已有文件；新写入会先检查读取权限与连接。修改连接后，已有原件保持其已保存位置；旧连接需要更换凭据时，在存储的连接详情中更换。Secret Key 保留在服务端；签名 URL 包含非保密的 Access Key 标识与限于该对象的签名。连接需要读、写与清理权限，启用版本控制时还需要访问应用保存的对象版本。
 
 查看、播放和下载先验证应用登录与项目权限，再将浏览器重定向到签名的确切对象 URL，由对象存储直接发送原件。链接最多复用 24 小时，临近过期时刷新；签名在本地计算，不需要另向 S3 申请 token。浏览器必须能够访问配置的 endpoint。本地文件保持原路由，画廊缩略图仍由应用生成并提供。应用不设置公开 ACL 或修改 bucket 策略；管理员自行配置的公开策略不受此流程改变。申请新链接仍需应用认证。
 
@@ -41,7 +43,7 @@ title: 状态、文件与备份
 
 该配置独立于静态 CDN 和会话附件存储，只覆盖创作原件及其资源；模型原生日志与渲染恢复缓存保持原存储。备份时同时保留应用元数据、项目内容和 S3 对象，确保原件位置与清理回执可恢复。删除原件不会自动清除共享引擎状态。
 
-配置、独立凭据记录与清理日志位于应用状态目录的 `original-storage` 子目录，标准 Compose 状态卷已持久化。需要自定义父目录时，设置 `PANDA_FORCE_ORIGINAL_STORAGE_PARENT` 并为该路径挂载持久存储；应用仍使用其中的专属 `original-storage` 子目录。这些能力已包含在公开的 0.2.3 应用镜像中。
+配置、独立凭据记录与清理日志位于应用状态目录的 `original-storage` 子目录，标准 Compose 状态卷已持久化。需要自定义父目录时，设置 `PANDA_FORCE_ORIGINAL_STORAGE_PARENT` 并为该路径挂载持久存储；应用仍使用其中的专属 `original-storage` 子目录。这些能力已包含在公开的 0.2.4 应用镜像中。
 
 ## 受管理的项目目录
 
@@ -53,7 +55,7 @@ title: 状态、文件与备份
 
 ## 数据卷与备份
 
-Compose 服务名为 `panda-force`，正式镜像为 `hiforceai/panda-force:0.2.3`。标准命名卷是带项目名前缀的 `panda-force-state`、`panda-force-model-state` 与 `panda-force-workspace`。Grok 叠加配置另加账户卷和 socket 卷；账户卷由账户服务持有，socket 卷只保存通信状态，不能代替账户备份。
+Compose 服务名为 `panda-force`，正式镜像为 `hiforceai/panda-force:0.2.4`。标准命名卷是带项目名前缀的 `panda-force-state`、`panda-force-model-state` 与 `panda-force-workspace`。Grok 叠加配置另加账户卷和 socket 卷；账户卷由账户服务持有，socket 卷只保存通信状态，不能代替账户备份。
 
 已有数据卷通过 `PANDA_FORCE_STATE_VOLUME_NAME`、`PANDA_FORCE_MODEL_VOLUME_NAME` 与 `PANDA_FORCE_WORKSPACE_VOLUME_NAME` 指定实际 Docker 名称。绝对宿主目录绑定使用 `PANDA_FORCE_HOME_HOST`、`PANDA_FORCE_MODEL_HOME_HOST` 与 `PANDA_FORCE_WORKSPACE_HOST`。修改默认名称不会迁移或删除旧数据；升级保持原项目名与卷名。
 

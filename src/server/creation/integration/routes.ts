@@ -112,6 +112,7 @@ export function creationRoutes(
           "selections",
           "attachments",
           "outputType",
+          "media",
           "dialogue",
           "runtimeId",
           "model",

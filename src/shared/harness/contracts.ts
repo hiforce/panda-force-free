@@ -4,6 +4,7 @@ import type { TokenUsage } from "../engine/types.js";
 export type HarnessKind = "codex" | "grok-build" | "zcode" | "antigravity" | "claude-code";
 export type HarnessDeployment = "local" | "container" | "remote";
 export type HarnessStatus = "unknown" | "connecting" | "ready" | "authentication" | "unavailable";
+export type HarnessProtocol = "codex-app-server/model-list" | "acp/1" | "zcode-app-server/session-workspace";
 export const HARNESS_PERMISSION_MODES = [
   "ask",
   "accept-edits",
@@ -52,11 +53,13 @@ export interface HarnessCapabilities {
 }
 export interface HarnessRuntimeView extends HarnessRuntime {
   botSupported?: boolean;
+  creationCapabilities?: import("../creation/media-executors.js").HarnessCreationCapabilities;
   deployment: HarnessDeployment;
   status: HarnessStatus;
   isDefault: boolean;
   models: HarnessModel[];
   capabilities: HarnessCapabilities | null;
+  protocol?: HarnessProtocol;
   error?: HarnessErrorCode;
 }
 export interface HarnessProfileView {

@@ -1,3 +1,4 @@
+import { bindingChoice } from "./media-executors/selection.js";
 import { creationDocumentArtifact } from "../../shared/creation/contracts.js";
 import {
   CREATION_NOTIFICATION_PAGE_SIZE,
@@ -41,7 +42,14 @@ export class CreationService {
   private closed = false;
   private readonly summaries = new Map<
     string,
-    Promise<{ prompt: string; runtimeId?: string; model: string | null; effort: string | null; documentTitle?: string }>
+    Promise<{
+      prompt: string;
+      runtimeId?: string;
+      media?: import("../../shared/creation/media-executors.js").CreationMediaChoice;
+      model: string | null;
+      effort: string | null;
+      documentTitle?: string;
+    }>
   >();
   private readonly pending = new Set<Promise<unknown>>();
   constructor(
@@ -151,6 +159,7 @@ export class CreationService {
       summary = this.inputs.read(task.spec).then((input) => ({
         prompt: input.prompt,
         runtimeId: input.profile.runtimeId ?? "codex",
+        media: input.media ? bindingChoice(input.media) : undefined,
         model: input.profile.model ?? null,
         effort: input.profile.effort ?? null,
         documentTitle: input.previous?.document.title,
@@ -228,6 +237,7 @@ export class CreationService {
       prompt: input.prompt,
       outputType: current.spec.kind,
       runtimeId: input.runtimeId,
+      ...(input.media ? { media: input.media } : {}),
       model: input.model,
       effort: input.effort,
       artifact: current.artifact,

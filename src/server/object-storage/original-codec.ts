@@ -5,7 +5,7 @@ import {
   storageDigest,
   storageInteger,
   storageOperationId,
-  storageProfileId,
+  storageTargetId,
   storageRecord,
   storageText,
 } from "./config-codec.js";
@@ -73,7 +73,7 @@ export function originalUploadIntent(value: unknown): OriginalUploadIntent {
     digest: storageDigest(v.digest),
     size: storageInteger(v.size, 0, 32 * 1024 * 1024 + 1),
     id: storageOperationId(v.id),
-    profileId: storageProfileId(v.profileId),
+    profileId: storageTargetId(v.profileId),
     profileDigest: storageDigest(v.profileDigest),
     key,
     signature: storageDigest(v.signature),

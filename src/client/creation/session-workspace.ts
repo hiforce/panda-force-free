@@ -28,6 +28,7 @@ import { storage, STORAGE_KEYS } from "../storage.js";
 import { creationActive, CreationActivity } from "./activity.js";
 import { CreationApiError, creationApiFor } from "./api.js";
 import { CreationCards } from "./cards.js";
+import { CreationMediaControls, creationOutputPreference } from "./media-controls.js";
 import { CreationDrafts } from "./drafts.js";
 import { CreationSessionCommands } from "./session-commands.js";
 import { CreationSessionGoals } from "./session-goals.js";
@@ -45,6 +46,7 @@ export type { CreationWorkspaceBridge } from "./session-port.js";
 
 /** Creation owns public task data; one shared composer, renderer, viewport and inspector own all interaction surfaces. */
 export class CreationSessionWorkspace implements CreationSessionDomain {
+  private readonly mediaControls: CreationMediaControls;
   private readonly state = new CreationSessionState();
   private readonly reader: CreationSessionReader;
   private readonly commands: CreationSessionCommands;
@@ -75,6 +77,13 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     private readonly projects: () => { id: string; name: string; code?: string }[],
     private readonly bridge: CreationWorkspaceBridge,
   ) {
+    this.mediaControls = new CreationMediaControls(this.t, (output, media) => {
+      if (this.running || this.sending || this.state.pending) return;
+      this.state.output = output;
+      this.state.media = media;
+      this.persist();
+      this.renderMediaControls();
+    });
     this.presenter = new CreationSessionPresenter(this.bridge, this.notice, this.status, this.t);
     this.sectionView = new CreationSessionSections(this.state, {
       t: this.t,
@@ -200,6 +209,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       runtimeId: "",
       model: "",
       effort: "",
+      output: undefined as import("../../shared/creation/contracts.js").CreationRequestedOutput | undefined,
+      media: undefined as import("../../shared/creation/media-executors.js").CreationMediaChoice | undefined,
       pending: null,
       updateTarget: null,
     });
@@ -216,6 +227,9 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     void this.loadRuntime();
     this.state.model = typeof saved.model === "string" ? saved.model : "";
     this.state.effort = typeof saved.effort === "string" ? saved.effort : "";
+    this.state.output = creationOutputPreference(saved.output);
+    this.state.media = saved.media;
+    document.querySelector("#composer")?.before(this.mediaControls.root);
     this.state.pending = saved.pending || undefined;
     this.state.updateTarget = saved.updateTarget || undefined;
     this.renderUpdateNotice();
@@ -262,11 +276,14 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       void this.refresh();
     }
     if (this.state.pending || this.state.pendingGoal || !route.id) this.renderPending();
+    else this.renderMediaControls();
     this.renderActions();
     this.bridge.changed();
   }
   hide() {
     this.state.catalogEpoch++;
+    this.mediaControls.close();
+    this.mediaControls.root.remove();
     if (this.state.route) this.bridge.reset();
     this.state.epoch++;
     this.state.historyController.abort();
@@ -309,10 +326,19 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       if (current !== this.state.catalogEpoch || !this.state.route) return;
       this.state.runtimeId = id;
       this.state.runtime = runtime;
+      this.renderMediaControls();
       this.bridge.changed();
     } catch {
       if (current === this.state.catalogEpoch) this.bridge.changed();
     }
+  }
+  private renderMediaControls() {
+    this.mediaControls.show({
+      output: this.state.output ?? this.state.task?.outputType,
+      media: this.state.media ?? (this.state.output ? undefined : this.state.task?.media),
+      nativeImage: this.state.runtime?.creationCapabilities?.nativeImageStatus ?? "unsupported",
+      disabled: this.running || this.sending || !!this.state.pending,
+    });
   }
   controls(): SessionControlView {
     const base = this.bridge.controls(),
@@ -341,6 +367,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
     this.state.runtimePreferenceSaved = true;
     this.state.model = selection.model;
     this.state.effort = selection.effort;
+    this.renderMediaControls();
     this.persist();
     this.bridge.changed();
   }
@@ -438,6 +465,8 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
       runtimeId: this.state.runtimeId,
       model: this.state.model,
       effort: this.state.effort,
+      output: this.state.output,
+      media: this.state.media,
       pending: this.state.pending || null,
       updateTarget: this.state.updateTarget || null,
     });
@@ -694,6 +723,7 @@ export class CreationSessionWorkspace implements CreationSessionDomain {
 
   private renderPending() {
     this.renderUpdateNotice();
+    this.renderMediaControls();
     this.notice.classList.toggle("sr-only", this.sending);
     if (this.sending) {
       if (this.notice.dataset.phase !== "sending") {

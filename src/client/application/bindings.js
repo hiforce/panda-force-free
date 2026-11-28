@@ -3,7 +3,7 @@ import { renderAssistantMarkdown } from "../rendering.js";
 import { closestElement, findElement } from "./../dom.js";
 
 // Delegates global shell events after every feature interface has been assembled.
-/** @param {import("./ports.js").FeatureOptions<"i18n" | "$" | "workspacePreparation" | "state" | "viewUpdates", "images" | "panels" | "localization" | "synchronization" | "sidebarLayout" | "usage" | "identity" | "models" | "settings" | "workbench" | "navigation", "bindings">} options */
+/** @param {import("./ports.js").FeatureOptions<"i18n" | "$" | "workspacePreparation" | "state", "images" | "panels" | "localization" | "synchronization" | "sidebarLayout" | "usage" | "identity" | "models" | "settings" | "workbench" | "navigation", "bindings">} options */
 export function assembleBindings({
   i18n,
   $,
@@ -17,7 +17,6 @@ export function assembleBindings({
   usagePort,
   identityPort,
   modelsPort,
-  viewUpdates,
   settingsPort,
   workbenchPort,
   navigationPort,
@@ -79,12 +78,8 @@ export function assembleBindings({
         modelsPort.closeModelMenu();
       if (!composerSettings && !path.includes($("#permissionPicker")) && !path.includes($("#permissionMenu")))
         modelsPort.closePermissionMenu();
-      if (!path.includes($("#accountMenu")) && !path.includes($("#accountButton")))
-        viewUpdates.request("accountMenu", false);
       if (!path.includes($("#sidebarSearchPanel")) && !path.includes($("#sidebarSearchButton")))
         sidebarLayoutPort.setSidebarSearchOpen(false);
-      if (!path.includes($("#sidebarHelpMenu")) && !path.includes($("#sidebarHelpButton")))
-        sidebarLayoutPort.setSidebarHelpOpen(false);
     });
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState !== "visible") {
@@ -137,11 +132,6 @@ export function assembleBindings({
           sidebarLayoutPort.setSidebarSearchOpen(false);
           return;
         }
-        if (!$("#sidebarHelpMenu").hidden) {
-          e.preventDefault();
-          sidebarLayoutPort.setSidebarHelpOpen(false);
-          return;
-        }
         if ($("#settingsDialog").open) {
           // A child modal owns Escape; let its native cancel event close only that dialog.
           if (e.target instanceof Element && closestElement("dialog[open]", e.target) !== $("#settingsDialog")) return;
@@ -151,7 +141,6 @@ export function assembleBindings({
         }
         modelsPort.closeModelMenu();
         modelsPort.closePermissionMenu();
-        viewUpdates.request("accountMenu", false);
         if (document.body.classList.contains("side-panel-open")) panelsPort.setSidePanelOpen(false);
         else if (document.body.classList.contains("summary-panel-open")) panelsPort.setSummaryPanelOpen(false);
       }

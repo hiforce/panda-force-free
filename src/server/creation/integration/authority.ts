@@ -16,6 +16,8 @@ export function creationAuthority(options: {
   skills: SkillCatalog;
   rendering?: import("../runtime/rendering.js").CreationRendering;
   original?: CreationSubmissionAuthority["original"];
+  enforceMediaSelection?: boolean;
+  media?: Pick<import("../media-executors/contracts.js").CreationMediaExecutorPort, "bind">;
 }) {
   const authority: CreationSubmissionAuthority = {
     authorize: options.authorize,
@@ -36,6 +38,27 @@ export function creationAuthority(options: {
       )
         throw new CreationError("conflict");
     },
+    ...(options.enforceMediaSelection || options.media
+      ? {
+          async media(owner, profile, selection) {
+            if (selection.source === "harness") {
+              if (
+                selection.kind !== "image" ||
+                !profile.model ||
+                !(await options.rendering?.nativeImage?.(owner, profile.runtimeId ?? "codex", profile.model))
+              )
+                throw new CreationError("runtimeSelectionUnavailable");
+              return selection;
+            }
+            try {
+              if (!options.media) throw new CreationError("runtimeSelectionUnavailable");
+              return await options.media.bind(owner, selection);
+            } catch {
+              throw new CreationError("runtimeSelectionUnavailable");
+            }
+          },
+        }
+      : {}),
     profile: (id, selection, owner) => options.profiles.resolve(id, selection, owner),
     capture: async (owner, input, requestDigest) => {
       let output = input.outputType;
@@ -50,6 +73,8 @@ export function creationAuthority(options: {
         if (kinds.includes("image") && !kinds.some((kind) => kind === "web" || kind === "slides" || kind === "video"))
           output = "image";
       }
+      if ((options.enforceMediaSelection || options.media) && input.outputType === "auto" && output === "image")
+        throw new CreationError("runtimeSelectionUnavailable");
       const allowed = new Set<SkillCapability>(
         creationCaptureCapabilities(output, (await options.rendering?.available()) ?? []),
       );

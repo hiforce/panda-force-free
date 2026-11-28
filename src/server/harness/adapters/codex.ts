@@ -36,6 +36,7 @@ export class CodexHarnessAgent implements HarnessAgent {
   async initialize(): Promise<HarnessAgentInfo> {
     const result = record(await this.driver.execute("model.list", {}));
     return {
+      ...(Array.isArray(result.data) ? { protocol: "codex-app-server/model-list" as const } : {}),
       capabilities: {
         text: true,
         imageInput: true,

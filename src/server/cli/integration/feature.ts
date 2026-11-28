@@ -9,6 +9,7 @@ import { cliApiRoute, cliRegistrationRoutes } from "./http.js";
 import type { CliContentCommands } from "../commands.js";
 import { cliContentError } from "./errors.js";
 import type { CliCredentialStore } from "../auth/ports.js";
+import { installLocalCli } from "./local-install.js";
 export function createCliFeature(options: {
   stateRoot: string;
   commands: CliContentCommands;
@@ -25,6 +26,7 @@ export function createCliFeature(options: {
       active = 0,
       drain: (() => void) | null = null,
       closePromise: Promise<void> | null = null;
+    let localInstall: Promise<void> | undefined;
     const tracked = async (context: RouteContext, run: () => Promise<void>) => {
       if (closing) {
         respondJson(
@@ -44,6 +46,20 @@ export function createCliFeature(options: {
       }
     };
     return {
+      provisionLocal(owner: string, loopback: string) {
+        if (closing) return Promise.resolve();
+        return (localInstall ??= installLocalCli(
+          credentials,
+          join(options.stateRoot, "local-cli"),
+          loopback,
+          owner,
+          (project) => options.authorize(owner, project),
+        )
+          .catch(options.report)
+          .finally(() => {
+            localInstall = undefined;
+          }));
+      },
       routes: [
         ...cliRegistrationRoutes(credentials, {
           ...options,
@@ -84,6 +100,7 @@ export function createCliFeature(options: {
       close: () =>
         (closePromise ??= (async () => {
           closing = true;
+          await localInstall;
           if (active)
             await new Promise<void>((resolve) => {
               drain = resolve;
@@ -95,6 +112,7 @@ export function createCliFeature(options: {
     options.report(error);
     return {
       routes: [],
+      async provisionLocal() {},
       async handle(context: RouteContext) {
         if (!(context.url.pathname === "/api/cli/v1" || context.url.pathname.startsWith("/api/cli/v1/"))) return false;
         respondJson(context.res, 503, { schema: 1, error: { code: "unavailable" } }, { "cache-control": "no-store" });

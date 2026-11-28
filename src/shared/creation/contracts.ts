@@ -47,6 +47,7 @@ export interface CreationRequest {
   effort?: string;
   attachments?: readonly { materialId: string }[];
   outputType?: CreationRequestedOutput;
+  media?: import("./media-executors.js").CreationMediaChoice;
   dialogue?: true;
 }
 export const DOCUMENT_CREATION_CAPABILITIES = ["project.documents.create"] as const;
@@ -134,6 +135,7 @@ export interface CreationTaskView {
   generation: number;
   prompt: string;
   outputType?: CreationRequestedOutput;
+  media?: import("./media-executors.js").CreationMediaChoice;
   goal?: CreationGoal | null;
   runtimeId?: string;
   model: string | null;

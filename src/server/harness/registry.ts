@@ -162,6 +162,7 @@ export class HarnessRegistry {
       isDefault: runtime.id === defaultId,
       status: error ?? (profile ? (info ? "ready" : "unknown") : "unavailable"),
       capabilities: info?.capabilities ?? null,
+      ...(info?.protocol ? { protocol: info.protocol } : {}),
       models: info?.models ?? [],
       ...(error ? { error } : {}),
     };

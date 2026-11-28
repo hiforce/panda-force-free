@@ -5,6 +5,11 @@ import { applicationRuntimes } from "./harness/application.js";
 import { LocalTextIndex } from "./search/providers/local.js";
 import { harnessMemoryModels } from "./project-memory/model-review.js";
 import type { ApplicationRuntimePort } from "./engines/application-tools/runtime-port.js";
+import { mediaBrokerClient, readMediaBrokerToken } from "./creation/integration/media-executors/broker.js";
+import { CreationMediaJobs } from "./creation/integration/media-executors/jobs.js";
+import { creationMediaExecutorRoutes } from "./creation/integration/media-executors/routes.js";
+import { reportDiagnostic } from "../shared/diagnostics.js";
+import { PERSONAL_CONTENT_SCOPE } from "../shared/creative/scope.js";
 import { applicationRuntimeRoutes } from "./engines/application-tools/runtime-routes.js";
 import { createCodexApplicationEngine } from "./engines/application-tools/codex.js";
 import { createOriginalStorageFeature } from "./object-storage/feature.js";
@@ -16,6 +21,7 @@ import { createApplicationContent } from "./application/content.js";
 import { creationNotificationSource } from "./creation/integration/notification-source.js";
 import { NotificationCenter } from "./notifications/center.js";
 import { notificationRoutes } from "./notifications/routes.js";
+import { storageBrowserId } from "../shared/workspace-tools/storage-browser.js";
 import { remoteConnectionRoutes } from "./remote-terminal/routes.js";
 import { RemoteRegistry } from "./remote-terminal/registry.js";
 import { RemoteHostKeyProbe } from "./remote-terminal/host-key.js";
@@ -57,6 +63,7 @@ import { SUPPORTED_LOCALES } from "../shared/i18n/locale-policy.js";
 import { isRecord } from "../shared/records.js";
 import { errorMessage, errorStatus } from "./../shared/errors.js";
 import { installBrowserConnections } from "./bridge/browser-connections.js";
+import { terminalSocketPath } from "./terminal/relay.js";
 import { createBrowserEngine } from "./bridge/browser-engine.js";
 import { createEngineNotifications } from "./bridge/engine-notifications.js";
 import { accountRoutes } from "./http/account-routes.js";
@@ -66,6 +73,7 @@ import { withRequestErrors } from "./http/request-handler.js";
 import { workspaceRoutes } from "./http/workspace-routes.js";
 import type { EngineEnvelope } from "../shared/engine/contracts.js";
 import { createInstalledEngine } from "./engines/installed.js";
+import { nativeProcessLaunchSocket, nativeProcessScratch, nativeProcessSocket } from "./engines/native-process.js";
 import { CREATION_STYLES } from "../shared/template-previews/assets.js";
 import {
   KNOWLEDGE_STYLES,
@@ -102,7 +110,7 @@ import { ProjectVisibilityStore } from "./misc/project-visibility.js";
 import { projectDocumentPreviewRoutes } from "./documents/preview/routes.js";
 import { documentTemplateCreationRoutes } from "./templates/integration/document-creation-routes.js";
 import { sourceThemeRoutes } from "./plugins/integration/source-theme-routes.js";
-import { servePublicationCallback } from "./connections/integration/callback-page.js";
+import { serveOAuthCallback } from "./connections/integration/callback-page.js";
 import { publicationOwner } from "./connections/integration/identity.js";
 import { DocumentError } from "./documents/errors.js";
 import { ProjectDirectoryPolicy } from "./projects/directory-policy.js";
@@ -110,6 +118,16 @@ import { ReviewDiffStore } from "./review/state.js";
 import { createLocalImagePresenter } from "./workspace/image-presentation.js";
 import { createImageThumbnailCache } from "./workspace/image-thumbnails.js";
 import { createOssAttachmentStorage, readOssAttachmentConfig } from "./workspace/oss-attachments.js";
+
+const mediaSocket = process.env.PANDA_FORCE_MEDIA_EXECUTOR_SOCKET,
+  mediaTokenFile = process.env.PANDA_FORCE_MEDIA_EXECUTOR_TOKEN_FILE;
+if (Boolean(mediaSocket) !== Boolean(mediaTokenFile))
+  throw new Error("The media worker requires both its private socket and token file");
+// Keep the selected backend across reconnects so another writer cannot take over shared sessions.
+const appServerConnection = resolveAppServerConnection(process.env, config.homeDir);
+const harnessSocket = appServerConnection.mode === "shared" ? nativeProcessSocket() : nativeProcessLaunchSocket();
+const harnessProcessRoot = harnessSocket ? await nativeProcessScratch() : undefined;
+const harnessScratchRoot = harnessProcessRoot ?? join(config.stateRoot, "harness");
 
 const initialDatabaseChoice =
   !existsSync(config.projectCatalogPath) &&
@@ -165,9 +183,6 @@ function presentBrowserData<T>(value: T): T {
   return presentLocalImages(attachmentStorage ? attachmentStorage.present(value) : value);
 }
 
-// Keep the selected backend across reconnects; silently switching to another
-// writer after a daemon disconnect would break shared sessions.
-const appServerConnection = resolveAppServerConnection(process.env, homeDir);
 const clusterConfig = readClusterConfig();
 if (clusterConfig?.role === "gateway") throw new Error("Start gateways with bun run start");
 if (clusterConfig && appServerConnection.mode !== "isolated")
@@ -316,7 +331,7 @@ const harnessFeature = await createHarnessFeature({
   },
   memoryModels: harnessMemoryModels((): ApplicationRuntimePort => applicationRuntime, {
     connection: appServerConnection,
-    scratchRoot: join(config.stateRoot, "harness", "memory"),
+    scratchRoot: join(harnessScratchRoot, "memory"),
     version: config.version,
     engineId: engineDriver.descriptor.id,
   }),
@@ -328,7 +343,7 @@ const harnessFeature = await createHarnessFeature({
 });
 const applicationRuntime: ApplicationRuntimePort = applicationRuntimes({
   registry: harnessFeature.registry,
-  scratchRoot: join(config.stateRoot, "harness", "catalog"),
+  scratchRoot: join(harnessScratchRoot, "catalog"),
   hostWorkspace: harnessFeature.hostCatalogWorkspace,
   principal: (owner) =>
     localAccountFeature?.accounts.runtimePrincipal(owner) ?? Promise.resolve({ owner, administrator: true }),
@@ -343,6 +358,15 @@ const applicationRuntime: ApplicationRuntimePort = applicationRuntimes({
       timeoutMs: purpose === "creation" ? 600000 : 180000,
     }),
 });
+const configuredTerminalSocket = process.env.PANDA_FORCE_TERMINAL_SOCKET,
+  terminalSocket = configuredTerminalSocket ? terminalSocketPath(configuredTerminalSocket) : undefined;
+const creationMediaExecutors =
+  mediaSocket && mediaTokenFile
+    ? mediaBrokerClient(mediaSocket, () => readMediaBrokerToken(mediaTokenFile))
+    : undefined;
+const creationMediaJobs = creationMediaExecutors
+  ? new CreationMediaJobs(join(config.stateRoot, "creation-media", "rendering"), creationMediaExecutors)
+  : undefined;
 const {
   creationFeature,
   personalContent,
@@ -367,6 +391,8 @@ const {
   (project, owner) => searchChanged(project, owner),
   () => (authState.administrator ? publicationOwner(authState, {}) : null),
   applicationRuntime,
+  creationMediaExecutors,
+  creationMediaJobs,
 );
 harnessFeature.startProjectMemory();
 const authorizeCliProject = async (owner: string, project: string) => {
@@ -433,6 +459,10 @@ const cliFeature = createCliFeature({
   authorize: authorizeCliProject,
   commands: cliContentCommands({
     authorize: authorizeCliProject,
+    media: {
+      service: creationMediaExecutors,
+      administrator: (owner) => !!authState.administrator && owner === publicationOwner(authState, {}),
+    },
     memory: harnessFeature.projectMemory,
     originals: readOriginalSources,
     documents: async (owner, project) =>
@@ -444,6 +474,18 @@ const cliFeature = createCliFeature({
   }),
   report: () => console.warn("[cli] Client authentication is unavailable"),
 });
+function provisionLocalCli() {
+  if (
+    !clusterConfig &&
+    config.authMode === "password" &&
+    process.env.PANDA_FORCE_LOCAL_CLI_BOOTSTRAP === "true" &&
+    authState.administrator
+  )
+    return cliFeature.provisionLocal(
+      publicationOwner(authState, {}),
+      "http://" + (host === "::1" ? "[::1]" : "127.0.0.1") + ":" + port,
+    );
+}
 searchChanged = (project, owner) =>
   queueMicrotask(() => {
     void searchFeature
@@ -635,7 +677,8 @@ const dispatchApiRoute = createRouter([
   ...notificationRoutes(notifications, resolveOwner),
   ...remoteConnectionRoutes(remoteRegistry, remoteSessions, remoteHostKeys, resolveOwner),
   ...harnessFeature.routes,
-  ...applicationRuntimeRoutes(applicationRuntime, resolveOwner),
+  ...applicationRuntimeRoutes(applicationRuntime, resolveOwner, creationFeature.creationCapabilities),
+  ...creationMediaExecutorRoutes(creationMediaExecutors, resolveOwner),
   ...(localAccountFeature?.routes ?? []),
   ...gadgetFeature.routes,
   ...contentAccess.routes,
@@ -802,12 +845,13 @@ const server = createServer(
           return;
         }
       }
-      if (servePublicationCallback(req, res, url)) return;
+      if (serveOAuthCallback(req, res, url)) return;
       if (await botFeature.handle({ req, res, url })) return;
       if (await cliFeature.handle({ req, res, url })) return;
       const appRoute =
         req.method === "GET" &&
-        (["/", "/invite", "/verify-email", "/reset-password", "/reset-password/new"].includes(url.pathname) ||
+        (Boolean(storageBrowserId(url.pathname)) ||
+          ["/", "/invite", "/verify-email", "/reset-password", "/reset-password/new"].includes(url.pathname) ||
           /^\/(?:settings(?:\/[^/]+)?|workspace|bots(?:\/tasks|\/[a-f0-9-]{36}\/(?:chat|tasks|integrations))?|tasks|projects|project|documents|deliverables|connections|create|creation\/[^/]+|skills(?:\/[^/]+)?|publish(?:\/[^/]+)?|new|task\/[^/]+|tools\/[a-z0-9-]+(?:\/terminal\/[a-f0-9-]{36})?)\/?$/.test(
             url.pathname,
           ));
@@ -853,7 +897,11 @@ const server = createServer(
         ...INSTALL_ASSETS,
       ]);
       if (await localAccountFeature?.publicHandle(req, res, url)) return;
-      if (await passwordAuth.handle(req, res, url)) return;
+      if (await passwordAuth.handle(req, res, url)) {
+        if (url.pathname === "/api/auth/setup" && req.method === "POST" && res.statusCode === 200)
+          await provisionLocalCli();
+        return;
+      }
       if (!(await passwordAuth.isAuthorized(req))) {
         if (appRoute || loginAssets.has(url.pathname)) {
           const file = resolvePublicAsset(appRoute ? "/" : url.pathname, publicDir);
@@ -916,6 +964,8 @@ const browserConnections = installBrowserConnections({
   defaultCwd,
   handleClient,
   openRemoteTerminal: (client, req, url) => remoteSessions.open(client, resolveOwner({ req }), url),
+  terminalSocket,
+  allowLocalTerminal: !creationMediaExecutors,
   cluster,
 });
 
@@ -939,11 +989,22 @@ startApplicationBackground({
   search: searchFeature,
   editorial: editorialFeature,
   creation: creationFeature,
+  media: {
+    start: () =>
+      creationMediaJobs?.start(
+        (scope) =>
+          scope.projectId === PERSONAL_CONTENT_SCOPE
+            ? personalContent.recoverMedia(scope)
+            : creationFeature.recoverMedia(scope),
+        (error) => reportDiagnostic("creation-media-recovery", error),
+      ),
+  },
   knowledge: knowledgeFeature,
   previews: templatePreviewFeature,
   goals: goalStore,
 });
 server.listen(port, host, () => {
+  void provisionLocalCli();
   startApplicationIngress({
     sources: packageSourceFeature,
     themes: nativeThemeFeature,
@@ -985,6 +1046,7 @@ function shutdown() {
     originals: originalStorage,
     knowledge: knowledgeFeature,
     creation: creationFeature,
+    media: creationMediaJobs,
     personal: personalContent,
     publication: sitePublicationFeature,
     editorial: editorialFeature,

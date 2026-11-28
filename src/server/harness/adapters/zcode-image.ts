@@ -1,17 +1,50 @@
 import { createDecipheriv, createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, mkdtemp, open, readFile, realpath, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join, normalize } from "node:path";
 import { spawn } from "node:child_process";
 import { isRecord } from "../../../shared/records.js";
 import type { ApplicationImageRenderer } from "../../engines/application-tools/runtime-port.js";
+import { captureNativeProcess, nativeProcessLaunchSocket, nativeProcessScratch } from "../../engines/native-process.js";
 
 const origin = "https://zcode.z.ai";
 const pluginVersion = "0.1.2";
 const maxReferenceBytes = 10 * 1024 * 1024;
 const reviewedSha256 = "583ac893030ec05fbf54f77dcb2dc39d4e321afb155ba24c62d151ae4186adce";
 const hash = (data: Uint8Array) => createHash("sha256").update(data).digest();
+const workerPlugin = `
+  import { createHash } from "node:crypto";
+  import { constants } from "node:fs";
+  import { open, realpath } from "node:fs/promises";
+  import { pathToFileURL } from "node:url";
+  const [, script, expected, action] = process.argv;
+  if (await realpath(script) !== script) throw Error("Plugin unavailable");
+  const file = await open(script, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const info = await file.stat();
+    if (!info.isFile() || info.size > 131072) throw Error("Plugin unavailable");
+    const bytes = Buffer.alloc(131073);
+    const { bytesRead } = await file.read(bytes, 0, bytes.length, 0);
+    if (bytesRead !== info.size || createHash("sha256").update(bytes.subarray(0, bytesRead)).digest("hex") !== expected)
+      throw Error("Plugin unavailable");
+  } finally {
+    await file.close();
+  }
+  if (action === "check") process.stdout.write(expected);
+  else {
+    process.argv.length = 2;
+    await import(pathToFileURL(script).href);
+  }
+`;
+
+function reviewedWorkerPlugin(script: string, cwd: string, env: NodeJS.ProcessEnv, action: "check" | "run") {
+  return {
+    command: "node",
+    args: ["--input-type=module", "-e", workerPlugin, script, reviewedSha256, action],
+    cwd,
+    env,
+  };
+}
 
 async function privateFile(path: string, limit: number) {
   if ((await realpath(path)) !== path) throw Error("ZCode image credentials unavailable");
@@ -67,11 +100,31 @@ async function officialHeaders(home: string) {
   };
 }
 
-function invokePlugin(script: string, cwd: string, input: string, signal: AbortSignal) {
-  return new Promise<unknown>((resolve, reject) => {
+async function invokePlugin(script: string, cwd: string, input: string, signal: AbortSignal) {
+  const env = { PATH: process.env.PATH, HOME: cwd, ZCODE_PROJECT_DIR: cwd, ZCODE_BASE_URL: origin },
+    relay = nativeProcessLaunchSocket();
+  const output = relay
+    ? await captureNativeProcess(
+        relay,
+        reviewedWorkerPlugin(script, cwd, env, "run"),
+        Buffer.from(input),
+        32768,
+        AbortSignal.any([signal, AbortSignal.timeout(335000)]),
+      )
+    : await localPlugin(script, cwd, input, env, signal);
+  return output
+    .toString("utf8")
+    .split("\n")
+    .filter((line) => line.trim())
+    .map((line): unknown => JSON.parse(line))
+    .find((item) => isRecord(item) && item.id === 2);
+}
+
+function localPlugin(script: string, cwd: string, input: string, env: NodeJS.ProcessEnv, signal: AbortSignal) {
+  return new Promise<Buffer>((resolve, reject) => {
     const child = spawn("node", [script], {
       cwd,
-      env: { PATH: process.env.PATH, HOME: cwd, ZCODE_PROJECT_DIR: cwd, ZCODE_BASE_URL: origin },
+      env,
       stdio: ["pipe", "pipe", "ignore"],
       signal,
       timeout: 335000,
@@ -92,62 +145,75 @@ function invokePlugin(script: string, cwd: string, input: string, signal: AbortS
     });
     child.on("close", (code) => {
       if (code !== 0) return reject(Error("ZCode image plugin did not complete"));
-      try {
-        const result = Buffer.concat(chunks)
-          .toString("utf8")
-          .split("\n")
-          .filter((line) => line.trim())
-          .map((line): unknown => JSON.parse(line))
-          .find((item) => isRecord(item) && item.id === 2);
-        resolve(result);
-      } catch (error) {
-        reject(error);
-      }
+      resolve(Buffer.concat(chunks));
     });
     child.stdin.end(input);
   });
 }
 
 export function zcodeImageRenderer(accountHome: string): ApplicationImageRenderer {
+  async function installedPlugin() {
+    const home = await lstat(accountHome);
+    if (
+      !home.isDirectory() ||
+      (home.mode & 0o077) !== 0 ||
+      normalize(accountHome) !== accountHome ||
+      (await realpath(accountHome)) !== accountHome
+    )
+      throw Error("ZCode image account directory unavailable");
+    const script = join(
+      accountHome,
+      ".zcode",
+      "cli",
+      "plugins",
+      "cache",
+      "zcode-plugins-official",
+      "image-generation",
+      pluginVersion,
+      "mcp",
+      "server.mjs",
+    );
+    const plugin = await lstat(script);
+    if (
+      !plugin.isFile() ||
+      plugin.size > 131072 ||
+      (await realpath(script)) !== script ||
+      hash(await readFile(script)).toString("hex") !== reviewedSha256
+    )
+      throw Error("Reviewed ZCode image plugin is unavailable");
+    return script;
+  }
   return {
     provider: "zcode",
     maxReferences: 1,
     maxReferenceBytes,
+    async version() {
+      const relay = nativeProcessLaunchSocket();
+      const script = await installedPlugin();
+      await officialHeaders(accountHome);
+      if (relay) {
+        const cwd = await nativeProcessScratch();
+        const receipt = await captureNativeProcess(
+          relay,
+          reviewedWorkerPlugin(script, cwd, { HOME: cwd }, "check"),
+          Buffer.alloc(0),
+          64,
+          AbortSignal.timeout(3500),
+        );
+        if (receipt.toString("ascii") !== reviewedSha256)
+          throw Error("Reviewed ZCode image plugin is unavailable in the worker");
+      }
+      return pluginVersion;
+    },
     async render(prompt, references, signal) {
       signal.throwIfAborted();
       const reference = references[0];
       if (references.length > 1 || (reference && reference.bytes.length > maxReferenceBytes))
         throw Error("Invalid ZCode image input");
-      const home = await lstat(accountHome);
-      if (
-        !home.isDirectory() ||
-        (home.mode & 0o077) !== 0 ||
-        normalize(accountHome) !== accountHome ||
-        (await realpath(accountHome)) !== accountHome
-      )
-        throw Error("ZCode image account directory unavailable");
-      const script = join(
-        accountHome,
-        ".zcode",
-        "cli",
-        "plugins",
-        "cache",
-        "zcode-plugins-official",
-        "image-generation",
-        pluginVersion,
-        "mcp",
-        "server.mjs",
-      );
-      const plugin = await lstat(script);
-      if (
-        !plugin.isFile() ||
-        plugin.size > 131072 ||
-        (await realpath(script)) !== script ||
-        hash(await readFile(script)).toString("hex") !== reviewedSha256
-      )
-        throw Error("Reviewed ZCode image plugin is unavailable");
+      const scratch = await nativeProcessScratch();
+      const script = await installedPlugin();
       const headers = await officialHeaders(accountHome);
-      const directory = await mkdtemp(join(tmpdir(), "panda-zcode-image-"));
+      const directory = await mkdtemp(join(scratch, "panda-zcode-image-"));
       try {
         const arguments_ = {
           prompt,

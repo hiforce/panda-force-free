@@ -3,6 +3,7 @@ import type { CodexConnection, CodexTransportFactory } from "../../engines/codex
 import type { CreationEngines } from "../runtime/contracts.js";
 import { CreationError } from "../contracts.js";
 import { isolatedApplicationEngines } from "../../engines/application-tools/factory.js";
+import { creationCliEngine } from "../../harness/application-cli.js";
 
 /** The application selects scratch or a verified conversation directory; model text never selects a workspace or process. */
 export function creationEngines(
@@ -20,9 +21,9 @@ export function creationEngines(
   const engines = isolatedApplicationEngines({ ...options, purpose: "creation" }, factory);
   return {
     select(profile, owner) {
-      if (profile.runtimeId && owner && options.runtimes) return engines.select(profile, owner);
+      if (profile.runtimeId && owner && options.runtimes) return creationCliEngine(engines.select(profile, owner));
       if (profile.engineId !== "codex" || options.engineId !== "codex") throw new CreationError("unavailable");
-      return engines.select(profile);
+      return creationCliEngine(engines.select(profile));
     },
   };
 }

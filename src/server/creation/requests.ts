@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { stableJson } from "../../shared/stable-json.js";
 import { SKILL_LIMITS } from "../../shared/skills/contracts.js";
 import type { CreationRequest } from "./input.js";
+import { mediaChoice } from "./media-executors/selection.js";
 import { creationOutputType } from "./output-type.js";
 import { CreationError } from "./contracts.js";
 import {
@@ -51,6 +52,7 @@ export function creationRequest(value: unknown): CreationRequest {
       "effort",
       "attachments",
       "outputType",
+      "media",
       "dialogue",
     ]),
     locale = creationText(row.locale, 35),
@@ -75,6 +77,7 @@ export function creationRequest(value: unknown): CreationRequest {
     prompt,
     profileId: creationId(row.profileId),
     ...(row.outputType === undefined ? {} : { outputType: creationOutputType(row.outputType) }),
+    ...(row.media === undefined ? {} : { media: mediaChoice(row.media) }),
     ...(row.dialogue === true ? { dialogue: true as const } : {}),
     ...(row.runtimeId === undefined ? {} : { runtimeId: creationId(row.runtimeId) }),
     ...(row.model === undefined || row.model === "" ? {} : { model: creationText(row.model, 128) }),

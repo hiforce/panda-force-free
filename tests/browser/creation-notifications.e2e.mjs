@@ -82,6 +82,7 @@ for (const kind of ["document", "image"]) {
             locale: "en",
             prompt: "Create a finished notification example",
             outputType: kind,
+            ...(kind === "image" ? { media: { kind: "image", source: "harness" } } : {}),
             profileId: options.defaultProfileId,
             selections: options.defaultWorkflow ? [options.defaultWorkflow] : [],
           });

@@ -61,6 +61,7 @@ export type OriginalStorageMutation = {
         credentials?: OriginalStorageCredentials;
       };
     }
+  | ({ action: "placement"; kinds: OriginalStorageKind[] } & ({ mode: "local" } | { mode: "s3"; profileId: string }))
   | {
       action: "credentials";
       profileId: string;

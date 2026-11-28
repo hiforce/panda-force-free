@@ -67,14 +67,20 @@ export function cliApiRoute(
           url.search
         )
           throw new CliError("authenticationRequired", 401);
-        const client = req.headers["x-panda-client-id"],
-          token = authorization.slice(7),
-          grant = await credentials.authenticate(client, token);
         if (
           req.method === "GET" &&
           (Number(req.headers["content-length"] || 0) !== 0 || req.headers["transfer-encoding"])
         )
           throw new CliError("invalidInput");
+        const client = req.headers["x-panda-client-id"],
+          token = authorization.slice(7);
+        if (url.pathname === "/api/cli/v1/setup" && req.method === "GET" && client === undefined) {
+          timer = deadline(context, controller, requestId, timeoutMs);
+          const registration = await credentials.registrationForSetup(token);
+          if (!controller.signal.aborted) respondJson(res, 200, { schema: 1, requestId, data: registration });
+          return;
+        }
+        const grant = await credentials.authenticate(client, token);
         timer = deadline(context, controller, requestId, timeoutMs);
         if (url.pathname === "/api/cli/v1/session" && req.method === "GET") {
           const { owner: _owner, ...publicGrant } = grant;

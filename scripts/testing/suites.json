@@ -141,6 +141,8 @@
     "browser/session-workspace.e2e.mjs",
     "browser/shared-approvals.e2e.mjs",
     "browser/side-utilities.e2e.mjs",
+    "browser/sidebar-account-menu.e2e.mjs",
+    "browser/storage-connection-workspace.e2e.mjs",
     "browser/sidebar-refresh.e2e.mjs",
     "browser/site-builds.e2e.mjs",
     "browser/site-publications.e2e.mjs",

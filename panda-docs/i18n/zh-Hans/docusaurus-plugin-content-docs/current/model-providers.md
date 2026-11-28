@@ -75,7 +75,7 @@ spec:
     fsGroup: 1000
   containers:
     - name: panda-force
-      image: hiforceai/panda-force:0.2.3
+      image: hiforceai/panda-force:0.2.4
       env:
         - name: CODEX_HOME
           value: /home/codex/.codex

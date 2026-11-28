@@ -527,6 +527,10 @@
     min-width: 0;
   }
   .panda-workspace .window-brand strong {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     font-size: 16px;
     letter-spacing: -0.4px;
   }
@@ -649,5 +653,12 @@
   .panda-workspace:is(.project-creation-page, .project-creation-reading, :has(.project-gallery[data-open]))
     .workbench-mobile-nav {
     display: none;
+  }
+}
+
+@media (max-width: 375px) {
+  .panda-workspace .window-brand strong {
+    position: absolute;
+    clip-path: inset(50%);
   }
 }

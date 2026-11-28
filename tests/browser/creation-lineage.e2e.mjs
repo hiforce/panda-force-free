@@ -12,6 +12,7 @@ const image = await sharp({ create: { width: 1000, height: 700, channels: 3, bac
   .toBuffer();
 const app = await createAppFixture({
   applicationCreation: true,
+  startupTimeoutMs: 90000,
   applicationImage: image.toString("base64"),
   models: [
     {
@@ -81,6 +82,7 @@ try {
             profileId: options.defaultProfileId,
             selections: [],
             outputType: "image",
+            media: { kind: "image", source: "harness" },
           })
         ).task;
         initial = await complete(initial.id);
@@ -109,7 +111,7 @@ try {
       const activity = page.locator("[data-activity-list]");
       await activity.locator("[data-activity-task]").waitFor();
       assert.equal(await activity.locator("[data-activity-task]").count(), 1);
-      assert((await activity.innerText()).includes(initial.prompt));
+      assert.equal(await activity.locator("[data-activity-task] strong").textContent(), latest.artifact.title);
       assert((await activity.innerText()).includes("26"));
       await page.screenshot({ path: `${out}/activity-${locale}-${width}.png` });
       // An old bookmark resolves the whole creation and writes subsequent updates to its latest round.
@@ -153,6 +155,19 @@ try {
       assert.equal(await page.locator('#conversation [data-item-id$="-request"]').count(), 26);
       assert.equal(await page.locator("#prompt").inputValue(), "Keep this unsent continuation");
       assert.equal(await page.locator(".creation-session-notice").textContent(), "");
+      const source = page.locator("[data-media-executor]");
+      await waitFor(() => source.inputValue().then((value) => value === "harness"));
+      assert.equal(
+        await source.evaluate((select) => {
+          const style = getComputedStyle(select);
+          const canvas = document.createElement("canvas").getContext("2d");
+          canvas.font = style.font;
+          const label = select.selectedOptions[0]?.label || "";
+          const available = select.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 16;
+          return !!label && canvas.measureText(label).width <= available;
+        }),
+        true,
+      );
       await page.locator('[data-item-id="creation-' + initial.id + '-request"]').scrollIntoViewIfNeeded();
       await page.screenshot({ path: `${out}/history-${locale}-${width}.png` });
       await page.reload();
@@ -161,13 +176,15 @@ try {
       const originalVersion = page.locator('[data-creation-round="' + initial.id + '"]');
       if (!(await originalVersion.isVisible())) await page.locator("#sessionInfoButton").click();
       await originalVersion.click();
-      const dialog = page.locator(".creative-asset-dialog[open]");
+      await page.waitForURL((url) => url.searchParams.get("asset") === initial.artifact.assetId);
+      const viewer = page.locator("[data-personal-reader]:visible");
       await waitFor(() =>
-        dialog.locator("img[data-asset-native]").evaluate((img) => img.complete && img.naturalWidth === 1000),
+        viewer.locator("img[data-asset-native]").evaluate((img) => img.complete && img.naturalWidth === 1000),
       );
-      await page.keyboard.press("Escape");
-      await dialog.waitFor({ state: "hidden" });
-      if (width < 768) await page.locator('#sessionInspector [data-session-action="close"]').click();
+      await page.goBack();
+      await page.locator("#prompt").waitFor();
+      const inspector = page.locator('#sessionInspector [data-session-action="close"]');
+      if (width < 768 && (await inspector.isVisible())) await inspector.click();
       if (locale === "zh-TW") {
         const submitted = page.waitForResponse(
           (r) => r.url().endsWith(prefix + "/message") && r.request().method() === "POST",

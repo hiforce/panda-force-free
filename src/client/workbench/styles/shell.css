@@ -93,17 +93,6 @@
 .sidebar .thread-list {
   font-size: 12px;
 }
-.workbench-connection {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  min-height: 40px;
-  padding: 9px 12px;
-  font-size: 11px;
-  color: var(--pf-muted);
-  text-align: left;
-}
 .workbench-preparation {
   width: 100%;
   padding: 9px 12px;
@@ -124,8 +113,16 @@
 .sidebar-footer {
   padding: 8px 12px 14px;
 }
-.account-button {
-  min-height: 44px;
+.sidebar-settings {
+  min-height: var(--pf-touch-target);
+  color: var(--pf-ink);
+}
+.sidebar-settings .icon-slot {
+  color: var(--pf-muted);
+}
+.sidebar-settings:focus-visible {
+  outline: 2px solid var(--pf-accent);
+  outline-offset: -2px;
 }
 .conversation-shell {
   min-width: 0;
@@ -399,36 +396,9 @@
   color: #865700;
 }
 .wb-page-heading,
-.resource-heading,
-.encryption-key-settings {
+.resource-heading {
   display: grid;
   gap: var(--pf-space-3);
-}
-.encryption-key-settings :is(p, ul) {
-  margin: 0;
-}
-.encryption-key-settings :is(p, ul):empty {
-  display: none;
-}
-.encryption-key-settings ul {
-  padding: 0;
-  list-style: none;
-}
-.encryption-key-settings details {
-  border-block-start: 1px solid var(--app-border);
-  padding-block-start: var(--pf-space-3);
-}
-.encryption-key-settings form {
-  margin-block-start: var(--pf-space-3);
-  max-inline-size: 34rem;
-}
-.encryption-key-settings summary {
-  cursor: pointer;
-}
-.encryption-key-settings .settings-row {
-  flex-wrap: wrap;
-  overflow-wrap: anywhere;
-  gap: var(--pf-space-2);
 }
 .settings-page-heading {
   display: var(--pf-resource-heading-display, flex);
@@ -1704,8 +1674,7 @@
   .folder-go,
   .folder-confirm,
   .folder-cancel,
-  .settings-nav-back,
-  .workbench-connection {
+  .settings-nav-back {
     min-width: 44px;
     min-height: 44px;
   }

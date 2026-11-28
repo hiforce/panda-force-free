@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "version": 1,
+  "reviewedOn": "2026-11-27",
+  "scope": "creation",
+  "harnesses": {
+    "codex": {
+      "protocol": "codex-app-server/model-list",
+      "text": true,
+      "applicationTools": true,
+      "imageUnderstanding": true,
+      "nativeImage": {
+        "tool": "modelProvider/capabilities/read",
+        "version": null,
+        "orchestratorModel": "runtime-catalog",
+        "editing": true,
+        "evidence": "Native Codex image renderer with provider capability discovery"
+      },
+      "nativeVideo": false
+    },
+    "grok-build": {
+      "protocol": "acp/1",
+      "text": true,
+      "applicationTools": true,
+      "imageUnderstanding": true,
+      "nativeImage": {
+        "tool": "GrokBuild:image_gen",
+        "version": "1.0.89",
+        "orchestratorModel": "runtime-catalog",
+        "editing": false,
+        "evidence": "Panda AI release 243 verified a native Grok image original"
+      },
+      "nativeVideo": false
+    },
+    "zcode": {
+      "protocol": "zcode-app-server/session-workspace",
+      "text": true,
+      "applicationTools": true,
+      "imageUnderstanding": false,
+      "nativeImage": {
+        "tool": "generate_image",
+        "version": "0.1.2",
+        "orchestratorModel": "runtime-catalog",
+        "editing": true,
+        "evidence": "Official image-generation MCP plugin with verified digest and NJ image original"
+      },
+      "nativeVideo": false
+    },
+    "antigravity": {
+      "protocol": "acp/1",
+      "text": true,
+      "applicationTools": true,
+      "imageUnderstanding": true,
+      "nativeImage": null,
+      "nativeVideo": false
+    },
+    "claude-code": {
+      "protocol": "acp/1",
+      "text": true,
+      "applicationTools": true,
+      "imageUnderstanding": true,
+      "nativeImage": null,
+      "nativeVideo": false
+    }
+  }
+}

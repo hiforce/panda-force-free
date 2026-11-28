@@ -2,13 +2,13 @@
 title: Upgrade PandaForce
 ---
 
-Use the published `hiforceai/panda-force:0.2.3` image and matching release configuration. Review the [release notes](releases.md#023) before upgrading. The [installation guide](installation.md) is for a new installation.
+Use the published `hiforceai/panda-force:0.2.4` image and matching release configuration. Review the [release notes](releases.md#024) before upgrading. The [installation guide](installation.md) is for a new installation.
 
 ## Preserve your installation
 
 - Back up application state, the selected SQLite/MySQL database, model-account storage, workspaces and attachments using the [storage guide](storage.md). Back up a Grok account through its existing owner; avoid creating independent copies of a rotating account.
 - Keep the existing Compose project name, `.env`, volume names and administrator configuration. Review configuration changes before merging them into your own files.
-- Check `PANDA_FORCE_IMAGE` in `.env` and your shell. Update an old override to `hiforceai/panda-force:0.2.3`, or use your matching private-registry image. Registry credentials remain in your registry tooling.
+- Check `PANDA_FORCE_IMAGE` in `.env` and your shell. Update an old override to `hiforceai/panda-force:0.2.4`, or use your matching private-registry image. Registry credentials remain in your registry tooling.
 - Retain the previous image digest and compatible backups for rollback. A database migration may require restoring its corresponding backup rather than simply starting an older image.
 
 ## Update the standard installation

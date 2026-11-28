@@ -2,7 +2,7 @@
 title: Configure Harness Runtimes
 ---
 
-PandaForce 0.2.3 supports **multiple Harness Runtimes**. A runtime selects the native engine and account connection; its model list and reasoning levels come from that runtime. Choose **Harness Runtime → model → reasoning level** in conversations, assistants/Bots and supported creation settings. The published image includes Codex CLI, Grok Build and ZCode. Antigravity is available through an operator-built option.
+PandaForce supports **multiple Harness Runtimes**. A runtime selects the native engine and account connection; its model list and reasoning levels come from that runtime. Choose **Harness Runtime → model → reasoning level** in conversations, assistants/Bots and supported creation settings. The published image includes Codex CLI, Grok Build and ZCode. Antigravity is available through an operator-built option.
 
 Enabled runtimes are available to Bots by default. To remove one runtime from the Bot picker, edit that instance in **Settings → Harness Runtimes** and turn off **Allow Bots to use this runtime**.
 
@@ -10,10 +10,10 @@ For task runtimes, editable documents and media outputs, see [Creation on a self
 
 ## Install the matching release
 
-Get the installation configuration from the `main` branch and run the published `hiforceai/panda-force:0.2.3` image:
+Get the installation configuration from the `develop` branch and run the published `hiforceai/panda-force:0.2.4` image:
 
 ```bash
-git clone --branch main --depth 1 https://github.com/hiforce/panda-force-free.git
+git clone --branch develop --depth 1 https://github.com/hiforce/panda-force-free.git
 cd panda-force-free
 docker compose pull panda-force
 docker compose up -d --no-build
@@ -70,7 +70,7 @@ docker compose exec panda-force grok --no-auto-update --version
 docker compose exec panda-force panda-tools doctor
 ```
 
-For the 0.2.3 release, the reviewed engines are Codex CLI **0.171.0**, Grok Build **1.0.89** and ZCode CLI **0.17.1**. The image already provides Office, PDF/OCR, fonts, browser, image, writing, research and video tools; [contents and purpose](base-images.md) explains the matched build/runtime bases.
+The 0.2.4 image uses Codex CLI **0.171.0**, Grok Build **1.0.89** and ZCode CLI **0.17.1**. The image already provides Office, PDF/OCR, fonts, browser, image, writing, research and video tools; [contents and purpose](base-images.md) explains the matched build/runtime bases.
 
 `PANDA_FORCE_IMAGE` overrides the application and Grok helpers together, including a private registry or digest. Keep their selected version compatible. `PANDA_FORCE_PULL_POLICY` controls pulls; registry credentials remain in your registry tooling. Before upgrading, check your `.env` for an old image override and preserve the existing Compose project name and volume names. `docker compose down` preserves named volumes; back up application, Codex, Grok-account and workspace storage before changing versions. The socket volume contains communication state, not the account backup.
 
@@ -78,7 +78,7 @@ Switch an existing conversation after the current turn finishes. PandaForce hand
 
 ## ZCode
 
-The 0.2.3 image includes ZCode CLI 0.17.1. The experimental conversation runtime supports text streaming, visible thinking and tool activity, approvals, and resuming sessions. Usage is shown when the runtime reports it. Creation and Bots use their own supported runtimes.
+The 0.2.4 image includes ZCode CLI 0.17.1. The experimental conversation runtime supports text streaming, visible thinking and tool activity, approvals, and resuming sessions. Usage is shown when the runtime reports it. Creation and Bots use their own supported runtimes.
 
 1. Copy the [example provider file](https://github.com/hiforce/panda-force-free/blob/v0.2.3/deploy/harness/zcode-provider.example.json) to a private location outside the checkout and enter your own BigModel Coding Plan key there. Keep the IDs used in the example, or update the Compose profile and provider file together. Give the container user read access to this file.
 2. Run the following from the release checkout. Replace the example path with the path to your configured file. Keep your existing Compose project and volumes when upgrading.
@@ -134,4 +134,23 @@ The runtime supplies the models and the reasoning slider's available levels. For
 
 ## Source development
 
-Developers customizing the application can follow the [container build guide](building.md#development-container), including its Grok overlay instructions. The installation and account commands on this page use the published `hiforceai/panda-force:0.2.3` image.
+Developers customizing the application can follow the [container build guide](building.md#development-container), including its Grok overlay instructions. The installation and account commands on this page use the published `hiforceai/panda-force:0.2.4` image.
+
+## Optional creation executors
+
+Run the media, Harness process and terminal workers when you want to configure creation executors. Use the following overlays with the same Compose project and state volumes as your existing installation.
+
+```bash
+export PANDA_FORCE_IMAGE=hiforceai/panda-force:0.2.4
+export PANDA_FORCE_MEDIA_WORKER_IMAGE="$PANDA_FORCE_IMAGE"
+export PANDA_FORCE_HARNESS_PROCESS_IMAGE="$PANDA_FORCE_IMAGE"
+export PANDA_FORCE_TERMINAL_WORKER_IMAGE="$PANDA_FORCE_IMAGE"
+
+docker compose -f docker-compose.yml \
+  -f docker-compose.media-worker.yml \
+  -f docker-compose.harness-process.yml \
+  -f docker-compose.terminal-worker.yml \
+  -f docker-compose.creation-media.yml up -d
+```
+
+Open **Executors** in the sidebar to choose a provider and a model. Manage reusable provider credentials under **Settings → Credentials**. CLI executors require the provider package and its approved configuration on the media worker.

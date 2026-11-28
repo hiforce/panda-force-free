@@ -4,7 +4,7 @@ import { chromium, webkit } from "playwright";
 import { createAppFixture } from "../support/app-fixture.mjs";
 
 const app = await createAppFixture(),
-  out = ".artifacts/original-storage-lifecycle",
+  out = process.env.PANDA_ORIGINAL_LIFECYCLE_PROOF || ".artifacts/original-storage-lifecycle",
   results = [];
 await mkdir(out, { recursive: true });
 try {
@@ -22,7 +22,23 @@ try {
         isMobile: width < 768,
       });
       await app.signIn(context);
-      await context.addInitScript((locale) => localStorage.setItem("panda-force-locale", locale), locale);
+      await context.addInitScript((locale) => {
+        if (window === window.top) localStorage.setItem("panda-force-locale", locale);
+      }, locale);
+      const id = crypto.randomUUID();
+      const registered = await context.request.post(app.base + "/api/system/storage-connections", {
+        headers: { Origin: app.base },
+        data: {
+          id,
+          name: "Connection " + locale,
+          provider: "s3",
+          bucket: "retained-draft",
+          region: "us-east-1",
+          accessKeyId: "fixture-access",
+          secretAccessKey: "fixture-secret",
+        },
+      });
+      assert.equal(registered.status(), 200);
       const page = await context.newPage();
       let writes = 0,
         held,
@@ -51,9 +67,8 @@ try {
 
       const panel = page.locator(".original-storage-settings"),
         field = (name) => panel.locator(`[data-storage-field="${name}"]`);
-      await field("mode").selectOption("s3");
-      await field("bucket").fill("retained-draft-" + locale);
-      await field("secretAccessKey").fill("temporary-secret");
+      await field("profileId").selectOption(id);
+      await panel.locator('[data-storage-kind="slides"]').check();
       held = new Promise((r) => (release = r));
       await panel.locator('[data-storage-action="reload"]').click();
       await switchPage("users");
@@ -62,13 +77,14 @@ try {
       await page.locator("[data-users-notice]").waitFor();
       assert.equal(await page.locator(".original-storage-settings:visible").count(), 0);
       await switchPage("storage");
-      await field("bucket").waitFor();
-      assert.equal(await field("bucket").inputValue(), "retained-draft-" + locale);
-      assert.equal(await field("secretAccessKey").inputValue(), "");
+      await field("profileId").waitFor();
+      assert.equal(await field("profileId").inputValue(), id);
+      assert(await panel.locator('[data-storage-kind="slides"]').isChecked());
+      assert.equal(await panel.locator('[type="password"]').count(), 0);
       assert.equal(writes, 0);
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       await page.screenshot({ path: `${out}/${locale}-${width}.png` });
-      results.push({ locale, width, draftRetained: true, secretsCleared: true, lateReadIgnored: true, writes });
+      results.push({ locale, width, draftRetained: true, credentialsAbsent: true, lateReadIgnored: true, writes });
     } finally {
       await browser.close();
     }

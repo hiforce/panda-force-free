@@ -149,12 +149,12 @@ try {
         const passphrase = "test fixture phrase for PMF keys";
         await page.goto(app.base + "/settings/encryption-keys");
         const keyForm = page.locator("[data-key-create]");
-        await keyForm.locator("..").locator("summary").click();
+        await page.locator("[data-open-key-create]").click();
         await keyForm.locator('[name="keyName"]').fill("PMF fixture " + locale);
         await keyForm.locator('[name="password"]').fill(passphrase);
         await keyForm.locator('[name="repeat"]').fill(passphrase);
         const backingUp = page.waitForEvent("download");
-        await keyForm.locator("button").click();
+        await keyForm.locator('button[type="submit"]').click();
         const backupDownload = await backingUp;
         assert.match(backupDownload.suggestedFilename(), /\.pfkey$/);
         const backupFile = join(app.dir, backupDownload.suggestedFilename());
@@ -236,10 +236,10 @@ try {
           );
           await page.goto(app.base + "/settings/encryption-keys");
           const restoreKey = page.locator("[data-key-restore]");
-          await restoreKey.locator("..").locator("summary").click();
+          await page.locator("[data-open-key-restore]").click();
           await restoreKey.locator("[name=backup]").setInputFiles(backupFile);
           await restoreKey.locator("[name=password]").fill(passphrase);
-          await restoreKey.locator("button").click();
+          await restoreKey.locator('button[type="submit"]').click();
           await page.locator("[data-key-backup]").waitFor();
         }
         await page.goto(app.base + restoreRoute);

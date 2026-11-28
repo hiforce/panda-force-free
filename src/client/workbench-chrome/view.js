@@ -27,7 +27,7 @@ export function createChromeView(t) {
     ["layout", "width", "shell.layout", "chrome-desktop"],
     ["fullscreen", "fullscreen", "shell.fullscreen", "chrome-fullscreen chrome-desktop"],
     ["preferences", "slidersHorizontal", "shell.preferences", "chrome-mobile"],
-    ["profile", "userRound", "shell.profile", "chrome-profile chrome-desktop"],
+    ["profile", "userRound", "shell.profile", "chrome-profile"],
   ];
   setMessageHtml(
     toolbar,
@@ -46,12 +46,12 @@ export function createChromeView(t) {
   return { toolbar, dialog };
 }
 
-/** @param {{ t: import('../../shared/i18n/messages.js').Translate; i18n: import('../contracts/platform.js').I18nRuntime; layout: import('../contracts/workbench-chrome.js').WorkbenchLayout; mobile: boolean; options: import('../contracts/workbench-chrome.js').WorkbenchChromeOptions }} context */
+/** @param {{ t: import('../../shared/i18n/messages.js').Translate; i18n: import('../contracts/platform.js').I18nRuntime; layout: import('../contracts/workbench-chrome.js').WorkbenchLayout; mobile: boolean; logoutState: "idle" | "pending" | "failed"; options: import('../contracts/workbench-chrome.js').WorkbenchChromeOptions }} context */
 export function renderChromeMenu(menu, context) {
-  const { t, i18n, layout, mobile, options } = context;
+  const { t, i18n, layout, mobile, logoutState, options } = context;
   const label = (key) => messageHtml(key, undefined, t);
   const option = (action, value, name, detail = "", leading = "", selected = false) =>
-    `<button type="button" class="chrome-option${selected ? " selected" : ""}" data-chrome-action="${action}" data-value="${escapeHtml(value)}"${["locale", "theme", "width"].includes(action) ? ` aria-pressed="${selected}"` : ""}>${leading}<span class="chrome-option-copy"><strong>${name}</strong>${detail ? `<small>${detail}</small>` : ""}</span>${selected ? chromeIcon("check") : ""}</button>`;
+    `<button type="button" class="chrome-option${selected ? " selected" : ""}" data-chrome-action="${action}" data-value="${escapeHtml(value)}"${["locale", "theme", "width"].includes(action) ? ` aria-pressed="${selected}"` : ""}${action === "logout" && logoutState === "pending" ? " disabled" : ""}>${leading}<span class="chrome-option-copy"><strong>${name}</strong>${detail ? `<small>${detail}</small>` : ""}</span>${selected ? chromeIcon("check") : ""}</button>`;
   const localeName = () =>
     i18n.preference === "system"
       ? t("shell.followBrowser")
@@ -67,9 +67,7 @@ export function renderChromeMenu(menu, context) {
         label(THEME_OPTIONS.find((item) => item.id === readThemePreference())?.labelKey || "common.systemDefault"),
         chromeIcon("appearance"),
       ) +
-      option("menu", "layout", label("shell.layout"), "", chromeIcon("width")) +
-      '<div class="chrome-menu-divider"></div>' +
-      option("settings", "profile", label("shell.profile"), "", chromeIcon("userRound"));
+      option("menu", "layout", label("shell.layout"), "", chromeIcon("width"));
   } else if (menu === "language") {
     body =
       `<p class="chrome-menu-hint">${label("shell.languageHint")}</p>` +
@@ -159,7 +157,20 @@ export function renderChromeMenu(menu, context) {
       option("settings", "profile", label("shell.personalSettings"), "", chromeIcon("userRound")) +
       option("settings", "general-settings", label("common.settings"), "", chromeIcon("settings")) +
       option("settings", "keyboard-shortcuts", label("shell.keyboardShortcuts"), "", chromeIcon("command"));
+    if (document.getElementById("pandaLogout"))
+      body +=
+        (logoutState === "failed"
+          ? `<p role="alert" class="chrome-menu-hint">${label("shell.logoutFailed")}</p>`
+          : "") +
+        '<div class="chrome-menu-divider" role="separator"></div>' +
+        option(
+          "logout",
+          "",
+          label(logoutState === "pending" ? "shell.loggingOut" : "common.logOut"),
+          "",
+          chromeIcon("logOut"),
+        );
   }
   const heading = menu === "preferences" ? "shell.preferences" : "shell." + menu;
-  return `<header class="chrome-menu-heading">${mobile && menu !== "preferences" ? `<button type="button" class="chrome-menu-back" data-chrome-action="menu" data-value="preferences" ${messageAttributes("aria-label", "shell.preferences", undefined, t)}>${chromeIcon("arrowLeft")}</button>` : ""}<h2 id="workbenchPreferencesTitle" tabindex="-1">${label(heading)}</h2><button type="button" class="chrome-menu-close" data-chrome-action="close" ${messageAttributes("aria-label", "common.close", undefined, t)}>${chromeIcon("x")}</button></header><div class="chrome-menu-body">${body}</div>`;
+  return `<header class="chrome-menu-heading">${mobile && menu !== "preferences" && menu !== "profile" ? `<button type="button" class="chrome-menu-back" data-chrome-action="menu" data-value="preferences" ${messageAttributes("aria-label", "shell.preferences", undefined, t)}>${chromeIcon("arrowLeft")}</button>` : ""}<h2 id="workbenchPreferencesTitle" tabindex="-1">${label(heading)}</h2><button type="button" class="chrome-menu-close" data-chrome-action="close" ${messageAttributes("aria-label", "common.close", undefined, t)}>${chromeIcon("x")}</button></header><div class="chrome-menu-body">${body}</div>`;
 }

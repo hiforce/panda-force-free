@@ -8,6 +8,7 @@ import type {
   HarnessRuntime,
   HarnessMessage,
   HarnessPermissionMode,
+  HarnessProtocol,
 } from "../../shared/harness/contracts.js";
 import type { TokenCount } from "../../shared/engine/types.js";
 export type HarnessImportedMessage = Pick<HarnessMessage, "role" | "text"> &
@@ -92,6 +93,7 @@ export interface HarnessHistory {
   ): Promise<number>;
 }
 export interface HarnessAgentInfo {
+  protocol?: HarnessProtocol;
   capabilities: HarnessCapabilities;
   models: HarnessModel[];
   currentModel: string | null;

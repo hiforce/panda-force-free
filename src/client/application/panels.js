@@ -257,7 +257,6 @@ export function assemblePanels({
     viewUpdates.request("sessionWorkspace");
   }
   function openUsageSummary() {
-    viewUpdates.request("accountMenu", false);
     if (settingsPort.settingsRoutePage()) history.replaceState({}, "", "/");
     settingsPort.hideSettings();
     setSummaryPanelOpen(true);

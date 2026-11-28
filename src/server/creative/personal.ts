@@ -14,9 +14,16 @@ import { FileSavedQueries } from "../documents/files/saved-queries.js";
 import { FileCreativeAssetReader } from "./assets/reader.js";
 import { FileOriginalQueries } from "../content-sources/reader.js";
 import type { CreationNotificationReader } from "../creation/integration/notification-source.js";
+import type { MediaJobScope, MediaRecoveryAction } from "../creation/integration/media-executors/jobs.js";
 
 type Documents = ReturnType<typeof createFileDocumentApplication>;
-type Creation = { service?: CreationNotificationReader; routes: Route[]; start(): void; close(): Promise<void> };
+type Creation = {
+  service?: CreationNotificationReader;
+  routes: Route[];
+  start(): void;
+  close(): Promise<void>;
+  recoverMedia?(scope: MediaJobScope): Promise<MediaRecoveryAction>;
+};
 export interface PersonalContentOptions {
   originalStorage?: Pick<OriginalStorageFeature, "objects" | "purges">;
   contentRoot: string;
@@ -120,6 +127,15 @@ export class PersonalContent {
       return await opening;
     } catch (error) {
       if (this.owners.get(owner) === opening) this.owners.delete(owner);
+      throw error;
+    }
+  }
+  async recoverMedia(scope: MediaJobScope) {
+    if (scope.projectId !== PERSONAL_CONTENT_SCOPE) return false;
+    try {
+      return (await (await this.forOwner(scope.owner)).creation?.recoverMedia?.(scope)) ?? false;
+    } catch (error) {
+      if (error instanceof DocumentError && (error.code === "notFound" || error.status === 403)) return false;
       throw error;
     }
   }

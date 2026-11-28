@@ -2,6 +2,7 @@ import {
   fileCreationDocumentRevisions,
   creationFileDocuments,
 } from "../creation/integration/file-document-revisions.js";
+import { CreationError } from "../creation/contracts.js";
 import { recoverKnowledgeOutput } from "../knowledge/integration/output-recovery.js";
 import { PersonalContent } from "../creative/personal.js";
 import { creationDocumentImages, projectCreationDocuments } from "../creation/integration/document-port.js";
@@ -37,6 +38,8 @@ export async function createApplicationContent(
   changed: (project: string, owner?: string) => void,
   hostOwner?: () => string | null,
   runtimes?: import("../engines/application-tools/runtime-port.js").ApplicationRuntimePort,
+  media?: import("../creation/media-executors/contracts.js").CreationMediaExecutorPort,
+  mediaJobs?: import("../creation/integration/media-executors/jobs.js").CreationMediaJobs,
 ) {
   const {
     documentFeature,
@@ -84,6 +87,11 @@ export async function createApplicationContent(
         contentAccess.require(owner, project, "contribute"),
       )
     : undefined;
+  const mediaSelection = media ?? {
+    bind: async () => {
+      throw new CreationError("runtimeSelectionUnavailable");
+    },
+  };
   const creationFeature = createNativeCreationFeature({
     materials: creationMaterials,
     storage: runtimeStores?.creation,
@@ -94,6 +102,8 @@ export async function createApplicationContent(
     version: config.version,
     models,
     runtimes,
+    media: mediaSelection,
+    mediaJobs,
     owner: resolveOwner,
     requireProject: requireDocumentProject,
     authorizeProject: (owner, project) => contentAccess.require(owner, project, "contribute"),
@@ -129,10 +139,13 @@ export async function createApplicationContent(
         version: config.version,
         models,
         runtimes,
+        media: mediaSelection,
+        mediaJobs,
         owner: () => owner,
         requireProject: (id) => {
           if (id !== "personal") throw new DocumentError("notFound", 404);
         },
+        authorizeProject: (actor) => contentAccess.require(actor, "personal", "contribute"),
         documents: archives.wrap(creationFileDocuments(documents)),
         assets: async (_actor, project) => {
           if (_actor !== owner || project !== "personal") throw new DocumentError("notFound", 404);

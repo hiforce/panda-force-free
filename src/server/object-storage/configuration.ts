@@ -1,10 +1,12 @@
 import type { OriginalStorageKind } from "../../shared/storage/contracts.js";
 import type {
   OriginalStorageCredentials,
+  OriginalStorageConnection,
   OriginalStorageSettings,
   OriginalStorageMutation,
   OriginalStorageOperation,
 } from "../../shared/storage/contracts.js";
+import { registeredStorageId } from "../../shared/workspace-tools/storage.js";
 import { stableJson } from "../../shared/stable-json.js";
 import { ObjectStorageError } from "./contracts.js";
 import { PrivateStorageFiles } from "./private-files.js";
@@ -17,6 +19,7 @@ import {
   storageRecord,
   storageOperationId,
   storageProfileId,
+  storageTargetId,
   storageInteger,
   storageDigest,
   storageCredentials,
@@ -24,6 +27,13 @@ import {
   type StorageConfigurationRecord,
   type StorageProfileReference,
 } from "./config-codec.js";
+
+export interface RegisteredObjectTarget {
+  profile: OriginalStorageConnection & { id: string; prefix: string };
+  digest: string;
+  credentialRevision: number;
+  client: PrivateS3Client;
+}
 
 const generation = (revision: number) => String(storageInteger(revision, 1)).padStart(10, "0") + ".json";
 const integrity = (): never => {
@@ -60,7 +70,10 @@ const profileIdentity = (
 
 /** Configuration activates an immutable provider and separate credential generation in one CAS publication. */
 export class OriginalStorageConfiguration {
-  constructor(readonly files: PrivateStorageFiles) {}
+  constructor(
+    readonly files: PrivateStorageFiles,
+    private readonly registeredTarget?: (id: string) => Promise<RegisteredObjectTarget | null>,
+  ) {}
   private async current(): Promise<StorageConfigurationRecord> {
     const names = (await this.files.list(["config"])).filter((name) => /^\d{10}\.json$/.test(name));
     if (!names.length) return initial();
@@ -301,7 +314,13 @@ export class OriginalStorageConfiguration {
     } else {
       next.mode = input.mode;
       next.kinds = input.kinds;
-      if (input.profile) {
+      if (input.action === "placement" && input.mode === "s3") {
+        const id = input.profileId;
+        if (registeredStorageId.test(id)) {
+          if (!(await this.registeredTarget?.(id))) throw new ObjectStorageError("storageInvalidConfiguration");
+        } else if (!current.profiles.some((profile) => profile.id === id)) return conflict();
+        next.activeProfileId = id;
+      } else if (input.action === "configure" && input.profile) {
         reference = await this.prepareProfile(input, current, signature);
         next.activeProfileId = reference.id;
       }
@@ -322,9 +341,16 @@ export class OriginalStorageConfiguration {
     return this.result(next.revision);
   }
   async client(profileId: string, expectedDigest?: string) {
-    storageProfileId(profileId);
-    const current = await this.current(),
-      reference = current.profiles.find((profile) => profile.id === profileId);
+    return this.resolveTarget(await this.current(), profileId, expectedDigest);
+  }
+  private async resolveTarget(current: StorageConfigurationRecord, profileId: string, expectedDigest?: string) {
+    storageTargetId(profileId);
+    if (registeredStorageId.test(profileId)) {
+      const target = await this.registeredTarget?.(profileId);
+      if (!target || (expectedDigest !== undefined && target.digest !== expectedDigest)) return integrity();
+      return target;
+    }
+    const reference = current.profiles.find((profile) => profile.id === profileId);
     if (!reference || (expectedDigest !== undefined && reference.digest !== expectedDigest)) return integrity();
     const profile = await this.profile(reference),
       credentials = await this.secret(reference);
@@ -347,10 +373,7 @@ export class OriginalStorageConfiguration {
   async writeTarget(kind: OriginalStorageKind) {
     const current = await this.current();
     if (current.mode !== "s3" || !current.kinds.includes(kind)) return null;
-    const reference = current.profiles.find((profile) => profile.id === current.activeProfileId);
-    if (!reference) return integrity();
-    const profile = await this.profile(reference),
-      credentials = await this.secret(reference);
-    return { profile, digest: reference.digest, client: new PrivateS3Client(profile, credentials) };
+    if (!current.activeProfileId) return integrity();
+    return this.resolveTarget(current, current.activeProfileId);
   }
 }

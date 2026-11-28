@@ -7,7 +7,6 @@ if (globalThis.__pandaForceIdentity?.role === "member") {
     "#newTask",
     "#searchThreads",
     "#threadList",
-    "#accountButton",
     "#toggleFilesPanel",
     "#toggleSidePanel",
     "#toggleSummaryPanel",

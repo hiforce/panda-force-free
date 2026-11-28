@@ -1597,3 +1597,25 @@
 .creation-session-history .session-text-button {
   min-height: var(--pf-touch-target, 44px);
 }
+
+.creation-media-controls.wb-form {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: var(--pf-space-2, 8px);
+  margin-block-end: var(--pf-space-2);
+}
+
+.creation-media-controls .wb-field {
+  flex: 1 1 11rem;
+}
+
+.creation-media-controls [data-media-message] {
+  flex-basis: 100%;
+}
+
+@media (max-width: 640px) {
+  .creation-media-controls .wb-field {
+    flex: 1 1 100%;
+  }
+}

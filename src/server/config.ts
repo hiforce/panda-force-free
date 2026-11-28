@@ -61,8 +61,20 @@ const sessionDirectoryRoots = allowExternalDirectories
     ? [...new Set([defaultCwd, ...extraSessionRoots.map((path) => resolve(path))])]
     : undefined
   : [defaultCwd];
+const configuredBrowseRoots = (env.PANDA_FORCE_BROWSE_ROOTS || "")
+  .split(",")
+  .map((path) => path.trim())
+  .filter(Boolean);
+if (allowExternalDirectories && configuredBrowseRoots.some((path) => !isAbsolute(path)))
+  throw new Error("PANDA_FORCE_BROWSE_ROOTS requires absolute directory paths");
+const explicitBrowseRoots = configuredBrowseRoots.map((path) => resolve(path));
 const browseRoots = allowExternalDirectories
-  ? [...new Set([...defaultBrowseRoots(homeDir), projectWorkspaceRoot])]
+  ? [
+      ...new Set([
+        ...(explicitBrowseRoots.length ? explicitBrowseRoots : defaultBrowseRoots(homeDir)),
+        projectWorkspaceRoot,
+      ]),
+    ]
   : [projectWorkspaceRoot];
 
 export const config = Object.freeze({
@@ -120,7 +132,7 @@ export const config = Object.freeze({
     ]),
   ],
   reviewRoots: allowExternalDirectories
-    ? [...new Set([resolve(configuredReviewRoot || defaultCwd), projectWorkspaceRoot])]
+    ? [...new Set([resolve(configuredReviewRoot || defaultCwd), ...explicitBrowseRoots, projectWorkspaceRoot])]
     : [projectWorkspaceRoot],
 });
 

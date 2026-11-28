@@ -1,0 +1,63 @@
+# Attach the IPC volume read-only to the application. Only approved runtime workspaces belong in the worker.
+x-harness-process-image: &harness-process-image
+  image: ${PANDA_FORCE_HARNESS_PROCESS_IMAGE:?Set the verified PandaForce image that includes the Harness process worker}
+  pull_policy: ${PANDA_FORCE_HARNESS_PROCESS_PULL_POLICY:-missing}
+
+services:
+  panda-harness-process-init:
+    <<: *harness-process-image
+    user: "0:0"
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        case "$$RUNNER_UID" in ""|0|*[!0-9]*) exit 1;; esac
+        case "$$APPLICATION_GID" in ""|0|*[!0-9]*) exit 1;; esac
+        chown "$$RUNNER_UID:$$APPLICATION_GID" /ipc /hps
+        chmod 0750 /ipc
+        chmod 0700 /hps
+    environment:
+      RUNNER_UID: ${PUID:-1000}
+      APPLICATION_GID: ${PGID:-1000}
+    volumes:
+      - panda-harness-process-ipc:/ipc
+      - panda-harness-process-scratch:/hps
+    network_mode: none
+    read_only: true
+
+  panda-harness-process-worker:
+    <<: *harness-process-image
+    user: "${PUID:-1000}:${PGID:-1000}"
+    working_dir: /app
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    environment:
+      PANDA_FORCE_SERVICE_ROLE: harness-process
+      HOME: /tmp
+      PANDA_FORCE_HARNESS_PROCESS_SOCKET: /ipc/worker.sock
+      PANDA_FORCE_HARNESS_PROCESS_COMMANDS: >-
+        ${PANDA_FORCE_HARNESS_PROCESS_COMMANDS:-["codex=/usr/local/bin/codex","/usr/local/bin/grok","node=/usr/local/bin/node"]}
+      PANDA_FORCE_HARNESS_PROCESS_ROOTS: >-
+        ${PANDA_FORCE_HARNESS_PROCESS_ROOTS:-["/home/codex/workspace","/hps"]}
+    volumes:
+      - panda-harness-process-ipc:/ipc
+      - panda-harness-process-scratch:/hps
+      - ${PANDA_FORCE_HARNESS_PROCESS_WORKSPACE_HOST:-${PANDA_FORCE_WORKSPACE_HOST:-${CODEX_WORKSPACE_HOST:-panda-force-workspace}}}:/home/codex/workspace
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    depends_on:
+      panda-harness-process-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "test", "-S", "/ipc/worker.sock"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  panda-force-workspace:
+  panda-harness-process-ipc:
+  panda-harness-process-scratch:

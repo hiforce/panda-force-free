@@ -2,7 +2,7 @@
 title: 升级 PandaForce
 ---
 
-使用已发布的 `hiforceai/panda-force:0.2.3` 和配套发行配置。升级前查看[发行说明](releases.md#023)。首次安装请使用[安装指南](installation.md)。
+使用已发布的 `hiforceai/panda-force:0.2.4` 和配套发行配置。升级前查看[发行说明](releases.md#024)。首次安装请使用[安装指南](installation.md)。
 
 创作、普通会话和 Bot 对话的发送按钮内统一显示发送指示器。创作首次提交会确认 Harness 选择，发送结果无法确认时保留草稿并沿用原请求编号。创作任务的执行权限由服务端管理，设置中可调整模型和推理强度。
 
@@ -10,7 +10,7 @@ title: 升级 PandaForce
 
 - 按[存储指南](storage.md)备份应用状态、所选 SQLite/MySQL 数据库、模型账户、工作区与附件。Grok 账户通过现有持有者备份，避免让多份账户副本独立轮换凭据。
 - 保留原 Compose 项目名、`.env`、卷名及管理员配置；审阅新版配置后，再合并到自己的文件。
-- 检查 `.env` 和当前终端中的 `PANDA_FORCE_IMAGE`。将旧覆盖项更新为 `hiforceai/panda-force:0.2.3`，或使用配套的自有仓库镜像。仓库凭据继续由独立仓库工具管理。
+- 检查 `.env` 和当前终端中的 `PANDA_FORCE_IMAGE`。将旧覆盖项更新为 `hiforceai/panda-force:0.2.4`，或使用配套的自有仓库镜像。仓库凭据继续由独立仓库工具管理。
 - 保留前版镜像摘要与兼容备份。涉及数据库迁移时，回退可能需要恢复配套备份，不能仅启动旧镜像。
 
 ## 升级标准安装
@@ -43,3 +43,7 @@ docker compose -f docker-compose.yml -f deploy/harness/docker-compose.grok.yml u
 使用原管理员登录，检查项目列表、保存的文档和工作区文件，再进入**设置 → Harness Runtime**检查连接。可选的 **hi** 按钮会发送真实模型请求。启动或登录失败时先查看错误并保留状态，不自动重放尚未完成的用户任务。
 
 维护自建镜像的开发者请参阅[开发指南](building.md#development-container)。源码快照发布流程单独放在[维护者指南](releases.md#maintainer-source-snapshots)。
+
+## 0.2.4 开发版
+
+`develop` 分支使用 Linux amd64 镜像 `hiforceai/panda-force:0.2.4`。本版提供创作执行器、可复用凭证、独立存储连接与文件浏览，并优化了侧栏、账户菜单和手机端存储操作。

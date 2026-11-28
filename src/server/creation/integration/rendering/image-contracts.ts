@@ -41,5 +41,8 @@ interface ImageRenderArtifact {
   mime: "image/png" | "image/jpeg" | "image/webp";
 }
 export type ImageRenderReceipt = ImageRenderArtifact &
-  ({ threadId: string; turnId: string } | { provider: ApplicationImageProvider; invocationId?: string });
+  (
+    | { threadId: string; turnId: string }
+    | { provider: ApplicationImageProvider | "media-executor"; invocationId?: string }
+  );
 export type ImageRenderResult = ImageRenderReceipt & { bytes: Buffer };

@@ -1,3 +1,4 @@
+import { objectBrowserKey, parseS3List } from "./s3-list.js";
 import { s3Multipart } from "./multipart.js";
 import type { S3Connection, S3Credentials, S3ObjectReceipt } from "./contracts.js";
 import { ObjectStorageError } from "./contracts.js";
@@ -120,7 +121,7 @@ async function boundedBody(response: Response, limit: number, signal: AbortSigna
   }
 }
 
-/** No ambient credentials, redirects, ACL operations, listing or automatic retries; the durable journal owns replay. */
+/** No ambient credentials, redirects, ACL operations or automatic retries; the durable journal owns replay. */
 export class PrivateS3Client {
   readonly connection: S3Connection;
   #credentials: S3Credentials;
@@ -203,6 +204,32 @@ export class PrivateS3Client {
   }
   multipart() {
     return s3Multipart(this.request.bind(this), boundedBody);
+  }
+  async listDirectory(prefix: string, cursor: string, signal?: AbortSignal) {
+    if (prefix && !objectBrowserKey(prefix, true)) return invalid();
+    const result = await this.request("GET", null, {
+      query: {
+        "list-type": "2",
+        delimiter: "/",
+        "encoding-type": "url",
+        "max-keys": "80",
+        prefix,
+        ...(cursor ? { "continuation-token": cursor } : {}),
+      },
+      signal,
+    });
+    if (result.response.status !== 200) {
+      await result.response.body?.cancel();
+      throw new ObjectStorageError("storageUnavailable", true, result.response.status);
+    }
+    return parseS3List(await boundedBody(result.response, 1024 * 1024, result.signal), prefix);
+  }
+  async browserDownload(key: string, signal: AbortSignal) {
+    if (!objectBrowserKey(key)) return invalid();
+    const result = await this.request("GET", key, { signal, timeoutMs: 15 * 60_000 });
+    if (result.response.status === 200) return result.response;
+    await result.response.body?.cancel();
+    throw new ObjectStorageError("storageUnavailable", false, result.response.status);
   }
   downloadUrl(
     key: string,
